@@ -62,5 +62,3 @@ export default function App() {
     </BrowserRouter>
   );
 }
-// Build Tue Jul 21 11:59:25 UTC 2026
-// build 1784637144
