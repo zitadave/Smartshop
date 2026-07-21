@@ -5,13 +5,16 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatPrice(price: number, currency = 'ETB'): string {
+export function formatPrice(price: number, currency?: string): string {
+  // Try to get user's selected currency from localStorage
+  const userCurrency = currency || (typeof window !== 'undefined' ? 
+    (() => { try { const c = localStorage.getItem('ss_currency'); return c ? JSON.parse(c) : 'ETB'; } catch { return 'ETB'; } })() : 'ETB');
   const rates: Record<string, number> = { ETB: 1, USD: 0.019, EUR: 0.017, GBP: 0.015, KES: 2.45 };
   const symbols: Record<string, string> = { ETB: 'Br', USD: '$', EUR: '€', GBP: '£', KES: 'KSh' };
-  const rate = rates[currency] || 1;
-  const sym = symbols[currency] || 'Br';
+  const rate = rates[userCurrency] || 1;
+  const sym = symbols[userCurrency] || 'Br';
   const converted = price * rate;
-  if (currency === 'ETB') return `Br ${Math.round(converted).toLocaleString()}`;
+  if (userCurrency === 'ETB') return `Br ${Math.round(converted).toLocaleString()}`;
   return `${sym}${converted.toFixed(2)}`;
 }
 

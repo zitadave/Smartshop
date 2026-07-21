@@ -110,7 +110,7 @@ export default function Home() {
                   <ProductCard product={p} variant="mini"
                     onAdd={handleAdd} onWish={handleWish}
                     addingId={btnAnim.activeId} wishAnimId={wishAnim.activeId} />
-                  <div className="absolute top-0 left-0 right-0 p-1">
+                  <div className="absolute top-1 left-1 z-10">
                     <FlashDealTimer endTime={deal?.endTime || 0} discount={deal?.discount} compact />
                   </div>
                 </div>

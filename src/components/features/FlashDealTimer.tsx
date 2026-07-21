@@ -50,12 +50,12 @@ export default function FlashDealTimer({
 
   if (compact) {
     return (
-      <div className={cn('flex items-center gap-1 text-[10px] font-semibold', className)}>
-        <Zap size={10} className="text-orange-500" />
-        <span className="text-orange-600 dark:text-orange-400">
+      <div className={cn('flex items-center gap-1 text-[9px] font-semibold bg-black/60 backdrop-blur-sm text-white px-1.5 py-0.5 rounded-full', className)}>
+        <Zap size={8} className="text-yellow-400" />
+        <span className="text-yellow-300">
           {formatTimeRemaining(remaining)}
         </span>
-        {discount && <span className="text-red-500">-{discount}%</span>}
+        {discount && <span className="text-red-400">-{discount}%</span>}
       </div>
     );
   }

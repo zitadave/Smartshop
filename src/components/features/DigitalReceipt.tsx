@@ -113,7 +113,7 @@ export default function DigitalReceipt({ orderNumber, onClose }: DigitalReceiptP
       {/* Receipt Preview */}
       {showReceipt ? (
         <div className="p-3">
-          <div className="bg-white dark:bg-gray-900 rounded-lg p-4 text-xs font-mono shadow-inner">
+          <div className="bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100 rounded-lg p-4 text-xs font-mono shadow-inner">
             <div className="text-center mb-3 border-b border-dashed border-gray-300 dark:border-gray-700 pb-2">
               <div className="text-lg">🏪</div>
               <div className="font-bold text-sm">SMART SHOP</div>
