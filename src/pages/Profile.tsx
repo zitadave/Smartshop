@@ -33,6 +33,7 @@ export default function Profile() {
   const menuItems = [
     { icon: '✏️', label: 'Edit Profile', onClick: () => { const n = prompt('Name:', profile.name); if (n && n.trim()) store.updateProfileName(n.trim()); } },
     { icon: '📍', label: 'Saved Addresses', onClick: () => navigate('/profile') },
+    { icon: '🎡', label: 'Game Center', onClick: () => navigate('/game') },
     { icon: '📦', label: 'My Orders', onClick: () => navigate('/orders') },
     { icon: '❤️', label: 'Wishlist', onClick: () => navigate('/wishlist') },
     { icon: '🎁', label: 'Gift Cards', onClick: () => navigate('/gift-cards') },
@@ -88,7 +89,7 @@ export default function Profile() {
           <div className="text-[10px] font-semibold text-muted-foreground mb-1.5">🏪 Followed Shops</div>
           <div className="flex gap-1.5 overflow-x-auto scrollbar-none">
             {followedVendorNames.map(v => (
-              <span key={v.id} className="inline-flex items-center gap-1 px-2.5 py-1 bg-card border border-border rounded-full text-[10px] cursor-pointer hover:border-primary" onClick={() => navigate('/shop')}>
+              <span key={v.id} className="inline-flex items-center gap-1 px-2.5 py-1 bg-card border border-border rounded-full text-[10px] cursor-pointer hover:border-primary" onClick={() => navigate(`/store/${v.id}`)}>
                 🏪 {v.name}
               </span>
             ))}

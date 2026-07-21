@@ -147,7 +147,8 @@ export const ProductCard = memo(function ProductCard({
           )}
         </div>
         {product.vendorName && (
-          <div className="mt-2 flex items-center gap-1 text-[7px] text-orange-600/70 bg-orange-50/50 dark:bg-orange-950/20 px-2 py-0.5 rounded-full w-fit border border-orange-200/30 dark:border-orange-800/30">
+          <div className="mt-2 flex items-center gap-1 text-[7px] text-orange-600/70 bg-orange-50/50 dark:bg-orange-950/20 px-2 py-0.5 rounded-full w-fit border border-orange-200/30 dark:border-orange-800/30 cursor-pointer hover:bg-orange-100/50 dark:hover:bg-orange-950/30 transition-colors"
+            onClick={(e) => { e.stopPropagation(); navigate(`/store/${product.vendorId}`); }}>
             🏪 {product.vendorName}
           </div>
         )}

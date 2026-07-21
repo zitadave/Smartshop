@@ -3,7 +3,8 @@ import { useStore } from '@/stores/AppStore';
 import { t } from '@/i18n/translations';
 import ToastContainer from './Toast';
 import QuickView from './ui/QuickView';
-import { ShoppingCart, Package, User, Home, Store, Moon, Sun, Search, Sparkles, ChevronRight } from 'lucide-react';
+import AIChat from '@/components/ai/AIChat';
+import { ShoppingCart, Package, User, Home, Store, Moon, Sun, Search, Sparkles, ChevronRight, Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
 
@@ -33,6 +34,7 @@ export default function Layout() {
     <div className="min-h-screen bg-background text-foreground pb-16">
       <ToastContainer />
       <QuickView />
+      <AIChat />
 
       {/* Search Overlay */}
       {searchOpen && <div className="search-overlay show" onClick={() => setSearchOpen(false)} />}

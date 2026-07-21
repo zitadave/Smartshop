@@ -23,6 +23,8 @@ const Compare = lazy(() => import('@/pages/Compare'));
 const Tracking = lazy(() => import('@/pages/Tracking'));
 const AdminRedirect = lazy(() => import('@/pages/AdminRedirect'));
 const AdminPanel = lazy(() => import('@/pages/admin/AdminPanel'));
+const GameCenter = lazy(() => import('@/pages/GameCenter'));
+const Storefront = lazy(() => import('@/pages/Storefront'));
 
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-[60vh]">
@@ -72,6 +74,8 @@ export default function App() {
           <Route path="/compare" element={<Suspense fallback={<PageLoader />}><Compare /></Suspense>} />
           <Route path="/tracking" element={<Suspense fallback={<PageLoader />}><Tracking /></Suspense>} />
           <Route path="/admin" element={<Suspense fallback={<PageLoader />}><AdminRedirect /></Suspense>} />
+          <Route path="/game" element={<Suspense fallback={<PageLoader />}><GameCenter /></Suspense>} />
+          <Route path="/store/:vendorId" element={<Suspense fallback={<PageLoader />}><Storefront /></Suspense>} />
         </Route>
         <Route path="/admin-panel/*" element={<Suspense fallback={<PageLoader />}><AdminPanel /></Suspense>} />
       </Routes>
