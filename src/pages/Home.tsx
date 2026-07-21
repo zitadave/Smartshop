@@ -250,15 +250,13 @@ function MiniCard({ product, onClick, onAdd, onWish, index = 0, addingId, wishAn
           <span className="text-base font-extrabold text-primary">{formatPrice(product.price)}</span>
           {product.originalPrice && <span className="text-[9px] text-muted-foreground line-through">{formatPrice(product.originalPrice)}</span>}
         </div>
-        <button
-          className={cn(
-            'w-full mt-2 py-2 rounded-xl text-white text-[10px] font-bold transition-all flex items-center justify-center gap-1.5 btn-ripple shadow-sm',
-            isAdding ? 'bg-green-600 scale-95' : 'bg-primary hover:bg-primary/90 active:scale-95'
-          )}
-          onClick={onAdd}>
-          <ShoppingCart size={12} className={cn(isAdding && 'animate-cartBounce')} />
-          {isAdding ? 'Added!' : 'Add'}
-        </button>
+        <div className="flex items-center justify-end mt-2">
+          <button
+            className="w-7 h-7 rounded-lg flex items-center justify-center border border-border hover:bg-primary hover:text-white hover:border-primary transition-all"
+            onClick={onAdd}>
+            <ShoppingCart size={12} className={isAdding ? 'animate-cartBounce' : ''} />
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -306,15 +304,13 @@ function ProductCard({ product, onAdd, onWish, addingId, wishAnimId }: any) {
             🏪 {product.vendorName}
           </div>
         )}
-        <button
-          className={cn(
-            'w-full mt-2.5 py-2.5 rounded-xl text-white text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 btn-ripple shadow-sm',
-            isAdding ? 'bg-green-600 scale-95' : 'bg-primary hover:bg-primary/90 active:scale-95'
-          )}
-          onClick={onAdd}>
-          <ShoppingCart size={13} className={cn(isAdding && 'animate-cartBounce')} />
-          {isAdding ? '✓ Added!' : 'Add to Cart'}
-        </button>
+        <div className="flex items-center justify-end mt-2">
+          <button
+            className="w-8 h-8 rounded-xl flex items-center justify-center border border-border hover:bg-primary hover:text-white hover:border-primary transition-all"
+            onClick={onAdd}>
+            <ShoppingCart size={14} className={isAdding ? 'animate-cartBounce' : ''} />
+          </button>
+        </div>
       </div>
     </div>
   );

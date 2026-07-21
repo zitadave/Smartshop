@@ -140,14 +140,14 @@ export default function Shop() {
                     <span className="price-tag discount">-{Math.round((1 - p.price / p.originalPrice) * 100)}%</span></>}
                 </div>
                 {p.vendorName && <div className="mt-1.5 flex items-center gap-1 text-[8px] text-orange-600 bg-orange-50 dark:bg-orange-950/30 px-2 py-0.5 rounded-full w-fit">🏪 {p.vendorName}</div>}
-                <button
-                  className={cn('w-full mt-2.5 py-2.5 rounded-xl text-white text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 btn-ripple shadow-sm',
-                    addingId === p.id ? 'bg-green-600 scale-95' : 'bg-primary hover:bg-primary/90 active:scale-95')}
-                  onClick={e => handleAdd(e, p)}>
-                  <ShoppingCart size={13} className={cn(addingId === p.id && 'animate-cartBounce')} />
-                  {addingId === p.id ? '✓ Added!' : 'Add to Cart'}
+                <div className="flex items-center justify-end mt-2">
+                  <button
+                    className="w-8 h-8 rounded-xl flex items-center justify-center border border-border hover:bg-primary hover:text-white hover:border-primary transition-all"
+                    onClick={e => handleAdd(e, p)}>
+                    <ShoppingCart size={14} className={addingId === p.id ? 'animate-cartBounce' : ''} />
                 </button>
               </div>
+            </div>
             </div>
           ))}
         </div>
