@@ -1,26 +1,46 @@
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { useStore } from '@/stores/AppStore';
 import { productsApi, settingsApi } from '@/lib/api';
+import { initSentry } from '@/lib/sentry';
+import { initAnalytics, trackEvent } from '@/lib/analytics';
+import { registerSW } from '@/lib/sw';
 import Layout from '@/components/Layout';
-import Home from '@/pages/Home';
-import Shop from '@/pages/Shop';
-import ProductDetail from '@/pages/ProductDetail';
-import Cart from '@/pages/Cart';
-import Wishlist from '@/pages/Wishlist';
-import Orders from '@/pages/Orders';
-import OrderDetail from '@/pages/OrderDetail';
-import Profile from '@/pages/Profile';
-import Checkout from '@/pages/Checkout';
-import Confirmation from '@/pages/Confirmation';
-import GiftCards from '@/pages/GiftCards';
-import Compare from '@/pages/Compare';
-import Tracking from '@/pages/Tracking';
-import AdminRedirect from '@/pages/AdminRedirect';
-import AdminPanel from '@/pages/admin/AdminPanel';
+
+// ===== CODE SPLITTING — Lazy-load rarely-used pages =====
+const Home = lazy(() => import('@/pages/Home'));
+const Shop = lazy(() => import('@/pages/Shop'));
+const ProductDetail = lazy(() => import('@/pages/ProductDetail'));
+const Cart = lazy(() => import('@/pages/Cart'));
+const Wishlist = lazy(() => import('@/pages/Wishlist'));
+const Orders = lazy(() => import('@/pages/Orders'));
+const OrderDetail = lazy(() => import('@/pages/OrderDetail'));
+const Profile = lazy(() => import('@/pages/Profile'));
+const Checkout = lazy(() => import('@/pages/Checkout'));
+const Confirmation = lazy(() => import('@/pages/Confirmation'));
+const GiftCards = lazy(() => import('@/pages/GiftCards'));
+const Compare = lazy(() => import('@/pages/Compare'));
+const Tracking = lazy(() => import('@/pages/Tracking'));
+const AdminRedirect = lazy(() => import('@/pages/AdminRedirect'));
+const AdminPanel = lazy(() => import('@/pages/admin/AdminPanel'));
+
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-[60vh]">
+    <div className="text-center">
+      <div className="w-8 h-8 border-2 border-border border-t-primary rounded-full animate-spin mx-auto" />
+      <p className="text-xs text-muted-foreground mt-3">Loading...</p>
+    </div>
+  </div>
+);
 
 export default function App() {
   const { darkMode, setProducts, setSettings } = useStore();
+
+  useEffect(() => {
+    initSentry();
+    initAnalytics();
+    registerSW();
+  }, []);
 
   useEffect(() => {
     if (darkMode) document.documentElement.classList.add('dark');
@@ -28,36 +48,32 @@ export default function App() {
   }, [darkMode]);
 
   useEffect(() => {
-    // Load initial data using API client (uses VITE_API_URL)
     productsApi.list().then(d => {
-      if (d?.products) setProducts(d.products);
+      if (d?.products) { setProducts(d.products); trackEvent('page_view', { page: 'home', products: d.products.length }); }
     }).catch(() => {});
-
-    settingsApi.get().then(d => {
-      if (d?.settings) setSettings(d.settings);
-    }).catch(() => {});
+    settingsApi.get().then(d => { if (d?.settings) setSettings(d.settings); }).catch(() => {});
   }, []);
 
   return (
     <BrowserRouter>
       <Routes>
         <Route element={<Layout />}>
-          <Route path="/" element={<Home />} />
-          <Route path="/shop" element={<Shop />} />
-          <Route path="/product/:id" element={<ProductDetail />} />
-          <Route path="/cart" element={<Cart />} />
-          <Route path="/wishlist" element={<Wishlist />} />
-          <Route path="/orders" element={<Orders />} />
-          <Route path="/orders/:orderNumber" element={<OrderDetail />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/checkout" element={<Checkout />} />
-          <Route path="/confirmation/:orderNumber" element={<Confirmation />} />
-          <Route path="/gift-cards" element={<GiftCards />} />
-          <Route path="/compare" element={<Compare />} />
-          <Route path="/tracking" element={<Tracking />} />
-          <Route path="/admin" element={<AdminRedirect />} />
+          <Route path="/" element={<Suspense fallback={<PageLoader />}><Home /></Suspense>} />
+          <Route path="/shop" element={<Suspense fallback={<PageLoader />}><Shop /></Suspense>} />
+          <Route path="/product/:id" element={<Suspense fallback={<PageLoader />}><ProductDetail /></Suspense>} />
+          <Route path="/cart" element={<Suspense fallback={<PageLoader />}><Cart /></Suspense>} />
+          <Route path="/wishlist" element={<Suspense fallback={<PageLoader />}><Wishlist /></Suspense>} />
+          <Route path="/orders" element={<Suspense fallback={<PageLoader />}><Orders /></Suspense>} />
+          <Route path="/orders/:orderNumber" element={<Suspense fallback={<PageLoader />}><OrderDetail /></Suspense>} />
+          <Route path="/profile" element={<Suspense fallback={<PageLoader />}><Profile /></Suspense>} />
+          <Route path="/checkout" element={<Suspense fallback={<PageLoader />}><Checkout /></Suspense>} />
+          <Route path="/confirmation/:orderNumber" element={<Suspense fallback={<PageLoader />}><Confirmation /></Suspense>} />
+          <Route path="/gift-cards" element={<Suspense fallback={<PageLoader />}><GiftCards /></Suspense>} />
+          <Route path="/compare" element={<Suspense fallback={<PageLoader />}><Compare /></Suspense>} />
+          <Route path="/tracking" element={<Suspense fallback={<PageLoader />}><Tracking /></Suspense>} />
+          <Route path="/admin" element={<Suspense fallback={<PageLoader />}><AdminRedirect /></Suspense>} />
         </Route>
-        <Route path="/admin-panel/*" element={<AdminPanel />} />
+        <Route path="/admin-panel/*" element={<Suspense fallback={<PageLoader />}><AdminPanel /></Suspense>} />
       </Routes>
     </BrowserRouter>
   );

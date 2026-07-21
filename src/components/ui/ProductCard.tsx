@@ -1,7 +1,8 @@
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/stores/AppStore';
 import { formatPrice, stars, cn } from '@/lib/utils';
+import { img, blurHash, placeholder } from '@/lib/images';
 import { ShoppingCart } from 'lucide-react';
 import type { Product, BadgeType } from '@/types';
 import { BADGE_COLORS, BADGE_LABELS } from '@/types';
@@ -43,7 +44,15 @@ export const ProductCard = memo(function ProductCard({
         onClick={handleClick}
       >
         <div className="relative aspect-square overflow-hidden bg-muted/30 img-zoom">
-          <img src={product.image} alt={product.nameEn} className="w-full h-full object-cover" loading="lazy" />
+          <div className="relative w-full h-full bg-muted/30">
+            <img
+              src={img(product.image, { w: 200, h: 200 })}
+              alt={product.nameEn}
+              className="w-full h-full object-cover transition-opacity duration-300"
+              loading="lazy"
+              onError={(e) => { (e.target as HTMLImageElement).src = placeholder(200); }}
+            />
+          </div>
           {product.badge && (
             <span className={`absolute top-2.5 left-2.5 px-2.5 py-1 rounded-lg text-[7px] font-bold text-white z-10 shadow-lg backdrop-blur-sm bg-gradient-to-r ${badgeColor}`}>
               {badgeLabel}
@@ -75,7 +84,15 @@ export const ProductCard = memo(function ProductCard({
   return (
     <div className="bg-card rounded-2xl overflow-hidden border border-border/60 cursor-pointer card-glow group shadow-sm" onClick={handleClick}>
       <div className="relative aspect-square overflow-hidden bg-muted/30 img-zoom">
-        <img src={product.image} alt={product.nameEn} className="w-full h-full object-cover" loading="lazy" />
+        <div className="relative w-full h-full bg-muted/30">
+          <img
+            src={img(product.image, { w: 400, h: 400 })}
+            alt={product.nameEn}
+            className="w-full h-full object-cover transition-opacity duration-300"
+            loading="lazy"
+            onError={(e) => { (e.target as HTMLImageElement).src = placeholder(400); }}
+          />
+        </div>
         {product.badge && (
           <span className={`absolute top-2.5 left-2.5 px-2.5 py-1 rounded-lg text-[7px] font-bold text-white z-10 shadow-lg bg-gradient-to-r ${badgeColor}`}>
             {badgeLabel}
