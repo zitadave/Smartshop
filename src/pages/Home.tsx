@@ -3,23 +3,38 @@ import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/stores/AppStore';
 import { t } from '@/i18n/translations';
 import { formatPrice, stars, cn } from '@/lib/utils';
-import { ShoppingCart, Heart, TrendingUp, Sparkles, Clock, Truck, Star } from 'lucide-react';
+import { ShoppingCart, Heart, TrendingUp, Sparkles, Clock, Truck, Star, ChevronRight, Search } from 'lucide-react';
+import { toast } from '@/components/Toast';
 
 const CATEGORIES = [
+  { id: 'all', icon: '📋', label: 'All' },
   { id: 'electronics', icon: '📱', label: 'Electronics' },
   { id: 'fashion', icon: '👗', label: 'Fashion' },
   { id: 'home', icon: '🏠', label: 'Home' },
   { id: 'beauty', icon: '💄', label: 'Beauty' },
   { id: 'groceries', icon: '🍎', label: 'Groceries' },
   { id: 'books', icon: '📚', label: 'Books' },
-  { id: 'sports', icon: '⚽', label: 'Sports' },
   { id: 'baby', icon: '👶', label: 'Baby' },
 ];
+
+const SkeletonGrid = () => (
+  <div className="grid grid-cols-2 gap-3 px-3">
+    {[1,2,3,4].map(i => (
+      <div key={i} className="shimmer-card animate-fadeIn" style={{animationDelay: `${i*0.1}s`}}>
+        <div className="shimmer-img" />
+        <div className="shimmer-line" />
+        <div className="shimmer-line s" />
+        <div className="shimmer-line" style={{width:'40%',height:14,margin:'4px 10px'}} />
+      </div>
+    ))}
+  </div>
+);
 
 export default function Home() {
   const navigate = useNavigate();
   const { products, language, addToCart, toggleWishlist, isInWishlist, addRecentView, recentViews } = useStore();
   const [activeCat, setActiveCat] = useState('all');
+  const [loading, setLoading] = useState(false);
 
   const topProducts = [...products].sort((a, b) => (b.soldCount || 0) - (a.soldCount || 0)).slice(0, 10);
   const specialOffers = products.filter(p => p.originalPrice && p.originalPrice > p.price).slice(0, 10);
@@ -32,43 +47,65 @@ export default function Home() {
     return !viewedIds.includes(p.id) && viewedCats.includes(p.category);
   }).sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 8);
 
+  const handleAddToCart = (e: React.MouseEvent, product: any) => {
+    e.stopPropagation();
+    addToCart(product);
+    toast(`🛒 ${product.nameEn} added to cart!`, 'success');
+  };
+
   return (
-    <div className="pb-4">
-      {/* Hero */}
-      <section className="px-4 pt-6 pb-5 bg-gradient-to-br from-primary to-blue-900 text-white relative overflow-hidden">
-        <div className="absolute top-[-40%] right-[-10%] w-64 h-64 rounded-full bg-white/3"></div>
-        <div className="absolute bottom-[-20%] left-[-10%] w-48 h-48 rounded-full bg-white/2"></div>
+    <div className="pb-4 stagger">
+      {/* HERO SECTION */}
+      <section className="relative px-5 pt-8 pb-7 bg-gradient-to-br from-primary via-blue-700 to-indigo-900 text-white overflow-hidden">
+        {/* Decorative circles */}
+        <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-white/[0.03] animate-float" style={{animationDuration:'6s'}} />
+        <div className="absolute -bottom-10 -left-10 w-40 h-40 rounded-full bg-white/[0.02] animate-float" style={{animationDuration:'8s',animationDelay:'1s'}} />
+        <div className="absolute top-1/3 right-1/4 w-20 h-20 rounded-full bg-white/[0.01]" />
+
         <div className="relative z-10 text-center">
-          <h2 className="text-xl font-bold mb-1">🏪 {t('welcome', language)}</h2>
-          <p className="text-sm opacity-75 mb-3">{t('appSub', language)}</p>
-          <button className="px-7 py-2.5 bg-white text-primary rounded-full text-sm font-semibold shadow-lg hover:shadow-xl transition-all active:scale-95" onClick={() => navigate('/shop')}>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-sm text-[10px] font-medium mb-4">
+            <Sparkles size={12} />
+            <span>Premium Marketplace</span>
+          </div>
+          <h2 className="text-2xl font-extrabold mb-1.5 tracking-tight">
+            🏪 {t('welcome', language)}
+          </h2>
+          <p className="text-sm text-white/70 mb-5 max-w-xs mx-auto leading-relaxed">
+            Discover premium products at unbeatable prices with fast delivery across Ethiopia
+          </p>
+          <button
+            className="inline-flex items-center gap-2 px-8 py-3 bg-white text-primary rounded-2xl text-sm font-bold shadow-xl hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+            onClick={() => navigate('/shop')}
+          >
             🛍️ {t('shop', language)}
+            <ChevronRight size={16} />
           </button>
-          <div className="flex gap-2 mt-3 justify-center">
+
+          <div className="flex gap-3 mt-6 justify-center">
             {[
-              { val: products.length + '+', label: 'Products' },
-              { val: '⭐ ' + (Math.max(...products.map(p => p.rating || 0), 0) || 4.9).toFixed(1), label: 'Rating' },
+              { val: `${products.length}+`, label: 'Products' },
+              { val: `⭐ ${(products.reduce((m, p) => Math.max(m, p.rating || 0), 0) || 4.9).toFixed(1)}`, label: 'Rating' },
               { val: 'FREE', label: 'Delivery' },
             ].map((s, i) => (
-              <div key={i} className="text-center px-3 py-1.5 bg-white/8 rounded-lg backdrop-blur-sm min-w-[60px]">
-                <div className="text-sm font-bold">{s.val}</div>
-                <div className="text-[7px] opacity-60 uppercase tracking-wider">{s.label}</div>
+              <div key={i} className="text-center px-4 py-2 bg-white/8 rounded-xl backdrop-blur-sm min-w-[64px] animate-countUp" style={{animationDelay: `${i*0.15}s`}}>
+                <div className="text-sm font-extrabold">{s.val}</div>
+                <div className="text-[7px] text-white/50 uppercase tracking-widest mt-0.5">{s.label}</div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Categories */}
-      <div className="flex gap-1.5 px-3 py-2.5 overflow-x-auto border-b border-border bg-card scrollbar-none">
+      {/* CATEGORIES */}
+      <div className="flex gap-2 px-4 py-3 overflow-x-auto scrollbar-none border-b border-border">
         {CATEGORIES.map(cat => (
           <button
             key={cat.id}
             className={cn(
-              'px-3.5 py-1.5 rounded-full text-[10px] font-medium whitespace-nowrap border transition-all',
+              'flex items-center gap-1.5 px-4 py-2 rounded-2xl text-xs font-medium whitespace-nowrap border transition-all duration-200 flex-shrink-0',
               activeCat === cat.id
-                ? 'bg-primary text-white border-primary shadow'
-                : 'bg-muted text-muted-foreground border-border hover:border-primary hover:text-primary'
+                ? 'bg-primary text-white border-primary shadow-md shadow-primary/20'
+                : 'bg-card text-muted-foreground border-border hover:border-primary hover:text-primary hover:bg-primary/5'
             )}
             onClick={() => { setActiveCat(cat.id); navigate('/shop'); }}
           >
@@ -77,157 +114,150 @@ export default function Home() {
         ))}
       </div>
 
-      {/* AI Recommendations */}
+      {/* AI RECOMMENDATIONS */}
       {recommendations.length > 0 && (
-        <Section title="🤖 Recommended For You">
-          <HorizontalScroll>
-            {recommendations.map(p => (
-              <MiniProductCard key={p.id} product={p} onClick={() => { addRecentView(p); navigate(`/product/${p.id}`); }} />
+        <div className="mt-2 animate-fadeUp">
+          <div className="section-title-bar">
+            <div className="inline-flex items-center gap-2">
+              <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Sparkles size={14} className="text-primary" />
+              </div>
+              <span className="text-sm font-bold">Recommended For You</span>
+            </div>
+          </div>
+          <div className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-none snap-x snap-mandatory">
+            {recommendations.map((p, i) => (
+              <MiniProductCard key={p.id} product={p} index={i}
+                onClick={() => { addRecentView(p); navigate(`/product/${p.id}`); }}
+                onAdd={(e) => handleAddToCart(e, p)}
+              />
             ))}
-          </HorizontalScroll>
-        </Section>
+          </div>
+        </div>
       )}
 
-      {/* Recently Viewed */}
+      {/* RECENTLY VIEWED */}
       {recents.length > 0 && (
-        <Section title="🕐 Recently Viewed">
-          <HorizontalScroll>
-            {recents.map(p => (
-              <MiniProductCard key={p.id} product={p} onClick={() => navigate(`/product/${p.id}`)} />
+        <div className="mt-2 animate-fadeUp">
+          <div className="section-title-bar">
+            <div className="inline-flex items-center gap-2">
+              <div className="w-6 h-6 rounded-lg bg-muted flex items-center justify-center">
+                <Clock size={14} className="text-muted-foreground" />
+              </div>
+              <span className="text-sm font-bold">Recently Viewed</span>
+            </div>
+          </div>
+          <div className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-none snap-x snap-mandatory">
+            {recents.map((p, i) => (
+              <MiniProductCard key={p.id} product={p} index={i}
+                onClick={() => navigate(`/product/${p.id}`)}
+                onAdd={(e) => handleAddToCart(e, p)}
+              />
             ))}
-          </HorizontalScroll>
-        </Section>
+          </div>
+        </div>
       )}
 
-      {/* Special Offers */}
+      {/* SPECIAL OFFERS */}
       {specialOffers.length > 0 && (
-        <Section title="🔥 Special Offers">
-          <HorizontalScroll>
-            {specialOffers.map(p => (
-              <div key={p.id} className="flex-shrink-0 w-44 bg-card rounded-xl overflow-hidden border border-border cursor-pointer hover:shadow-md transition-all active:scale-97" onClick={() => { addRecentView(p); navigate(`/product/${p.id}`); }}>
-                <div className="relative aspect-square overflow-hidden bg-muted">
-                  <img src={p.image} alt={p.nameEn} className="w-full h-full object-cover hover:scale-105 transition-transform" loading="lazy" />
+        <div className="mt-2 animate-fadeUp">
+          <div className="section-title-bar">
+            <div className="inline-flex items-center gap-2">
+              <div className="w-6 h-6 rounded-lg bg-red-50 dark:bg-red-950/30 flex items-center justify-center">
+                <TrendingUp size={14} className="text-red-500" />
+              </div>
+              <span className="text-sm font-bold">🔥 Special Offers</span>
+            </div>
+          </div>
+          <div className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-none snap-x snap-mandatory">
+            {specialOffers.map((p, i) => (
+              <div key={p.id} className="flex-shrink-0 w-44 bg-card rounded-2xl overflow-hidden border border-border cursor-pointer hover-lift snap-start"
+                onClick={() => { addRecentView(p); navigate(`/product/${p.id}`); }}
+                style={{animationDelay: `${i*0.08}s`}}
+              >
+                <div className="relative aspect-square overflow-hidden bg-muted img-zoom">
+                  <img src={p.image} alt={p.nameEn} className="w-full h-full object-cover" loading="lazy" />
                   {p.badge && (
-                    <span className={cn('absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded text-[7px] font-bold text-white z-10', badgeColor(p.badge))}>
+                    <span className={cn('absolute top-2 left-2 px-2 py-0.5 rounded-md text-[8px] font-bold text-white z-10 shadow-lg', badgeColor(p.badge))}>
                       {badgeLabel(p.badge)}
                     </span>
                   )}
                 </div>
-                <div className="p-2">
+                <div className="p-2.5">
                   <div className="flex items-center gap-1.5">
                     <span className="text-sm font-bold text-primary">{formatPrice(p.price)}</span>
                     {p.originalPrice && <span className="text-[10px] text-muted-foreground line-through">{formatPrice(p.originalPrice)}</span>}
+                    {p.originalPrice && (
+                      <span className="price-tag discount">-{Math.round((1-p.price/p.originalPrice)*100)}%</span>
+                    )}
                   </div>
                 </div>
               </div>
             ))}
-          </HorizontalScroll>
-        </Section>
+          </div>
+        </div>
       )}
 
-      {/* Featured Products Grid */}
-      <Section title="⭐ Featured Products">
-        <div className="grid grid-cols-2 gap-3 px-3">
-          {topProducts.map(p => (
-            <ProductCard key={p.id} product={p} />
-          ))}
+      {/* FEATURED PRODUCTS GRID */}
+      <div className="mt-3 animate-fadeUp">
+        <div className="section-title-bar">
+          <div className="inline-flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-amber-50 dark:bg-amber-950/30 flex items-center justify-center">
+              <Star size={14} className="text-amber-500" />
+            </div>
+            <span className="text-sm font-bold">⭐ Featured Products</span>
+          </div>
         </div>
-      </Section>
-    </div>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="mt-2">
-      <div className="flex items-center gap-1.5 px-3 py-2">
-        <span className="text-sm font-bold">{title}</span>
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function HorizontalScroll({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex gap-2.5 overflow-x-auto px-3 pb-2 scrollbar-none snap-x snap-mandatory">
-      {children}
-    </div>
-  );
-}
-
-function MiniProductCard({ product, onClick }: { product: any; onClick: () => void }) {
-  return (
-    <div className="flex-shrink-0 w-44 bg-card rounded-xl overflow-hidden border border-border cursor-pointer hover:shadow-md transition-all active:scale-97 snap-start" onClick={onClick}>
-      <div className="relative aspect-square overflow-hidden bg-muted">
-        <img src={product.image} alt={product.nameEn} className="w-full h-full object-cover hover:scale-105 transition-transform" loading="lazy" />
-        {product.badge && (
-          <span className={cn('absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded text-[7px] font-bold text-white z-10', badgeColor(product.badge))}>
-            {badgeLabel(product.badge)}
-          </span>
-        )}
-      </div>
-      <div className="p-2.5">
-        <div className="text-xs font-semibold line-clamp-2 leading-tight">{product.name}</div>
-        <div className="text-[10px] text-muted-foreground mt-0.5">{product.nameEn}</div>
-        <div className="text-[10px] text-amber-500 mt-0.5">{stars(product.rating)} ({product.reviews || 0})</div>
-        <div className="flex items-center gap-1.5 mt-1">
-          <span className="text-sm font-bold text-primary">{formatPrice(product.price)}</span>
-          {product.originalPrice && <span className="text-[10px] text-muted-foreground line-through">{formatPrice(product.originalPrice)}</span>}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ProductCard({ product }: { product: any }) {
-  const navigate = useNavigate();
-  const { addToCart, toggleWishlist, isInWishlist, addRecentView } = useStore();
-  const wis = isInWishlist(product.id);
-  const isFlash = false; // Will be loaded from settings
-
-  return (
-    <div className="bg-card rounded-xl overflow-hidden border border-border cursor-pointer hover:shadow-md transition-all active:scale-98 group" onClick={() => { addRecentView(product); navigate(`/product/${product.id}`); }}>
-      <div className="relative aspect-square overflow-hidden bg-muted">
-        <img src={product.image} alt={product.nameEn} className="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy" />
-        {product.badge && (
-          <span className={cn('absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded text-[7px] font-bold text-white z-10', badgeColor(product.badge))}>
-            {badgeLabel(product.badge)}
-          </span>
-        )}
-        {product.stockCount <= 0 && (
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-10">
-            <span className="text-white text-[10px] font-bold bg-destructive px-2.5 py-1 rounded">Sold Out</span>
+        {loading ? <SkeletonGrid /> : (
+          <div className="grid grid-cols-2 gap-3 px-4 stagger">
+            {topProducts.map(p => (
+              <ProductCard key={p.id} product={p}
+                onAddToCart={(e) => handleAddToCart(e, p)}
+              />
+            ))}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ===== MINI PRODUCT CARD (Horizontal Scroll) =====
+function MiniProductCard({ product, onClick, onAdd, index = 0 }: { product: any; onClick: () => void; onAdd: (e: React.MouseEvent) => void; index?: number }) {
+  const { isInWishlist, toggleWishlist } = useStore();
+  const wis = isInWishlist(product.id);
+
+  return (
+    <div className="flex-shrink-0 w-44 bg-card rounded-2xl overflow-hidden border border-border cursor-pointer hover-lift snap-start animate-fadeUp"
+      onClick={onClick} style={{animationDelay: `${index*0.06}s`}}>
+      <div className="relative aspect-square overflow-hidden bg-muted img-zoom">
+        <img src={product.image} alt={product.nameEn} className="w-full h-full object-cover" loading="lazy" />
+        {product.badge && (
+          <span className={cn('absolute top-2 left-2 px-2 py-0.5 rounded-md text-[8px] font-bold text-white z-10 shadow-lg', badgeColor(product.badge))}>
+            {badgeLabel(product.badge)}
+          </span>
+        )}
         <button
-          className="absolute top-1.5 right-1.5 w-7 h-7 rounded-lg bg-white/90 backdrop-blur flex items-center justify-center text-xs z-20 shadow hover:scale-105 transition-all"
+          className="absolute top-2 right-2 w-8 h-8 rounded-xl bg-white/90 backdrop-blur-sm flex items-center justify-center text-xs z-20 shadow-sm hover:scale-110 active:scale-90 transition-all"
           onClick={(e) => { e.stopPropagation(); toggleWishlist(product); }}
         >
-          <span className={wis ? 'text-destructive' : 'text-muted-foreground'}>{wis ? '❤️' : '♡'}</span>
+          <span className={wis ? 'text-red-500' : 'text-muted-foreground'}>{wis ? '❤️' : '♡'}</span>
         </button>
       </div>
-      <div className="p-2.5">
-        <div className="text-xs font-semibold line-clamp-2 leading-tight">{product.name}</div>
-        <div className="text-[10px] text-muted-foreground mt-0.5">{product.nameEn}</div>
-        <div className="text-[10px] text-amber-500 mt-0.5">{stars(product.rating)} ({product.reviews || 0})</div>
-        <div className="flex items-center gap-1.5 mt-1">
-          <span className="text-sm font-bold text-primary">{formatPrice(product.price)}</span>
-          {product.originalPrice && <span className="text-[10px] text-muted-foreground line-through">{formatPrice(product.originalPrice)}</span>}
-          {product.originalPrice && (
-            <span className="text-[8px] bg-destructive/10 text-destructive px-1 rounded font-semibold">
-              -{Math.round((1 - product.price / product.originalPrice) * 100)}%
-            </span>
-          )}
+      <div className="p-3">
+        <div className="text-xs font-semibold line-clamp-2 leading-snug min-h-[2em]">{product.name}</div>
+        <div className="text-[9px] text-muted-foreground mt-0.5 line-clamp-1">{product.nameEn}</div>
+        <div className="flex items-center gap-1 text-[10px] text-amber-500 mt-1">
+          <span className="stars">{stars(product.rating)}</span>
+          <span className="text-muted-foreground">({product.reviews || 0})</span>
         </div>
-        {product.vendorName && (
-          <div className="text-[8px] text-orange-600 bg-orange-50 dark:bg-orange-950/30 px-1.5 py-0.5 rounded-full inline-flex items-center gap-1 mt-1">
-            🏪 {product.vendorName}
-          </div>
-        )}
+        <div className="flex items-center gap-1.5 mt-1.5">
+          <span className="text-base font-extrabold text-primary">{formatPrice(product.price)}</span>
+          {product.originalPrice && <span className="text-[9px] text-muted-foreground line-through">{formatPrice(product.originalPrice)}</span>}
+        </div>
         <button
-          className="w-full mt-2 py-2 rounded-lg bg-primary text-white text-[10px] font-semibold hover:bg-primary/90 active:scale-95 transition-all flex items-center justify-center gap-1"
-          onClick={(e) => { e.stopPropagation(); addToCart(product); }}
+          className="w-full mt-2 py-2 rounded-xl bg-primary text-white text-[10px] font-bold hover:bg-primary/90 active:scale-95 transition-all flex items-center justify-center gap-1.5 btn-ripple shadow-sm"
+          onClick={onAdd}
         >
           <ShoppingCart size={12} /> Add
         </button>
@@ -236,13 +266,76 @@ function ProductCard({ product }: { product: any }) {
   );
 }
 
+// ===== PRODUCT CARD (Grid) =====
+function ProductCard({ product, onAddToCart }: { product: any; onAddToCart: (e: React.MouseEvent) => void }) {
+  const navigate = useNavigate();
+  const { addRecentView, isInWishlist, toggleWishlist } = useStore();
+  const wis = isInWishlist(product.id);
+
+  return (
+    <div className="bg-card rounded-2xl overflow-hidden border border-border cursor-pointer card-glow group"
+      onClick={() => { addRecentView(product); navigate(`/product/${product.id}`); }}>
+      <div className="relative aspect-square overflow-hidden bg-muted img-zoom">
+        <img src={product.image} alt={product.nameEn} className="w-full h-full object-cover" loading="lazy" />
+        {product.badge && (
+          <span className={cn('absolute top-2 left-2 px-2 py-0.5 rounded-md text-[8px] font-bold text-white z-10 shadow-lg', badgeColor(product.badge))}>
+            {badgeLabel(product.badge)}
+          </span>
+        )}
+        {product.stockCount <= 0 && (
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-10">
+            <span className="text-white text-xs font-extrabold bg-destructive px-3 py-1.5 rounded-lg shadow-lg">Sold Out</span>
+          </div>
+        )}
+        <button
+          className="absolute top-2 right-2 w-8 h-8 rounded-xl bg-white/90 backdrop-blur-sm flex items-center justify-center text-xs z-20 shadow-sm hover:scale-110 active:scale-90 transition-all"
+          onClick={(e) => { e.stopPropagation(); toggleWishlist(product); }}
+        >
+          <span className={wis ? 'text-red-500' : 'text-muted-foreground'}>{wis ? '❤️' : '♡'}</span>
+        </button>
+      </div>
+      <div className="p-3">
+        <div className="text-xs font-bold line-clamp-2 leading-snug min-h-[2em]">{product.name}</div>
+        <div className="text-[9px] text-muted-foreground mt-0.5 line-clamp-1">{product.nameEn}</div>
+        <div className="flex items-center gap-1 text-[10px] text-amber-500 mt-1">
+          <span className="stars">{stars(product.rating)}</span>
+          <span className="text-muted-foreground">({product.reviews || 0})</span>
+        </div>
+        <div className="flex items-center gap-1.5 mt-1.5">
+          <span className="text-base font-extrabold text-primary">{formatPrice(product.price)}</span>
+          {product.originalPrice && (
+            <>
+              <span className="text-[9px] text-muted-foreground line-through">{formatPrice(product.originalPrice)}</span>
+              <span className="price-tag discount">
+                -{Math.round((1 - product.price / product.originalPrice) * 100)}%
+              </span>
+            </>
+          )}
+        </div>
+        {product.vendorName && (
+          <div className="mt-1.5 flex items-center gap-1 text-[8px] text-orange-600 bg-orange-50 dark:bg-orange-950/30 px-2 py-0.5 rounded-full w-fit">
+            🏪 {product.vendorName}
+          </div>
+        )}
+        <button
+          className="w-full mt-2.5 py-2.5 rounded-xl bg-primary text-white text-[11px] font-bold hover:bg-primary/90 active:scale-95 transition-all flex items-center justify-center gap-1.5 btn-ripple shadow-sm"
+          onClick={onAddToCart}
+        >
+          <ShoppingCart size={13} /> Add to Cart
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function badgeColor(badge: string): string {
   const colors: Record<string, string> = {
-    sale: 'bg-destructive', hot: 'bg-orange-500', new: 'bg-green-600',
-    'best-seller': 'bg-purple-600', popular: 'bg-blue-600', premium: 'bg-slate-800',
-    'big-deal': 'bg-red-700', educational: 'bg-teal-600',
+    sale: 'bg-gradient-to-r from-red-600 to-red-500', hot: 'bg-gradient-to-r from-orange-500 to-amber-500',
+    new: 'bg-gradient-to-r from-green-600 to-emerald-500', 'best-seller': 'bg-gradient-to-r from-purple-600 to-violet-500',
+    popular: 'bg-gradient-to-r from-blue-600 to-blue-500', premium: 'bg-gradient-to-r from-slate-800 to-slate-700',
+    'big-deal': 'bg-gradient-to-r from-red-700 to-red-600', educational: 'bg-gradient-to-r from-teal-600 to-teal-500',
   };
-  return colors[badge] || 'bg-destructive';
+  return colors[badge] || 'bg-gradient-to-r from-red-600 to-red-500';
 }
 
 function badgeLabel(badge: string): string {

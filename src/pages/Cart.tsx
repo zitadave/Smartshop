@@ -2,14 +2,14 @@ import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/stores/AppStore';
 import { t } from '@/i18n/translations';
 import { formatPrice, cn } from '@/lib/utils';
-import { ShoppingCart, Trash2, Minus, Plus, Store } from 'lucide-react';
+import { ShoppingCart, Trash2, Minus, Plus, Store, ChevronRight, ArrowLeft } from 'lucide-react';
+import { toast } from '@/components/Toast';
 
 export default function Cart() {
   const navigate = useNavigate();
   const { cart, language, removeFromCart, updateCartQty, clearCart, getCartTotal } = useStore();
   const total = getCartTotal();
 
-  // Group by vendor
   const vendorGroups: Record<string, typeof cart> = {};
   cart.forEach(item => {
     const v = item.vendorName || 'Smart Shop';
@@ -19,10 +19,12 @@ export default function Cart() {
 
   if (cart.length === 0) {
     return (
-      <div className="text-center py-20 px-4">
-        <div className="text-5xl opacity-40 mb-3">🛒</div>
-        <h3 className="text-sm font-semibold text-muted-foreground mb-3">{t('cartEmpty', language)}</h3>
-        <button className="px-6 py-2.5 bg-primary text-white rounded-lg text-sm font-semibold hover:bg-primary/90" onClick={() => navigate('/shop')}>
+      <div className="text-center py-24 px-4 animate-fadeUp">
+        <div className="text-6xl mb-4 opacity-30 animate-float">🛒</div>
+        <h3 className="text-base font-semibold text-muted-foreground mb-1">{t('cartEmpty', language)}</h3>
+        <p className="text-xs text-muted-foreground/60 mb-6">Add some products to get started!</p>
+        <button className="px-8 py-3 bg-primary text-white rounded-2xl text-sm font-bold shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all"
+          onClick={() => navigate('/shop')}>
           🛍️ {t('shop', language)}
         </button>
       </div>
@@ -30,51 +32,91 @@ export default function Cart() {
   }
 
   return (
-    <div className="px-3 pt-3 pb-4 max-w-lg mx-auto">
-      <h2 className="text-base font-bold mb-3">🛒 {t('cart', language)} ({cart.length})</h2>
+    <div className="px-4 pt-4 pb-6 max-w-lg mx-auto stagger">
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-4">
+        <button className="p-2 -ml-2 rounded-xl hover:bg-muted transition-colors" onClick={() => navigate(-1)}>
+          <ArrowLeft size={18} />
+        </button>
+        <h2 className="text-lg font-bold">{t('cart', language)}</h2>
+        <span className="text-xs text-muted-foreground bg-muted px-2.5 py-1 rounded-full">{cart.length} items</span>
+      </div>
 
+      {/* Vendor Groups */}
       {Object.entries(vendorGroups).map(([vendor, items]) => (
-        <div key={vendor} className="mb-3">
-          <div className="flex items-center gap-1.5 px-1 py-1.5 text-[10px] font-semibold text-muted-foreground">
-            <Store size={12} /> {vendor} ({items.length})
-          </div>
-          {items.map(item => (
-            <div key={item.id} className="flex gap-3 p-3 bg-card rounded-xl border border-border mb-2 shadow-sm">
-              <img src={item.image} alt={item.nameEn} className="w-16 h-16 rounded-lg object-cover flex-shrink-0 cursor-pointer" onClick={() => navigate(`/product/${item.id}`)} />
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-semibold cursor-pointer line-clamp-1" onClick={() => navigate(`/product/${item.id}`)}>{item.name}</div>
-                <div className="text-sm font-bold text-primary mt-0.5">{formatPrice(item.price)}</div>
-                <div className="flex items-center justify-between mt-1.5">
-                  <div className="flex items-center gap-1">
-                    <button className="w-7 h-7 rounded-md bg-muted flex items-center justify-center text-xs font-semibold border border-border" onClick={() => updateCartQty(item.id, item.qty - 1)} disabled={item.qty <= 1}>
-                      <Minus size={12} />
-                    </button>
-                    <span className="min-w-[20px] text-center font-semibold text-xs">{item.qty}</span>
-                    <button className="w-7 h-7 rounded-md bg-muted flex items-center justify-center text-xs font-semibold border border-border" onClick={() => updateCartQty(item.id, item.qty + 1)} disabled={item.qty >= item.maxQty}>
-                      <Plus size={12} />
-                    </button>
-                  </div>
-                  <span className="text-xs font-bold">{formatPrice(item.price * item.qty)}</span>
-                </div>
-              </div>
-              <button className="text-muted-foreground hover:text-destructive p-1 self-start" onClick={() => removeFromCart(item.id)}>
-                <Trash2 size={14} />
-              </button>
+        <div key={vendor} className="mb-4 animate-fadeUp">
+          <div className="flex items-center gap-2 px-1 py-2">
+            <div className="w-6 h-6 rounded-lg bg-orange-50 dark:bg-orange-950/30 flex items-center justify-center">
+              <Store size={12} className="text-orange-600" />
             </div>
-          ))}
+            <span className="text-xs font-semibold text-muted-foreground">{vendor}</span>
+            <span className="text-[10px] text-muted-foreground/60">({items.length})</span>
+          </div>
+
+          <div className="space-y-2">
+            {items.map(item => (
+              <div key={item.id} className="flex gap-3 p-3 bg-card rounded-2xl border border-border shadow-sm hover:shadow-md transition-shadow">
+                <img src={item.image} alt={item.nameEn}
+                  className="w-20 h-20 rounded-xl object-cover flex-shrink-0 cursor-pointer"
+                  onClick={() => navigate(`/product/${item.id}`)} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-semibold line-clamp-1 cursor-pointer hover:text-primary transition-colors"
+                    onClick={() => navigate(`/product/${item.id}`)}>
+                    {item.name}
+                  </div>
+                  <div className="text-sm font-bold text-primary mt-1">{formatPrice(item.price)}</div>
+                  <div className="flex items-center justify-between mt-2">
+                    <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
+                      <button className="w-7 h-7 rounded-md flex items-center justify-center text-xs font-semibold hover:bg-card transition-colors"
+                        onClick={() => updateCartQty(item.id, item.qty - 1)} disabled={item.qty <= 1}>
+                        <Minus size={12} />
+                      </button>
+                      <span className="min-w-[22px] text-center font-bold text-xs">{item.qty}</span>
+                      <button className="w-7 h-7 rounded-md flex items-center justify-center text-xs font-semibold hover:bg-card transition-colors"
+                        onClick={() => updateCartQty(item.id, item.qty + 1)} disabled={item.qty >= item.maxQty}>
+                        <Plus size={12} />
+                      </button>
+                    </div>
+                    <span className="text-xs font-bold">{formatPrice(item.price * item.qty)}</span>
+                  </div>
+                </div>
+                <button className="text-muted-foreground hover:text-destructive p-1 self-start transition-colors"
+                  onClick={() => { removeFromCart(item.id); toast('Item removed', 'info'); }}>
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       ))}
 
       {/* Summary */}
-      <div className="bg-card rounded-xl border border-border p-4 shadow-sm">
-        <div className="flex justify-between py-1 text-xs text-muted-foreground">
-          <span>{t('total', language)}</span>
-          <span className="text-lg font-bold text-primary">{formatPrice(total)}</span>
+      <div className="bg-card rounded-2xl border border-border p-4 shadow-sm animate-fadeUp">
+        <div className="space-y-2 mb-3">
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>{t('subtotal', language)}</span>
+            <span>{formatPrice(total)}</span>
+          </div>
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>{t('delivery', language)}</span>
+            <span className="text-green-600 font-medium">{t('free', language)}</span>
+          </div>
+          <div className="border-t border-border pt-2 flex justify-between text-sm font-bold">
+            <span>{t('total', language)}</span>
+            <span className="text-primary text-lg">{formatPrice(total)}</span>
+          </div>
         </div>
-        <button className="w-full mt-3 py-3 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-lg text-sm font-semibold shadow hover:shadow-md active:scale-98 transition-all" onClick={() => navigate('/checkout')}>
+        <button
+          className="w-full py-3.5 bg-gradient-to-r from-green-600 to-emerald-500 text-white rounded-2xl text-sm font-bold shadow-lg hover:shadow-xl hover:scale-[1.01] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+          onClick={() => navigate('/checkout')}
+        >
           ✅ {t('proceedCheckout', language)}
+          <ChevronRight size={16} />
         </button>
-        <button className="w-full mt-2 py-2.5 border border-border rounded-lg text-xs text-muted-foreground hover:bg-muted transition-colors" onClick={clearCart}>
+        <button
+          className="w-full mt-2 py-2.5 rounded-xl text-xs text-muted-foreground hover:bg-muted transition-colors"
+          onClick={() => { clearCart(); toast('Cart cleared', 'info'); }}
+        >
           🗑️ {t('clearAll', language)}
         </button>
       </div>
