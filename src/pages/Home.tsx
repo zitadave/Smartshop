@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useState } from 'react';
+import { useMemo, useCallback, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/stores/AppStore';
 import { Hero } from '@/components/ui/Hero';
@@ -10,21 +10,25 @@ import { CardSkeleton } from '@/components/ui/Skeletons';
 import { showQuickView } from '@/components/ui/QuickView';
 import { CATEGORIES } from '@/types';
 import { cn } from '@/lib/utils';
-import { Sparkles, Clock, Star, ChevronRight } from 'lucide-react';
+import { Sparkles, Clock, Star, ChevronRight, Zap, Megaphone } from 'lucide-react';
 import { useButtonAnimation, useWishlistAnimation } from '@/hooks/useAnimations';
 import { useCart } from '@/hooks/useCart';
 import { productsApi } from '@/lib/api';
 import type { Product, CategoryId } from '@/types';
 import { toast } from '@/components/Toast';
+import FlashDealTimer, { useFlashDeals } from '@/components/features/FlashDealTimer';
+import BroadcastBanner from '@/components/features/BroadcastBanner';
 
 export default function Home() {
   const navigate = useNavigate();
   const store = useStore();
-  const { products, language, addRecentView, recentViews, isInWishlist, toggleWishlist } = store;
+  const { products, language, addRecentView, recentViews, isInWishlist, toggleWishlist, settings } = store;
   const cart = useCart();
   const btnAnim = useButtonAnimation();
   const wishAnim = useWishlistAnimation();
   const [activeCat, setActiveCat] = useState<CategoryId>('all');
+
+  const activeDeals = useFlashDeals(settings);
 
   const topProducts = useMemo(
     () => [...products].sort((a, b) => (b.soldCount || 0) - (a.soldCount || 0)).slice(0, 8),
@@ -52,6 +56,11 @@ export default function Home() {
       .slice(0, 8);
   }, [products, recentViews]);
 
+  const flashProducts = useMemo(() => {
+    const dealProductIds = new Set(activeDeals.map(d => d.productId));
+    return products.filter(p => dealProductIds.has(p.id));
+  }, [products, activeDeals]);
+
   const handleAdd = useCallback((e: React.MouseEvent, product: Product) => {
     e.stopPropagation();
     btnAnim.trigger(product.id);
@@ -76,16 +85,41 @@ export default function Home() {
     } catch { toast('Refresh failed', 'error'); }
   }, []);
 
-  const handleLongPress = useCallback((product: Product) => {
-    showQuickView(product);
-  }, []);
-
   return (
     <div className="pb-6">
       <PullToRefresh onRefresh={handleRefresh}>
       <Hero productCount={products.length} topRating={topRating} />
 
-      {/* Quick Stat Cards */}
+      <div className="px-4 mt-2">
+        <BroadcastBanner />
+      </div>
+
+      {flashProducts.length > 0 && (
+        <section className="mt-2 animate-fadeUp">
+          <SectionHeader
+            icon={<Zap size={15} className="text-white" />}
+            title="⚡ Flash Deals"
+            subtitle="Limited time offers - Hurry!"
+            gradient="from-orange-500 to-red-600"
+          />
+          <HorizontalScroll>
+            {flashProducts.map((p) => {
+              const deal = activeDeals.find(d => d.productId === p.id);
+              return (
+                <div key={p.id} className="relative flex-shrink-0 w-48">
+                  <ProductCard product={p} variant="mini"
+                    onAdd={handleAdd} onWish={handleWish}
+                    addingId={btnAnim.activeId} wishAnimId={wishAnim.activeId} />
+                  <div className="absolute top-0 left-0 right-0 p-1">
+                    <FlashDealTimer endTime={deal?.endTime || 0} discount={deal?.discount} compact />
+                  </div>
+                </div>
+              );
+            })}
+          </HorizontalScroll>
+        </section>
+      )}
+
       <div className="flex gap-3 px-4 -mt-5 mb-3 relative z-20">
         {[
           { icon: '🛍️', label: 'Best Seller', val: topProducts[0]?.nameEn || 'Loading...', gradient: 'from-amber-500 via-orange-500 to-red-500' },
@@ -104,13 +138,11 @@ export default function Home() {
         ))}
       </div>
 
-      {/* Category Pills */}
       <div className="px-4 py-4">
         <div className="flex gap-2.5 overflow-x-auto scrollbar-none snap-x">
           {CATEGORIES.map(cat => (
             <button key={cat.id}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-medium whitespace-nowrap border transition-all duration-300 flex-shrink-0 snap-start hover-lift',
+              className={cn('flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-medium whitespace-nowrap border transition-all duration-300 flex-shrink-0 snap-start hover-lift',
                 activeCat === cat.id
                   ? 'bg-primary text-white border-primary shadow-xl shadow-primary/20 scale-105'
                   : 'bg-card text-muted-foreground/70 border-border/60 hover:border-primary/30 hover:text-primary hover:bg-primary/5'
@@ -125,7 +157,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* AI Recommendations */}
       {recommendations.length > 0 && (
         <section className="animate-fadeUp">
           <SectionHeader
@@ -141,9 +172,8 @@ export default function Home() {
             }
           />
           <HorizontalScroll>
-            {recommendations.map((p, i) => (
+            {recommendations.map((p) => (
               <ProductCard key={p.id} product={p} variant="mini"
-                onClick={() => { addRecentView(p); navigate(`/product/${p.id}`); }}
                 onAdd={handleAdd} onWish={handleWish}
                 addingId={btnAnim.activeId} wishAnimId={wishAnim.activeId} />
             ))}
@@ -151,7 +181,6 @@ export default function Home() {
         </section>
       )}
 
-      {/* Recently Viewed */}
       {recents.length > 0 && (
         <section className="animate-fadeUp">
           <SectionHeader
@@ -160,9 +189,8 @@ export default function Home() {
             gradient="from-slate-500 to-slate-600"
           />
           <HorizontalScroll>
-            {recents.map((p, i) => (
+            {recents.map((p) => (
               <ProductCard key={p.id} product={p} variant="mini"
-                onClick={() => navigate(`/product/${p.id}`)}
                 onAdd={handleAdd} onWish={handleWish}
                 addingId={btnAnim.activeId} wishAnimId={wishAnim.activeId} />
             ))}
@@ -170,7 +198,6 @@ export default function Home() {
         </section>
       )}
 
-      {/* Featured Products */}
       <section className="mt-2 animate-fadeUp">
         <SectionHeader
           icon={<Star size={15} className="text-white" />}

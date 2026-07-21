@@ -12,7 +12,7 @@ export default function GiftCards() {
   const purchase = () => {
     if (amount < 50 || !phone) return alert('Amount min Br 50 and phone required');
     const code = 'GIFT-' + Date.now().toString(36).toUpperCase();
-    addGiftCard({ code, amount, phone, message, from: '', date: new Date().toISOString(), used: false });
+    addGiftCard({ code, balance: amount, initialBalance: amount, active: true, expiresAt: new Date(Date.now() + 365 * 86400000).toISOString(), createdAt: new Date().toISOString() });
     alert('🎁 Gift card purchased! Code: ' + code);
     navigate('/profile');
   };

@@ -2,7 +2,10 @@ import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/stores/AppStore';
 import { t } from '@/i18n/translations';
 import { formatPrice, cn } from '@/lib/utils';
-import { User, Package, Heart, ShoppingCart, Gift, LogOut, Moon, Sun, ChevronRight, Store, CreditCard } from 'lucide-react';
+import { User, Package, Heart, ShoppingCart, Gift, LogOut, Moon, Sun, ChevronRight, Store, CreditCard, Palette, Globe, TrendingDown, Bell, Megaphone } from 'lucide-react';
+import ThemePicker from '@/components/features/ThemePicker';
+import CurrencySelector from '@/components/features/CurrencySelector';
+import { ActivePriceAlerts } from '@/components/features/PriceDropAlert';
 
 const LANGUAGES = [
   { code: 'am' as const, label: '🇪🇹 አማርኛ' },
@@ -15,10 +18,10 @@ const LANGUAGES = [
 export default function Profile() {
   const navigate = useNavigate();
   const store = useStore();
-  const { profile, language, setLanguage, darkMode, setDarkMode, orders, wishlist, cart, followedVendors, loyaltyPoints, savedPayments } = store;
+  const { profile, language, setLanguage, darkMode, setDarkMode, orders, wishlist, cart, followedVendors, loyaltyPoints, savedPayments, preOrders, notifications } = store;
 
   const initials = profile.name ? profile.name.substring(0, 2).toUpperCase() : '?';
-  const ordCount = orders.length;
+  const ordCount = orders.length + preOrders.length;
   const cartCount = cart.reduce((s, i) => s + i.qty, 0);
 
   // Get followed vendors info from products
@@ -32,21 +35,29 @@ export default function Profile() {
 
   const menuItems = [
     { icon: '✏️', label: 'Edit Profile', onClick: () => { const n = prompt('Name:', profile.name); if (n && n.trim()) store.updateProfileName(n.trim()); } },
-    { icon: '📍', label: 'Saved Addresses', onClick: () => navigate('/profile') },
+    { icon: '📍', label: 'Saved Addresses', badge: store.savedAddresses.length, onClick: () => navigate('/profile') },
+    { icon: '💳', label: 'Payment Methods', badge: savedPayments.length, onClick: () => navigate('/profile') },
     { icon: '🎡', label: 'Game Center', onClick: () => navigate('/game') },
-    { icon: '📦', label: 'My Orders', onClick: () => navigate('/orders') },
-    { icon: '❤️', label: 'Wishlist', onClick: () => navigate('/wishlist') },
-    { icon: '🎁', label: 'Gift Cards', onClick: () => navigate('/gift-cards') },
-    { icon: '🤝', label: 'Referral', onClick: () => { const c = 'REF-' + (profile.name.substring(0, 3).toUpperCase() || 'USR'); navigator.clipboard.writeText(c); } },
+  ];
+
+  const shopItems = [
+    { icon: '📦', label: 'My Orders', badge: ordCount, onClick: () => navigate('/orders') },
+    { icon: '🚀', label: 'Pre-Orders', badge: preOrders.length, onClick: () => navigate('/orders') },
+    { icon: '❤️', label: 'Wishlist', badge: wishlist.length, onClick: () => navigate('/wishlist') },
+    { icon: '🎁', label: 'Gift Cards', badge: store.giftCards.length, onClick: () => navigate('/gift-cards') },
+    { icon: '📉', label: 'Price Alerts', badge: store.priceAlerts.length, onClick: () => {} },
+    { icon: '🔔', label: 'Notifications', badge: notifications.length, onClick: () => navigate('/profile') },
+  ];
+
+  const moreItems = [
     { icon: '🏪', label: 'Become a Vendor', onClick: () => navigate('/admin') },
-    { icon: '🔒', label: 'Privacy Policy', onClick: () => alert('Privacy content') },
-    { icon: '❓', label: 'FAQ', onClick: () => alert('FAQ content') },
-    { icon: '💬', label: 'Contact Us', onClick: () => alert('Contact content') },
+    { icon: '🤝', label: 'Referral', onClick: () => { const c = 'REF-' + (profile.name.substring(0, 3).toUpperCase() || 'USR'); navigator.clipboard.writeText(c); store.addNotification('🤝', 'Referral code copied!'); } },
+    { icon: '❓', label: 'Help & Support', onClick: () => {} },
   ];
 
   return (
     <div className="pb-4">
-      {/* Avatar */}
+      {/* Avatar & Profile */}
       <div className="text-center py-6 bg-card border-b border-border">
         <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-blue-700 text-white flex items-center justify-center text-xl font-bold mx-auto shadow-md">
           {initials}
@@ -83,6 +94,11 @@ export default function Profile() {
         <ChevronRight size={16} />
       </div>
 
+      {/* Price Alerts */}
+      <div className="mx-3 mt-3">
+        <ActivePriceAlerts />
+      </div>
+
       {/* Followed Shops */}
       {followedVendorNames.length > 0 && (
         <div className="mx-3 mt-3">
@@ -97,18 +113,49 @@ export default function Profile() {
         </div>
       )}
 
-      {/* Menu */}
-      <div className="mx-3 mt-3">
+      {/* Quick Menu */}
+      <div className="mx-3 mt-3 space-y-1">
         {menuItems.map((item, i) => (
-          <div key={i} className="flex items-center gap-3 px-3 py-2.5 bg-card rounded-lg mb-1 border border-border cursor-pointer hover:border-primary transition-colors" onClick={item.onClick}>
+          <div key={i} className="flex items-center gap-3 px-3 py-2.5 bg-card rounded-lg border border-border cursor-pointer hover:border-primary transition-colors" onClick={item.onClick}>
             <span className="text-base w-6 text-center">{item.icon}</span>
             <span className="text-xs font-medium flex-1">{item.label}</span>
+            {item.badge !== undefined && item.badge > 0 && (
+              <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-semibold">{item.badge}</span>
+            )}
             <ChevronRight size={14} className="text-muted-foreground" />
           </div>
         ))}
       </div>
 
-      {/* Language + Theme */}
+      {/* Shop Menu */}
+      <div className="mx-3 mt-3">
+        <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 px-1">Shopping</div>
+        <div className="space-y-1">
+          {shopItems.map((item, i) => (
+            <div key={i} className="flex items-center gap-3 px-3 py-2.5 bg-card rounded-lg border border-border cursor-pointer hover:border-primary transition-colors" onClick={item.onClick}>
+              <span className="text-base w-6 text-center">{item.icon}</span>
+              <span className="text-xs font-medium flex-1">{item.label}</span>
+              {item.badge !== undefined && item.badge > 0 && (
+                <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-semibold">{item.badge}</span>
+              )}
+              <ChevronRight size={14} className="text-muted-foreground" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Currency Selector */}
+      <div className="mx-3 mt-3">
+        <div className="bg-card rounded-xl border border-border p-3 mb-2">
+          <div className="flex items-center gap-2.5 mb-2">
+            <Globe size={16} className="text-primary" />
+            <span className="text-xs font-medium">Currency</span>
+          </div>
+          <CurrencySelector />
+        </div>
+      </div>
+
+      {/* Theme + Language */}
       <div className="mx-3 mt-3">
         <div className="bg-card rounded-xl border border-border p-3 mb-2">
           <div className="flex items-center gap-2.5 mb-2">
@@ -123,10 +170,13 @@ export default function Profile() {
             {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.label}</option>)}
           </select>
         </div>
-        <div className="bg-card rounded-xl border border-border p-3">
+        <div className="bg-card rounded-xl border border-border p-3 mb-2">
           <div className="flex items-center gap-2.5 mb-2">
-            <span className="text-base">🎨</span>
-            <span className="text-xs font-medium">{'Theme'}</span>
+            <Palette size={16} className="text-primary" />
+            <span className="text-xs font-medium">Theme</span>
+          </div>
+          <div className="flex gap-2 mb-2">
+            <ThemePicker />
           </div>
           <div className="flex gap-2">
             <button className={cn('flex-1 py-2 rounded-lg text-[10px] font-medium border transition-all', !darkMode ? 'bg-primary text-white border-primary' : 'bg-card text-muted-foreground border-border')} onClick={() => setDarkMode(false)}>☀️ {t('light', language)}</button>
@@ -135,9 +185,20 @@ export default function Profile() {
         </div>
       </div>
 
+      {/* More Menu */}
+      <div className="mx-3 mt-1 space-y-1">
+        {moreItems.map((item, i) => (
+          <div key={i} className="flex items-center gap-3 px-3 py-2.5 bg-card rounded-lg border border-border cursor-pointer hover:border-primary transition-colors" onClick={item.onClick}>
+            <span className="text-base w-6 text-center">{item.icon}</span>
+            <span className="text-xs font-medium flex-1">{item.label}</span>
+            <ChevronRight size={14} className="text-muted-foreground" />
+          </div>
+        ))}
+      </div>
+
       {/* Logout */}
       <div className="mx-3 mt-3 mb-6">
-        <div className="flex items-center gap-3 px-3 py-2.5 bg-card rounded-lg border border-border cursor-pointer hover:border-destructive/50 transition-colors" onClick={() => { store.setProfile({ name: '', phone: '', registered: false, joinedAt: '' }); }}>
+        <div className="flex items-center gap-3 px-3 py-2.5 bg-card rounded-lg border border-border cursor-pointer hover:border-destructive/50 transition-colors" onClick={() => { store.setProfile({ name: '', phone: '', email: '', registered: false, joinedAt: '' }); }}>
           <span className="text-base w-6 text-center text-destructive">🚪</span>
           <span className="text-xs font-medium flex-1 text-destructive">{t('logout', language)}</span>
         </div>

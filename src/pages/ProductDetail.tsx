@@ -2,15 +2,19 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '@/stores/AppStore';
 import { t } from '@/i18n/translations';
-import { formatPrice, stars, getDeliveryEstimate, cn } from '@/lib/utils';
-import { ShoppingCart, Heart, Share2, Minus, Plus, ChevronLeft, ChevronRight, Store, Clock, Truck, TrendingDown, MessageCircle } from 'lucide-react';
+import { formatPrice, stars, getDeliveryEstimate, cn, calcDiscount, isFlashDealActive } from '@/lib/utils';
+import { ShoppingCart, Heart, Share2, Minus, Plus, ChevronLeft, ChevronRight, Store, Clock, Truck, TrendingDown, MessageCircle, Camera, Zap } from 'lucide-react';
+import PhotoReviewSection from '@/components/features/PhotoReview';
+import PriceDropAlert from '@/components/features/PriceDropAlert';
+import PreOrderBadge from '@/components/features/PreOrderBadge';
+import FlashDealTimer from '@/components/features/FlashDealTimer';
 
 export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const store = useStore();
   const product = store.products.find(p => p.id === Number(id));
-  const { language, addToCart, toggleWishlist, isInWishlist, addRecentView, toggleFollowVendor, isFollowingVendor, togglePriceAlert, hasPriceAlert } = store;
+  const { language, addToCart, toggleWishlist, isInWishlist, addRecentView, toggleFollowVendor, isFollowingVendor, togglePriceAlert, hasPriceAlert, settings } = store;
 
   const [qty, setQty] = useState(1);
   const [galleryIdx, setGalleryIdx] = useState(0);
@@ -32,6 +36,10 @@ export default function ProductDetail() {
   const wis = isInWishlist(product.id);
   const following = product.vendorId ? isFollowingVendor(product.vendorId) : false;
   const tracking = hasPriceAlert(product.id);
+
+  // Check if this product has a flash deal
+  const flashDeal = settings.flashSales?.[String(product.id)];
+  const isFlashProduct = flashDeal && isFlashDealActive(flashDeal);
 
   const related = store.products
     .filter(p => p.category === product.category && p.id !== product.id)
@@ -67,10 +75,18 @@ export default function ProductDetail() {
               </button>
             </>
           )}
-          {product.badge && (
-            <span className={cn('absolute top-2 left-2 px-2 py-1 rounded text-[9px] font-bold text-white', badgeCls(product.badge))}>
-              {badgeLbl(product.badge)}
-            </span>
+          <span className={cn('absolute top-2 left-2 px-2 py-1 rounded text-[9px] font-bold text-white', product.badge ? `bg-gradient-to-r ${badgeCls(product.badge)}` : '')}>
+            {badgeLbl(product.badge)}
+          </span>
+          {/* Flash deal badge */}
+          {isFlashProduct && (
+            <div className="absolute top-2 right-2">
+              <FlashDealTimer
+                endTime={flashDeal.end}
+                discount={calcDiscount(product.originalPrice || product.price, product.price)}
+                compact
+              />
+            </div>
           )}
         </div>
         {images.length > 1 && (
@@ -103,11 +119,33 @@ export default function ProductDetail() {
             <>
               <span className="text-xs text-muted-foreground line-through">{formatPrice(product.originalPrice)}</span>
               <span className="text-[10px] bg-destructive/10 text-destructive px-1.5 py-0.5 rounded font-bold">
-                -{Math.round((1 - product.price / product.originalPrice) * 100)}%
+                -{calcDiscount(product.originalPrice, product.price)}%
               </span>
             </>
           )}
         </div>
+
+        {/* Price Drop Alert */}
+        <div className="mt-2">
+          <PriceDropAlert
+            productId={product.id}
+            currentPrice={product.price}
+            productName={product.nameEn}
+          />
+        </div>
+
+        {/* Pre-Order Section */}
+        {product.isPreOrder && product.preOrderReleaseDate && (
+          <PreOrderBadge
+            productId={product.id}
+            deposit={product.preOrderDeposit || Math.round(product.price * 0.3)}
+            releaseDate={product.preOrderReleaseDate}
+            maxOrders={product.preOrderMax || 100}
+            currentOrders={product.preOrdered || 0}
+            price={product.price}
+            productName={product.nameEn}
+          />
+        )}
 
         {/* Description */}
         {(product.description || product.descriptionEn) && (
@@ -136,7 +174,7 @@ export default function ProductDetail() {
             <button className="w-9 h-9 rounded-md text-lg font-semibold flex items-center justify-center hover:bg-card transition-colors" onClick={() => setQty(Math.min(product.stockCount, qty + 1))}><Plus size={16} /></button>
           </div>
           <div className="flex gap-1.5">
-            <button className="flex-1 py-3 bg-primary text-white rounded-lg text-sm font-semibold hover:bg-primary/90 active:scale-95 transition-all flex items-center justify-center gap-1.5" onClick={() => { addToCart(product, qty); }}>
+            <button className="flex-1 py-3 bg-primary text-white rounded-lg text-sm font-semibold hover:bg-primary/90 active:scale-95 transition-all flex items-center justify-center gap-1.5" onClick={() => { addToCart(product, qty); store.addNotification('🛒', `Added ${product.nameEn} to cart`); }}>
               <ShoppingCart size={16} /> {t('addToCart', language)}
             </button>
             <button className={cn('py-3 px-4 rounded-lg border text-sm transition-all', wis ? 'bg-destructive/10 border-destructive/30 text-destructive' : 'border-border text-muted-foreground hover:bg-muted')} onClick={() => toggleWishlist(product)}>
@@ -146,56 +184,76 @@ export default function ProductDetail() {
               <Share2 size={16} />
             </button>
           </div>
-          {/* Express checkout */}
           <button className="w-full py-2.5 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-lg text-xs font-semibold shadow-sm hover:shadow active:scale-95 transition-all" onClick={() => { addToCart(product, qty); navigate('/checkout'); }}>
-            ⚡ {t('proceedCheckout', language)}
+            ⚡ Buy Now
           </button>
-          {/* Action buttons */}
-          <div className="flex gap-1.5 mt-1">
-            {product.vendorId && (
-              <button className={cn('flex-1 py-2 rounded-lg border text-[10px] font-medium transition-all', following ? 'bg-primary/10 border-primary/30 text-primary' : 'border-border text-muted-foreground hover:bg-muted')} onClick={() => toggleFollowVendor(product.vendorId!)}>
-                🏪 {following ? t('unfollow', language) : t('follow', language)} Shop
-              </button>
-            )}
-            <button className={cn('flex-1 py-2 rounded-lg border text-[10px] font-medium transition-all', tracking ? 'bg-primary/10 border-primary/30 text-primary' : 'border-border text-muted-foreground hover:bg-muted')} onClick={() => togglePriceAlert(product.id, product.price, product.nameEn)}>
-              <TrendingDown size={12} className="inline mr-0.5" /> {tracking ? 'Tracking' : t('trackPrice', language)}
-            </button>
-            <button className="flex-1 py-2 rounded-lg border border-border text-[10px] text-muted-foreground hover:bg-muted transition-all" onClick={() => { const q = prompt('Ask a question about ' + product.nameEn + ':'); if (q) { store.addNotification('❓', 'Q: ' + q); } }}>
-              <MessageCircle size={12} className="inline mr-0.5" /> {t('askQuestion', language)}
-            </button>
-          </div>
         </div>
 
-        {/* Also Bought */}
-        {alsoBought.length > 0 && (
-          <div className="mt-4">
-            <h3 className="text-xs font-bold mb-2">👥 Customers Also Bought</h3>
-            <div className="flex gap-2.5 overflow-x-auto scrollbar-none">
-              {alsoBought.map(p => (
-                <div key={p.id} className="flex-shrink-0 w-36 bg-card rounded-xl overflow-hidden border border-border cursor-pointer hover:shadow-md transition-all" onClick={() => navigate(`/product/${p.id}`)}>
-                  <img src={p.image} alt={p.nameEn} className="w-full h-24 object-cover" loading="lazy" />
-                  <div className="p-2">
-                    <div className="text-[10px] font-semibold line-clamp-1">{p.name}</div>
-                    <div className="text-xs font-bold text-primary">{formatPrice(p.price)}</div>
-                  </div>
+        {/* Vendor */}
+        {product.vendorId && (
+          <div className="mt-3 bg-card rounded-xl border border-border p-2.5 flex items-center gap-2.5 cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => navigate(`/store/${product.vendorId}`)}>
+            <Store size={20} className="text-primary" />
+            <div className="flex-1">
+              <div className="text-xs font-semibold">{product.vendorName}</div>
+              <div className="text-[9px] text-muted-foreground">View store</div>
+            </div>
+            <button className={cn('px-3 py-1.5 rounded-lg text-[10px] font-semibold transition-all', following ? 'bg-muted text-muted-foreground' : 'bg-primary text-white')} onClick={(e) => { e.stopPropagation(); toggleFollowVendor(product.vendorId!); }}>
+              {following ? 'Following' : '+ Follow'}
+            </button>
+          </div>
+        )}
+
+        {/* Colors & Sizes */}
+        {(product.colors?.length > 0 || product.sizes?.length > 0) && (
+          <div className="mt-3 space-y-2">
+            {product.colors?.length > 0 && (
+              <div>
+                <span className="text-[10px] font-semibold">Colors:</span>
+                <div className="flex gap-1.5 mt-1">
+                  {product.colors.map((c, i) => (
+                    <div key={i} className="w-6 h-6 rounded-full border-2 border-border cursor-pointer hover:scale-110 transition-transform" style={{ backgroundColor: c }} />
+                  ))}
                 </div>
+              </div>
+            )}
+            {product.sizes?.length > 0 && (
+              <div>
+                <span className="text-[10px] font-semibold">Sizes:</span>
+                <div className="flex gap-1.5 mt-1">
+                  {product.sizes.map((s, i) => (
+                    <span key={i} className="px-2.5 py-1 rounded-lg border border-border text-[10px] cursor-pointer hover:border-primary hover:text-primary transition-colors">{s}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Photo Reviews */}
+        <PhotoReviewSection productId={product.id} existingReviews={[]} />
+
+        {/* Features */}
+        {product.features?.length > 0 && (
+          <div className="mt-3">
+            <h3 className="text-[10px] font-semibold mb-1.5">✨ Features</h3>
+            <div className="flex flex-wrap gap-1">
+              {product.features.map((f, i) => (
+                <span key={i} className="text-[9px] bg-muted px-2 py-1 rounded-full text-muted-foreground">{f}</span>
               ))}
             </div>
           </div>
         )}
 
-        {/* Related */}
+        {/* Related Products */}
         {related.length > 0 && (
           <div className="mt-4">
-            <h3 className="text-xs font-bold mb-2">🔗 {t('recentlyViewed', language)}</h3>
-            <div className="flex gap-2.5 overflow-x-auto scrollbar-none">
+            <h3 className="text-xs font-semibold mb-2">🔄 Related Products</h3>
+            <div className="grid grid-cols-2 gap-2.5">
               {related.map(p => (
-                <div key={p.id} className="flex-shrink-0 w-36 bg-card rounded-xl overflow-hidden border border-border cursor-pointer hover:shadow-md transition-all" onClick={() => navigate(`/product/${p.id}`)}>
-                  <img src={p.image} alt={p.nameEn} className="w-full h-24 object-cover" loading="lazy" />
-                  <div className="p-2">
-                    <div className="text-[10px] font-semibold line-clamp-1">{p.name}</div>
-                    <div className="text-xs font-bold text-primary">{formatPrice(p.price)}</div>
-                  </div>
+                <div key={p.id} className="bg-card rounded-xl border border-border p-2 cursor-pointer hover:shadow-md transition-all" onClick={() => navigate(`/product/${p.id}`)}>
+                  <img src={p.image} className="w-full h-24 object-cover rounded-lg mb-1.5" />
+                  <div className="text-[10px] font-semibold truncate">{p.nameEn}</div>
+                  <div className="text-[10px] font-bold text-primary">{formatPrice(p.price)}</div>
                 </div>
               ))}
             </div>
@@ -206,11 +264,26 @@ export default function ProductDetail() {
   );
 }
 
-function badgeCls(b: string): string {
-  const m: Record<string, string> = { sale: 'bg-destructive', 'best-seller': 'bg-purple-600', new: 'bg-green-600', hot: 'bg-orange-500', popular: 'bg-blue-600', premium: 'bg-slate-800', 'big-deal': 'bg-red-700', educational: 'bg-teal-600' };
-  return m[b] || 'bg-destructive';
+function badgeCls(badge: string): string {
+  const map: Record<string, string> = {
+    sale: 'from-red-500 to-rose-500',
+    hot: 'from-orange-500 to-amber-500',
+    new: 'from-emerald-500 to-green-500',
+    'best-seller': 'from-purple-500 to-violet-500',
+    popular: 'from-blue-500 to-sky-500',
+    premium: 'from-slate-700 to-slate-600',
+    'big-deal': 'from-red-600 to-rose-600',
+    educational: 'from-teal-500 to-emerald-500',
+    'pre-order': 'from-blue-600 to-indigo-600',
+  };
+  return map[badge] || '';
 }
-function badgeLbl(b: string): string {
-  const m: Record<string, string> = { sale: 'SALE', hot: 'HOT', new: 'NEW', 'best-seller': 'BEST SELLER', popular: 'POPULAR', premium: 'PREMIUM', 'big-deal': 'BIG DEAL', educational: 'EDUCATIONAL' };
-  return m[b] || b;
+
+function badgeLbl(badge: string): string {
+  const map: Record<string, string> = {
+    sale: 'SALE', hot: 'HOT', new: 'NEW', 'best-seller': 'BEST SELLER',
+    popular: 'POPULAR', premium: 'PREMIUM', 'big-deal': 'BIG DEAL',
+    educational: 'EDUCATIONAL', 'pre-order': 'PRE-ORDER',
+  };
+  return map[badge] || badge;
 }

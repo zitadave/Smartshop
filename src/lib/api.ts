@@ -1,7 +1,6 @@
 /**
  * Smart Shop API Client
  * Works with any backend: Render, Cloudflare Workers, or local dev server
- * Set VITE_API_URL env var in Cloudflare Pages dashboard
  */
 
 const API_BASE = 'https://smartshop-api.zitadave61.workers.dev';
@@ -13,22 +12,17 @@ async function request<T = any>(path: string, options: RequestInit = {}): Promis
     ...(options.headers as Record<string, string> || {}),
   };
 
-  // For FormData, remove Content-Type (browser sets it with boundary)
   if (options.body instanceof FormData) {
     delete headers['Content-Type'];
   }
 
-  const res = await fetch(url, {
-    ...options,
-    headers,
-  });
+  const res = await fetch(url, { ...options, headers });
 
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`API Error ${res.status}: ${text}`);
   }
 
-  // Check if JSON
   const contentType = res.headers.get('content-type');
   if (contentType && contentType.includes('application/json')) {
     return res.json();
@@ -108,4 +102,52 @@ export const analyticsApi = {
 
 export const broadcastApi = {
   send: (message: string) => request<{ success: boolean; sent: number; total: number }>('/api/broadcast', { method: 'POST', body: JSON.stringify({ message }) }),
+};
+
+// ==================== PHOTO REVIEWS ====================
+
+export const reviewsApi = {
+  list: (productId?: number) => request<{ reviews: any[] }>(`/api/reviews${productId ? `?productId=${productId}` : ''}`),
+  create: (data: { productId: number; rating: number; text: string; images?: string[]; userName?: string }) =>
+    request<{ success: boolean; review: any }>('/api/reviews', { method: 'POST', body: JSON.stringify(data) }),
+  delete: (reviewId: string) => request<{ success: boolean }>(`/api/reviews/${reviewId}`, { method: 'DELETE' }),
+};
+
+// ==================== PRE-ORDERS ====================
+
+export const preOrdersApi = {
+  create: (data: { productId: number; quantity: number; deposit: number; phone: string; name: string }) =>
+    request<{ success: boolean; preOrder: any }>('/api/pre-orders', { method: 'POST', body: JSON.stringify(data) }),
+  list: () => request<{ preOrders: any[] }>('/api/pre-orders'),
+  cancel: (id: number) => request<{ success: boolean }>(`/api/pre-orders/${id}/cancel`, { method: 'POST' }),
+};
+
+// ==================== CURRENCY RATES ====================
+
+export const currencyApi = {
+  getRates: () => request<{ rates: Record<string, number>; base: string }>('/api/currency/rates'),
+};
+
+// ==================== RECEIPTS ====================
+
+export const receiptsApi = {
+  generate: (orderNumber: string) => request<{ success: boolean; receiptUrl: string }>(`/api/receipts/${orderNumber}`, { method: 'POST' }),
+  get: (orderNumber: string) => request<{ success: boolean; receipt: any }>(`/api/receipts/${orderNumber}`),
+};
+
+// ==================== FLASH DEALS ====================
+
+export const flashDealsApi = {
+  list: () => request<{ deals: any[] }>('/api/flash-deals'),
+  create: (data: { productId: number; endTime: number; discount?: number; maxQuantity?: number }) =>
+    request<{ success: boolean; deal: any }>('/api/flash-deals', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: any) => request<{ success: boolean }>(`/api/flash-deals/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: number) => request<{ success: boolean }>(`/api/flash-deals/${id}`, { method: 'DELETE' }),
+};
+
+// ==================== ORDER TRACKING ====================
+
+export const trackingApi = {
+  get: (orderNumber: string) => request<{ success: boolean; tracking: any }>(`/api/tracking/${orderNumber}`),
+  update: (orderNumber: string, data: any) => request<{ success: boolean }>(`/api/tracking/${orderNumber}`, { method: 'PUT', body: JSON.stringify(data) }),
 };
