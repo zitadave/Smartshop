@@ -1,68 +1,81 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/stores/AppStore';
 import { formatPrice, cn, generateId } from '@/lib/utils';
-import { ChevronLeft, Share2, Copy, Star, TrendingUp, DollarSign, Link2, Users } from 'lucide-react';
+import { ChevronLeft, Share2, Copy, Star, TrendingUp, DollarSign, ShoppingCart } from 'lucide-react';
 import { toast } from '@/components/Toast';
 
-/** Affiliate referral system — users earn commission ONLY when someone buys via their link */
+/** Affiliate: each product has its OWN unique link. Commission ONLY on sale of that specific product. */
 export default function AffiliateProducts() {
   const navigate = useNavigate();
   const { products, settings, addNotification, addLoyaltyPoints } = useStore();
-  const [referralLink] = useState(() => {
-    // Generate unique referral code based on profile or random
+
+  // Generate a unique per-user affiliate code from profile name
+  const [userCode] = useState(() => {
     try {
-      const profile = JSON.parse(localStorage.getItem('ss_profile') || '{}');
-      return `https://moonlit-kheer-826ac2.netlify.app/?ref=${profile.name ? profile.name.substring(0, 4).toUpperCase() : 'SHOP' + Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-    } catch {
-      return `https://moonlit-kheer-826ac2.netlify.app/?ref=SHOP${generateId().substring(0, 4).toUpperCase()}`;
-    }
+      const p = JSON.parse(localStorage.getItem('ss_profile') || '{}');
+      return p.name ? p.name.substring(0, 4).toUpperCase() : 'AFF' + generateId().substring(0, 4).toUpperCase();
+    } catch { return 'AFF' + generateId().substring(0, 4).toUpperCase(); }
   });
 
-  const [stats, setStats] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('ss_affiliate_stats') || '{"clicks":0,"sales":0,"commission":0,"conversionRate":0}'); } 
-    catch { return { clicks: 0, sales: 0, commission: 0, conversionRate: 0 }; }
+  // Per-product stats persisted separately
+  const [productStats, setProductStats] = useState<Record<number, { clicks: number; sales: number; commission: number }>>(() => {
+    try { return JSON.parse(localStorage.getItem('ss_affiliate_product_stats') || '{}'); }
+    catch { return {}; }
+  });
+
+  const [totalStats, setTotalStats] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('ss_affiliate_totals') || '{"clicks":0,"sales":0,"commission":0}'); }
+    catch { return { clicks: 0, sales: 0, commission: 0 }; }
   });
 
   const commissionPercent = (settings as any)?.affiliateCommission || 10;
-  const affiliateEnabled = (settings as any)?.affiliateEnabled !== false;
 
-  const copyReferralLink = () => {
-    navigator.clipboard.writeText(referralLink);
-    // Track the click
-    const newStats = { ...stats, clicks: stats.clicks + 1, conversionRate: stats.sales > 0 ? Math.round((stats.sales / (stats.clicks + 1)) * 100) : 0 };
-    localStorage.setItem('ss_affiliate_stats', JSON.stringify(newStats));
-    setStats(newStats);
-    toast('📋 Referral link copied! You earn commission when someone buys through this link.', 'success');
+  // Save stats
+  const saveStats = (pid: number, newProdStats: any, newTotals: any) => {
+    localStorage.setItem('ss_affiliate_product_stats', JSON.stringify(newProdStats));
+    localStorage.setItem('ss_affiliate_totals', JSON.stringify(newTotals));
   };
 
-  const shareReferral = async () => {
-    // Just sharing — no commission. Commission only on sale.
+  const copyProductLink = (product: any) => {
+    const link = `https://moonlit-kheer-826ac2.netlify.app/product/${product.id}?ref=${userCode}`;
+    navigator.clipboard.writeText(link);
+    // Update stats
+    const prod = productStats[product.id] || { clicks: 0, sales: 0, commission: 0 };
+    const newProdStats = { ...productStats, [product.id]: { ...prod, clicks: prod.clicks + 1 } };
+    const newTotals = { ...totalStats, clicks: totalStats.clicks + 1 };
+    setProductStats(newProdStats);
+    setTotalStats(newTotals);
+    saveStats(product.id, newProdStats, newTotals);
+    toast(`📋 ${product.nameEn} link copied! Earn ${commissionPercent}% if it sells!`, 'success');
+  };
+
+  const shareProduct = async (product: any) => {
+    const link = `https://moonlit-kheer-826ac2.netlify.app/product/${product.id}?ref=${userCode}`;
     if (navigator.share) {
       try {
-        await navigator.share({
-          title: 'Smart Shop - Shop & Save!',
-          text: `Shop at Smart Shop Ethiopia! Use my referral link to start shopping: ${referralLink}`,
-          url: referralLink,
-        });
+        await navigator.share({ title: product.nameEn, text: `Check out ${product.nameEn} on Smart Shop!`, url: link });
       } catch {}
     } else {
-      copyReferralLink();
+      copyProductLink(product);
     }
   };
 
-  // Simulate a referral sale (for demo purposes)
-  const simulateSale = () => {
-    const commission = Math.round(Math.random() * 500 * (commissionPercent / 100));
-    const newStats = { ...stats, sales: stats.sales + 1, commission: stats.commission + commission, conversionRate: Math.round(((stats.sales + 1) / (stats.clicks || 1)) * 100) };
-    localStorage.setItem('ss_affiliate_stats', JSON.stringify(newStats));
-    setStats(newStats);
+  // Simulate a sale for a specific product
+  const simulateSale = (product: any) => {
+    const commission = Math.round(product.price * (commissionPercent / 100));
+    const prod = productStats[product.id] || { clicks: 0, sales: 0, commission: 0 };
+    const newProdStats = { ...productStats, [product.id]: { ...prod, sales: prod.sales + 1, commission: prod.commission + commission } };
+    const newTotals = { ...totalStats, sales: totalStats.sales + 1, commission: totalStats.commission + commission };
+    setProductStats(newProdStats);
+    setTotalStats(newTotals);
+    saveStats(product.id, newProdStats, newTotals);
     addLoyaltyPoints(Math.round(commission / 10));
-    addNotification('💰', `🎉 You earned Br ${commission} commission from a referral sale!`);
-    toast(`🎉 Congratulations! You earned Br ${commission} commission from a referral purchase!`, 'success');
+    addNotification('💰', `🎉 You earned Br ${commission} commission from ${product.nameEn} sale!`);
+    toast(`🎉 Br ${commission} earned from ${product.nameEn} referral sale!`, 'success');
   };
 
-  const topProducts = products.filter(p => p.inStock && p.rating >= 4).slice(0, 10);
+  const topProducts = products.filter(p => p.inStock && p.rating >= 3).slice(0, 12);
 
   return (
     <div className="px-3 pt-3 pb-4 max-w-lg mx-auto">
@@ -70,35 +83,17 @@ export default function AffiliateProducts() {
         <button onClick={() => navigate(-1)} className="p-1 hover:bg-muted rounded-lg transition-colors"><ChevronLeft size={20} /></button>
         <div>
           <h2 className="text-base font-bold">🤝 Affiliate Program</h2>
-          <p className="text-[9px] text-muted-foreground">Earn {commissionPercent}% commission on referred sales</p>
+          <p className="text-[9px] text-muted-foreground">Your code: <strong className="text-primary">{userCode}</strong> · Earn {commissionPercent}% per sale</p>
         </div>
-      </div>
-
-      {/* Referral Link Card */}
-      <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-2xl p-4 text-white mb-4 shadow-lg">
-        <h3 className="text-xs font-bold mb-1">Your Referral Link</h3>
-        <p className="text-[9px] opacity-80 mb-2">Share this link — you earn {commissionPercent}% commission when someone buys through it!</p>
-        <div className="bg-white/10 rounded-xl p-2.5 text-[10px] font-mono truncate mb-2">{referralLink}</div>
-        <div className="flex gap-2">
-          <button className="flex-1 py-2 bg-white/20 rounded-xl text-[10px] font-bold hover:bg-white/30 transition-all flex items-center justify-center gap-1" onClick={copyReferralLink}>
-            <Copy size={12} /> Copy Link
-          </button>
-          <button className="flex-1 py-2 bg-white/20 rounded-xl text-[10px] font-bold hover:bg-white/30 transition-all flex items-center justify-center gap-1" onClick={shareReferral}>
-            <Share2 size={12} /> Share
-          </button>
-        </div>
-        <p className="text-[8px] opacity-60 mt-2">
-          ⚠️ Commission is only earned when a purchase is made through your link. Sharing alone does not earn rewards.
-        </p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-4 gap-2 mb-4">
         {[
-          { icon: '📤', label: 'Link Clicks', val: stats.clicks, color: 'text-blue-600' },
-          { icon: '🛒', label: 'Sales', val: stats.sales, color: 'text-green-600' },
-          { icon: '💰', label: 'Commission', val: `Br ${stats.commission}`, color: 'text-emerald-600' },
-          { icon: '📊', label: 'Conversion', val: `${stats.conversionRate}%`, color: 'text-purple-600' },
+          { icon: '📤', label: 'Clicks', val: totalStats.clicks, color: 'text-blue-600' },
+          { icon: '🛒', label: 'Sales', val: totalStats.sales, color: 'text-green-600' },
+          { icon: '💰', label: 'Commission', val: `Br ${totalStats.commission}`, color: 'text-emerald-600' },
+          { icon: '📊', label: 'Conversion', val: totalStats.clicks > 0 ? `${Math.round((totalStats.sales / totalStats.clicks) * 100)}%` : '0%', color: 'text-purple-600' },
         ].map((s, i) => (
           <div key={i} className="bg-card rounded-xl border border-border p-2 text-center">
             <div className="text-sm">{s.icon}</div>
@@ -108,41 +103,62 @@ export default function AffiliateProducts() {
         ))}
       </div>
 
-      {/* Commission Calculator */}
-      <div className="bg-card rounded-xl border border-border p-3 mb-4">
-        <h3 className="text-xs font-semibold mb-2 flex items-center gap-1.5"><DollarSign size={14} className="text-green-500" /> Commission Calculator</h3>
-        <p className="text-[9px] text-muted-foreground mb-2">When someone buys through your link, you earn {commissionPercent}% of the sale.</p>
-        <div className="flex items-center gap-2 text-[10px]">
-          <span className="text-muted-foreground">Example:</span>
-          <span>Br 1,000 purchase</span>
-          <span className="text-green-600 font-bold">= Br {Math.round(1000 * commissionPercent / 100)} commission</span>
-        </div>
-        <p className="text-[9px] text-muted-foreground mt-1">Bonus: You also earn {Math.round(commissionPercent / 10)} loyalty points per Br 10 commission!</p>
+      {/* How it works */}
+      <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-2xl p-4 text-white mb-4 shadow-lg">
+        <h3 className="text-xs font-bold mb-1">How it Works</h3>
+        <ul className="text-[9px] opacity-90 space-y-1 mt-2">
+          <li>1️⃣ Tap any product below to copy its <strong>unique link</strong></li>
+          <li>2️⃣ Share that link with friends & followers</li>
+          <li>3️⃣ You earn <strong>{commissionPercent}% commission</strong> when <strong>that specific product sells</strong></li>
+        </ul>
+        <p className="text-[8px] opacity-60 mt-2">⚠️ Commission only on purchases of the shared product through your link</p>
+      </div>
+
+      {/* Per-Product Affiliate Links */}
+      <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1">
+        <TrendingUp size={12} /> Products — Tap to get unique affiliate link
+      </h3>
+
+      <div className="grid grid-cols-2 gap-2">
+        {topProducts.map(p => {
+          const stat = productStats[p.id];
+          return (
+            <div key={p.id} className="bg-card rounded-xl border border-border overflow-hidden hover:shadow-md transition-all">
+              <img src={p.image} className="w-full h-20 object-cover cursor-pointer" onClick={() => navigate(`/product/${p.id}`)} />
+              <div className="p-2">
+                <div className="text-[9px] font-semibold truncate">{p.nameEn}</div>
+                <div className="text-[9px] text-primary font-bold mt-0.5">{formatPrice(p.price)}</div>
+                <div className="text-[7px] text-muted-foreground">
+                  Earn ~Br {Math.round(p.price * commissionPercent / 100)}/sale
+                  {stat && stat.clicks > 0 && <span> · {stat.clicks} clicks</span>}
+                  {stat && stat.sales > 0 && <span className="text-green-600"> · {stat.sales} sold!</span>}
+                </div>
+                <div className="flex gap-1 mt-1.5">
+                  <button className="flex-1 py-1.5 bg-primary text-white rounded-lg text-[8px] font-semibold flex items-center justify-center gap-0.5"
+                    onClick={() => copyProductLink(p)}>
+                    <Copy size={9} /> Copy Link
+                  </button>
+                  <button className="p-1.5 rounded-lg border border-border hover:bg-muted transition-colors" onClick={() => shareProduct(p)}>
+                    <Share2 size={10} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Demo simulate */}
-      <div className="bg-amber-50 dark:bg-amber-950/20 rounded-xl border border-amber-200 dark:border-amber-800/30 p-3 mb-4">
-        <p className="text-[9px] text-amber-700 dark:text-amber-400">📢 Demo: Tap to simulate a referral sale (earns commission!)</p>
-        <button className="mt-2 px-3 py-1.5 bg-amber-500 text-white rounded-lg text-[9px] font-bold hover:bg-amber-600 transition-colors" onClick={simulateSale}>
-          🎯 Simulate Referral Sale
-        </button>
-      </div>
-
-      {/* Products you can promote */}
-      <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1">
-        <TrendingUp size={12} /> Products to Promote
-      </h3>
-      <div className="grid grid-cols-2 gap-2">
-        {topProducts.map(p => (
-          <div key={p.id} className="bg-card rounded-xl border border-border overflow-hidden hover:shadow-md transition-all">
-            <img src={p.image} className="w-full h-20 object-cover cursor-pointer" onClick={() => navigate(`/product/${p.id}`)} />
-            <div className="p-2">
-              <div className="text-[9px] font-semibold truncate">{p.nameEn}</div>
-              <div className="text-[9px] text-primary font-bold mt-0.5">{formatPrice(p.price)}</div>
-              <div className="text-[7px] text-muted-foreground mt-0.5">Earn ~Br {Math.round(p.price * commissionPercent / 100)}/sale</div>
-            </div>
-          </div>
-        ))}
+      <div className="bg-amber-50 dark:bg-amber-950/20 rounded-xl border border-amber-200 dark:border-amber-800/30 p-3 mt-4 mb-4">
+        <p className="text-[9px] text-amber-700 dark:text-amber-400">📢 Demo: Pick a product to simulate its sale (earns commission!)</p>
+        <div className="flex gap-1.5 mt-2 overflow-x-auto scrollbar-none">
+          {topProducts.slice(0, 4).map(p => (
+            <button key={p.id} className="px-2.5 py-1.5 bg-amber-500 text-white rounded-lg text-[8px] font-bold hover:bg-amber-600 whitespace-nowrap transition-colors flex items-center gap-1"
+              onClick={() => simulateSale(p)}>
+              <ShoppingCart size={8} /> {p.nameEn.substring(0, 12)}...
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );

@@ -23,7 +23,6 @@ const Compare = lazy(() => import('@/pages/Compare'));
 const Tracking = lazy(() => import('@/pages/Tracking'));
 const AdminRedirect = lazy(() => import('@/pages/AdminRedirect'));
 const AdminPanel = lazy(() => import('@/pages/admin/AdminPanel'));
-const GameCenter = lazy(() => import('@/pages/GameCenter'));
 const Storefront = lazy(() => import('@/pages/Storefront'));
 const SavedAddresses = lazy(() => import('@/pages/SavedAddresses'));
 const PaymentMethods = lazy(() => import('@/pages/PaymentMethods'));
@@ -124,8 +123,6 @@ export default function App() {
           <Route path="/gift-cards" element={<Suspense fallback={<PageLoader />}><GiftCards /></Suspense>} />
           <Route path="/compare" element={<Suspense fallback={<PageLoader />}><Compare /></Suspense>} />
           <Route path="/tracking" element={<Suspense fallback={<PageLoader />}><Tracking /></Suspense>} />
-          <Route path="/admin" element={<Suspense fallback={<PageLoader />}><AdminRedirect /></Suspense>} />
-          <Route path="/game" element={<Suspense fallback={<PageLoader />}><GameCenter /></Suspense>} />
           <Route path="/store/:vendorId" element={<Suspense fallback={<PageLoader />}><Storefront /></Suspense>} />
           <Route path="/addresses" element={<Suspense fallback={<PageLoader />}><SavedAddresses /></Suspense>} />
           <Route path="/payment-methods" element={<Suspense fallback={<PageLoader />}><PaymentMethods /></Suspense>} />
@@ -134,6 +131,7 @@ export default function App() {
           <Route path="/notifications" element={<Suspense fallback={<PageLoader />}><Notifications /></Suspense>} />
           <Route path="/price-alerts" element={<Suspense fallback={<PageLoader />}><PriceAlerts /></Suspense>} />
         </Route>
+        <Route path="/admin" element={<Suspense fallback={<PageLoader />}><AdminRedirect /></Suspense>} />
         <Route path="/admin-panel/*" element={<Suspense fallback={<PageLoader />}><AdminPanel /></Suspense>} />
         <Route path="/vendor/*" element={<Suspense fallback={<PageLoader />}><VendorDashboard /></Suspense>} />
       </Routes>

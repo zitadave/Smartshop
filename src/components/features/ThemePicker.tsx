@@ -50,33 +50,34 @@ export default function ThemePicker() {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 right-0 mt-1 bg-card border border-border rounded-xl shadow-xl z-50 p-2.5 w-56">
-            {/* Horizontal scrollable theme swatches - no grid to avoid overflow */}
-            <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1 mb-2">
+          <div className="absolute left-1/2 -translate-x-1/2 mt-1 bg-card border border-border rounded-xl shadow-xl z-50 p-3 w-64">
+            <div className="text-[10px] font-semibold mb-2">🎨 Choose Theme</div>
+            {/* Vertical 3 rows x 2 columns */}
+            <div className="grid grid-cols-2 gap-2 mb-3">
               {THEMES.map(theme => (
                 <button
                   key={theme.id}
                   className={cn(
-                    'flex flex-col items-center gap-1 p-1.5 rounded-lg border transition-all flex-shrink-0 w-14',
+                    'flex flex-col items-center gap-1 p-2 rounded-xl border transition-all',
                     themePreset === theme.id
-                      ? 'border-primary bg-primary/5'
+                      ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
                       : 'border-border hover:border-muted-foreground/30'
                   )}
                   onClick={() => applyTheme(theme.id)}
                 >
-                  <div className="flex gap-0.5">
+                  <div className="flex gap-1">
                     {theme.colors.map((c, i) => (
-                      <div key={i} className="w-3 h-3 rounded-full" style={{ backgroundColor: c }} />
+                      <div key={i} className="w-4 h-4 rounded-full" style={{ backgroundColor: c }} />
                     ))}
                   </div>
-                  <span className="text-[7px] font-medium truncate w-full text-center">{theme.icon}</span>
-                  {themePreset === theme.id && <Check size={6} className="text-primary" />}
+                  <span className="text-[8px] font-medium">{theme.icon} {theme.name}</span>
+                  {themePreset === theme.id && <Check size={8} className="text-primary" />}
                 </button>
               ))}
             </div>
 
             {/* Dark/Light */}
-            <div className="flex gap-1">
+            <div className="flex gap-1 border-t border-border pt-2">
               <button className={cn('flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-[9px] font-medium border transition-all', !darkMode ? 'border-primary bg-primary/5 text-primary' : 'border-border')}
                 onClick={() => setDarkMode(false)}><Sun size={10} /> Light</button>
               <button className={cn('flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-[9px] font-medium border transition-all', darkMode ? 'border-primary bg-primary/5 text-primary' : 'border-border')}
