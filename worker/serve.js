@@ -262,6 +262,8 @@ function renderProfile() {
 }
 
 // ===== HELPERS =====
+function quickAdd(id){const p=products.find(x=>x.id===id);if(p)addToCart(p);}
+function quickAdd(id){var p=products.find(function(x){return x.id===id;});if(p)addToCart(p);}
 function cardHTML(p) {
   const wis = wishlist.indexOf(p.id) >= 0;
   return \`<div class="card" onclick="openProduct(\${p.id})">
