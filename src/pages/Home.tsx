@@ -235,11 +235,16 @@ function MiniCard({ product, onClick, onAdd, onWish, index = 0, addingId, wishAn
             {badgeLabel(product.badge)}
           </span>
         )}
-        <button className="absolute top-2 right-2 w-8 h-8 rounded-xl bg-white/90 backdrop-blur-sm flex items-center justify-center text-xs z-20 shadow-sm hover:scale-110 active:scale-90 transition-all"
+        <button className="absolute top-2 right-2 w-7 h-7 rounded-lg bg-white/60 backdrop-blur-sm flex items-center justify-center text-[11px] z-20 shadow-sm hover:bg-white/85 hover:scale-110 active:scale-90 transition-all"
           onClick={onWish}>
-          <span className={cn('transition-all', isInWishlist(product.id) ? 'text-red-500' : 'text-muted-foreground', wishAnimId === product.id && 'animate-heartBeat')}>
+          <span className={cn('transition-all', isInWishlist(product.id) ? 'text-red-500' : 'text-gray-500', wishAnimId === product.id && 'animate-heartBeat')}>
             {isInWishlist(product.id) ? '❤️' : '♡'}
           </span>
+        </button>
+        <button
+          className="absolute top-[2.35rem] right-2 w-7 h-7 rounded-lg bg-white/60 backdrop-blur-sm flex items-center justify-center text-[11px] z-20 shadow-sm hover:bg-white/85 hover:scale-110 active:scale-90 transition-all"
+          onClick={onAdd}>
+          <ShoppingCart size={12} className={isAdding ? 'animate-cartBounce text-green-600' : 'text-gray-500'} />
         </button>
       </div>
       <div className="p-3">
@@ -250,13 +255,7 @@ function MiniCard({ product, onClick, onAdd, onWish, index = 0, addingId, wishAn
           <span className="text-base font-extrabold text-primary">{formatPrice(product.price)}</span>
           {product.originalPrice && <span className="text-[9px] text-muted-foreground line-through">{formatPrice(product.originalPrice)}</span>}
         </div>
-        <div className="flex items-center justify-end mt-2">
-          <button
-            className="w-7 h-7 rounded-lg flex items-center justify-center border border-border hover:bg-primary hover:text-white hover:border-primary transition-all"
-            onClick={onAdd}>
-            <ShoppingCart size={12} className={isAdding ? 'animate-cartBounce' : ''} />
-          </button>
-        </div>
+
       </div>
     </div>
   );
@@ -282,10 +281,15 @@ function ProductCard({ product, onAdd, onWish, addingId, wishAnimId }: any) {
             <span className="text-white text-xs font-extrabold bg-destructive px-3 py-1.5 rounded-lg shadow-lg">Sold Out</span>
           </div>
         )}
-        <button className="absolute top-2 right-2 w-8 h-8 rounded-xl bg-white/90 backdrop-blur-sm flex items-center justify-center text-xs z-20 shadow-sm hover:scale-110 active:scale-90 transition-all" onClick={onWish}>
-          <span className={cn('transition-all', isInWishlist(product.id) ? 'text-red-500' : 'text-muted-foreground', wishAnimId === product.id && 'animate-heartBeat')}>
+        <button className="absolute top-2 right-2 w-8 h-8 rounded-xl bg-white/60 backdrop-blur-sm flex items-center justify-center text-xs z-20 shadow-sm hover:bg-white/85 hover:scale-110 active:scale-90 transition-all" onClick={onWish}>
+          <span className={cn('transition-all', isInWishlist(product.id) ? 'text-red-500' : 'text-gray-500', wishAnimId === product.id && 'animate-heartBeat')}>
             {isInWishlist(product.id) ? '❤️' : '♡'}
           </span>
+        </button>
+        <button
+          className="absolute top-10 right-2 w-8 h-8 rounded-xl bg-white/60 backdrop-blur-sm flex items-center justify-center text-xs z-20 shadow-sm hover:bg-white/85 hover:scale-110 active:scale-90 transition-all"
+          onClick={onAdd}>
+          <ShoppingCart size={14} className={isAdding ? 'animate-cartBounce' : 'text-gray-500'} />
         </button>
       </div>
       <div className="p-3.5">
@@ -304,13 +308,7 @@ function ProductCard({ product, onAdd, onWish, addingId, wishAnimId }: any) {
             🏪 {product.vendorName}
           </div>
         )}
-        <div className="flex items-center justify-end mt-2">
-          <button
-            className="w-8 h-8 rounded-xl flex items-center justify-center border border-border hover:bg-primary hover:text-white hover:border-primary transition-all"
-            onClick={onAdd}>
-            <ShoppingCart size={14} className={isAdding ? 'animate-cartBounce' : ''} />
-          </button>
-        </div>
+
       </div>
     </div>
   );

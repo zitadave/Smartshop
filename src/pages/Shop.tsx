@@ -125,9 +125,14 @@ export default function Shop() {
                     <span className="text-white text-xs font-extrabold bg-destructive px-3 py-1.5 rounded-lg shadow-lg">Sold Out</span>
                   </div>
                 )}
-                <button className="absolute top-2 right-2 w-8 h-8 rounded-xl bg-white/90 backdrop-blur-sm flex items-center justify-center text-xs z-20 shadow-sm hover:scale-110 active:scale-90 transition-all"
+                <button className="absolute top-2 right-2 w-8 h-8 rounded-xl bg-white/60 backdrop-blur-sm flex items-center justify-center text-xs z-20 shadow-sm hover:bg-white/85 hover:scale-110 active:scale-90 transition-all"
                   onClick={e => { e.stopPropagation(); toggleWishlist(p); }}>
                   <span className={isInWishlist(p.id) ? 'text-red-500' : 'text-muted-foreground'}>{isInWishlist(p.id) ? '❤️' : '♡'}</span>
+                </button>
+                <button
+                  className="absolute top-10 right-2 w-8 h-8 rounded-xl bg-white/60 backdrop-blur-sm flex items-center justify-center text-xs z-20 shadow-sm hover:bg-white/85 hover:scale-110 active:scale-90 transition-all"
+                  onClick={e => handleAdd(e, p)}>
+                  <ShoppingCart size={14} className={addingId === p.id ? 'animate-cartBounce' : 'text-gray-500'} />
                 </button>
               </div>
               <div className="p-3.5">
@@ -140,13 +145,7 @@ export default function Shop() {
                     <span className="price-tag discount">-{Math.round((1 - p.price / p.originalPrice) * 100)}%</span></>}
                 </div>
                 {p.vendorName && <div className="mt-1.5 flex items-center gap-1 text-[8px] text-orange-600 bg-orange-50 dark:bg-orange-950/30 px-2 py-0.5 rounded-full w-fit">🏪 {p.vendorName}</div>}
-                <div className="flex items-center justify-end mt-2">
-                  <button
-                    className="w-8 h-8 rounded-xl flex items-center justify-center border border-border hover:bg-primary hover:text-white hover:border-primary transition-all"
-                    onClick={e => handleAdd(e, p)}>
-                    <ShoppingCart size={14} className={addingId === p.id ? 'animate-cartBounce' : ''} />
-                </button>
-              </div>
+
             </div>
             </div>
           ))}
