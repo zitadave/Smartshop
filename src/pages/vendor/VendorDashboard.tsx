@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/stores/AppStore';
 import { formatPrice, cn, generateId } from '@/lib/utils';
 import { Store, Package, ShoppingCart, TrendingUp, Settings, LogOut, Menu, X, BarChart3, Plus, Edit3, Eye, EyeOff } from 'lucide-react';
+import { toast } from '@/components/Toast';
 
 type VendorTab = 'overview' | 'products' | 'orders' | 'analytics' | 'settings';
 
@@ -122,12 +123,70 @@ function VendorOverview({ products }: { products: any[] }) {
 }
 
 function VendorProducts({ products }: { products: any[] }) {
+  const [showForm, setShowForm] = useState(false);
+  const [formData, setFormData] = useState({ nameEn: '', name: '', price: '', stockCount: '', category: 'electronics', description: '' });
+  const [adding, setAdding] = useState(false);
+
+  const handleAddProduct = async () => {
+    if (!formData.nameEn.trim() || !formData.price) return alert('Product name and price required');
+    setAdding(true);
+    try {
+      const { productsApi } = await import('@/lib/api');
+      await productsApi.create({
+        nameEn: formData.nameEn.trim(),
+        name: formData.name.trim() || formData.nameEn.trim(),
+        price: Number(formData.price),
+        stockCount: Number(formData.stockCount) || 10,
+        category: formData.category,
+        description: formData.description || '',
+        vendorId: 1,
+        vendorName: 'Your Store',
+        image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400',
+        images: ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400'],
+        inStock: true,
+        visible: true,
+      });
+      toast('✅ Product added to your store!', 'success');
+      setShowForm(false);
+      setFormData({ nameEn: '', name: '', price: '', stockCount: '', category: 'electronics', description: '' });
+    } catch {
+      toast('Failed to add product', 'error');
+    }
+    setAdding(false);
+  };
+
   return (
     <div className="animate-fadeUp">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-bold">📦 My Products ({products.length})</h2>
-        <button className="px-3 py-2 bg-primary text-white rounded-xl text-[10px] font-bold flex items-center gap-1"><Plus size={12} /> Add Product</button>
+        <button className="px-3 py-2 bg-primary text-white rounded-xl text-[10px] font-bold flex items-center gap-1 hover:bg-primary/90 transition-colors"
+          onClick={() => setShowForm(!showForm)}>
+          <Plus size={12} /> {showForm ? 'Cancel' : 'Add Product'}
+        </button>
       </div>
+
+      {showForm && (
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 mb-4 animate-slideUp">
+          <h3 className="text-sm font-bold mb-3">New Product</h3>
+          <div className="grid sm:grid-cols-2 gap-3 mb-3">
+            <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Product Name *</label><input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" placeholder="e.g. Wireless Headphones" value={formData.nameEn} onChange={e => setFormData({ ...formData, nameEn: e.target.value })} /></div>
+            <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Amharic Name</label><input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" placeholder="የምርት ስም" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} /></div>
+            <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Price (Br) *</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" placeholder="e.g. 1999" value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })} /></div>
+            <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Stock Count</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" placeholder="e.g. 50" value={formData.stockCount} onChange={e => setFormData({ ...formData, stockCount: e.target.value })} /></div>
+            <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Category</label>
+              <select className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
+                <option value="electronics">📱 Tech</option><option value="fashion">👗 Fashion</option><option value="home">🏠 Home</option><option value="beauty">💄 Beauty</option><option value="groceries">🍎 Food</option><option value="books">📚 Books</option>
+              </select>
+            </div>
+            <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Description</label><input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" placeholder="Brief description" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} /></div>
+          </div>
+          <button className="w-full py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold hover:shadow-lg transition-all flex items-center justify-center gap-1 disabled:opacity-50"
+            onClick={handleAddProduct} disabled={adding || !formData.nameEn.trim() || !formData.price}>
+            {adding ? 'Adding...' : <><Plus size={14} /> Add Product to Store</>}
+          </button>
+        </div>
+      )}
+
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
         <div className="divide-y divide-slate-100 dark:divide-slate-800">
           {products.map(p => (

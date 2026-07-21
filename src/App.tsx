@@ -5,10 +5,9 @@ import { productsApi, settingsApi } from '@/lib/api';
 import { initSentry } from '@/lib/sentry';
 import { initAnalytics, trackEvent } from '@/lib/analytics';
 import { registerSW } from '@/lib/sw';
-import { getSampleBroadcasts, getSampleFlashDeals, getSamplePhotoReviews } from '@/lib/seed';
+import { getSampleBroadcasts, getSampleFlashDeals } from '@/lib/seed';
 import Layout from '@/components/Layout';
 
-// ===== CODE SPLITTING — Lazy-load rarely-used pages =====
 const Home = lazy(() => import('@/pages/Home'));
 const Shop = lazy(() => import('@/pages/Shop'));
 const ProductDetail = lazy(() => import('@/pages/ProductDetail'));
@@ -31,6 +30,8 @@ const PaymentMethods = lazy(() => import('@/pages/PaymentMethods'));
 const HelpSupport = lazy(() => import('@/pages/HelpSupport'));
 const AffiliateProducts = lazy(() => import('@/pages/AffiliateProducts'));
 const VendorDashboard = lazy(() => import('@/pages/vendor/VendorDashboard'));
+const Notifications = lazy(() => import('@/pages/Notifications'));
+const PriceAlerts = lazy(() => import('@/pages/PriceAlerts'));
 
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-[60vh]">
@@ -41,73 +42,68 @@ const PageLoader = () => (
   </div>
 );
 
+/** Apply theme CSS variables globally */
+function applySavedTheme() {
+  // Dark mode
+  const dark = (() => { try { return JSON.parse(localStorage.getItem('ss_dark') || 'false'); } catch { return false; } })();
+  if (dark) document.documentElement.classList.add('dark');
+  else document.documentElement.classList.remove('dark');
+
+  // Theme preset
+  const themes: Record<string, { primary: string; accent: string }> = {
+    default: { primary: '#6C63FF', accent: '#8B5CF6' },
+    ocean: { primary: '#0EA5E9', accent: '#06B6D4' },
+    forest: { primary: '#10B981', accent: '#34D399' },
+    sunset: { primary: '#F59E0B', accent: '#F97316' },
+    midnight: { primary: '#6366F1', accent: '#818CF8' },
+    rose: { primary: '#EC4899', accent: '#F43F5E' },
+  };
+  const preset = (() => { try { return JSON.parse(localStorage.getItem('ss_theme') || '"default"'); } catch { return 'default'; } })();
+  const theme = themes[preset as keyof typeof themes] || themes.default;
+  const accent = (() => { try { return JSON.parse(localStorage.getItem('ss_accent') || '""'); } catch { return ''; } })();
+
+  const root = document.documentElement;
+  root.style.setProperty('--primary-hex', theme.primary);
+  root.style.setProperty('--accent-hex', accent || theme.accent);
+  // Also set Tailwind-compatible CSS variables
+  const primaryColor = accent || theme.primary;
+  root.style.setProperty('--color-primary', primaryColor);
+  root.style.setProperty('--color-ring', primaryColor + '40');
+}
+
 export default function App() {
   const { darkMode, setProducts, setSettings, settings, products } = useStore();
 
-  useEffect(() => {
-    initSentry();
-    initAnalytics();
-    registerSW();
-  }, []);
+  useEffect(() => { initSentry(); initAnalytics(); registerSW(); }, []);
 
-  // Apply dark mode
+  // Apply theme on mount
+  useEffect(() => { applySavedTheme(); }, []);
+
+  // Apply dark mode changes
   useEffect(() => {
     if (darkMode) document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
   }, [darkMode]);
 
-  // Apply theme preset
-  useEffect(() => {
-    const preset = localStorage.getItem('ss_theme');
-    if (preset) {
-      const themes: Record<string, { primary: string; accent: string }> = {
-        default: { primary: '#6C63FF', accent: '#8B5CF6' },
-        ocean: { primary: '#0EA5E9', accent: '#06B6D4' },
-        forest: { primary: '#10B981', accent: '#34D399' },
-        sunset: { primary: '#F59E0B', accent: '#F97316' },
-        midnight: { primary: '#6366F1', accent: '#818CF8' },
-        rose: { primary: '#EC4899', accent: '#F43F5E' },
-      };
-      const theme = themes[preset as keyof typeof themes];
-      if (theme) {
-        document.documentElement.style.setProperty('--accent-color', theme.accent);
-        document.documentElement.style.setProperty('--primary-color', theme.primary);
-      }
-    }
-    const accent = localStorage.getItem('ss_accent');
-    if (accent) {
-      document.documentElement.style.setProperty('--accent-color', accent);
-    }
-  }, []);
-
-  // Load initial data and seed sample content
+  // Load data
   useEffect(() => {
     productsApi.list().then(d => {
-      if (d?.products) {
-        setProducts(d.products);
-        trackEvent('page_view', { page: 'home', products: d.products.length });
-      }
+      if (d?.products) { setProducts(d.products); trackEvent('page_view', { page: 'home', products: d.products.length }); }
     }).catch(() => {});
     settingsApi.get().then(d => {
       if (d?.settings) {
         const s = d.settings;
-        if (!s.broadcastMessages || s.broadcastMessages.length === 0) {
-          s.broadcastMessages = getSampleBroadcasts();
-        }
+        if (!s.broadcastMessages || s.broadcastMessages.length === 0) s.broadcastMessages = getSampleBroadcasts();
         setSettings(s);
       }
     }).catch(() => {});
   }, []);
 
-  // Seed flash deals once products are loaded
+  // Seed flash deals
   useEffect(() => {
-    if (products.length > 0) {
-      const hasFlashDeals = settings.flashSales && Object.keys(settings.flashSales).length > 0;
-      if (!hasFlashDeals) {
-        const productIds = products.slice(0, 5).map(p => p.id);
-        const deals = getSampleFlashDeals(productIds);
-        setSettings({ ...settings, flashSales: deals });
-      }
+    if (products.length > 0 && (!settings.flashSales || Object.keys(settings.flashSales).length === 0)) {
+      const productIds = products.slice(0, 5).map(p => p.id);
+      setSettings({ ...settings, flashSales: getSampleFlashDeals(productIds) });
     }
   }, [products.length]);
 
@@ -131,13 +127,13 @@ export default function App() {
           <Route path="/admin" element={<Suspense fallback={<PageLoader />}><AdminRedirect /></Suspense>} />
           <Route path="/game" element={<Suspense fallback={<PageLoader />}><GameCenter /></Suspense>} />
           <Route path="/store/:vendorId" element={<Suspense fallback={<PageLoader />}><Storefront /></Suspense>} />
-          {/* NEW PAGES */}
           <Route path="/addresses" element={<Suspense fallback={<PageLoader />}><SavedAddresses /></Suspense>} />
           <Route path="/payment-methods" element={<Suspense fallback={<PageLoader />}><PaymentMethods /></Suspense>} />
           <Route path="/help" element={<Suspense fallback={<PageLoader />}><HelpSupport /></Suspense>} />
           <Route path="/affiliate" element={<Suspense fallback={<PageLoader />}><AffiliateProducts /></Suspense>} />
+          <Route path="/notifications" element={<Suspense fallback={<PageLoader />}><Notifications /></Suspense>} />
+          <Route path="/price-alerts" element={<Suspense fallback={<PageLoader />}><PriceAlerts /></Suspense>} />
         </Route>
-        {/* Admin & Vendor pages without Layout */}
         <Route path="/admin-panel/*" element={<Suspense fallback={<PageLoader />}><AdminPanel /></Suspense>} />
         <Route path="/vendor/*" element={<Suspense fallback={<PageLoader />}><VendorDashboard /></Suspense>} />
       </Routes>

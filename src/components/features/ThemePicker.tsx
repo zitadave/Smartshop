@@ -13,19 +13,29 @@ const THEMES: { id: ThemePreset; name: string; colors: string[]; icon: string }[
   { id: 'rose', name: 'Rose', colors: ['#EC4899', '#F43F5E', '#DB2777'], icon: '🌹' },
 ];
 
+/** Apply theme to the document root */
+export function applyThemeToDocument(preset: ThemePreset, accentColor?: string) {
+  const theme = THEMES.find(t => t.id === preset) || THEMES[0];
+  const root = document.documentElement;
+  const primary = accentColor || theme.colors[0];
+  const accent = accentColor || theme.colors[1];
+  
+  root.style.setProperty('--color-primary', primary);
+  root.style.setProperty('--color-ring', primary + '40');
+  root.style.setProperty('--color-primary-foreground', '#ffffff');
+  root.style.setProperty('--primary', primary);
+  root.style.setProperty('--accent-color', accent);
+  root.style.setProperty('--primary-hex', primary);
+  root.style.setProperty('--accent-hex', accent);
+}
+
 export default function ThemePicker() {
   const { themePreset, setThemePreset, darkMode, setDarkMode } = useStore();
   const [open, setOpen] = useState(false);
 
   const applyTheme = (preset: ThemePreset) => {
     setThemePreset(preset);
-    const theme = THEMES.find(t => t.id === preset);
-    if (theme) {
-      document.documentElement.style.setProperty('--primary', theme.colors[0]);
-      document.documentElement.style.setProperty('--primary-foreground', '#ffffff');
-      document.documentElement.style.setProperty('--accent-color', theme.colors[1]);
-      document.documentElement.style.setProperty('--ring', theme.colors[0] + '40');
-    }
+    applyThemeToDocument(preset);
   };
 
   return (
@@ -46,7 +56,6 @@ export default function ThemePicker() {
               <Palette size={12} /> Theme Settings
             </div>
 
-            {/* Theme Presets */}
             <div className="grid grid-cols-3 gap-1.5 mb-3">
               {THEMES.map(theme => (
                 <button
@@ -70,26 +79,15 @@ export default function ThemePicker() {
               ))}
             </div>
 
-            {/* Dark/Light Toggle */}
             <div className="flex gap-1.5">
               <button
-                className={cn(
-                  'flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[10px] font-medium border transition-all',
-                  !darkMode ? 'border-primary bg-primary/5 text-primary' : 'border-border'
-                )}
+                className={cn('flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[10px] font-medium border transition-all', !darkMode ? 'border-primary bg-primary/5 text-primary' : 'border-border')}
                 onClick={() => setDarkMode(false)}
-              >
-                <Sun size={12} /> Light
-              </button>
+              ><Sun size={12} /> Light</button>
               <button
-                className={cn(
-                  'flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[10px] font-medium border transition-all',
-                  darkMode ? 'border-primary bg-primary/5 text-primary' : 'border-border'
-                )}
+                className={cn('flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[10px] font-medium border transition-all', darkMode ? 'border-primary bg-primary/5 text-primary' : 'border-border')}
                 onClick={() => setDarkMode(true)}
-              >
-                <Moon size={12} /> Dark
-              </button>
+              ><Moon size={12} /> Dark</button>
             </div>
           </div>
         </>

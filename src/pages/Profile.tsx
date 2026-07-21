@@ -67,8 +67,8 @@ export default function Profile() {
       items: [
         { icon: '🎡', label: 'Game Center', onClick: () => navigate('/game') },
         { icon: '🏪', label: 'Vendor Dashboard', onClick: () => navigate('/vendor') },
-        { icon: '📉', label: 'Price Alerts', badge: store.priceAlerts.length, onClick: () => {} },
-        { icon: '🔔', label: 'Notifications', badge: notifications.length, onClick: () => store.clearNotifications() },
+        { icon: '📉', label: 'Price Alerts', badge: store.priceAlerts.length, onClick: () => navigate('/price-alerts') },
+        { icon: '🔔', label: 'Notifications', badge: notifications.length, onClick: () => navigate('/notifications') },
         { icon: '❓', label: 'Help & Support', onClick: () => navigate('/help') },
       ]
     },

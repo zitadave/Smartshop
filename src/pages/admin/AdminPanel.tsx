@@ -13,7 +13,7 @@ import {
   Gamepad2, Coins, Smartphone, ExternalLink
 } from 'lucide-react';
 
-type Tab = 'overview' | 'products' | 'orders' | 'vendors' | 'marketplace' | 'reviews' | 'broadcast' | 'flashdeals' | 'preorders' | 'tracking' | 'themes' | 'games' | 'coupons' | 'settings';
+type Tab = 'overview' | 'products' | 'orders' | 'vendors' | 'marketplace' | 'reviews' | 'broadcast' | 'flashdeals' | 'preorders' | 'tracking' | 'themes' | 'coupons' | 'settings';
 
 export default function AdminLayout() {
   const [tab, setTab] = useState<Tab>('overview');
@@ -33,7 +33,6 @@ export default function AdminLayout() {
     { id: 'preorders', icon: Clock, label: 'Pre-Orders' },
     { id: 'tracking', icon: MapPin, label: 'Tracking' },
     { id: 'themes', icon: Palette, label: 'Themes' },
-    { id: 'games', icon: Gamepad2, label: 'Games' },
     { id: 'coupons', icon: Tags, label: 'Coupons' },
     { id: 'settings', icon: SettingsIcon, label: 'Settings' },
   ];
@@ -104,7 +103,6 @@ export default function AdminLayout() {
           {tab === 'preorders' && <AdminPreOrders />}
           {tab === 'tracking' && <AdminTracking />}
           {tab === 'themes' && <AdminThemes />}
-          {tab === 'games' && <AdminGames />}
           {tab === 'coupons' && <AdminCoupons />}
           {tab === 'settings' && <AdminSettings />}
         </div>
@@ -178,7 +176,7 @@ function Overview() {
               { icon: Megaphone, label: 'Send Broadcast', color: 'purple', onClick: () => setTab('broadcast' as Tab) },
               { icon: Zap, label: 'New Flash Deal', color: 'orange', onClick: () => setTab('flashdeals' as Tab) },
               { icon: Tags, label: 'Create Coupon', color: 'green', onClick: () => setTab('coupons' as Tab) },
-              { icon: Gamepad2, label: 'Game Settings', color: 'pink', onClick: () => setTab('games' as Tab) },
+              { icon: Gamepad2, label: 'Game Settings', color: 'pink', onClick: () => setTab('settings' as Tab) },
               { icon: Store, label: 'Vendor Dashboard', color: 'emerald', onClick: () => window.open('/vendor', '_blank') },
             ].map((item, i) => {
               const Icon = item.icon;
@@ -552,118 +550,6 @@ function AdminThemes() {
 // =============================================
 // GAME SETTINGS — Admin controls wheel, streak, mystery box, points
 // =============================================
-function AdminGames() {
-  const store = useStore();
-  const { settings, setSettings } = store;
-  const saveSetting = (key: string, val: any) => { const updated = { ...settings, [key]: val }; setSettings(updated as any); settingsApi.update(updated); };
-
-  const gameSettings = (settings as any)?.gameSettings || {};
-  const wheelSegments = (settings as any)?.wheelSegments || [
-    { label: '🚚 Free Delivery', color: '#e53e3e', value: 0 },
-    { label: '💰 Br 50 Off', color: '#dd6b20', value: 50 },
-    { label: '💎 Br 100 Off', color: '#d69e2e', value: 100 },
-    { label: '🎯 10% Off', color: '#38a169', value: 10 },
-    { label: '🔥 15% Off', color: '#3182ce', value: 15 },
-    { label: '⭐ 25% Off', color: '#805ad5', value: 25 },
-    { label: '🏆 50 Pts', color: '#ed64a6', value: 50 },
-    { label: '👑 100 Pts', color: '#0bc5ea', value: 100 },
-    { label: '🔄 Try Again', color: '#a0aec0', value: 0 },
-    { label: '🎁 Br 20 Off', color: '#e53e3e', value: 20 },
-  ];
-
-  const updateGameSetting = (key: string, val: any) => {
-    saveSetting('gameSettings', { ...gameSettings, [key]: val });
-  };
-
-  const updateWheelSegment = (idx: number, field: string, val: any) => {
-    const updated = [...wheelSegments];
-    updated[idx] = { ...updated[idx], [field]: val };
-    saveSetting('wheelSegments', updated);
-  };
-
-  const addWheelSegment = () => {
-    const updated = [...wheelSegments, { label: '🎁 New Prize', color: '#6366F1', value: 50 }];
-    saveSetting('wheelSegments', updated);
-  };
-
-  const removeWheelSegment = (idx: number) => {
-    if (wheelSegments.length <= 2) return alert('Need at least 2 segments');
-    saveSetting('wheelSegments', wheelSegments.filter((_: any, i: number) => i !== idx));
-  };
-
-  return (
-    <div className="animate-fadeUp space-y-4">
-      <h2 className="text-lg font-bold flex items-center gap-2"><Gamepad2 size={20} /> Game Center Settings</h2>
-
-      {/* Points to Cash Conversion */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
-        <h3 className="text-sm font-bold mb-3 flex items-center gap-2"><Coins size={16} /> Points Conversion</h3>
-        <div className="grid sm:grid-cols-2 gap-3">
-          <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Min Points for Cash</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={gameSettings.minPointsForCash || 100} onChange={e => updateGameSetting('minPointsForCash', Number(e.target.value))} /></div>
-          <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Conversion Rate (pts→Br)</label><input type="number" step="0.1" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={gameSettings.pointsToCashRate || 0.5} onChange={e => updateGameSetting('pointsToCashRate', Number(e.target.value))} /></div>
-        </div>
-        <p className="text-[9px] text-slate-400 mt-2">Example: 100 points × {gameSettings.pointsToCashRate || 0.5} = Br {Math.round(100 * (gameSettings.pointsToCashRate || 0.5))}</p>
-      </div>
-
-      {/* Wheel Customization */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
-        <h3 className="text-sm font-bold mb-3 flex items-center gap-2">🎡 Spin Wheel Customization</h3>
-        
-        {/* Font & Color Settings */}
-        <div className="grid sm:grid-cols-3 gap-3 mb-4 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
-          <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Font Size</label><input type="number" className="w-full mt-1 p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-transparent" value={gameSettings.wheelFontSize || 20} onChange={e => updateGameSetting('wheelFontSize', Number(e.target.value))} /></div>
-          <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Font Color</label><input type="color" className="w-full mt-1 h-9 rounded-lg cursor-pointer border-0" value={gameSettings.wheelFontColor || '#ffffff'} onChange={e => updateGameSetting('wheelFontColor', e.target.value)} /></div>
-          <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Show Emoji</label>
-            <label className="flex items-center gap-2 text-xs mt-2"><input type="checkbox" checked={gameSettings.wheelShowEmoji !== false} onChange={e => updateGameSetting('wheelShowEmoji', e.target.checked)} className="rounded" /> Show emoji on wheel</label>
-          </div>
-        </div>
-
-        <h4 className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Wheel Segments ({wheelSegments.length})</h4>
-        <div className="space-y-1.5">
-          {wheelSegments.map((seg: any, i: number) => (
-            <div key={i} className="flex items-center gap-2 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-              <span className="text-[9px] font-bold text-slate-400 w-5">{i + 1}</span>
-              <input className="flex-1 p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] bg-transparent" value={seg.label} onChange={e => updateWheelSegment(i, 'label', e.target.value)} placeholder="Label" />
-              <input type="color" className="w-8 h-8 rounded-lg cursor-pointer border-0" value={seg.color} onChange={e => updateWheelSegment(i, 'color', e.target.value)} />
-              <input type="number" className="w-20 p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] bg-transparent" value={seg.value} onChange={e => updateWheelSegment(i, 'value', Number(e.target.value))} placeholder="Value" />
-              <button className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600" onClick={() => removeWheelSegment(i)}><Trash2 size={12} /></button>
-            </div>
-          ))}
-        </div>
-        <button className="mt-2 px-4 py-2 border border-dashed border-slate-300 dark:border-slate-600 rounded-xl text-[10px] text-slate-500 hover:border-indigo-400 hover:text-indigo-600 transition-all w-full" onClick={addWheelSegment}>+ Add Segment</button>
-      </div>
-
-      {/* Streak & Mystery Box Settings */}
-      <div className="grid sm:grid-cols-2 gap-4">
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
-          <h3 className="text-sm font-bold mb-3 flex items-center gap-2">🔥 Streak Settings</h3>
-          <div className="space-y-3">
-            <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Streak Duration (days)</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={gameSettings.streakDays || 7} onChange={e => updateGameSetting('streakDays', Number(e.target.value))} /></div>
-            <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Daily Bonus Points</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={gameSettings.streakBonus || 10} onChange={e => updateGameSetting('streakBonus', Number(e.target.value))} /></div>
-            <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Max Streak Bonus</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={gameSettings.maxStreakBonus || 100} onChange={e => updateGameSetting('maxStreakBonus', Number(e.target.value))} /></div>
-          </div>
-        </div>
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
-          <h3 className="text-sm font-bold mb-3 flex items-center gap-2">🎁 Mystery Box Settings</h3>
-          <div className="space-y-3">
-            <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Boxes per Purchase</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={gameSettings.boxesPerPurchase || 1} onChange={e => updateGameSetting('boxesPerPurchase', Number(e.target.value))} /></div>
-            <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Min Order for Box (Br)</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={gameSettings.minOrderForBox || 500} onChange={e => updateGameSetting('minOrderForBox', Number(e.target.value))} /></div>
-            <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Max Prize Value (Br)</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={gameSettings.maxBoxPrize || 1000} onChange={e => updateGameSetting('maxBoxPrize', Number(e.target.value))} /></div>
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
-        <h3 className="text-sm font-bold mb-3 flex items-center gap-2"><CreditCard size={16} /> Daily Spin Limit</h3>
-        <div className="flex items-center gap-3">
-          <span className="text-xs">Spins per day:</span>
-          <input type="number" className="w-20 p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={gameSettings.spinsPerDay || 1} onChange={e => updateGameSetting('spinsPerDay', Number(e.target.value))} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function AdminCoupons() {
   const store = useStore(); const { settings, setSettings } = store;
   const [code, setCode] = useState(''); const [discount, setDiscount] = useState(10);
@@ -696,9 +582,23 @@ function AdminSettings() {
   const [priceAlertEnabled, setPriceAlertEnabled] = useState(settings.priceAlertEnabled !== false);
   const saveSetting = (key: string, val: any) => { const updated = { ...settings, [key]: val }; setSettings(updated as any); settingsApi.update(updated); };
 
+  const gameSettings = (settings as any)?.gameSettings || {};
+  const wheelSegments = (settings as any)?.wheelSegments || [];
+
+  const updateGameSetting = (key: string, val: any) => { saveSetting('gameSettings', { ...gameSettings, [key]: val }); };
+  const updateWheelSegment = (idx: number, field: string, val: any) => {
+    const updated = [...wheelSegments];
+    updated[idx] = { ...updated[idx], [field]: val };
+    saveSetting('wheelSegments', updated);
+  };
+  const addWheelSegment = () => { saveSetting('wheelSegments', [...wheelSegments, { label: '🎁 New Prize', color: '#6366F1', value: 50 }]); };
+  const removeWheelSegment = (idx: number) => { if (wheelSegments.length > 2) saveSetting('wheelSegments', wheelSegments.filter((_: any, i: number) => i !== idx)); };
+
   return (
     <div className="animate-fadeUp space-y-4">
-      <h2 className="text-lg font-bold">⚙️ Settings</h2>
+      <h2 className="text-lg font-bold flex items-center gap-2"><SettingsIcon size={20} /> Settings</h2>
+
+      {/* Commission & Delivery */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
         <h3 className="text-sm font-bold mb-3">💰 Commission & Delivery</h3>
         <div className="grid sm:grid-cols-3 gap-3">
@@ -708,9 +608,76 @@ function AdminSettings() {
         </div>
         <button className="mt-4 px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-bold" onClick={() => { saveSetting('vendorCommission', commission); saveSetting('deliveryFee', deliveryFee); saveSetting('freeDeliveryThreshold', freeThreshold); }}>💾 Save Settings</button>
       </div>
+
+      {/* Features */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
         <h3 className="text-sm font-bold mb-3">🔔 Features</h3>
         <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={priceAlertEnabled} onChange={e => { setPriceAlertEnabled(e.target.checked); saveSetting('priceAlertEnabled', e.target.checked); }} className="rounded" /> Enable Price Drop Alerts</label>
+        <label className="flex items-center gap-2 text-xs mt-2"><input type="checkbox" checked={settings.affiliateEnabled !== false} onChange={e => saveSetting('affiliateEnabled', e.target.checked)} className="rounded" /> Enable Affiliate Program</label>
+        <div className="mt-2 flex items-center gap-3"><span className="text-xs">Affiliate Commission %:</span><input type="number" className="w-20 p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={settings.affiliateCommission || 10} onChange={e => saveSetting('affiliateCommission', Number(e.target.value))} /></div>
+      </div>
+
+      {/* Game & Loyalty Settings */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+        <h3 className="text-sm font-bold mb-3 flex items-center gap-2"><Gamepad2 size={16} /> Game & Loyalty Settings</h3>
+        
+        {/* Points Conversion */}
+        <div className="grid sm:grid-cols-3 gap-3 mb-4">
+          <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Min Points for Cash</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={gameSettings.minPointsForCash || 100} onChange={e => updateGameSetting('minPointsForCash', Number(e.target.value))} /></div>
+          <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Conversion Rate (pts→Br)</label><input type="number" step="0.1" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={gameSettings.pointsToCashRate || 0.5} onChange={e => updateGameSetting('pointsToCashRate', Number(e.target.value))} /></div>
+          <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Daily Spins</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={gameSettings.spinsPerDay || 1} onChange={e => updateGameSetting('spinsPerDay', Number(e.target.value))} /></div>
+        </div>
+
+        {/* Wheel Font Settings */}
+        <div className="grid sm:grid-cols-3 gap-3 mb-4 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+          <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Wheel Font Size</label><input type="number" className="w-full mt-1 p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-transparent" value={gameSettings.wheelFontSize || 20} onChange={e => updateGameSetting('wheelFontSize', Number(e.target.value))} /></div>
+          <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Wheel Font Color</label><input type="color" className="w-full mt-1 h-9 rounded-lg cursor-pointer border-0" value={gameSettings.wheelFontColor || '#ffffff'} onChange={e => updateGameSetting('wheelFontColor', e.target.value)} /></div>
+          <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Show Emoji</label><label className="flex items-center gap-2 text-xs mt-2"><input type="checkbox" checked={gameSettings.wheelShowEmoji !== false} onChange={e => updateGameSetting('wheelShowEmoji', e.target.checked)} className="rounded" /> Show emoji on wheel</label></div>
+        </div>
+
+        {/* Wheel Segments */}
+        <h4 className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Wheel Segments ({wheelSegments.length || 10})</h4>
+        <div className="space-y-1 max-h-48 overflow-y-auto">
+          {(wheelSegments.length > 0 ? wheelSegments : [
+            { label: '🚚 Free Delivery', color: '#e53e3e', value: 0 },
+            { label: '💰 Br 50 Off', color: '#dd6b20', value: 50 },
+            { label: '💎 Br 100 Off', color: '#d69e2e', value: 100 },
+            { label: '🎯 10% Off', color: '#38a169', value: 10 },
+            { label: '🔥 15% Off', color: '#3182ce', value: 15 },
+            { label: '⭐ 25% Off', color: '#805ad5', value: 25 },
+            { label: '🏆 50 Pts', color: '#ed64a6', value: 50 },
+            { label: '👑 100 Pts', color: '#0bc5ea', value: 100 },
+            { label: '🔄 Try Again', color: '#a0aec0', value: 0 },
+            { label: '🎁 Br 20 Off', color: '#e53e3e', value: 20 },
+          ]).map((seg: any, i: number) => (
+            <div key={i} className="flex items-center gap-2 p-1.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50">
+              <span className="text-[9px] font-bold text-slate-400 w-5">{i + 1}</span>
+              <input className="flex-1 p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] bg-transparent" value={seg.label} onChange={e => updateWheelSegment(i, 'label', e.target.value)} />
+              <input type="color" className="w-7 h-7 rounded-lg cursor-pointer border-0" value={seg.color} onChange={e => updateWheelSegment(i, 'color', e.target.value)} />
+              <input type="number" className="w-16 p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] bg-transparent" value={seg.value} onChange={e => updateWheelSegment(i, 'value', Number(e.target.value))} />
+              <button className="p-1 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600" onClick={() => removeWheelSegment(i)}><Trash2 size={11} /></button>
+            </div>
+          ))}
+        </div>
+        <button className="mt-2 px-4 py-2 border border-dashed border-slate-300 dark:border-slate-600 rounded-xl text-[10px] text-slate-500 hover:border-indigo-400 hover:text-indigo-600 transition-all w-full" onClick={addWheelSegment}>+ Add Segment</button>
+      </div>
+
+      {/* Streak & Mystery Box */}
+      <div className="grid sm:grid-cols-2 gap-4">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+          <h3 className="text-sm font-bold mb-3 flex items-center gap-2">🔥 Streak</h3>
+          <div className="space-y-3">
+            <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Streak Days</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={gameSettings.streakDays || 7} onChange={e => updateGameSetting('streakDays', Number(e.target.value))} /></div>
+            <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Daily Bonus Points</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={gameSettings.streakBonus || 10} onChange={e => updateGameSetting('streakBonus', Number(e.target.value))} /></div>
+          </div>
+        </div>
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+          <h3 className="text-sm font-bold mb-3 flex items-center gap-2">🎁 Mystery Box</h3>
+          <div className="space-y-3">
+            <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Boxes per Purchase</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={gameSettings.boxesPerPurchase || 1} onChange={e => updateGameSetting('boxesPerPurchase', Number(e.target.value))} /></div>
+            <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Max Prize (Br)</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={gameSettings.maxBoxPrize || 1000} onChange={e => updateGameSetting('maxBoxPrize', Number(e.target.value))} /></div>
+          </div>
+        </div>
       </div>
     </div>
   );
