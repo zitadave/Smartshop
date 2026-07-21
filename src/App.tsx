@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { useStore } from '@/stores/AppStore';
+import { productsApi, settingsApi } from '@/lib/api';
 import Layout from '@/components/Layout';
 import Home from '@/pages/Home';
 import Shop from '@/pages/Shop';
@@ -27,12 +28,12 @@ export default function App() {
   }, [darkMode]);
 
   useEffect(() => {
-    // Load initial data
-    fetch('/api/products').then(r => r.json()).then(d => {
+    // Load initial data using API client (uses VITE_API_URL)
+    productsApi.list().then(d => {
       if (d?.products) setProducts(d.products);
     }).catch(() => {});
 
-    fetch('/api/settings').then(r => r.json()).then(d => {
+    settingsApi.get().then(d => {
       if (d?.settings) setSettings(d.settings);
     }).catch(() => {});
   }, []);
