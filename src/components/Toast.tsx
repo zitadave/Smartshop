@@ -37,15 +37,10 @@ export default function ToastContainer() {
   };
 
   return (
-    <div className="toast-container" style={{ pointerEvents: 'none' }}>
-      {toasts.map((t, i) => (
+    <div className="toast-container">
+      {toasts.map(t => (
         <div key={t.id} className={`toast ${t.type === 'error' ? 'error' : t.type === 'warning' ? 'warning' : 'success'}`}
-          onClick={() => remove(t.id)}
-          style={{
-            pointerEvents: 'auto', cursor: 'pointer',
-            animation: `fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both`,
-            zIndex: 99999 - i,
-          }}>
+          onClick={() => remove(t.id)}>
           {icons[t.type] || icons.info}
           <span style={{ flex: 1 }}>{t.message}</span>
           <X size={14} style={{ opacity: 0.3, flexShrink: 0 }} />
