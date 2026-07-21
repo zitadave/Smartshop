@@ -4,6 +4,7 @@ import { t } from '@/i18n/translations';
 import { formatPrice, cn } from '@/lib/utils';
 import { ShoppingCart, Trash2, Minus, Plus, Store, ChevronRight, ArrowLeft } from 'lucide-react';
 import { toast } from '@/components/Toast';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 export default function Cart() {
   const navigate = useNavigate();
@@ -19,15 +20,12 @@ export default function Cart() {
 
   if (cart.length === 0) {
     return (
-      <div className="text-center py-24 px-4 animate-fadeUp">
-        <div className="text-6xl mb-4 opacity-30 animate-float">🛒</div>
-        <h3 className="text-base font-semibold text-muted-foreground mb-1">{t('cartEmpty', language)}</h3>
-        <p className="text-xs text-muted-foreground/60 mb-6">Add some products to get started!</p>
-        <button className="px-8 py-3 bg-primary text-white rounded-2xl text-sm font-bold shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all"
-          onClick={() => navigate('/shop')}>
-          🛍️ {t('shop', language)}
-        </button>
-      </div>
+      <EmptyState
+        icon="🛒"
+        title={t('cartEmpty', language) || 'Your cart is empty'}
+        description="Looks like you haven't added anything yet. Browse our collection and find something you love!"
+        action={{ label: `🛍️ ${t('shop', language)}`, onClick: () => navigate('/shop') }}
+      />
     );
   }
 

@@ -1,14 +1,16 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '@/stores/AppStore';
 import { useProducts } from '@/hooks/useProducts';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useCart } from '@/hooks/useCart';
 import { useButtonAnimation, useWishlistAnimation } from '@/hooks/useAnimations';
 import { ProductCard } from '@/components/ui/ProductCard';
+import { CardSkeleton } from '@/components/ui/Skeletons';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { CATEGORIES, SORT_OPTIONS } from '@/types';
 import { cn } from '@/lib/utils';
-import { Search, X, Filter, ArrowUp, Sparkles } from 'lucide-react';
-import { useState } from 'react';
+import { Search, X, Filter, ArrowUp, Sparkles, RefreshCw } from 'lucide-react';
 import type { Product, CategoryId, SortMode } from '@/types';
 
 export default function Shop() {
@@ -20,6 +22,7 @@ export default function Shop() {
   const btnAnim = useButtonAnimation();
   const wishAnim = useWishlistAnimation();
   const [showFilters, setShowFilters] = useState(false);
+  const { visibleItems, hasMore, sentinelRef } = useInfiniteScroll(filtered, { pageSize: 8 });
 
   const handleAdd = useCallback((e: React.MouseEvent, product: Product) => {
     e.stopPropagation();
@@ -114,24 +117,33 @@ export default function Shop() {
 
       {/* Empty State */}
       {filtered.length === 0 ? (
-        <div className="text-center py-24 px-4">
-          <div className="text-5xl mb-4 opacity-30 animate-float">🔍</div>
-          <h3 className="text-base font-semibold text-muted-foreground/70 mb-1">No products found</h3>
-          <p className="text-xs text-muted-foreground/40 mb-6">Try adjusting your search</p>
-          <button className="px-7 py-3 bg-primary text-white rounded-2xl text-sm font-bold shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all duration-200"
-            onClick={() => { setSearch(''); setCategory('all'); }}>
-            <Sparkles size={14} className="inline mr-1.5" /> Clear Filters
-          </button>
-        </div>
+        <EmptyState
+          icon="🔍"
+          title="No products found"
+          description="Try adjusting your search or filters"
+          action={{ label: '✨ Clear Filters', onClick: () => { setSearch(''); setCategory('all'); setSort(''); } }}
+        />
       ) : (
-        /* Product Grid */
-        <div className="grid grid-cols-2 gap-3 px-4 pb-6 stagger">
-          {filtered.map(p => (
-            <ProductCard key={p.id} product={p}
-              onAdd={handleAdd} onWish={handleWish}
-              addingId={btnAnim.activeId} wishAnimId={wishAnim.activeId} />
-          ))}
-        </div>
+        <>
+          {/* Product Grid */}
+          <div className="grid grid-cols-2 gap-3 px-4 pb-6 stagger">
+            {visibleItems.map(p => (
+              <ProductCard key={p.id} product={p}
+                onAdd={handleAdd} onWish={handleWish}
+                addingId={btnAnim.activeId} wishAnimId={wishAnim.activeId} />
+            ))}
+          </div>
+
+          {/* Infinite Scroll Sentinel */}
+          {hasMore && (
+            <div ref={sentinelRef} className="flex justify-center py-4">
+              <RefreshCw size={18} className="animate-spin text-muted-foreground" />
+            </div>
+          )}
+          {!hasMore && visibleItems.length > 0 && (
+            <p className="text-center text-[10px] text-muted-foreground/40 pb-4">You've reached the end</p>
+          )}
+        </>
       )}
 
       {/* Scroll to Top */}

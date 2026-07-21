@@ -1,4 +1,4 @@
-import { memo, useCallback, useState } from 'react';
+import { memo, useCallback, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/stores/AppStore';
 import { formatPrice, stars, cn } from '@/lib/utils';
@@ -28,6 +28,20 @@ export const ProductCard = memo(function ProductCard({
   const { addRecentView, isInWishlist } = useStore();
   const isAdding = addingId === product.id;
   const isWishAnim = wishAnimId === product.id;
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [longPressed, setLongPressed] = useState(false);
+
+  const handlePointerDown = useCallback(() => {
+    longPressTimer.current = setTimeout(() => {
+      setLongPressed(true);
+      import('../ui/QuickView').then(m => m.showQuickView(product));
+    }, 500);
+  }, [product]);
+
+  const handlePointerUp = useCallback(() => {
+    if (longPressTimer.current) clearTimeout(longPressTimer.current);
+    if (longPressed) { setLongPressed(false); return; }
+  }, [longPressed]);
 
   const handleClick = useCallback(() => {
     addRecentView(product);
@@ -42,7 +56,10 @@ export const ProductCard = memo(function ProductCard({
       <div
         className="flex-shrink-0 w-44 bg-card rounded-2xl overflow-hidden border border-border/60 cursor-pointer hover-lift snap-start animate-scaleIn shadow-sm hover:shadow-xl"
         onClick={handleClick}
-      >
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerUp}
+        onContextMenu={(e) => e.preventDefault()}>
         <div className="relative aspect-square overflow-hidden bg-muted/30 img-zoom">
           <div className="relative w-full h-full bg-muted/30">
             <img
@@ -82,7 +99,12 @@ export const ProductCard = memo(function ProductCard({
   }
 
   return (
-    <div className="bg-card rounded-2xl overflow-hidden border border-border/60 cursor-pointer card-glow group shadow-sm" onClick={handleClick}>
+    <div className="bg-card rounded-2xl overflow-hidden border border-border/60 cursor-pointer card-glow group shadow-sm"
+      onClick={handleClick}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onPointerLeave={handlePointerUp}
+      onContextMenu={(e) => e.preventDefault()}>
       <div className="relative aspect-square overflow-hidden bg-muted/30 img-zoom">
         <div className="relative w-full h-full bg-muted/30">
           <img

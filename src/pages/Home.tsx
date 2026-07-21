@@ -1,17 +1,21 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/stores/AppStore';
 import { Hero } from '@/components/ui/Hero';
 import { ProductCard } from '@/components/ui/ProductCard';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { HorizontalScroll } from '@/components/ui/HorizontalScroll';
+import { PullToRefresh } from '@/components/ui/PullToRefresh';
+import { CardSkeleton } from '@/components/ui/Skeletons';
+import { showQuickView } from '@/components/ui/QuickView';
 import { CATEGORIES } from '@/types';
 import { cn } from '@/lib/utils';
 import { Sparkles, Clock, Star, ChevronRight } from 'lucide-react';
 import { useButtonAnimation, useWishlistAnimation } from '@/hooks/useAnimations';
 import { useCart } from '@/hooks/useCart';
+import { productsApi } from '@/lib/api';
 import type { Product, CategoryId } from '@/types';
-import { useState } from 'react';
+import { toast } from '@/components/Toast';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -65,8 +69,20 @@ export default function Home() {
     navigate('/shop');
   }, [navigate]);
 
+  const handleRefresh = useCallback(async () => {
+    try {
+      const d = await productsApi.list();
+      if (d?.products) { store.setProducts(d.products); toast('✨ Products refreshed!', 'success'); }
+    } catch { toast('Refresh failed', 'error'); }
+  }, []);
+
+  const handleLongPress = useCallback((product: Product) => {
+    showQuickView(product);
+  }, []);
+
   return (
     <div className="pb-6">
+      <PullToRefresh onRefresh={handleRefresh}>
       <Hero productCount={products.length} topRating={topRating} />
 
       {/* Quick Stat Cards */}
@@ -170,6 +186,7 @@ export default function Home() {
           ))}
         </div>
       </section>
+      </PullToRefresh>
     </div>
   );
 }
