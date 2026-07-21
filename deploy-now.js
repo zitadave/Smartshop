@@ -1,6 +1,6 @@
 // SMART SHOP - CORS Worker (deploy this to Workers)
 const SUPABASE_URL = 'https://auaendcgszofgvdfdajt.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1YWVuZGNnc3pvZmd2ZGZkYWp0LCJyb2xlIjoic2VydmljZV9yb2xlIiwiaWF0IjoxNzg0NDM3OTA2LCJleHAiOjIxMDAwMTM5MDZ9.bvVY6X_KozYV1BapIOvwkv4UY6D-k3QgGHRQndMtRu4';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1YWVuZGNnc3pvZmd2ZGZkYWp0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NDQzNzkwNiwiZXhwIjoyMTAwMDEzOTA2fQ.bvVY6X_KozYV1BapIOvwkv4UY6D-k3QgGHRQndMtRu4';
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': '*', 'Access-Control-Allow-Headers': '*' };
 
 export default {
