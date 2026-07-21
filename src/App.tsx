@@ -5,6 +5,7 @@ import { productsApi, settingsApi } from '@/lib/api';
 import { initSentry } from '@/lib/sentry';
 import { initAnalytics, trackEvent } from '@/lib/analytics';
 import { registerSW } from '@/lib/sw';
+import { getSampleBroadcasts, getSampleFlashDeals, getSamplePhotoReviews } from '@/lib/seed';
 import Layout from '@/components/Layout';
 
 // ===== CODE SPLITTING — Lazy-load rarely-used pages =====
@@ -36,7 +37,7 @@ const PageLoader = () => (
 );
 
 export default function App() {
-  const { darkMode, setProducts, setSettings } = useStore();
+  const { darkMode, setProducts, setSettings, settings, setBroadcastMessages, setFlashDeals, setPhotoReviews, products } = useStore();
 
   useEffect(() => {
     initSentry();
@@ -49,12 +50,39 @@ export default function App() {
     else document.documentElement.classList.remove('dark');
   }, [darkMode]);
 
+  // Load initial data and seed sample content
   useEffect(() => {
     productsApi.list().then(d => {
-      if (d?.products) { setProducts(d.products); trackEvent('page_view', { page: 'home', products: d.products.length }); }
+      if (d?.products) {
+        setProducts(d.products);
+        trackEvent('page_view', { page: 'home', products: d.products.length });
+      }
     }).catch(() => {});
-    settingsApi.get().then(d => { if (d?.settings) setSettings(d.settings); }).catch(() => {});
+    settingsApi.get().then(d => {
+      if (d?.settings) {
+        const s = d.settings;
+        // Seed sample broadcast messages if none exist
+        if (!s.broadcastMessages || s.broadcastMessages.length === 0) {
+          const broadcasts = getSampleBroadcasts();
+          s.broadcastMessages = broadcasts;
+        }
+        setSettings(s);
+      }
+    }).catch(() => {});
   }, []);
+
+  // Seed flash deals once products are loaded and no flash deals exist
+  useEffect(() => {
+    if (products.length > 0) {
+      const hasFlashDeals = settings.flashSales && Object.keys(settings.flashSales).length > 0;
+      if (!hasFlashDeals) {
+        const productIds = products.slice(0, 5).map(p => p.id);
+        const deals = getSampleFlashDeals(productIds);
+        const updatedSettings = { ...settings, flashSales: deals };
+        setSettings(updatedSettings);
+      }
+    }
+  }, [products.length]);
 
   return (
     <BrowserRouter>
