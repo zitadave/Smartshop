@@ -1,13 +1,17 @@
+// ============================================================
+// TYPES — Strict, comprehensive, no `any`
+// ============================================================
+
 export interface Product {
   id: number;
   name: string;
   nameEn: string;
-  category: string;
+  category: CategoryId;
   price: number;
   originalPrice: number | null;
   image: string;
   images: string[];
-  badge: string;
+  badge: BadgeType;
   description: string;
   descriptionEn: string;
   stockCount: number;
@@ -20,46 +24,22 @@ export interface Product {
   visible: boolean;
   colors: string[];
   sizes: string[];
-  sku: string;
-  commission: number;
-  userReviews: Review[];
-  questions: QnA[];
-  priceHistory: PricePoint[];
-  createdAt: string;
   features: string[];
+  createdAt: string;
 }
 
-export interface Review {
-  id: number;
-  name: string;
-  rating: number;
-  comment: string;
-  date: string;
-}
-
-export interface QnA {
-  question: string;
-  askedBy: string;
-  askedAt: string;
-  answers: Answer[];
-}
-
-export interface Answer {
-  answer: string;
-  answeredBy: string;
-  answeredAt: string;
-}
-
-export interface PricePoint {
-  price: number;
-  date: string;
-}
+export type CategoryId = 'all' | 'electronics' | 'fashion' | 'home' | 'beauty' | 'groceries' | 'books' | 'sports' | 'baby';
+export type BadgeType = '' | 'sale' | 'hot' | 'new' | 'best-seller' | 'popular' | 'premium' | 'big-deal' | 'educational';
+export type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'completed' | 'cancelled';
+export type SortMode = '' | 'price_low' | 'price_high' | 'newest';
+export type Language = 'am' | 'en' | 'om' | 'ti' | 'so';
+export type Currency = 'ETB' | 'USD';
+export type ToastType = 'success' | 'error' | 'warning' | 'info' | 'cart' | 'wish';
 
 export interface Category {
-  id: string;
+  id: CategoryId;
   icon: string;
-  labelEn: string;
-  labelAm: string;
+  label: string;
 }
 
 export interface CartItem {
@@ -75,53 +55,16 @@ export interface CartItem {
 }
 
 export interface Order {
-  id?: string;
   orderNumber: string;
   status: OrderStatus;
-  items: OrderItem[];
+  items: { id: number; name: string; quantity: number; price: number; total: number }[];
   total: number;
   subtotal: number;
   discount: number;
-  delivery: number;
   paymentMethod: string;
-  customer: Customer;
+  customer: { name: string; phone: string; city: string; address: string };
   date: string;
   createdAt: string;
-  currency: string;
-  language: string;
-}
-
-export type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'completed' | 'cancelled' | 'returned' | 'refunded';
-
-export interface OrderItem {
-  id: number;
-  name: string;
-  quantity: number;
-  price: number;
-  total: number;
-}
-
-export interface Customer {
-  name: string;
-  phone: string;
-  city: string;
-  address: string;
-  notes: string;
-}
-
-export interface Vendor {
-  id: number;
-  name: string;
-  phone: string;
-  email: string;
-  shopName: string;
-  description: string;
-  ownerId: number;
-  commission: number;
-  balance: number;
-  totalSales: number;
-  status: 'active' | 'pending' | 'suspended';
-  joinedAt: string;
 }
 
 export interface Profile {
@@ -131,49 +74,45 @@ export interface Profile {
   joinedAt: string;
 }
 
-export interface FlashSale {
-  end: number;
-  startedAt: number;
-}
+export const CATEGORIES: Category[] = [
+  { id: 'all', icon: '✨', label: 'All' },
+  { id: 'electronics', icon: '📱', label: 'Tech' },
+  { id: 'fashion', icon: '👗', label: 'Fashion' },
+  { id: 'home', icon: '🏠', label: 'Home' },
+  { id: 'beauty', icon: '💄', label: 'Beauty' },
+  { id: 'groceries', icon: '🍎', label: 'Food' },
+  { id: 'books', icon: '📚', label: 'Books' },
+  { id: 'sports', icon: '⚽', label: 'Sports' },
+  { id: 'baby', icon: '👶', label: 'Baby' },
+];
 
-export interface BundleDeal {
-  withId: number;
-  discount: number;
-}
+export const SORT_OPTIONS: { id: SortMode; icon: string; label: string }[] = [
+  { id: '', icon: '🔥', label: 'Best' },
+  { id: 'price_low', icon: '💵', label: 'Low→High' },
+  { id: 'price_high', icon: '💰', label: 'High→Low' },
+  { id: 'newest', icon: '✨', label: 'Newest' },
+];
 
-export interface Coupon {
-  code: string;
-  discount: number;
-  minOrder: number;
-  maxUses: number;
-  used: number;
-  expires: string;
-  active: boolean;
-}
+export const BADGE_COLORS: Record<BadgeType, string> = {
+  '': '',
+  sale: 'from-red-500 to-rose-500',
+  hot: 'from-orange-500 to-amber-500',
+  new: 'from-emerald-500 to-green-500',
+  'best-seller': 'from-purple-500 to-violet-500',
+  popular: 'from-blue-500 to-sky-500',
+  premium: 'from-slate-700 to-slate-600',
+  'big-deal': 'from-red-600 to-rose-600',
+  educational: 'from-teal-500 to-emerald-500',
+};
 
-export interface GiftCard {
-  code: string;
-  amount: number;
-  phone: string;
-  message: string;
-  from: string;
-  date: string;
-  used: boolean;
-}
-
-export type Language = 'am' | 'en' | 'om' | 'ti' | 'so';
-
-export interface AppSettings {
-  vendorRegistration: boolean;
-  vendorCommission: number;
-  vendorApproval: boolean;
-  commissionRates: Record<string, number>;
-  flashSales: Record<number, FlashSale>;
-  sponsoredProducts: number[];
-  bundleDeals: Record<number, BundleDeal>;
-  coupons: Coupon[];
-  subscriptionPlans: any[];
-  storeName: string;
-  deliveryFee: number;
-  minOrder: number;
-}
+export const BADGE_LABELS: Record<BadgeType, string> = {
+  '': '',
+  sale: 'SALE',
+  hot: 'HOT',
+  new: 'NEW',
+  'best-seller': 'BEST SELLER',
+  popular: 'POPULAR',
+  premium: 'PREMIUM',
+  'big-deal': 'BIG DEAL',
+  educational: 'EDUCATIONAL',
+};
