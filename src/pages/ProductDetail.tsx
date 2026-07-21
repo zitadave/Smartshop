@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '@/stores/AppStore';
 import { t } from '@/i18n/translations';
@@ -26,7 +26,7 @@ export default function ProductDetail() {
     );
   }
 
-  addRecentView(product);
+  useEffect(() => { addRecentView(product); }, []);
 
   const images = product.images?.length ? product.images : [product.image || 'https://placehold.co/400x400/e2e8f0/94a3b8?text=📦'];
   const wis = isInWishlist(product.id);
