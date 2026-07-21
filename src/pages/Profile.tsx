@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/stores/AppStore';
 import { t } from '@/i18n/translations';
 import { formatPrice, cn } from '@/lib/utils';
-import { User, Package, Heart, ShoppingCart, Gift, LogOut, Moon, Sun, ChevronRight, Store, CreditCard, Palette, Globe, TrendingDown, Bell, Megaphone, MapPin, HelpCircle, Share2, Gamepad2 } from 'lucide-react';
+import { User, Package, Heart, ShoppingCart, Gift, LogOut, Moon, Sun, ChevronRight, Store, CreditCard, Palette, Globe, TrendingDown, Bell, Megaphone, MapPin, HelpCircle, Share2, Gamepad2, Wallet } from 'lucide-react';
 import ThemePicker from '@/components/features/ThemePicker';
 import CurrencySelector from '@/components/features/CurrencySelector';
 import { ActivePriceAlerts } from '@/components/features/PriceDropAlert';
@@ -20,10 +20,11 @@ const LANGUAGES = [
 export default function Profile() {
   const navigate = useNavigate();
   const store = useStore();
-  const { profile, language, setLanguage, darkMode, setDarkMode, orders, wishlist, cart, followedVendors, loyaltyPoints, savedPayments, preOrders, notifications, savedAddresses } = store;
+  const { profile, language, setLanguage, darkMode, setDarkMode, orders, wishlist, cart, followedVendors, loyaltyPoints, savedPayments, preOrders, notifications, savedAddresses, walletBalance, addToWallet } = store;
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [editName, setEditName] = useState(profile.name);
   const [editPhone, setEditPhone] = useState(profile.phone);
+  const [showWallet, setShowWallet] = useState(false);
 
   const initials = profile.name ? profile.name.substring(0, 2).toUpperCase() : '?';
   const ordCount = orders.length + preOrders.length;
@@ -34,8 +35,12 @@ export default function Profile() {
     return { id, name: `Shop #${id}` };
   }).filter((v, i, a) => a.findIndex(x => x.id === v.id) === i);
 
-  const tier = loyaltyPoints >= 500 ? { name: 'Gold', icon: '🥇' } : loyaltyPoints >= 200 ? { name: 'Silver', icon: '🥈' } : { name: 'Bronze', icon: '🥉' };
-  const nextTier = loyaltyPoints < 200 ? { need: 200 - loyaltyPoints } : loyaltyPoints < 500 ? { need: 500 - loyaltyPoints } : null;
+  // Tier thresholds
+  const getTier = (pts: number) => 
+    pts >= 500 ? { name: 'Gold', icon: '🥇', next: null, color: 'from-amber-500 to-orange-600' } :
+    pts >= 200 ? { name: 'Silver', icon: '🥈', next: { need: 500 - pts, label: 'Gold' }, color: 'from-slate-400 to-slate-500' } :
+    { name: 'Bronze', icon: '🥉', next: { need: 200 - pts, label: 'Silver' }, color: 'from-amber-700 to-amber-800' };
+  const tier = getTier(loyaltyPoints);
 
   const saveProfile = () => {
     if (editName.trim()) store.updateProfileName(editName.trim());
@@ -65,7 +70,7 @@ export default function Profile() {
     {
       title: 'Engagement',
       items: [
-        { icon: '🎡', label: 'Game Center', onClick: () => navigate('/game') },
+        { icon: '🎡', label: 'Loyalty & Rewards', onClick: () => navigate('/game') },
         { icon: '🏪', label: 'Vendor Dashboard', onClick: () => navigate('/vendor') },
         { icon: '📉', label: 'Price Alerts', badge: store.priceAlerts.length, onClick: () => navigate('/price-alerts') },
         { icon: '🔔', label: 'Notifications', badge: notifications.length, onClick: () => navigate('/notifications') },
@@ -100,19 +105,41 @@ export default function Profile() {
         ))}
       </div>
 
-      {/* Loyalty Card - Navigate to Game Center */}
-      <div className="mx-3 mt-3 p-3 bg-gradient-to-r from-amber-500 to-orange-600 rounded-xl text-white flex items-center gap-3 cursor-pointer hover:shadow-xl transition-all" onClick={() => navigate('/game')}>
-        <span className="text-2xl">{tier.icon}</span>
-        <div className="flex-1">
-          <div className="font-bold text-sm">{loyaltyPoints} pts</div>
-          <div className="text-[10px] opacity-80">{tier.name} Tier</div>
-          <div className="h-1.5 bg-white/20 rounded-full mt-1 overflow-hidden">
-            <div className="h-full bg-white/60 rounded-full" style={{ width: nextTier ? `${Math.min(100, (loyaltyPoints / (loyaltyPoints + (nextTier?.need || 1))) * 100)}%` : '100%' }}></div>
-          </div>
-          <p className="text-[8px] opacity-60 mt-0.5">🎮 Tap to visit Game Center & convert points</p>
+      {/* Wallet + Loyalty Row */}
+      <div className="mx-3 mt-3 grid grid-cols-2 gap-2">
+        {/* Wallet Card */}
+        <div className="bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl p-3 text-white cursor-pointer hover:shadow-xl transition-all" onClick={() => setShowWallet(true)}>
+          <Wallet size={18} className="mb-1 opacity-80" />
+          <div className="text-lg font-extrabold">Br {walletBalance.toLocaleString()}</div>
+          <div className="text-[8px] opacity-70">Wallet Balance</div>
         </div>
-        <ChevronRight size={16} />
+
+        {/* Loyalty Card */}
+        <div className={cn('bg-gradient-to-r rounded-xl p-3 text-white cursor-pointer hover:shadow-xl transition-all', tier.color)} onClick={() => navigate('/game')}>
+          <span className="text-xl">{tier.icon}</span>
+          <div className="text-lg font-extrabold">{loyaltyPoints}</div>
+          <div className="text-[8px] opacity-70">{tier.name} · {tier.next ? `${tier.next.need} pts to ${tier.next.label}` : 'Max tier!'}</div>
+        </div>
       </div>
+
+      {/* Wallet Modal */}
+      {showWallet && (
+        <div className="fixed inset-0 bg-black/60 z-[200] flex items-center justify-center p-4" onClick={() => setShowWallet(false)}>
+          <div className="bg-card rounded-3xl w-full max-w-sm p-5 shadow-2xl animate-bounce-in" onClick={e => e.stopPropagation()}>
+            <div className="text-center mb-4">
+              <Wallet size={32} className="mx-auto text-emerald-500 mb-1" />
+              <h3 className="text-sm font-bold">Wallet</h3>
+              <p className="text-3xl font-extrabold text-primary mt-1">Br {walletBalance.toLocaleString()}</p>
+            </div>
+            <div className="bg-muted/50 rounded-xl p-3 text-xs mb-3">
+              <p>💡 Convert your loyalty points to cash in the Loyalty & Rewards section!</p>
+            </div>
+            <button className="w-full py-3 bg-primary text-white rounded-xl text-xs font-bold" onClick={() => { setShowWallet(false); navigate('/game'); }}>
+              Go to Loyalty & Rewards
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Price Alerts Section */}
       <div className="mx-3 mt-3">
@@ -152,16 +179,69 @@ export default function Profile() {
         </div>
       ))}
 
-      {/* Currency + Theme + Language */}
+      {/* Currency + THEME SIDE BY SIDE + Language */}
       <div className="mx-3 mt-3">
-        <div className="bg-card rounded-xl border border-border p-3 mb-2">
-          <div className="flex items-center gap-2.5 mb-2">
-            <Globe size={16} className="text-primary" />
-            <span className="text-xs font-medium">Currency</span>
+        {/* Currency + Theme side by side */}
+        <div className="grid grid-cols-2 gap-2 mb-2">
+          {/* Currency */}
+          <div className="bg-card rounded-xl border border-border p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <Globe size={14} className="text-primary" />
+              <span className="text-[10px] font-medium">Currency</span>
+            </div>
+            <CurrencySelector />
           </div>
-          <CurrencySelector />
+
+          {/* Theme */}
+          <div className="bg-card rounded-xl border border-border p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <Palette size={14} className="text-primary" />
+              <span className="text-[10px] font-medium">Theme</span>
+            </div>
+            <ThemePicker />
+            {/* Creative Dark/Light Toggle */}
+            <div className="flex gap-1 mt-2">
+              <button
+                className={cn(
+                  'flex-1 py-1.5 rounded-lg text-[9px] font-semibold transition-all duration-300 relative overflow-hidden',
+                  !darkMode 
+                    ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-white shadow-md shadow-amber-500/30' 
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                )}
+                onClick={() => setDarkMode(false)}
+              >
+                <span className="relative z-10 flex items-center justify-center gap-1">
+                  <Sun size={10} className={!darkMode ? 'animate-spin-slow' : ''} /> Light
+                </span>
+                {!darkMode && <div className="absolute inset-0 bg-gradient-to-r from-amber-400/20 to-yellow-500/20 animate-pulse" />}
+              </button>
+              <button
+                className={cn(
+                  'flex-1 py-1.5 rounded-lg text-[9px] font-semibold transition-all duration-300 relative overflow-hidden',
+                  darkMode 
+                    ? 'bg-gradient-to-r from-indigo-800 to-slate-900 text-white shadow-md shadow-indigo-500/30' 
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                )}
+                onClick={() => setDarkMode(true)}
+              >
+                <span className="relative z-10 flex items-center justify-center gap-1">
+                  <Moon size={10} className={darkMode ? 'animate-float' : ''} /> Dark
+                </span>
+                {darkMode && (
+                  <div className="absolute inset-0">
+                    <div className="absolute top-0 left-1/4 w-0.5 h-full bg-white/5" />
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="absolute w-1 h-1 bg-white/20 rounded-full animate-float" style={{ top: `${20 + i * 30}%`, left: `${30 + i * 20}%`, animationDelay: `${i * 0.3}s` }} />
+                    ))}
+                  </div>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
-        <div className="bg-card rounded-xl border border-border p-3 mb-2">
+
+        {/* Language */}
+        <div className="bg-card rounded-xl border border-border p-3">
           <div className="flex items-center gap-2.5 mb-2">
             <span className="text-base">🌐</span>
             <span className="text-xs font-medium">{t('language', language)}</span>
@@ -169,17 +249,6 @@ export default function Profile() {
           <select className="w-full p-2 border border-input rounded-lg text-xs bg-card" value={language} onChange={e => setLanguage(e.target.value as any)}>
             {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.label}</option>)}
           </select>
-        </div>
-        <div className="bg-card rounded-xl border border-border p-3">
-          <div className="flex items-center gap-2.5 mb-2">
-            <Palette size={16} className="text-primary" />
-            <span className="text-xs font-medium">Theme</span>
-          </div>
-          <div className="flex gap-2 mb-2"><ThemePicker /></div>
-          <div className="flex gap-2">
-            <button className={cn('flex-1 py-2 rounded-lg text-[10px] font-medium border transition-all', !darkMode ? 'bg-primary text-white border-primary' : 'bg-card text-muted-foreground border-border')} onClick={() => setDarkMode(false)}>☀️ {t('light', language)}</button>
-            <button className={cn('flex-1 py-2 rounded-lg text-[10px] font-medium border transition-all', darkMode ? 'bg-primary text-white border-primary' : 'bg-card text-muted-foreground border-border')} onClick={() => setDarkMode(true)}>🌙 {t('dark', language)}</button>
-          </div>
         </div>
       </div>
 

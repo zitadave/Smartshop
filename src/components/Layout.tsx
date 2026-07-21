@@ -4,22 +4,23 @@ import { t } from '@/i18n/translations';
 import ToastContainer from './Toast';
 import QuickView from './ui/QuickView';
 import AIChat from '@/components/ai/AIChat';
-import { ShoppingCart, Package, User, Home, Store, Moon, Sun, Search, Sparkles, ChevronRight, Bot } from 'lucide-react';
+import { ShoppingCart, Package, User, Home, Store, Moon, Sun, Search, Sparkles, ChevronRight, Bot, Heart } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
 
 const NAV_ITEMS = [
   { path: '/', icon: Home, label: 'home' },
   { path: '/shop', icon: Store, label: 'shop' },
-  { path: '/cart', icon: ShoppingCart, label: 'cart' },
+  { path: '/orders', icon: Package, label: 'orders' },
   { path: '/profile', icon: User, label: 'profile' },
 ];
 
 export default function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { language, darkMode, setDarkMode, getCartCount } = useStore();
+  const { language, darkMode, setDarkMode, getCartCount, wishlist } = useStore();
   const cartCount = getCartCount();
+  const wishlistCount = wishlist.length;
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -88,6 +89,19 @@ export default function Layout() {
               <Search size={17} />
             </button>
 
+            {/* Wishlist — between search and theme */}
+            <button
+              className="w-9 h-9 rounded-2xl flex items-center justify-center text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-all duration-200 active:scale-90 relative"
+              onClick={() => navigate('/wishlist')}
+            >
+              <Heart size={17} className={wishlistCount > 0 ? 'text-red-500 fill-red-500' : ''} />
+              {wishlistCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] rounded-full bg-destructive text-white text-[7px] font-bold flex items-center justify-center shadow-lg shadow-destructive/40">
+                  {wishlistCount > 99 ? '99+' : wishlistCount}
+                </span>
+              )}
+            </button>
+
             {/* Theme */}
             <button
               className="w-9 h-9 rounded-2xl flex items-center justify-center text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-all duration-200 active:scale-90"
@@ -115,7 +129,7 @@ export default function Layout() {
         </div>
       </main>
 
-      {/* Premium Bottom Navigation */}
+      {/* Premium Bottom Navigation — Orders instead of Cart */}
       <nav className="fixed bottom-0 left-0 right-0 h-16 glass-strong border-t border-border/40 z-50 safe-area-bottom">
         <div className="max-w-lg mx-auto h-full flex items-center justify-around px-2">
           {NAV_ITEMS.map(({ path, icon: Icon, label }) => {
@@ -139,7 +153,7 @@ export default function Layout() {
                 {active && (
                   <span className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-full shadow-lg shadow-primary/30" />
                 )}
-                {path === '/cart' && cartCount > 0 && (
+                {path === '/orders' && cartCount > 0 && (
                   <span className="absolute top-0.5 right-3 min-w-[16px] h-[16px] rounded-full bg-destructive text-white text-[7px] font-bold flex items-center justify-center shadow-lg shadow-destructive/40">
                     {cartCount > 99 ? '99+' : cartCount}
                   </span>

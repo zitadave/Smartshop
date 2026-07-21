@@ -46,6 +46,12 @@ interface AppState {
   // Gift cards
   giftCards: GiftCard[];
 
+  // Wallet (for converted points to cash)
+  walletBalance: number;
+  // Actions for wallet
+  addToWallet: (amount: number) => void;
+  deductFromWallet: (amount: number) => void;
+
   // Saved addresses
   savedAddresses: any[];
 
@@ -159,6 +165,7 @@ export const useStore = create<AppState>((set, get) => ({
   recentViews: loadPersisted<Product[]>('ss_recent', []),
   loyaltyPoints: loadPersisted<number>('ss_loyalty', 0),
   giftCards: loadPersisted<GiftCard[]>('ss_giftcards', []),
+  walletBalance: loadPersisted<number>('ss_wallet', 0),
   savedAddresses: loadPersisted<any[]>('ss_addresses', []),
   savedPayments: loadPersisted<any[]>('ss_payments', []),
 
@@ -371,6 +378,18 @@ export const useStore = create<AppState>((set, get) => ({
     const newCards = [...get().giftCards, card];
     savePersisted('ss_giftcards', newCards);
     set({ giftCards: newCards });
+  },
+
+  addToWallet: (amount) => {
+    const newBalance = get().walletBalance + amount;
+    savePersisted('ss_wallet', newBalance);
+    set({ walletBalance: newBalance });
+  },
+
+  deductFromWallet: (amount) => {
+    const newBalance = Math.max(0, get().walletBalance - amount);
+    savePersisted('ss_wallet', newBalance);
+    set({ walletBalance: newBalance });
   },
 
   // === NEW ACTIONS ===

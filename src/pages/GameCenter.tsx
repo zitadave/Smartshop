@@ -63,8 +63,10 @@ export default function GameCenter() {
       const newPoints = loyaltyPoints - convertAmount;
       localStorage.setItem('ss_loyalty', String(newPoints));
       useStore.setState({ loyaltyPoints: newPoints });
+      // Add to wallet
+      store.addToWallet(cashValue);
       addNotification('💰', `Converted ${convertAmount} points to Br ${cashValue}!`);
-      toast(`💰 Converted! Br ${cashValue} added to your wallet!`, 'success');
+      toast(`💰 Converted! Br ${cashValue} added to your wallet! 💼`, 'success');
       setShowConversion(false);
     }
   };

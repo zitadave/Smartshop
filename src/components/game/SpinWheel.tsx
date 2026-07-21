@@ -100,7 +100,7 @@ export function SpinWheel({ onWin, segments: customSegments, adminSettings }: Sp
               </g>
             );
           })}
-          <circle cx="100" cy="100" r="12" fill="white" stroke="#e2e8f0" strokeWidth="2" />
+          <circle cx="100" cy="100" r="5" fill="white" stroke="#e2e8f0" strokeWidth="1" />
         </svg>
       </div>
 
