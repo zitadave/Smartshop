@@ -30,7 +30,14 @@ export default function BulkProductManager() {
     const sample = 'Wireless Headphones,ጆሮ ማዳመጫ,2499,2999,50,electronics,High quality Bluetooth headphones,Samsung,https://example.com/image.jpg,sale';
     const csv = [headers, sample, '', '-- Instructions --', 'nameEn: Required. English product name', 'price: Required. Number only', 'stockCount: Number, default 10', 'category: electronics|fashion|home|beauty|groceries|books|sports|baby', 'badge: sale|hot|new|best-seller|popular|premium'].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'smartshop-bulk-template.csv'; a.click();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'smartshop-bulk-template.csv';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
     toast('📄 Template downloaded!', 'success');
   };
 

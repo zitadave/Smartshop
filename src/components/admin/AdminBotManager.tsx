@@ -1,20 +1,13 @@
-/**
- * Smart Shop — Admin Bot Manager
- *
- * Configure and monitor the dedicated admin Telegram bot.
- * Set webhook, send test messages, view notification history,
- * configure which alerts to receive.
- */
-
+/** Admin Bot Manager — Fully fixed refresh, demo, and notification queue */
 import { useState, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import {
-  getPendingNotifications, clearNotifications, markSent,
+  getPendingNotifications, clearNotifications, markSent, queueNotification,
   generateNewOrderNotification, generateLowStockNotification, type AdminNotification,
 } from '@/lib/adminBot';
 import {
-  Bot, Settings, Webhook, Send, Activity, Bell, BellOff,
-  CheckCircle, XCircle, RefreshCw, Trash2, ExternalLink, ChevronRight,
+  Bot, Settings, Webhook, Send, Activity, Bell,
+  CheckCircle, RefreshCw, Trash2,
   MessageSquare, AlertTriangle, ShoppingCart, Package,
 } from 'lucide-react';
 import { toast } from '@/components/Toast';
@@ -35,10 +28,12 @@ export default function AdminBotManager() {
   });
 
   const refreshNotifs = useCallback(() => {
-    setNotifications(getPendingNotifications());
+    const items = getPendingNotifications();
+    setNotifications(items);
+    toast(`🔄 ${items.length} notifications loaded`, 'info');
   }, []);
 
-  useEffect(() => { refreshNotifs(); }, [refreshNotifs]);
+  useEffect(() => { refreshNotifs(); }, []);
 
   const saveAlertConfig = (key: string, val: boolean) => {
     const updated = { ...alertConfig, [key]: val };
@@ -52,14 +47,12 @@ export default function AdminBotManager() {
     toast('✅ Bot configuration saved!', 'success');
   };
 
-  const setWebhook = async () => {
+  const setWebhookFn = async () => {
     if (!botToken) { toast('Set bot token first', 'error'); return; }
     setSettingWebhook(true);
     try {
       const res = await fetch('/api/admin-bot/set-webhook', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}),
       });
       const data = await res.json();
       if (data.ok) {
@@ -69,9 +62,7 @@ export default function AdminBotManager() {
         setWebhookStatus('❌ Failed: ' + (data.description || 'Unknown error'));
         toast('❌ Webhook failed', 'error');
       }
-    } catch (e: any) {
-      setWebhookStatus('❌ Error: ' + e.message);
-    }
+    } catch (e: any) { setWebhookStatus('❌ Error: ' + e.message); }
     setSettingWebhook(false);
   };
 
@@ -80,30 +71,26 @@ export default function AdminBotManager() {
     setSending(true);
     try {
       const res = await fetch('/api/admin-bot/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chatId, message: '🔔 <b>Smart Shop Admin Bot</b>\n\n✅ Test notification successful!\nYour bot is configured correctly.' }),
       });
       const data = await res.json();
-      if (data.sent) {
-        toast('✅ Test message sent to Telegram!', 'success');
-      } else {
-        toast('❌ Failed to send. Check your bot token and chat ID.', 'error');
-      }
-    } catch (e: any) {
-      toast('❌ Error: ' + e.message, 'error');
-    }
+      toast(data.sent ? '✅ Test message sent to Telegram!' : '❌ Failed to send', data.sent ? 'success' : 'error');
+    } catch (e: any) { toast('❌ Error: ' + e.message, 'error'); }
     setSending(false);
   };
 
+  /** FIXED: Now actually queues notifications and refreshes the list */
   const demoNotification = (type: AdminNotification['type']) => {
+    let n: AdminNotification;
     if (type === 'new_order') {
-      const n = generateNewOrderNotification({ orderNumber: 'ETH-DEMO', total: 4500, customerName: 'Abebe K.', itemCount: 3, paymentMethod: 'Telebirr' });
-      toast(`📨 Demo: ${n.title} — ${n.message}`, 'info');
-    } else if (type === 'low_stock') {
-      const n = generateLowStockNotification({ nameEn: 'Demo Product', stockCount: 2, price: 1500 });
-      toast(`📨 Demo: ${n.title} — ${n.message}`, 'info');
+      n = generateNewOrderNotification({ orderNumber: 'ETH-DEMO-' + Date.now().toString(36).toUpperCase(), total: 4500, customerName: 'Abebe K.', itemCount: 3, paymentMethod: 'Telebirr' });
+    } else {
+      n = generateLowStockNotification({ nameEn: 'Premium Headphones', stockCount: 2, price: 1500 });
     }
+    queueNotification(n);
+    refreshNotifs();
+    toast(`📨 Demo: ${n.title} — ${n.message}`, 'info');
   };
 
   const typeIcons: Record<string, any> = {
@@ -115,17 +102,19 @@ export default function AdminBotManager() {
   };
 
   return (
-    <div className="animate-fadeUp space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="animate-fadeUp space-y-4 max-w-full overflow-x-hidden">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h2 className="text-lg font-bold flex items-center gap-2"><Bot size={20} className="text-blue-500" /> Admin Bot Manager</h2>
           <p className="text-[10px] text-slate-500 mt-0.5">Dedicated Telegram bot for admin alerts & remote management</p>
         </div>
-        <div className="flex gap-2">
-          <button className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg text-[10px] font-medium flex items-center gap-1 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors" onClick={() => { refreshNotifs(); toast('🔄 Notifications refreshed!', 'info'); }}><RefreshCw size={11} /> Refresh</button>
+        <div className="flex gap-2 flex-wrap">
+          <button className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg text-[10px] font-medium flex items-center gap-1 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+            onClick={refreshNotifs}><RefreshCw size={11} /> Refresh</button>
           {notifications.length > 0 && (
-            <button className="px-3 py-1.5 bg-red-100 text-red-600 rounded-lg text-[10px] font-medium flex items-center gap-1" onClick={() => { clearNotifications(); setNotifications([]); toast('Cleared', 'info'); }}>
-              <Trash2 size={11} /> Clear
+            <button className="px-3 py-1.5 bg-red-100 text-red-600 rounded-lg text-[10px] font-medium flex items-center gap-1"
+              onClick={() => { clearNotifications(); setNotifications([]); toast('🧹 All cleared!', 'info'); }}>
+              <Trash2 size={11} /> Clear All
             </button>
           )}
         </div>
@@ -144,7 +133,7 @@ export default function AdminBotManager() {
               <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Telegram Chat ID</label>
               <input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent font-mono" placeholder="-1001234567890" value={chatId} onChange={e => setChatId(e.target.value)} />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <button className="px-4 py-2 bg-primary text-white rounded-xl text-xs font-bold" onClick={saveConfig}>💾 Save Config</button>
               <button className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold flex items-center gap-1 disabled:opacity-50" onClick={sendTestMessage} disabled={sending}>
                 {sending ? '...' : <><Send size={12} /> Test</>}
@@ -157,11 +146,11 @@ export default function AdminBotManager() {
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
           <h3 className="text-sm font-bold mb-3 flex items-center gap-2"><Webhook size={16} /> Webhook URL</h3>
           <p className="text-[10px] text-slate-500 mb-3">Set this webhook in BotFather to receive commands via the bot. The bot responds to: /stats, /orders, /lowstock, /alerts</p>
-          <button className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl text-xs font-bold flex items-center gap-1 disabled:opacity-50" onClick={setWebhook} disabled={settingWebhook}>
+          <button className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl text-xs font-bold flex items-center gap-1 disabled:opacity-50" onClick={setWebhookFn} disabled={settingWebhook}>
             {settingWebhook ? <><RefreshCw size={12} className="animate-spin" /> Setting...</> : <><Webhook size={12} /> Set Webhook</>}
           </button>
           {webhookStatus && (
-            <div className={cn('mt-2 p-2 rounded-lg text-[9px]', webhookStatus.includes('✅') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600')}>
+            <div className={cn('mt-2 p-2 rounded-lg text-[9px] break-all', webhookStatus.includes('✅') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600')}>
               {webhookStatus}
             </div>
           )}
@@ -206,11 +195,11 @@ export default function AdminBotManager() {
             );
           })}
         </div>
-        <div className="flex gap-2 mt-3">
-          <button className="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-[9px] font-semibold flex items-center gap-1" onClick={() => demoNotification('new_order')}>
+        <div className="flex gap-2 mt-3 flex-wrap">
+          <button className="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-[9px] font-semibold flex items-center gap-1 hover:bg-indigo-100" onClick={() => demoNotification('new_order')}>
             <Send size={10} /> Demo: New Order
           </button>
-          <button className="px-3 py-1.5 bg-amber-50 text-amber-700 rounded-lg text-[9px] font-semibold flex items-center gap-1" onClick={() => demoNotification('low_stock')}>
+          <button className="px-3 py-1.5 bg-amber-50 text-amber-700 rounded-lg text-[9px] font-semibold flex items-center gap-1 hover:bg-amber-100" onClick={() => demoNotification('low_stock')}>
             <Send size={10} /> Demo: Low Stock
           </button>
         </div>
@@ -249,23 +238,9 @@ export default function AdminBotManager() {
           {notifications.length === 0 && (
             <div className="text-center py-8 text-xs text-slate-400">
               <Bell size={24} className="mx-auto mb-1 text-slate-300" />
-              No notifications yet. Configure your bot and trigger events to see them here.
+              No notifications yet. Click "Demo: New Order" above to test!
             </div>
           )}
-        </div>
-      </div>
-
-      {/* Quick Reference */}
-      <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/20 dark:to-purple-950/20 rounded-2xl border border-indigo-200 dark:border-indigo-800/30 p-3">
-        <div className="text-[9px] text-indigo-700 dark:text-indigo-300 space-y-1">
-          <strong>🤖 Bot Commands</strong>
-          <div className="grid grid-cols-2 gap-1 mt-1">
-            <code className="text-[8px] bg-white/50 dark:bg-black/20 px-2 py-1 rounded">/start — Welcome menu</code>
-            <code className="text-[8px] bg-white/50 dark:bg-black/20 px-2 py-1 rounded">/stats — Store statistics</code>
-            <code className="text-[8px] bg-white/50 dark:bg-black/20 px-2 py-1 rounded">/orders — Recent orders</code>
-            <code className="text-[8px] bg-white/50 dark:bg-black/20 px-2 py-1 rounded">/lowstock — Low stock alerts</code>
-            <code className="text-[8px] bg-white/50 dark:bg-black/20 px-2 py-1 rounded">/alerts — Active SLA alerts</code>
-          </div>
         </div>
       </div>
     </div>

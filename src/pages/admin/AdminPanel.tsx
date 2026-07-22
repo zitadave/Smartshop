@@ -146,8 +146,8 @@ export default function AdminLayout() {
 
       {menuOpen && <div className="fixed inset-0 bg-black/40 z-30 xl:hidden backdrop-blur-sm" onClick={() => setMenuOpen(false)} />}
 
-      <main className="xl:ml-60 pt-14 min-h-screen transition-all duration-300">
-        <div className="p-4 md:p-6 max-w-7xl mx-auto animate-fadeUp">
+      <main className="xl:ml-60 pt-14 min-h-screen transition-all duration-300 overflow-x-hidden">
+        <div className="p-4 md:p-6 max-w-7xl mx-auto animate-fadeUp overflow-x-hidden">
           {tab === 'overview' && <Overview onNavigate={handleCmdNavigate} />}
           {tab === 'products' && <AdminProducts />}
           {tab === 'orders' && <AdminOrders />}
@@ -577,29 +577,60 @@ function AdminMarketplace() {
   const store = useStore();
   const { settings, setSettings } = store;
   const [products, setProducts] = useState<any[]>([]);
+  const [sponsoredPid, setSponsoredPid] = useState('');
   useEffect(() => { productsApi.list().then(d => setProducts(d?.products || [])).catch(() => {}); }, []);
   const saveSetting = (key: string, val: any) => { const updated = { ...settings, [key]: val }; setSettings(updated as any); settingsApi.update(updated); };
+  const sp = settings.sponsoredProducts || [];
+  const addSponsored = () => { if (sponsoredPid) { saveSetting('sponsoredProducts', [...sp, Number(sponsoredPid)]); setSponsoredPid(''); toast('✅ Sponsored product added!', 'success'); } };
   return (
-    <div className="animate-fadeUp space-y-4">
-      <h2 className="text-lg font-bold">🚀 Marketplace</h2>
+    <div className="animate-fadeUp space-y-4 max-w-full overflow-x-hidden">
+      <h2 className="text-lg font-bold">🚀 Marketplace Management</h2>
+      <p className="text-[10px] text-slate-500">Manage flash sales, sponsored products, bundle deals, and cross-sell promotions</p>
+
+      {/* Sponsored Products */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
-        <h3 className="text-sm font-bold mb-3 flex items-center gap-2"><Zap size={16} className="text-orange-500" /> Flash Sales</h3>
-        {Object.entries(settings.flashSales || {}).map(([pid, d]: any) => {
+        <h3 className="text-sm font-bold mb-3">💼 Sponsored Products ({sp.length})</h3>
+        <div className="flex gap-2 mb-3 flex-wrap">
+          <select className="flex-1 min-w-[120px] p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] bg-transparent" value={sponsoredPid} onChange={e => setSponsoredPid(e.target.value)}>
+            <option value="">Select product...</option>
+            {products.filter(p => !sp.includes(p.id)).map(p => <option key={p.id} value={p.id}>{p.nameEn} - {formatPrice(p.price)}</option>)}
+          </select>
+          <button className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-[10px] font-bold disabled:opacity-50" onClick={addSponsored} disabled={!sponsoredPid}>+ Promote</button>
+        </div>
+        <div className="space-y-1.5 max-h-48 overflow-y-auto">
+          {sp.length === 0 ? <p className="text-[10px] text-slate-400 text-center py-4">No sponsored products</p> :
+            sp.map((pid: number) => {
+              const p = products.find(x => x.id === pid);
+              return <div key={pid} className="flex items-center gap-3 py-1.5 border-b border-slate-100 dark:border-slate-800 last:border-0">
+                <img src={p?.image} className="w-8 h-8 rounded-lg object-cover" />
+                <span className="flex-1 text-[10px] font-medium truncate">{p?.nameEn || `#${pid}`}</span>
+                <span className="text-[9px] text-green-600 font-semibold">{formatPrice(p?.price || 0)}</span>
+                <button className="p-1 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600" onClick={() => saveSetting('sponsoredProducts', sp.filter((x: number) => x !== pid))}><Trash2 size={11} /></button>
+              </div>;
+            })
+          }
+        </div>
+      </div>
+
+      {/* Bundle Deals */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+        <h3 className="text-sm font-bold mb-3">🔗 Bundle Deals</h3>
+        {Object.keys(settings.bundleDeals || {}).length === 0 && <p className="text-[10px] text-slate-400 text-center py-4">No bundle deals. Coming soon: buy together and save!</p>}
+        {Object.entries(settings.bundleDeals || {}).map(([pid, d]: any) => {
           const p = products.find(x => x.id === Number(pid));
-          const active = isFlashDealActive(d);
-          return <div key={pid} className="flex items-center gap-3 py-2 border-b border-slate-100 dark:border-slate-800 last:border-0">
-            <img src={p?.image} className="w-8 h-8 rounded-lg object-cover" />
-            <div className="flex-1 min-w-0"><div className="text-xs font-semibold truncate">{p?.nameEn || `#${pid}`}</div><div className={cn('text-[9px]', active ? 'text-green-600' : 'text-slate-400')}>{active ? formatCountdown(d.end) : 'Expired'} · -{d.discount || 20}%</div></div>
-            <button className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600" onClick={() => { const fs = { ...settings.flashSales }; delete fs[pid]; saveSetting('flashSales', fs); }}><Trash2 size={12} /></button>
-          </div>;
+          return <div key={pid} className="flex items-center gap-2 py-2 text-[10px]">{p?.nameEn} + bundle · {d.discount}% off</div>;
         })}
       </div>
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
-        <h3 className="text-sm font-bold mb-3">💼 Sponsored Products</h3>
-        {(settings.sponsoredProducts || []).map((pid: number) => {
-          const p = products.find(x => x.id === pid);
-          return <div key={pid} className="flex items-center gap-3 py-2 border-b border-slate-100 dark:border-slate-800 last:border-0"><span>💼</span><span className="flex-1 text-xs">{p?.nameEn || `#${pid}`}</span><button className="text-red-500 text-[9px]" onClick={() => saveSetting('sponsoredProducts', (settings.sponsoredProducts || []).filter((x: number) => x !== pid))}><Trash2 size={12} /></button></div>;
-        })}
+
+      {/* Cross-sell */}
+      <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/20 dark:to-purple-950/20 rounded-2xl border border-indigo-200 dark:border-indigo-800/30 p-4">
+        <h3 className="text-sm font-bold mb-2">📊 Marketplace Stats</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+          <div className="bg-white/80 dark:bg-slate-900/80 rounded-xl p-3"><div className="text-lg font-bold text-indigo-600">{products.length}</div><div className="text-[9px] text-slate-500">Total Products</div></div>
+          <div className="bg-white/80 dark:bg-slate-900/80 rounded-xl p-3"><div className="text-lg font-bold text-green-600">{products.filter(p => p.inStock).length}</div><div className="text-[9px] text-slate-500">In Stock</div></div>
+          <div className="bg-white/80 dark:bg-slate-900/80 rounded-xl p-3"><div className="text-lg font-bold text-amber-600">{sp.length}</div><div className="text-[9px] text-slate-500">Sponsored</div></div>
+          <div className="bg-white/80 dark:bg-slate-900/80 rounded-xl p-3"><div className="text-lg font-bold text-purple-600">{Object.keys(settings.flashSales || {}).length}</div><div className="text-[9px] text-slate-500">Flash Sales</div></div>
+        </div>
       </div>
     </div>
   );
