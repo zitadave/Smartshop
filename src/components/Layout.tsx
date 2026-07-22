@@ -1,12 +1,13 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '@/stores/AppStore';
 import { t } from '@/i18n/translations';
+import { isRunningInTelegram } from '@/lib/telegram';
 import ToastContainer from './Toast';
 import QuickView from './ui/QuickView';
 import AIChat from '@/components/ai/AIChat';
+import PWAInstallPrompt from './PWAInstallPrompt';
 import { ShoppingCart, Package, User, Home, Store, Moon, Sun, Search, Heart } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import PWAInstallPrompt from './PWAInstallPrompt';
 
 const NAV_ITEMS = [
   { path: '/', icon: Home, label: 'home' },
@@ -14,6 +15,10 @@ const NAV_ITEMS = [
   { path: '/orders', icon: Package, label: 'orders' },
   { path: '/profile', icon: User, label: 'profile' },
 ];
+
+// Running inside Telegram WebView — disable heavy animations
+const TG = isRunningInTelegram();
+const ANIM_CLASS = TG ? '' : 'animate-fadeIn';
 
 export default function Layout() {
   const navigate = useNavigate();
@@ -32,7 +37,7 @@ export default function Layout() {
       <ToastContainer />
       <QuickView />
       <AIChat />
-      <PWAInstallPrompt />
+      {!TG && <PWAInstallPrompt />}
 
       <header className="fixed top-0 left-0 right-0 h-14 z-50 glass-strong border-b border-border/40">
         <div className="max-w-2xl mx-auto h-full flex items-center px-4 gap-2">
@@ -45,11 +50,9 @@ export default function Layout() {
           </div>
 
           <div className="flex items-center gap-1.5">
-            {/* Search - navigates to Shop page */}
             <button className="w-9 h-9 rounded-2xl flex items-center justify-center text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-all duration-200 active:scale-90"
               onClick={() => navigate('/shop')}><Search size={17} /></button>
 
-            {/* Wishlist - only when items exist */}
             {wishlistCount > 0 && (
               <button className="w-9 h-9 rounded-2xl flex items-center justify-center text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-all duration-200 active:scale-90 relative"
                 onClick={() => navigate('/wishlist')}>
@@ -63,7 +66,6 @@ export default function Layout() {
             <button className="w-9 h-9 rounded-2xl flex items-center justify-center text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-all duration-200 active:scale-90"
               onClick={() => setDarkMode(!darkMode)}>{darkMode ? <Sun size={17} /> : <Moon size={17} />}</button>
 
-            {/* Cart - only when items exist */}
             {cartCount > 0 && (
               <button className="w-9 h-9 rounded-2xl flex items-center justify-center text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-all duration-200 active:scale-90 relative"
                 onClick={() => navigate('/cart')}>
@@ -75,7 +77,7 @@ export default function Layout() {
         </div>
       </header>
 
-      <main className="pt-14 animate-fadeIn">
+      <main className="pt-14">
         <div className="max-w-2xl mx-auto"><Outlet /></div>
       </main>
 

@@ -1,11 +1,12 @@
 import { useEffect, lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { useStore } from '@/stores/AppStore';
 import { productsApi, settingsApi } from '@/lib/api';
 import { initSentry } from '@/lib/sentry';
 import { initAnalytics, trackEvent } from '@/lib/analytics';
 import { registerSW } from '@/lib/sw';
 import { getSampleBroadcasts, getSampleFlashDeals } from '@/lib/seed';
+import { isRunningInTelegram } from '@/lib/telegram';
 import Layout from '@/components/Layout';
 
 const Home = lazy(() => import('@/pages/Home'));
@@ -33,23 +34,52 @@ const Notifications = lazy(() => import('@/pages/Notifications'));
 const PriceAlerts = lazy(() => import('@/pages/PriceAlerts'));
 const Loyalty = lazy(() => import('@/pages/Loyalty'));
 
+const TG = isRunningInTelegram();
+
+/** Telegram BackButton handler — syncs with browser navigation */
+function TelegramBackButton() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    const tg = (window as any).Telegram?.WebApp;
+    if (!tg) return;
+    
+    if (location.pathname === '/') {
+      tg.BackButton.hide();
+    } else {
+      tg.BackButton.show();
+      tg.BackButton.onClick(() => navigate(-1));
+    }
+    
+    return () => {
+      if (tg?.BackButton) {
+        tg.BackButton.offClick(() => {});
+      }
+    };
+  }, [location.pathname, navigate]);
+  
+  return null;
+}
+
 const PageLoader = () => (
-  <div className="flex items-center justify-center min-h-[60vh]">
-    <div className="text-center">
-      <div className="w-8 h-8 border-2 border-border border-t-primary rounded-full animate-spin mx-auto" />
-      <p className="text-xs text-muted-foreground mt-3">Loading...</p>
+  TG ? (
+    <div className="flex items-center justify-center min-h-[60vh] bg-background" />
+  ) : (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="text-center">
+        <div className="w-8 h-8 border-2 border-border border-t-primary rounded-full animate-spin mx-auto" />
+        <p className="text-xs text-muted-foreground mt-3">Loading...</p>
+      </div>
     </div>
-  </div>
+  )
 );
 
-/** Apply theme CSS variables globally */
 function applySavedTheme() {
-  // Dark mode
   const dark = (() => { try { return JSON.parse(localStorage.getItem('ss_dark') || 'false'); } catch { return false; } })();
   if (dark) document.documentElement.classList.add('dark');
   else document.documentElement.classList.remove('dark');
 
-  // Theme preset
   const themes: Record<string, { primary: string; accent: string }> = {
     default: { primary: '#6C63FF', accent: '#8B5CF6' },
     ocean: { primary: '#0EA5E9', accent: '#06B6D4' },
@@ -65,27 +95,20 @@ function applySavedTheme() {
   const root = document.documentElement;
   root.style.setProperty('--primary-hex', theme.primary);
   root.style.setProperty('--accent-hex', accent || theme.accent);
-  // Also set Tailwind-compatible CSS variables
-  const primaryColor = accent || theme.primary;
-  root.style.setProperty('--color-primary', primaryColor);
-  root.style.setProperty('--color-ring', primaryColor + '40');
+  root.style.setProperty('--color-primary', accent || theme.primary);
+  root.style.setProperty('--color-ring', (accent || theme.primary) + '40');
 }
 
 export default function App() {
   const { darkMode, setProducts, setSettings, settings, products } = useStore();
 
   useEffect(() => { initSentry(); initAnalytics(); registerSW(); }, []);
-
-  // Apply theme on mount
   useEffect(() => { applySavedTheme(); }, []);
-
-  // Apply dark mode changes
   useEffect(() => {
     if (darkMode) document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
   }, [darkMode]);
 
-  // Load data
   useEffect(() => {
     productsApi.list().then(d => {
       if (d?.products) { setProducts(d.products); trackEvent('page_view', { page: 'home', products: d.products.length }); }
@@ -99,7 +122,6 @@ export default function App() {
     }).catch(() => {});
   }, []);
 
-  // Seed flash deals
   useEffect(() => {
     if (products.length > 0 && (!settings.flashSales || Object.keys(settings.flashSales).length === 0)) {
       const productIds = products.slice(0, 5).map(p => p.id);
@@ -109,6 +131,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      {TG && <TelegramBackButton />}
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<Suspense fallback={<PageLoader />}><Home /></Suspense>} />
