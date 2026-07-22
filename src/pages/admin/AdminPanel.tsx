@@ -26,11 +26,12 @@ import BulkProductManager from '@/components/admin/BulkProductManager';
 import ProductAnalytics from '@/components/admin/ProductAnalytics';
 import InventoryForecast from '@/components/admin/InventoryForecast';
 import ActivityLog from '@/components/admin/ActivityLog';
+import OrderFulfillment from '@/components/admin/OrderFulfillment';
 import AdminSecurity from '@/components/admin/AdminSecurity';
 import TelegramNotifications from '@/components/admin/TelegramNotifications';
 
 
-type Tab = 'overview' | 'products' | 'orders' | 'vendors' | 'marketplace' | 'reviews' | 'broadcast' | 'flashdeals' | 'preorders' | 'tracking' | 'themes' | 'coupons' | 'settings' | 'alerts' | 'abandoned' | 'roles' | 'backup' | 'adminTheme' | 'bulkProducts' | 'analytics' | 'forecast' | 'activity' | 'security' | 'telegram';
+type Tab = 'overview' | 'products' | 'orders' | 'vendors' | 'marketplace' | 'reviews' | 'broadcast' | 'flashdeals' | 'preorders' | 'tracking' | 'themes' | 'coupons' | 'settings' | 'alerts' | 'abandoned' | 'roles' | 'backup' | 'adminTheme' | 'bulkProducts' | 'analytics' | 'forecast' | 'activity' | 'security' | 'telegram' | 'fulfillment';
 
 export default function AdminLayout() {
   const [tab, setTab] = useState<Tab>('overview');
@@ -68,7 +69,9 @@ export default function AdminLayout() {
     { id: 'forecast', icon: Clock, label: 'Forecast' },
     { id: 'activity', icon: ClipboardList, label: 'Activity Log' },
     { id: 'security', icon: Shield, label: 'Security' },
+
     { id: 'telegram', icon: Bell, label: 'Telegram Bot' },
+    { id: 'fulfillment', icon: ShoppingCart, label: 'Fulfillment' },
 
 
   ];
@@ -161,7 +164,9 @@ export default function AdminLayout() {
           {tab === 'forecast' && <InventoryForecast />}
           {tab === 'activity' && <ActivityLog />}
           {tab === 'security' && <AdminSecurity />}
+
           {tab === 'telegram' && <TelegramNotifications />}
+          {tab === 'fulfillment' && <OrderFulfillment />}
 
           {tab === 'settings' && <AdminSettings />}
         </div>

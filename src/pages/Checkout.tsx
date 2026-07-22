@@ -6,7 +6,8 @@ import { formatPrice, generateOrderNumber } from '@/lib/utils';
 import { CheckoutSteps } from '@/components/ui/CheckoutSteps';
 import { haptic } from '@/lib/confetti';
 import { getTelegramUser } from '@/lib/telegram';
-import { ArrowLeft, MapPin, CreditCard, Package, Smartphone, CheckCircle } from 'lucide-react';
+import { createFulfillment, upsertFulfillment } from '@/lib/orderFulfillment';
+import { ArrowLeft, MapPin, CreditCard, Package } from 'lucide-react';
 
 export default function Checkout() {
   const navigate = useNavigate();
@@ -14,7 +15,6 @@ export default function Checkout() {
   const { cart, language, getCartTotal, addOrder, clearCart, addLoyaltyPoints, addNotification, profile, savedPayments, addSavedPayment, isTelegramVerified } = store;
   const total = getCartTotal();
 
-  // Try to get Telegram user data for pre-fill
   const tgUser = getTelegramUser();
   const cachedAuth = (() => {
     try { return JSON.parse(localStorage.getItem('ss_telegram_auth') || 'null'); } catch { return null; }
@@ -33,10 +33,11 @@ export default function Checkout() {
     setLoading(true);
     haptic('medium');
 
+    const orderNumber = generateOrderNumber();
     const order = {
-      orderNumber: generateOrderNumber(),
+      orderNumber,
       status: 'confirmed' as const,
-      items: cart.map(i => ({ id: i.id, name: i.nameEn, quantity: i.qty, price: i.price, total: i.price * i.qty })),
+      items: cart.map(i => ({ id: i.id, name: i.nameEn, quantity: i.qty, price: i.price, total: i.price * i.qty, vendorId: i.vendorId, vendorName: i.vendorName })),
       total,
       subtotal: total,
       discount: 0,
@@ -66,8 +67,19 @@ export default function Checkout() {
       addLoyaltyPoints(Math.floor(total / 10));
     }
 
+    // Create fulfillment record for vendor routing + delivery pipeline
+    const fulfillment = createFulfillment({
+      orderNumber: order.orderNumber,
+      items: order.items,
+      total: order.total,
+      customer: order.customer,
+      createdAt: order.createdAt,
+    });
+    upsertFulfillment(fulfillment);
+
     addOrder(order);
     addNotification('📦', 'Order placed! #' + order.orderNumber);
+    addNotification('🏪', 'Vendor has been notified about your order #' + order.orderNumber);
     clearCart();
     setLoading(false);
     haptic('success');
@@ -82,15 +94,10 @@ export default function Checkout() {
   return (
     <div className="px-4 pt-4 pb-10 max-w-lg mx-auto animate-fadeUp">
       <div className="flex items-center gap-3 mb-4">
-        <button className="p-2 -ml-2 rounded-xl hover:bg-muted transition-colors" onClick={() => navigate('/cart')}>
-          <ArrowLeft size={18} />
-        </button>
+        <button className="p-2 -ml-2 rounded-xl hover:bg-muted transition-colors" onClick={() => navigate('/cart')}><ArrowLeft size={18} /></button>
         <h2 className="text-lg font-bold">{t('checkout', language)}</h2>
       </div>
-
       <CheckoutSteps current={step} className="mb-4" />
-
-      {/* Delivery Step */}
       {step === 'delivery' && (
         <div className="space-y-3 animate-fadeUp">
           <div className="bg-card rounded-2xl border border-border p-4 shadow-sm">
@@ -111,8 +118,6 @@ export default function Checkout() {
               </select>
             </div>
           </div>
-
-          {/* Items Summary */}
           <div className="bg-card rounded-2xl border border-border p-4 shadow-sm">
             <h3 className="text-xs font-semibold mb-3 flex items-center gap-2"><Package size={14} /> Items</h3>
             {cart.slice(0, 3).map(i => (
@@ -123,68 +128,39 @@ export default function Checkout() {
             ))}
             {cart.length > 3 && <p className="text-xs text-muted-foreground/60 mt-1">+{cart.length - 3} more items</p>}
           </div>
-
-          <button className="w-full py-3.5 bg-primary text-white rounded-2xl text-sm font-bold shadow-lg hover:shadow-xl hover:scale-[1.01] active:scale-[0.98] transition-all duration-200"
-            onClick={() => setStep('payment')}>
-            Continue to Payment →
-          </button>
+          <button className="w-full py-3.5 bg-primary text-white rounded-2xl text-sm font-bold shadow-lg hover:shadow-xl hover:scale-[1.01] active:scale-[0.98] transition-all duration-200" onClick={() => setStep('payment')}>Continue to Payment →</button>
         </div>
       )}
-
-      {/* Payment Step */}
       {step === 'payment' && (
         <div className="space-y-3 animate-fadeUp">
           <div className="bg-card rounded-2xl border border-border p-4 shadow-sm">
             <h3 className="text-xs font-semibold mb-3 flex items-center gap-2"><CreditCard size={14} /> Payment</h3>
-
             {savedPayments.length > 0 && (
               <div className="mb-3">
                 <div className="text-[10px] text-muted-foreground/60 mb-1.5 font-medium">Saved</div>
                 {savedPayments.slice(-3).map((p, i) => (
                   <div key={i} className="flex items-center gap-2.5 px-3 py-2.5 bg-muted/50 rounded-xl mb-1.5 cursor-pointer text-xs border border-border/60 hover:border-primary/30 transition-all" onClick={() => setPayment(p.type)}>
-                    <span className="text-base">{p.icon}</span>
-                    <span>{p.name} • {p.number?.slice(-4)}</span>
+                    <span className="text-base">{p.icon}</span><span>{p.name} • {p.number?.slice(-4)}</span>
                     {payment === p.type && <span className="ml-auto text-primary text-sm">✓</span>}
                   </div>
                 ))}
               </div>
             )}
-
-            {[
-              { id: 'telebirr', icon: '📱', label: 'Telebirr' },
-              { id: 'cbebirr', icon: '🏦', label: 'CBE Birr' },
-              { id: 'cash', icon: '💵', label: 'Cash on Delivery' },
-            ].map(p => (
+            {[{ id: 'telebirr', icon: '📱', label: 'Telebirr' }, { id: 'cbebirr', icon: '🏦', label: 'CBE Birr' }, { id: 'cash', icon: '💵', label: 'Cash on Delivery' }].map(p => (
               <div key={p.id} className={`flex items-center gap-2.5 px-3 py-3 rounded-xl mb-1.5 cursor-pointer text-xs border transition-all ${payment === p.id ? 'border-primary bg-primary/5 shadow-sm' : 'border-border/60 hover:border-primary/30'}`} onClick={() => setPayment(p.id)}>
-                <span className="text-base">{p.icon}</span>
-                <span className="font-medium">{p.label}</span>
+                <span className="text-base">{p.icon}</span><span className="font-medium">{p.label}</span>
                 {payment === p.id && <span className="ml-auto text-primary font-bold">✓</span>}
               </div>
             ))}
           </div>
-
-          {/* Total */}
           <div className="bg-card rounded-2xl border border-border p-4 shadow-sm">
-            <div className="flex justify-between text-xs text-muted-foreground mb-1">
-              <span>Subtotal</span><span>{formatPrice(total)}</span>
-            </div>
-            <div className="flex justify-between text-xs text-muted-foreground mb-1">
-              <span>Delivery</span><span className="text-green-600 font-medium">Free</span>
-            </div>
-            <div className="border-t border-border/60 pt-2 flex justify-between text-base font-bold mt-2">
-              <span>Total</span><span className="text-primary text-xl">{formatPrice(total)}</span>
-            </div>
+            <div className="flex justify-between text-xs text-muted-foreground mb-1"><span>Subtotal</span><span>{formatPrice(total)}</span></div>
+            <div className="flex justify-between text-xs text-muted-foreground mb-1"><span>Delivery</span><span className="text-green-600 font-medium">Free</span></div>
+            <div className="border-t border-border/60 pt-2 flex justify-between text-base font-bold mt-2"><span>Total</span><span className="text-primary text-xl">{formatPrice(total)}</span></div>
           </div>
-
           <div className="flex gap-2">
-            <button className="flex-1 py-3 border border-border/60 rounded-2xl text-xs font-medium hover:bg-muted transition-colors" onClick={() => setStep('delivery')}>
-              ← Back
-            </button>
-            <button
-              className="flex-[2] py-3.5 bg-gradient-to-r from-green-600 to-emerald-500 text-white rounded-2xl text-sm font-bold shadow-lg hover:shadow-xl hover:scale-[1.01] active:scale-[0.98] transition-all duration-200 disabled:opacity-50"
-              onClick={placeOrder}
-              disabled={loading}
-            >
+            <button className="flex-1 py-3 border border-border/60 rounded-2xl text-xs font-medium hover:bg-muted transition-colors" onClick={() => setStep('delivery')}>← Back</button>
+            <button className="flex-[2] py-3.5 bg-gradient-to-r from-green-600 to-emerald-500 text-white rounded-2xl text-sm font-bold shadow-lg hover:shadow-xl hover:scale-[1.01] active:scale-[0.98] transition-all duration-200 disabled:opacity-50" onClick={placeOrder} disabled={loading}>
               {loading ? '⏳ Placing Order...' : `✅ ${t('placeOrder', language)} — ${formatPrice(total)}`}
             </button>
           </div>
