@@ -344,3 +344,4 @@ export async function verifyTelegramInitData(
     return false;
   }
 }
+// Force build change Wed Jul 22 11:36:55 UTC 2026
