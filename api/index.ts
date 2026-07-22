@@ -26,8 +26,12 @@ function normalizeProduct(p: any) {
     vendorId: p.vendor_id || null, vendorName: p.vendor_name || '',
     inStock: p.in_stock !== false, visible: p.visible !== false,
     colors: p.colors || [], sizes: p.sizes || [], features: p.features || [],
+    tags: p.tags || [], brand: p.brand || '', featured: p.featured || false,
+    weight: p.weight || 0, unit: p.unit || 'kg',
+    seoTitle: p.seo_title || '', seoDescription: p.seo_description || '',
     createdAt: p.created_at || '', isPreOrder: p.is_pre_order || false,
     preOrderDeposit: p.pre_order_deposit || null, preOrderReleaseDate: p.pre_order_release_date || null,
+    preOrderMax: p.pre_order_max || null,
   };
 }
 
@@ -353,8 +357,64 @@ export default async function handler(req: any, res: any) {
           return res.json({ product: data ? normalizeProduct(data) : null });
         }
       }
-      if (method === 'POST') { const { data } = await supabase.from('products').insert(req.body).select().single(); return res.json({ success: true, product: data }); }
-      if (method === 'PUT') { const id = parseInt(path.split('/').pop() || '0'); await supabase.from('products').update(req.body).eq('id', id); return res.json({ success: true }); }
+      if (method === 'POST') {
+        // Convert camelCase frontend fields to snake_case for database
+        const body = {
+          ...req.body,
+          name_en: req.body.nameEn || req.body.name_en || '',
+          name: req.body.name || req.body.name_en || '',
+          description_en: req.body.descriptionEn || req.body.description_en || '',
+          description: req.body.description || '',
+          stock_count: req.body.stockCount ?? req.body.stock_count ?? 10,
+          sold_count: req.body.soldCount ?? req.body.sold_count ?? 0,
+          original_price: req.body.originalPrice ?? req.body.original_price ?? null,
+          vendor_id: req.body.vendorId ?? req.body.vendor_id ?? null,
+          vendor_name: req.body.vendorName ?? req.body.vendor_name ?? '',
+          is_pre_order: req.body.isPreOrder ?? req.body.is_pre_order ?? false,
+          pre_order_deposit: req.body.preOrderDeposit ?? req.body.pre_order_deposit ?? null,
+          pre_order_release_date: req.body.preOrderReleaseDate ?? req.body.pre_order_release_date ?? '',
+          pre_order_max: req.body.preOrderMax ?? req.body.pre_order_max ?? null,
+          seo_title: req.body.seoTitle ?? req.body.seo_title ?? '',
+          seo_description: req.body.seoDescription ?? req.body.seo_description ?? '',
+          in_stock: req.body.inStock ?? req.body.in_stock ?? true,
+        };
+        // Remove camelCase keys to avoid conflicts
+        delete body.nameEn; delete body.descriptionEn; delete body.stockCount; delete body.soldCount;
+        delete body.originalPrice; delete body.vendorId; delete body.vendorName;
+        delete body.isPreOrder; delete body.preOrderDeposit; delete body.preOrderReleaseDate;
+        delete body.preOrderMax; delete body.seoTitle; delete body.seoDescription;
+        delete body.inStock;
+        const { data } = await supabase.from('products').insert(body).select().single();
+        return res.json({ success: true, product: data });
+      }
+      if (method === 'PUT') {
+        const id = parseInt(path.split('/').pop() || '0');
+        const body = {
+          ...req.body,
+          name_en: req.body.nameEn || req.body.name_en,
+          name: req.body.name || req.body.name,
+          description_en: req.body.descriptionEn || req.body.description_en,
+          description: req.body.description,
+          stock_count: req.body.stockCount ?? req.body.stock_count,
+          original_price: req.body.originalPrice ?? req.body.original_price,
+          vendor_id: req.body.vendorId ?? req.body.vendor_id,
+          vendor_name: req.body.vendorName ?? req.body.vendor_name,
+          is_pre_order: req.body.isPreOrder ?? req.body.is_pre_order,
+          pre_order_deposit: req.body.preOrderDeposit ?? req.body.pre_order_deposit,
+          pre_order_release_date: req.body.preOrderReleaseDate ?? req.body.pre_order_release_date,
+          pre_order_max: req.body.preOrderMax ?? req.body.pre_order_max,
+          seo_title: req.body.seoTitle ?? req.body.seo_title,
+          seo_description: req.body.seoDescription ?? req.body.seo_description,
+          in_stock: req.body.inStock ?? req.body.in_stock,
+        };
+        delete body.nameEn; delete body.descriptionEn; delete body.stockCount; delete body.soldCount;
+        delete body.originalPrice; delete body.vendorId; delete body.vendorName;
+        delete body.isPreOrder; delete body.preOrderDeposit; delete body.preOrderReleaseDate;
+        delete body.preOrderMax; delete body.seoTitle; delete body.seoDescription;
+        delete body.inStock;
+        await supabase.from('products').update(body).eq('id', id);
+        return res.json({ success: true });
+      }
       if (method === 'DELETE') { const id = parseInt(path.split('/').pop() || '0'); await supabase.from('products').delete().eq('id', id); return res.json({ success: true }); }
     }
 
@@ -431,7 +491,11 @@ export default async function handler(req: any, res: any) {
     }
 
     // ===== UPLOAD =====
-    if (path === '/api/upload' && method === 'POST') { return res.json({ url: 'https://placehold.co/400x400/e2e8f0/94a3b8?text=Uploaded' }); }
+    if (path === '/api/upload' && method === 'POST') {
+      // For now, return the uploaded file as a data URL or use placeholder
+      // In production, this would upload to Supabase Storage
+      return res.json({ url: 'https://placehold.co/400x400/e2e8f0/94a3b8?text=Image+Uploaded' });
+    }
 
     // ===== SEED / HEALTH =====
     if (path === '/api/seed' && method === 'GET') {

@@ -14,7 +14,8 @@ interface Role {
 interface AdminUser {
   id: string;
   name: string;
-  email: string;
+  telegramId: string;
+  telegramUsername?: string;
   role: string;
   status: 'active' | 'inactive';
   lastLogin?: string;
@@ -78,13 +79,15 @@ export default function AdminRoles() {
 
   const addUser = () => {
     const name = (document.getElementById('new-user-name') as HTMLInputElement)?.value;
-    const email = (document.getElementById('new-user-email') as HTMLInputElement)?.value;
+    const telegramId = (document.getElementById('new-user-telegram') as HTMLInputElement)?.value;
+    const telegramUsername = (document.getElementById('new-user-username') as HTMLInputElement)?.value;
     const role = (document.getElementById('new-user-role') as HTMLSelectElement)?.value;
-    if (!name || !email) { toast('Name and email required', 'error'); return; }
-    const user: AdminUser = { id: generateId(), name, email, role, status: 'active', createdAt: new Date().toISOString() };
+    if (!name || !telegramId) { toast('Name and Telegram ID required', 'error'); return; }
+    const user: AdminUser = { id: generateId(), name, telegramId, telegramUsername, role, status: 'active', createdAt: new Date().toISOString() };
     saveUsers([...users, user]);
     (document.getElementById('new-user-name') as HTMLInputElement)!.value = '';
-    (document.getElementById('new-user-email') as HTMLInputElement)!.value = '';
+    (document.getElementById('new-user-telegram') as HTMLInputElement)!.value = '';
+    (document.getElementById('new-user-username') as HTMLInputElement)!.value = '';
     setShowNewUser(false);
     // Increment role count
     const updatedRoles = roles.map(r => r.id === role ? { ...r, userCount: r.userCount + 1 } : r);
@@ -155,9 +158,10 @@ export default function AdminRoles() {
 
             {showNewUser && (
               <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/30 animate-slideDown">
-                <div className="grid sm:grid-cols-3 gap-2 mb-2">
+                <div className="grid sm:grid-cols-4 gap-2 mb-2">
                   <input id="new-user-name" className="p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] bg-transparent" placeholder="Full name" />
-                  <input id="new-user-email" className="p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] bg-transparent" placeholder="Email address" />
+                  <input id="new-user-telegram" className="p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] bg-transparent font-mono" placeholder="Telegram ID (number)" type="number" />
+                  <input id="new-user-username" className="p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] bg-transparent font-mono" placeholder="@username (optional)" />
                   <select id="new-user-role" className="p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] bg-transparent">
                     {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                   </select>
@@ -172,7 +176,7 @@ export default function AdminRoles() {
                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center text-xs font-bold">{u.name.charAt(0)}</div>
                   <div className="flex-1 min-w-0">
                     <div className="text-xs font-semibold">{u.name}</div>
-                    <div className="text-[9px] text-slate-400">{u.email} · {roles.find(r => r.id === u.role)?.name || u.role}</div>
+                    <div className="text-[9px] text-slate-400">🆔 {u.telegramId}{u.telegramUsername ? ` · @${u.telegramUsername}` : ''} · {roles.find(r => r.id === u.role)?.name || u.role}</div>
                   </div>
                   <span className={cn('px-2 py-0.5 rounded-lg text-[8px] font-semibold', u.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500')}>{u.status}</span>
                   <button className="p-1.5 rounded-lg hover:bg-amber-50 text-slate-400 hover:text-amber-600" onClick={() => toggleUserStatus(u.id)}>

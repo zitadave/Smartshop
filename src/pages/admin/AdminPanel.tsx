@@ -1,8 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { productsApi, ordersApi, analyticsApi, vendorsApi, settingsApi } from '@/lib/api';
 import { formatPrice, cn, generateId, formatCountdown, isFlashDealActive, formatTimeRemaining } from '@/lib/utils';
 import { useStore } from '@/stores/AppStore';
+import { toast } from '@/components/Toast';
 import {
   LayoutDashboard, Package, ShoppingCart, Store, Settings as SettingsIcon,
   TrendingUp, Users, MessageSquare, BarChart3, Shield, LogOut, Menu, X,
@@ -10,7 +11,8 @@ import {
   Camera, Megaphone, Clock, Globe, Palette, MapPin, FileText, Zap, Upload,
   Search, Plus, Edit3, Trash2, Eye, EyeOff, Check, Loader, ChevronDown,
   DollarSign, Star, Activity, AlertTriangle, Sun, Moon, Gift, CreditCard,
-  Gamepad2, Coins, Smartphone, ExternalLink, Command, Columns, List, Database
+  Gamepad2, Coins, Smartphone, ExternalLink, Command, Columns, List, Database,
+  Truck, RotateCcw, RefreshCw
 } from 'lucide-react';
 import CommandPalette from '@/components/admin/CommandPalette';
 import LiveChart, { StatCard } from '@/components/admin/LiveChart';
@@ -30,18 +32,19 @@ import OrderFulfillment from '@/components/admin/OrderFulfillment';
 import SLAMonitor from '@/components/admin/SLAMonitor';
 import DriverTracker from '@/components/admin/DriverTracker';
 import ReturnsManager from '@/components/admin/ReturnsManager';
-import { Truck as TruckIcon, RotateCcw } from 'lucide-react';
-
 import AdminSecurity from '@/components/admin/AdminSecurity';
 import AdminBotManager from '@/components/admin/AdminBotManager';
+import ProductStudio from '@/components/admin/ProductStudio';
 
-
-type Tab = 'overview' | 'products' | 'orders' | 'vendors' | 'marketplace' | 'reviews' | 'broadcast' | 'flashdeals' | 'preorders' | 'tracking' | 'themes' | 'coupons' | 'settings' | 'alerts' | 'abandoned' | 'roles' | 'backup' | 'adminTheme' | 'bulkProducts' | 'analytics' | 'forecast' | 'activity' | 'security' | 'telegram' | 'fulfillment' | 'sla' | 'driver' | 'returns';
+type Tab = 'overview' | 'products' | 'orders' | 'vendors' | 'marketplace' | 'reviews' 
+  | 'broadcast' | 'flashdeals' | 'preorders' | 'tracking' | 'themes' | 'coupons' 
+  | 'settings' | 'alerts' | 'abandoned' | 'roles' | 'backup' | 'adminTheme' 
+  | 'bulkProducts' | 'analytics' | 'forecast' | 'activity' | 'security' | 'telegram' 
+  | 'fulfillment' | 'sla' | 'driver' | 'returns';
 
 export default function AdminLayout() {
   const [tab, setTab] = useState<Tab>('overview');
   const [menuOpen, setMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const [cmdOpen, setCmdOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -74,11 +77,11 @@ export default function AdminLayout() {
     { id: 'forecast', icon: Clock, label: 'Forecast' },
     { id: 'activity', icon: ClipboardList, label: 'Activity Log' },
     { id: 'security', icon: Shield, label: 'Security' },
-
     { id: 'telegram', icon: Bot, label: 'Admin Bot' },
-    { id: 'fulfillment' | 'sla' | 'driver' | 'returns', icon: ShoppingCart, label: 'Fulfillment' },
-
-
+    { id: 'fulfillment', icon: Package, label: 'Fulfillment' },
+    { id: 'sla', icon: Activity, label: 'SLA Monitor' },
+    { id: 'driver', icon: Truck, label: 'Driver Tracking' },
+    { id: 'returns', icon: RotateCcw, label: 'Returns' },
   ];
 
   return (
@@ -101,7 +104,6 @@ export default function AdminLayout() {
             </div>
           </div>
           <div className="ml-auto flex items-center gap-2">
-            {/* Cmd+K Button */}
             <button className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-[10px] font-medium"
               onClick={() => setCmdOpen(true)}>
               <Command size={12} />
@@ -157,22 +159,22 @@ export default function AdminLayout() {
           {tab === 'preorders' && <AdminPreOrders />}
           {tab === 'tracking' && <AdminTracking />}
           {tab === 'themes' && <AdminThemes />}
-          {tab === 'coupons' && <AdminCoupons />}
+          {tab === 'coupons' && <CouponAnalytics />}
           {tab === 'alerts' && <SmartAlerts />}
           {tab === 'abandoned' && <AbandonedCartRecovery />}
           {tab === 'roles' && <AdminRoles />}
           {tab === 'backup' && <DatabaseBackup />}
-
           {tab === 'adminTheme' && <AdminThemeManager />}
           {tab === 'bulkProducts' && <BulkProductManager />}
           {tab === 'analytics' && <ProductAnalytics />}
           {tab === 'forecast' && <InventoryForecast />}
           {tab === 'activity' && <ActivityLog />}
           {tab === 'security' && <AdminSecurity />}
-
           {tab === 'telegram' && <AdminBotManager />}
-          {tab === 'fulfillment' | 'sla' | 'driver' | 'returns' && <OrderFulfillment />}
-
+          {tab === 'fulfillment' && <OrderFulfillment />}
+          {tab === 'sla' && <SLAMonitor />}
+          {tab === 'driver' && <DriverTracker />}
+          {tab === 'returns' && <ReturnsManager />}
           {tab === 'settings' && <AdminSettings />}
         </div>
       </main>
@@ -192,9 +194,7 @@ function Overview({ onNavigate }: { onNavigate?: (tab: string) => void }) {
       value: Math.round(50000 + Math.random() * 150000 + i * 20000),
     }))
   );
-  const store = useStore();
-  const navigate = useNavigate();
-  const goto = (tab: string) => onNavigate ? onNavigate(tab) : navigate('/admin-panel');
+  const goto = (t: string) => onNavigate ? onNavigate(t) : null;
 
   useEffect(() => {
     analyticsApi.get().then(d => d?.analytics && setData(d.analytics)).catch(() => {});
@@ -206,13 +206,10 @@ function Overview({ onNavigate }: { onNavigate?: (tab: string) => void }) {
   }, []);
 
   const lowStock = products.filter(p => p.stockCount <= 5 && p.stockCount > 0);
-
-  // Generate sparkline data for each stat
   const generateSpark = (base: number) => Array.from({length: 8}, (_, i) => ({ label: `${i+1}h`, value: Math.round(base * (0.7 + Math.random() * 0.6)) }));
 
   return (
     <div className="space-y-5 animate-fadeUp">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-slate-900 dark:text-white">👋 Welcome back, Admin</h2>
@@ -224,62 +221,29 @@ function Overview({ onNavigate }: { onNavigate?: (tab: string) => void }) {
         </div>
       </div>
 
-      {/* Stat Cards with Sparklines */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard
-          label="Products"
-          value={products.length}
-          sub={`${data.totalSold || 0} sold`}
-          icon={Package}
-          color="from-blue-500 to-blue-600"
-          trend={{ value: 12, up: true }}
-          data={generateSpark(products.length || 18)}
-          onClick={() => goto('products')}
-        />
-        <StatCard
-          label="Revenue"
-          value={`Br ${(data.totalRevenue || 0).toLocaleString()}`}
-          sub={`${data.totalOrders || 0} orders`}
-          icon={DollarSign}
-          color="from-emerald-500 to-green-600"
-          trend={{ value: 8, up: true }}
-          data={revenueHistory}
-        />
-        <StatCard
-          label="Active Orders"
-          value={data.pendingOrders || 0}
-          sub={`${data.shippedOrders || 0} in transit`}
-          icon={ShoppingCart}
-          color="from-orange-500 to-amber-600"
-          trend={{ value: 3, up: false }}
-          data={generateSpark(12)}
-          onClick={() => goto('orders')}
-        />
-        <StatCard
-          label="Low Stock"
-          value={lowStock.length}
-          sub={`${products.filter(p => !p.inStock).length} out of stock`}
-          icon={AlertTriangle}
-          color="from-red-500 to-rose-600"
-          trend={{ value: lowStock.length > 0 ? 15 : 0, up: lowStock.length > 0 }}
-          data={generateSpark(lowStock.length || 3)}
-          onClick={() => goto('products')}
-        />
+        <StatCard label="Products" value={products.length} sub={`${data.totalSold || 0} sold`} icon={Package}
+          color="from-blue-500 to-blue-600" trend={{ value: 12, up: true }} data={generateSpark(products.length || 18)}
+          onClick={() => goto('products')} />
+        <StatCard label="Revenue" value={`Br ${(data.totalRevenue || 0).toLocaleString()}`} sub={`${data.totalOrders || 0} orders`} icon={DollarSign}
+          color="from-emerald-500 to-green-600" trend={{ value: 8, up: true }} data={revenueHistory} />
+        <StatCard label="Active Orders" value={data.pendingOrders || 0} sub={`${data.shippedOrders || 0} in transit`} icon={ShoppingCart}
+          color="from-orange-500 to-amber-600" trend={{ value: 3, up: false }} data={generateSpark(12)}
+          onClick={() => goto('orders')} />
+        <StatCard label="Low Stock" value={lowStock.length} sub={`${products.filter(p => !p.inStock).length} out of stock`} icon={AlertTriangle}
+          color="from-red-500 to-rose-600" trend={{ value: lowStock.length > 0 ? 15 : 0, up: lowStock.length > 0 }} data={generateSpark(lowStock.length || 3)}
+          onClick={() => goto('products')} />
       </div>
 
-      {/* Revenue Chart */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-bold">📈 Revenue Trend (12 months)</h3>
-          <span className="text-[9px] text-green-600 font-semibold flex items-center gap-1">
-            <TrendingUp size={12} /> +18% vs last year
-          </span>
+          <span className="text-[9px] text-green-600 font-semibold flex items-center gap-1"><TrendingUp size={12} /> +18% vs last year</span>
         </div>
         <LiveChart data={revenueHistory} height={100} color="#6C63FF" />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-4">
-        {/* Low Stock */}
         <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
           <h3 className="text-sm font-bold mb-3 flex items-center gap-2"><AlertTriangle size={15} className="text-amber-500" /> Low Stock Alert ({lowStock.length})</h3>
           {lowStock.length === 0 ? <p className="text-xs text-slate-400 py-4 text-center">All stocked!</p> : lowStock.slice(0, 5).map((p, i) => (
@@ -290,8 +254,6 @@ function Overview({ onNavigate }: { onNavigate?: (tab: string) => void }) {
             </div>
           ))}
         </div>
-
-        {/* Quick Actions */}
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
           <h3 className="text-sm font-bold mb-3 flex items-center gap-2"><Zap size={15} className="text-indigo-500" /> Quick Actions</h3>
           <div className="space-y-1.5">
@@ -319,43 +281,155 @@ function Overview({ onNavigate }: { onNavigate?: (tab: string) => void }) {
   );
 }
 
+// =============================================
+// 2. PRODUCTS — WITH PRODUCT STUDIO PRO
+// =============================================
 function AdminProducts() {
   const [products, setProducts] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
-  useEffect(() => { productsApi.list().then(d => { setProducts(d?.products || []); setLoading(false); }).catch(() => setLoading(false)); }, []);
+  const [showStudio, setShowStudio] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<any>(null);
+
+  const loadProducts = useCallback(() => {
+    setLoading(true);
+    productsApi.list().then(d => { setProducts(d?.products || []); setLoading(false); }).catch(() => setLoading(false));
+  }, []);
+
+  useEffect(loadProducts, [loadProducts]);
+
   const filtered = products.filter(p => !search || p.nameEn?.toLowerCase().includes(search.toLowerCase()));
-  const toggleVisibility = async (id: number, v: boolean) => { await productsApi.update(id, { visible: !v }); setProducts(products.map(p => p.id === id ? { ...p, visible: !v } : p)); };
-  const togglePreOrder = async (id: number) => { const p = products.find(x => x.id === id); await productsApi.update(id, { isPreOrder: !p?.isPreOrder }); setProducts(products.map(x => x.id === id ? { ...x, isPreOrder: !x.isPreOrder } : x)); };
-  const deleteProduct = async (id: number) => { if (!confirm('Delete?')) return; await productsApi.delete(id); setProducts(products.filter(p => p.id !== id)); };
+  
+  const toggleVisibility = async (id: number, v: boolean) => {
+    await productsApi.update(id, { visible: !v });
+    setProducts(products.map(p => p.id === id ? { ...p, visible: !v } : p));
+  };
+  const togglePreOrder = async (id: number) => {
+    const p = products.find(x => x.id === id);
+    await productsApi.update(id, { isPreOrder: !p?.isPreOrder });
+    setProducts(products.map(x => x.id === id ? { ...x, isPreOrder: !x.isPreOrder } : x));
+  };
+  const deleteProduct = async (id: number) => {
+    if (!window.confirm('⚠️ Are you sure you want to delete this product? This cannot be undone.')) return;
+    await productsApi.delete(id);
+    setProducts(products.filter(p => p.id !== id));
+  };
+
+  const openEdit = (p: any) => {
+    setEditingProduct(p);
+    setShowStudio(true);
+  };
+
+  const openCreate = () => {
+    setEditingProduct(null);
+    setShowStudio(true);
+  };
+
   if (loading) return <div className="text-center py-12"><Loader size={24} className="animate-spin mx-auto text-indigo-500" /></div>;
 
   return (
     <div className="animate-fadeUp">
+      {showStudio && (
+        <ProductStudio
+          editProduct={editingProduct}
+          onClose={() => { setShowStudio(false); setEditingProduct(null); }}
+          onSaved={loadProducts}
+        />
+      )}
+
       <div className="flex items-center justify-between mb-4">
-        <div><h2 className="text-lg font-bold">📦 Products ({products.length})</h2><p className="text-[10px] text-slate-500">{products.filter(p => p.inStock).length} in stock</p></div>
-        <div className="relative"><Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" /><input className="pl-9 pr-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs w-56 focus:outline-none focus:ring-2 focus:ring-indigo-500/30" placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} /></div>
+        <div>
+          <h2 className="text-lg font-bold">📦 Products ({products.length})</h2>
+          <p className="text-[10px] text-slate-500">{products.filter(p => p.inStock).length} in stock · {products.filter(p => !p.inStock).length} out of stock</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input className="pl-9 pr-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs w-48 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+              placeholder="Search products..." value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+          <button className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 hover:shadow-lg transition-all"
+            onClick={openCreate}>
+            <Plus size={13} /> Add Product
+          </button>
+          <button className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400"
+            onClick={loadProducts} title="Refresh"><RefreshCw size={14} /></button>
+        </div>
       </div>
+
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
         <table className="w-full text-xs">
-          <thead><tr className="bg-slate-50 dark:bg-slate-800/50 text-[9px] text-slate-500 uppercase tracking-wider"><th className="text-left px-4 py-3 font-semibold">Product</th><th className="text-left px-4 py-3 font-semibold hidden md:table-cell">Category</th><th className="text-right px-4 py-3 font-semibold">Price</th><th className="text-center px-4 py-3 font-semibold">Stock</th><th className="text-center px-4 py-3 font-semibold">Type</th><th className="text-center px-4 py-3 font-semibold">Status</th><th className="text-right px-4 py-3 font-semibold">Actions</th></tr></thead>
-          <tbody>{filtered.map(p => (
-            <tr key={p.id} className="border-t border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/30">
-              <td className="px-4 py-3"><div className="flex items-center gap-2.5"><img src={p.image} className="w-9 h-9 rounded-lg object-cover" /><div className="min-w-0"><div className="text-xs font-semibold truncate max-w-[160px]">{p.nameEn}</div><div className="text-[9px] text-slate-400">{p.soldCount || 0} sold</div></div></div></td>
-              <td className="px-4 py-3 hidden md:table-cell text-slate-500 capitalize">{p.category}</td>
-              <td className="px-4 py-3 text-right font-bold">{formatPrice(p.price)}</td>
-              <td className="px-4 py-3 text-center"><span className={cn('px-2 py-0.5 rounded-lg text-[9px] font-semibold', p.stockCount > 10 ? 'bg-green-100 text-green-700' : p.stockCount > 0 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-600')}>{p.stockCount}</span></td>
-              <td className="px-4 py-3 text-center"><button className={cn('px-2 py-0.5 rounded-lg text-[9px] font-semibold border', p.isPreOrder ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-slate-50 text-slate-500 border-slate-200')} onClick={() => togglePreOrder(p.id)}>{p.isPreOrder ? 'Pre-Order' : 'Regular'}</button></td>
-              <td className="px-4 py-3 text-center"><button className={cn('px-2 py-0.5 rounded-lg text-[9px] font-semibold border', p.visible !== false ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-500 border-slate-200')} onClick={() => toggleVisibility(p.id, p.visible)}>{p.visible !== false ? 'Visible' : 'Hidden'}</button></td>
-              <td className="px-4 py-3 text-right"><div className="flex items-center justify-end gap-1"><button className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400"><Edit3 size={13} /></button><button className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600" onClick={() => deleteProduct(p.id)}><Trash2 size={13} /></button></div></td>
+          <thead>
+            <tr className="bg-slate-50 dark:bg-slate-800/50 text-[9px] text-slate-500 uppercase tracking-wider">
+              <th className="text-left px-4 py-3 font-semibold">Product</th>
+              <th className="text-left px-4 py-3 font-semibold hidden md:table-cell">Category</th>
+              <th className="text-right px-4 py-3 font-semibold">Price</th>
+              <th className="text-center px-4 py-3 font-semibold">Stock</th>
+              <th className="text-center px-4 py-3 font-semibold">Type</th>
+              <th className="text-center px-4 py-3 font-semibold">Status</th>
+              <th className="text-right px-4 py-3 font-semibold">Actions</th>
             </tr>
-          ))}</tbody>
+          </thead>
+          <tbody>
+            {filtered.length === 0 ? (
+              <tr><td colSpan={7} className="text-center py-10 text-xs text-slate-400">No products found. Click "Add Product" to create one!</td></tr>
+            ) : filtered.map(p => (
+              <tr key={p.id} className="border-t border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-2.5">
+                    <img src={p.image} className="w-9 h-9 rounded-lg object-cover" />
+                    <div className="min-w-0">
+                      <div className="text-xs font-semibold truncate max-w-[160px]">{p.nameEn}</div>
+                      <div className="text-[9px] text-slate-400">{p.soldCount || 0} sold</div>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-4 py-3 hidden md:table-cell text-slate-500 capitalize">{p.category}</td>
+                <td className="px-4 py-3 text-right font-bold">{formatPrice(p.price)}</td>
+                <td className="px-4 py-3 text-center">
+                  <span className={cn('px-2 py-0.5 rounded-lg text-[9px] font-semibold',
+                    p.stockCount > 10 ? 'bg-green-100 text-green-700' : p.stockCount > 0 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-600')}>
+                    {p.stockCount}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-center">
+                  <button className={cn('px-2 py-0.5 rounded-lg text-[9px] font-semibold border',
+                    p.isPreOrder ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-slate-50 text-slate-500 border-slate-200')}
+                    onClick={() => togglePreOrder(p.id)}>
+                    {p.isPreOrder ? 'Pre-Order' : 'Regular'}
+                  </button>
+                </td>
+                <td className="px-4 py-3 text-center">
+                  <button className={cn('px-2 py-0.5 rounded-lg text-[9px] font-semibold border',
+                    p.visible !== false ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-500 border-slate-200')}
+                    onClick={() => toggleVisibility(p.id, p.visible)}>
+                    {p.visible !== false ? 'Visible' : 'Hidden'}
+                  </button>
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    <button className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-indigo-600"
+                      onClick={() => openEdit(p)} title="Edit product">
+                      <Edit3 size={13} />
+                    </button>
+                    <button className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600"
+                      onClick={() => deleteProduct(p.id)} title="Delete product">
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
         </table>
       </div>
     </div>
   );
 }
 
+// =============================================
+// 3. ORDERS
+// =============================================
 function AdminOrders() {
   const [orders, setOrders] = useState<any[]>([]);
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
@@ -373,17 +447,19 @@ function AdminOrders() {
     <div className="animate-fadeUp">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-bold">📋 Orders ({orders.length})</h2>
-        <div className="flex gap-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl p-0.5">
-          <button className={cn('px-3 py-1.5 rounded-lg text-[9px] font-semibold transition-all flex items-center gap-1', viewMode === 'kanban' ? 'bg-white dark:bg-slate-700 shadow-sm' : 'text-slate-500')} onClick={() => setViewMode('kanban')}>
-            <Columns size={12} /> Kanban
-          </button>
-          <button className={cn('px-3 py-1.5 rounded-lg text-[9px] font-semibold transition-all flex items-center gap-1', viewMode === 'list' ? 'bg-white dark:bg-slate-700 shadow-sm' : 'text-slate-500')} onClick={() => setViewMode('list')}>
-            <List size={12} /> List
-          </button>
+        <div className="flex items-center gap-2">
+          <button className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400" onClick={fetchOrders}><RefreshCw size={14} /></button>
+          <div className="flex gap-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl p-0.5">
+            <button className={cn('px-3 py-1.5 rounded-lg text-[9px] font-semibold transition-all flex items-center gap-1', viewMode === 'kanban' ? 'bg-white dark:bg-slate-700 shadow-sm' : 'text-slate-500')} onClick={() => setViewMode('kanban')}>
+              <Columns size={12} /> Kanban
+            </button>
+            <button className={cn('px-3 py-1.5 rounded-lg text-[9px] font-semibold transition-all flex items-center gap-1', viewMode === 'list' ? 'bg-white dark:bg-slate-700 shadow-sm' : 'text-slate-500')} onClick={() => setViewMode('list')}>
+              <List size={12} /> List
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Status Filter Pills */}
       <div className="flex gap-1.5 mb-4 overflow-x-auto scrollbar-none pb-1">
         {statuses.map(s => {
           const count = s === 'all' ? orders.length : orders.filter(o => o.status === s).length;
@@ -398,12 +474,8 @@ function AdminOrders() {
         })}
       </div>
 
-      {/* Kanban View */}
-      {viewMode === 'kanban' && (
-        <OrderKanban orders={orders} onUpdate={fetchOrders} />
-      )}
+      {viewMode === 'kanban' && <OrderKanban orders={orders} onUpdate={fetchOrders} />}
 
-      {/* List View */}
       {viewMode === 'list' && (
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -432,6 +504,9 @@ function AdminOrders() {
   );
 }
 
+// =============================================
+// 4. VENDORS
+// =============================================
 function AdminVendors() {
   const [vendors, setVendors] = useState<any[]>([]);
   const [selectedVendor, setSelectedVendor] = useState<any>(null);
@@ -453,20 +528,12 @@ function AdminVendors() {
     <div className="animate-fadeUp space-y-4">
       <div className="flex items-center justify-between mb-2">
         <h2 className="text-lg font-bold">🏪 Vendors ({vendors.length})</h2>
-        {/* Payouts toggle */}
         <div className="flex gap-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl p-0.5">
-          <button className={cn('px-3 py-1.5 rounded-lg text-[9px] font-semibold transition-all', vendorView === 'vendors' ? 'bg-white dark:bg-slate-700 shadow-sm' : 'text-slate-500')} onClick={() => setVendorView('vendors')}>
-            Vendors
-          </button>
-          <button className={cn('px-3 py-1.5 rounded-lg text-[9px] font-semibold transition-all', vendorView === 'payouts' ? 'bg-white dark:bg-slate-700 shadow-sm' : 'text-slate-500')} onClick={() => setVendorView('payouts')}>
-            <DollarSign size={11} className="inline" /> Payouts
-          </button>
+          <button className={cn('px-3 py-1.5 rounded-lg text-[9px] font-semibold transition-all', vendorView === 'vendors' ? 'bg-white dark:bg-slate-700 shadow-sm' : 'text-slate-500')} onClick={() => setVendorView('vendors')}>Vendors</button>
+          <button className={cn('px-3 py-1.5 rounded-lg text-[9px] font-semibold transition-all', vendorView === 'payouts' ? 'bg-white dark:bg-slate-700 shadow-sm' : 'text-slate-500')} onClick={() => setVendorView('payouts')}><DollarSign size={11} className="inline" /> Payouts</button>
         </div>
       </div>
-
-      {vendorView === 'payouts' ? (
-        <PayoutSystem />
-      ) : (
+      {vendorView === 'payouts' ? <PayoutSystem /> : (
         <>
           {selectedVendor && (
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 animate-slideUp">
@@ -496,20 +563,22 @@ function AdminVendors() {
               </div>
             ))}
           </div>
-          {vendors.length === 0 && <p className="text-xs text-slate-400 text-center py-8">No vendors</p>}
+          {vendors.length === 0 && <p className="text-xs text-slate-400 text-center py-8">No vendors registered yet</p>}
         </>
       )}
     </div>
   );
 }
 
+// =============================================
+// 5-23. Remaining admin tabs
+// =============================================
 function AdminMarketplace() {
   const store = useStore();
   const { settings, setSettings } = store;
   const [products, setProducts] = useState<any[]>([]);
   useEffect(() => { productsApi.list().then(d => setProducts(d?.products || [])).catch(() => {}); }, []);
   const saveSetting = (key: string, val: any) => { const updated = { ...settings, [key]: val }; setSettings(updated as any); settingsApi.update(updated); };
-
   return (
     <div className="animate-fadeUp space-y-4">
       <h2 className="text-lg font-bold">🚀 Marketplace</h2>
@@ -526,7 +595,7 @@ function AdminMarketplace() {
         })}
       </div>
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
-        <h3 className="text-sm font-bold mb-3">💼 Sponsored</h3>
+        <h3 className="text-sm font-bold mb-3">💼 Sponsored Products</h3>
         {(settings.sponsoredProducts || []).map((pid: number) => {
           const p = products.find(x => x.id === pid);
           return <div key={pid} className="flex items-center gap-3 py-2 border-b border-slate-100 dark:border-slate-800 last:border-0"><span>💼</span><span className="flex-1 text-xs">{p?.nameEn || `#${pid}`}</span><button className="text-red-500 text-[9px]" onClick={() => saveSetting('sponsoredProducts', (settings.sponsoredProducts || []).filter((x: number) => x !== pid))}><Trash2 size={12} /></button></div>;
@@ -557,7 +626,7 @@ function AdminReviews() {
           </div>
         ))}
       </div>
-      {photoReviews.length === 0 && <p className="text-xs text-slate-400 text-center py-8">No reviews</p>}
+      {photoReviews.length === 0 && <p className="text-xs text-slate-400 text-center py-8">No reviews yet</p>}
     </div>
   );
 }
@@ -567,13 +636,12 @@ function AdminBroadcast() {
   const { settings, setSettings, broadcastMessages, setBroadcastMessages } = store;
   const [title, setTitle] = useState(''); const [message, setMessage] = useState(''); const [type, setType] = useState<'info' | 'promo' | 'alert' | 'event'>('info');
   const sendBroadcast = () => {
-    if (!title.trim() || !message.trim()) return alert('Title and message required');
+    if (!title.trim() || !message.trim()) { toast('❌ Title and message are required', 'error'); return; }
     const newMsg = { id: generateId(), title: title.trim(), message: message.trim(), icon: type === 'promo' ? '🎉' : type === 'alert' ? '⚠️' : type === 'event' ? '✨' : '📢', type, createdAt: new Date().toISOString(), seen: false };
     const updated = [...broadcastMessages, newMsg]; setBroadcastMessages(updated); setSettings({ ...settings, broadcastMessages: updated } as any); settingsApi.update({ ...settings, broadcastMessages: updated }); setTitle(''); setMessage('');
   };
-  const deleteBroadcast = (id: string) => { const updated = broadcastMessages.filter(m => m.id !== id); setBroadcastMessages(updated); setSettings({ ...settings, broadcastMessages: updated } as any); settingsApi.update({ ...settings, broadcastMessages: updated }); };
+  const deleteBroadcast = (id: string) => { const updated = broadcastMessages.filter(m => m.id !== id); setBroadcastMessages(updated); setSettings({ ...settings, broadcastMessages: updated } as any); settingsApi.update({ ...settings, broadcastMessages: updated }); return false; };
   const typeColors: Record<string, string> = { info: 'from-blue-500 to-blue-600', promo: 'from-orange-500 to-amber-600', alert: 'from-red-500 to-rose-600', event: 'from-purple-500 to-violet-600' };
-
   return (
     <div className="animate-fadeUp space-y-4">
       <h2 className="text-lg font-bold">📢 Broadcasts ({broadcastMessages.length})</h2>
@@ -608,6 +676,7 @@ function AdminFlashDeals() {
       <h2 className="text-lg font-bold">⚡ Flash Deals</h2>
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
         <h3 className="text-sm font-bold mb-3">Active Deals ({Object.keys(flashSales).length})</h3>
+        {Object.keys(flashSales).length === 0 && <p className="text-xs text-slate-400 text-center py-6">No flash deals yet</p>}
         {Object.entries(flashSales).map(([pid, d]: any) => {
           const p = products.find(x => x.id === Number(pid)); const active = isFlashDealActive(d);
           return <div key={pid} className="flex items-center gap-3 py-2.5 border-b border-slate-100 dark:border-slate-800 last:border-0">
@@ -616,7 +685,6 @@ function AdminFlashDeals() {
             <button className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600" onClick={() => { const fs = { ...flashSales }; delete fs[pid]; saveSetting('flashSales', fs); }}><Trash2 size={12} /></button>
           </div>;
         })}
-        {Object.keys(flashSales).length === 0 && <p className="text-xs text-slate-400 text-center py-6">No flash deals</p>}
       </div>
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
         <h3 className="text-sm font-bold mb-3">Create Flash Deal</h3>
@@ -628,8 +696,9 @@ function AdminFlashDeals() {
           <button className="p-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-bold col-span-2" onClick={() => {
             const pid = (document.getElementById('fd-prod') as HTMLSelectElement)?.value;
             const end = (document.getElementById('fd-end') as HTMLInputElement)?.value;
-            if (!pid || !end) return alert('Select product and end time');
+            if (!pid || !end) { toast('❌ Select product and end time', 'error'); return; }
             saveSetting('flashSales', { ...flashSales, [pid]: { end: new Date(end).getTime(), startedAt: Date.now(), discount: Number((document.getElementById('fd-discount') as HTMLInputElement)?.value) || 20, maxQty: Number((document.getElementById('fd-qty') as HTMLInputElement)?.value) || 50 } });
+            toast('✅ Flash deal created!', 'success');
           }}>+ Create Flash Deal</button>
         </div>
       </div>
@@ -646,29 +715,48 @@ function AdminPreOrders() {
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
         <h3 className="text-sm font-bold mb-3">⚙️ Settings</h3>
         <label className="flex items-center gap-2 text-xs mb-3"><input type="checkbox" checked={settings.preOrderEnabled !== false} onChange={e => saveSetting('preOrderEnabled', e.target.checked)} className="rounded" /> Enable Pre-Orders</label>
-        <div className="flex items-center gap-3"><span className="text-xs">Default Deposit:</span><input type="number" className="w-20 p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={settings.preOrderDefaultDeposit || 30} onChange={e => saveSetting('preOrderDefaultDeposit', Number(e.target.value))} /></div>
+        <div className="flex items-center gap-3"><span className="text-xs">Default Deposit %:</span><input type="number" className="w-20 p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={settings.preOrderDefaultDeposit || 30} onChange={e => saveSetting('preOrderDefaultDeposit', Number(e.target.value))} /></div>
       </div>
       <div className="space-y-2">{preOrders.slice(0, 20).map(po => (
         <div key={po.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3">
           <div className="flex items-center justify-between"><span className="text-xs font-bold font-mono text-indigo-600">{po.orderNumber}</span><span className="text-[9px] px-2 py-0.5 rounded-lg bg-blue-100 text-blue-700 font-semibold">{po.status}</span></div>
           <div className="text-[10px] text-slate-600 dark:text-slate-400 mt-1">{po.productName} · Deposit: {formatPrice(po.deposit)} {po.releaseDate ? `· Release: ${new Date(po.releaseDate).toLocaleDateString()}` : ''}</div>
         </div>
-      ))}{preOrders.length === 0 && <p className="text-xs text-slate-400 text-center py-8">No pre-orders</p>}</div>
+      ))}{preOrders.length === 0 && <p className="text-xs text-slate-400 text-center py-8">No pre-orders yet</p>}</div>
     </div>
   );
 }
 
 function AdminTracking() {
-  const store = useStore(); const { orders, orderTracking, setOrderTracking, setDigitalReceipt } = store;
+  const store = useStore(); const { orders, orderTracking, setOrderTracking } = store;
   const [selectedOrder, setSelectedOrder] = useState(''); const [carrier, setCarrier] = useState('Ethio Express'); const [trackingNum, setTrackingNum] = useState('');
-  const addTracking = () => { if (!selectedOrder) return alert('Select order'); setOrderTracking(selectedOrder, { carrier, trackingNumber: trackingNum || `ET-${Date.now().toString(36).toUpperCase()}`, status: 'shipped', lastUpdate: new Date().toISOString(), estimatedDelivery: new Date(Date.now() + 3 * 86400000).toLocaleDateString(), coordinates: { lat: 9.03, lng: 38.74 }, timeline: [{ label: 'Order Placed', time: new Date().toLocaleString(), completed: true, location: 'Addis Ababa' }, { label: 'Processing', time: new Date().toLocaleString(), completed: true, location: 'Warehouse' }, { label: 'In Transit', time: '', completed: false }, { label: 'Out for Delivery', time: '', completed: false }, { label: 'Delivered', time: '', completed: false }] }); };
+  const addTracking = () => {
+    if (!selectedOrder) { toast('❌ Select an order first', 'error'); return; }
+    setOrderTracking(selectedOrder, {
+      carrier, trackingNumber: trackingNum || `ET-${Date.now().toString(36).toUpperCase()}`,
+      status: 'shipped', lastUpdate: new Date().toISOString(),
+      estimatedDelivery: new Date(Date.now() + 3 * 86400000).toLocaleDateString(),
+      coordinates: { lat: 9.03, lng: 38.74 },
+      timeline: [
+        { label: 'Order Placed', time: new Date().toLocaleString(), completed: true, location: 'Addis Ababa' },
+        { label: 'Processing', time: new Date().toLocaleString(), completed: true, location: 'Warehouse' },
+        { label: 'In Transit', time: '', completed: false },
+        { label: 'Out for Delivery', time: '', completed: false },
+        { label: 'Delivered', time: '', completed: false },
+      ]
+    });
+    toast('✅ Tracking added!', 'success');
+  };
   return (
     <div className="animate-fadeUp space-y-4">
       <h2 className="text-lg font-bold">📍 Order Tracking</h2>
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
-        <h3 className="text-sm font-bold mb-3">Add Tracking</h3>
+        <h3 className="text-sm font-bold mb-3">Add Tracking to Order</h3>
         <div className="grid sm:grid-cols-3 gap-3">
-          <select className="p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent col-span-3" value={selectedOrder} onChange={e => setSelectedOrder(e.target.value)}><option value="">Select order...</option>{orders.map(o => <option key={o.orderNumber} value={o.orderNumber}>{o.orderNumber} - {o.customer?.name}</option>)}</select>
+          <select className="p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent col-span-3" value={selectedOrder} onChange={e => setSelectedOrder(e.target.value)}>
+            <option value="">Select order...</option>
+            {orders.map(o => <option key={o.orderNumber} value={o.orderNumber}>{o.orderNumber} - {o.customer?.name}</option>)}
+          </select>
           <input className="p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" placeholder="Carrier" value={carrier} onChange={e => setCarrier(e.target.value)} />
           <input className="p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" placeholder="Tracking #" value={trackingNum} onChange={e => setTrackingNum(e.target.value)} />
           <button className="p-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-bold" onClick={addTracking}>+ Add Tracking</button>
@@ -679,7 +767,7 @@ function AdminTracking() {
           <div className="flex items-center justify-between"><span className="text-xs font-bold font-mono text-indigo-600">{on}</span><span className="text-[9px] text-slate-400">{t.carrier}</span></div>
           <div className="text-[10px] text-slate-500 mt-0.5">#{t.trackingNumber} · ETA: {t.estimatedDelivery}</div>
         </div>
-      ))}{Object.keys(orderTracking).length === 0 && <p className="text-xs text-slate-400 text-center py-8">No tracking</p>}</div>
+      ))}{Object.keys(orderTracking).length === 0 && <p className="text-xs text-slate-400 text-center py-8">No tracking records</p>}</div>
     </div>
   );
 }
@@ -694,18 +782,18 @@ function AdminThemes() {
     { id: 'midnight' as const, name: 'Midnight', colors: ['#6366F1', '#818CF8', '#4338CA'], icon: '🌙' },
     { id: 'rose' as const, name: 'Rose', colors: ['#EC4899', '#F43F5E', '#DB2777'], icon: '🌹' },
   ];
-
   const applyTheme = (preset: typeof THEMES[0]['id']) => {
     setThemePreset(preset);
     const t = THEMES.find(x => x.id === preset);
     if (t) {
+      localStorage.setItem('ss_theme', JSON.stringify(preset));
       document.documentElement.style.setProperty('--primary', t.colors[0]);
       document.documentElement.style.setProperty('--primary-foreground', '#ffffff');
       document.documentElement.style.setProperty('--accent-color', t.colors[1]);
       document.documentElement.style.setProperty('--ring', t.colors[0] + '40');
+      toast('🎨 Theme applied: ' + t.name, 'success');
     }
   };
-
   return (
     <div className="animate-fadeUp space-y-4">
       <h2 className="text-lg font-bold">🎨 Theme Settings</h2>
@@ -721,7 +809,7 @@ function AdminThemes() {
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 flex items-center gap-4">
         <input type="color" className="w-12 h-12 rounded-xl cursor-pointer border-0" value={customAccent} onChange={e => setCustomAccent(e.target.value)} />
         <div className="flex-1"><div className="text-xs font-semibold">Accent Color</div><div className="text-[9px] text-slate-400">{customAccent}</div></div>
-        <button className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-bold" onClick={() => { document.documentElement.style.setProperty('--accent-color', customAccent); }}>Apply</button>
+        <button className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-bold" onClick={() => { document.documentElement.style.setProperty('--accent-color', customAccent); localStorage.setItem('ss_accent', JSON.stringify(customAccent)); toast('✅ Accent applied!', 'success'); }}>Apply</button>
       </div>
       <div className="flex gap-3">
         <button className={cn('flex-1 py-3 rounded-xl text-xs font-bold border-2 transition-all', !darkMode ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-500')} onClick={() => setDarkMode(false)}>☀️ Light</button>
@@ -731,13 +819,6 @@ function AdminThemes() {
   );
 }
 
-// =============================================
-// GAME SETTINGS — Admin controls wheel, streak, mystery box, points
-// =============================================
-function AdminCoupons() {
-  return <CouponAnalytics />;
-}
-
 function AdminSettings() {
   const store = useStore(); const { settings, setSettings } = store;
   const [commission, setCommission] = useState(settings.vendorCommission || 10);
@@ -745,7 +826,6 @@ function AdminSettings() {
   const [freeThreshold, setFreeThreshold] = useState(settings.freeDeliveryThreshold || 1000);
   const [priceAlertEnabled, setPriceAlertEnabled] = useState(settings.priceAlertEnabled !== false);
   const saveSetting = (key: string, val: any) => { const updated = { ...settings, [key]: val }; setSettings(updated as any); settingsApi.update(updated); };
-
   const gameSettings = (settings as any)?.gameSettings || {};
   const wheelSegments = (settings as any)?.wheelSegments || [];
 
@@ -762,7 +842,6 @@ function AdminSettings() {
     <div className="animate-fadeUp space-y-4">
       <h2 className="text-lg font-bold flex items-center gap-2"><SettingsIcon size={20} /> Settings</h2>
 
-      {/* Commission & Delivery */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
         <h3 className="text-sm font-bold mb-3">💰 Commission & Delivery</h3>
         <div className="grid sm:grid-cols-3 gap-3">
@@ -770,10 +849,9 @@ function AdminSettings() {
           <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Delivery Fee (Br)</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={deliveryFee} onChange={e => setDeliveryFee(Number(e.target.value))} /></div>
           <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Free Delivery Over</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={freeThreshold} onChange={e => setFreeThreshold(Number(e.target.value))} /></div>
         </div>
-        <button className="mt-4 px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-bold" onClick={() => { saveSetting('vendorCommission', commission); saveSetting('deliveryFee', deliveryFee); saveSetting('freeDeliveryThreshold', freeThreshold); }}>💾 Save Settings</button>
+        <button className="mt-4 px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-bold" onClick={() => { saveSetting('vendorCommission', commission); saveSetting('deliveryFee', deliveryFee); saveSetting('freeDeliveryThreshold', freeThreshold); toast('✅ Settings saved!', 'success'); }}>💾 Save Settings</button>
       </div>
 
-      {/* Features */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
         <h3 className="text-sm font-bold mb-3">🔔 Features</h3>
         <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={priceAlertEnabled} onChange={e => { setPriceAlertEnabled(e.target.checked); saveSetting('priceAlertEnabled', e.target.checked); }} className="rounded" /> Enable Price Drop Alerts</label>
@@ -781,38 +859,26 @@ function AdminSettings() {
         <div className="mt-2 flex items-center gap-3"><span className="text-xs">Affiliate Commission %:</span><input type="number" className="w-20 p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={settings.affiliateCommission || 10} onChange={e => saveSetting('affiliateCommission', Number(e.target.value))} /></div>
       </div>
 
-      {/* Game & Loyalty Settings */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
         <h3 className="text-sm font-bold mb-3 flex items-center gap-2"><Gamepad2 size={16} /> Game & Loyalty Settings</h3>
-        
-        {/* Points Conversion */}
         <div className="grid sm:grid-cols-3 gap-3 mb-4">
           <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Min Points for Cash</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={gameSettings.minPointsForCash || 100} onChange={e => updateGameSetting('minPointsForCash', Number(e.target.value))} /></div>
           <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Conversion Rate (pts→Br)</label><input type="number" step="0.1" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={gameSettings.pointsToCashRate || 0.5} onChange={e => updateGameSetting('pointsToCashRate', Number(e.target.value))} /></div>
           <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Daily Spins</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={gameSettings.spinsPerDay || 1} onChange={e => updateGameSetting('spinsPerDay', Number(e.target.value))} /></div>
         </div>
-
-        {/* Wheel Font Settings */}
         <div className="grid sm:grid-cols-3 gap-3 mb-4 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
           <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Wheel Font Size</label><input type="number" className="w-full mt-1 p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-transparent" value={gameSettings.wheelFontSize || 20} onChange={e => updateGameSetting('wheelFontSize', Number(e.target.value))} /></div>
           <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Wheel Font Color</label><input type="color" className="w-full mt-1 h-9 rounded-lg cursor-pointer border-0" value={gameSettings.wheelFontColor || '#ffffff'} onChange={e => updateGameSetting('wheelFontColor', e.target.value)} /></div>
           <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Show Emoji</label><label className="flex items-center gap-2 text-xs mt-2"><input type="checkbox" checked={gameSettings.wheelShowEmoji !== false} onChange={e => updateGameSetting('wheelShowEmoji', e.target.checked)} className="rounded" /> Show emoji on wheel</label></div>
         </div>
-
-        {/* Wheel Segments */}
         <h4 className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Wheel Segments ({wheelSegments.length || 10})</h4>
         <div className="space-y-1 max-h-48 overflow-y-auto">
           {(wheelSegments.length > 0 ? wheelSegments : [
-            { label: '🚚 Free Delivery', color: '#e53e3e', value: 0 },
-            { label: '💰 Br 50 Off', color: '#dd6b20', value: 50 },
-            { label: '💎 Br 100 Off', color: '#d69e2e', value: 100 },
-            { label: '🎯 10% Off', color: '#38a169', value: 10 },
-            { label: '🔥 15% Off', color: '#3182ce', value: 15 },
-            { label: '⭐ 25% Off', color: '#805ad5', value: 25 },
-            { label: '🏆 50 Pts', color: '#ed64a6', value: 50 },
-            { label: '👑 100 Pts', color: '#0bc5ea', value: 100 },
-            { label: '🔄 Try Again', color: '#a0aec0', value: 0 },
-            { label: '🎁 Br 20 Off', color: '#e53e3e', value: 20 },
+            { label: '🚚 Free Delivery', color: '#e53e3e', value: 0 }, { label: '💰 Br 50 Off', color: '#dd6b20', value: 50 },
+            { label: '💎 Br 100 Off', color: '#d69e2e', value: 100 }, { label: '🎯 10% Off', color: '#38a169', value: 10 },
+            { label: '🔥 15% Off', color: '#3182ce', value: 15 }, { label: '⭐ 25% Off', color: '#805ad5', value: 25 },
+            { label: '🏆 50 Pts', color: '#ed64a6', value: 50 }, { label: '👑 100 Pts', color: '#0bc5ea', value: 100 },
+            { label: '🔄 Try Again', color: '#a0aec0', value: 0 }, { label: '🎁 Br 20 Off', color: '#e53e3e', value: 20 },
           ]).map((seg: any, i: number) => (
             <div key={i} className="flex items-center gap-2 p-1.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50">
               <span className="text-[9px] font-bold text-slate-400 w-5">{i + 1}</span>
@@ -826,7 +892,6 @@ function AdminSettings() {
         <button className="mt-2 px-4 py-2 border border-dashed border-slate-300 dark:border-slate-600 rounded-xl text-[10px] text-slate-500 hover:border-indigo-400 hover:text-indigo-600 transition-all w-full" onClick={addWheelSegment}>+ Add Segment</button>
       </div>
 
-      {/* Streak & Mystery Box */}
       <div className="grid sm:grid-cols-2 gap-4">
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
           <h3 className="text-sm font-bold mb-3 flex items-center gap-2">🔥 Streak</h3>

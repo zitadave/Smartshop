@@ -122,7 +122,7 @@ export default function AdminBotManager() {
           <p className="text-[10px] text-slate-500 mt-0.5">Dedicated Telegram bot for admin alerts & remote management</p>
         </div>
         <div className="flex gap-2">
-          <button className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg text-[10px] font-medium flex items-center gap-1" onClick={refreshNotifs}><RefreshCw size={11} /> Refresh</button>
+          <button className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg text-[10px] font-medium flex items-center gap-1 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors" onClick={() => { refreshNotifs(); toast('🔄 Notifications refreshed!', 'info'); }}><RefreshCw size={11} /> Refresh</button>
           {notifications.length > 0 && (
             <button className="px-3 py-1.5 bg-red-100 text-red-600 rounded-lg text-[10px] font-medium flex items-center gap-1" onClick={() => { clearNotifications(); setNotifications([]); toast('Cleared', 'info'); }}>
               <Trash2 size={11} /> Clear
