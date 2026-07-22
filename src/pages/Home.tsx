@@ -19,6 +19,34 @@ import { toast } from '@/components/Toast';
 import FlashDealTimer, { useFlashDeals } from '@/components/features/FlashDealTimer';
 import BroadcastBanner from '@/components/features/BroadcastBanner';
 
+/** Sponsored/Promoted Products Section */
+function SponsoredSection({ products, settings, onAdd, onWish, btnAnim, wishAnim }: any) {
+  const sponsoredIds = settings.sponsoredProducts || [];
+  if (sponsoredIds.length === 0) return null;
+  const sponsored = products.filter((p: any) => sponsoredIds.includes(p.id));
+  if (sponsored.length === 0) return null;
+  return (
+    <section className="mt-2 animate-fadeUp">
+      <SectionHeader
+        icon={<Megaphone size={15} className="text-white" />}
+        title="💼 Promoted Products"
+        subtitle="Sponsored & featured products"
+        gradient="from-indigo-500 to-purple-600"
+      />
+      <HorizontalScroll>
+        {sponsored.map((p: any) => (
+          <div key={p.id} className="relative flex-shrink-0 w-44">
+            <ProductCard product={p} variant="mini"
+              onAdd={onAdd} onWish={onWish}
+              addingId={btnAnim.activeId} wishAnimId={wishAnim.activeId} />
+            <span className="absolute top-1 right-1 text-[8px] bg-indigo-500 text-white px-1.5 py-0.5 rounded font-bold">PROMOTED</span>
+          </div>
+        ))}
+      </HorizontalScroll>
+    </section>
+  );
+}
+
 export default function Home() {
   const navigate = useNavigate();
   const store = useStore();
@@ -60,6 +88,8 @@ export default function Home() {
     const dealProductIds = new Set(activeDeals.map(d => d.productId));
     return products.filter(p => dealProductIds.has(p.id));
   }, [products, activeDeals]);
+
+  const sponsoredCount = (settings.sponsoredProducts || []).filter((id: number) => products.some(p => p.id === id)).length;
 
   const handleAdd = useCallback((e: React.MouseEvent, product: Product) => {
     e.stopPropagation();
@@ -119,6 +149,16 @@ export default function Home() {
           </HorizontalScroll>
         </section>
       )}
+
+      {/* Sponsored / Promoted Products */}
+      <SponsoredSection
+        products={products}
+        settings={settings}
+        onAdd={handleAdd}
+        onWish={handleWish}
+        btnAnim={btnAnim}
+        wishAnim={wishAnim}
+      />
 
       <div className="flex gap-3 px-4 -mt-5 mb-3 relative z-20">
         {[

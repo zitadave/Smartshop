@@ -3,6 +3,7 @@ import { formatPrice, cn, generateId } from '@/lib/utils';
 import { productsApi } from '@/lib/api';
 import { Upload, Download, FileSpreadsheet, Plus, Trash2, Check, AlertTriangle, RefreshCw } from 'lucide-react';
 import { toast } from '@/components/Toast';
+import { notifyTemplateDownloaded, notifyBulkImportResults } from '@/lib/adminNotifier';
 
 interface BulkProduct {
   nameEn: string;
@@ -39,6 +40,7 @@ export default function BulkProductManager() {
     a.click();
     setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
     toast('📄 Template downloaded!', 'success');
+    notifyTemplateDownloaded(1);
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -99,6 +101,7 @@ export default function BulkProductManager() {
     setResults({ success, failed, errors });
     setImporting(false);
     toast(`✅ ${success} imported, ${failed} failed`, failed > 0 ? 'warning' : 'success');
+    notifyBulkImportResults(success, failed);
   };
 
   const removeProduct = (idx: number) => setProducts(products.filter((_, i) => i !== idx));

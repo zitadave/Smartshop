@@ -36,6 +36,7 @@ import AdminSecurity from '@/components/admin/AdminSecurity';
 import AdminBotManager from '@/components/admin/AdminBotManager';
 import ProductStudio from '@/components/admin/ProductStudio';
 import ToastContainer from '@/components/Toast';
+import { sendAdminTelegram, notifyProductCreated, notifyProductUpdated, notifyProductDeleted, notifySettingsChanged, notifyVendorUpdated } from '@/lib/adminNotifier';
 
 type Tab = 'overview' | 'products' | 'orders' | 'vendors' | 'marketplace' | 'reviews' 
   | 'broadcast' | 'flashdeals' | 'preorders' | 'tracking' | 'themes' | 'coupons' 
@@ -306,16 +307,21 @@ function AdminProducts() {
   const toggleVisibility = async (id: number, v: boolean) => {
     await productsApi.update(id, { visible: !v });
     setProducts(products.map(p => p.id === id ? { ...p, visible: !v } : p));
+    const p = products.find(x => x.id === id);
+    sendAdminTelegram(`${p?.visible !== false ? '👁️' : '🙈'} <b>Product ${p?.visible !== false ? 'Hidden' : 'Revealed'}</b>\n\n📦 ${p?.nameEn || '#' + id}`);
   };
   const togglePreOrder = async (id: number) => {
     const p = products.find(x => x.id === id);
     await productsApi.update(id, { isPreOrder: !p?.isPreOrder });
     setProducts(products.map(x => x.id === id ? { ...x, isPreOrder: !x.isPreOrder } : x));
+    sendAdminTelegram(`${p?.isPreOrder ? '🔄' : '📅'} <b>Pre-Order Toggled</b>\n\n📦 ${p?.nameEn}\nNow: ${p?.isPreOrder ? 'Regular' : 'Pre-Order'}`);
   };
   const deleteProduct = async (id: number) => {
+    const p = products.find(x => x.id === id);
     if (!window.confirm('⚠️ Are you sure you want to delete this product? This cannot be undone.')) return;
     await productsApi.delete(id);
     setProducts(products.filter(p => p.id !== id));
+    notifyProductDeleted(p?.nameEn || '#' + id);
   };
 
   const openEdit = (p: any) => {
@@ -348,7 +354,7 @@ function AdminProducts() {
         <div className="flex items-center gap-2">
           <div className="relative">
             <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input className="pl-9 pr-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs w-48 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+            <input className="pl-9 pr-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs w-34 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 max-w-[140px]"
               placeholder="Search products..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           <button className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 hover:shadow-lg transition-all"
@@ -532,6 +538,7 @@ function AdminVendors() {
     setVendors(vendors.map(v => v.id === id ? { ...v, commission, approved, name: storeName, phone: vendorPhone, email: vendorEmail } : v));
     setSelectedVendor(null);
     toast('✅ Vendor updated!', 'success');
+    notifyVendorUpdated(storeName || selectedVendor?.name || 'Vendor', `Commission: ${commission}%\nStatus: ${approved ? 'Approved' : 'Pending'}`);
   };
 
   if (loading) return <div className="text-center py-12"><Loader size={24} className="animate-spin mx-auto text-indigo-500" /></div>;
@@ -744,35 +751,88 @@ function AdminFlashDeals() {
   const saveSetting = (key: string, val: any) => { const updated = { ...settings, [key]: val }; setSettings(updated as any); settingsApi.update(updated); };
   const flashSales = settings.flashSales || {};
   return (
-    <div className="animate-fadeUp space-y-4">
-      <h2 className="text-lg font-bold">⚡ Flash Deals</h2>
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
-        <h3 className="text-sm font-bold mb-3">Active Deals ({Object.keys(flashSales).length})</h3>
-        {Object.keys(flashSales).length === 0 && <p className="text-xs text-slate-400 text-center py-6">No flash deals yet</p>}
-        {Object.entries(flashSales).map(([pid, d]: any) => {
-          const p = products.find(x => x.id === Number(pid)); const active = isFlashDealActive(d);
-          return <div key={pid} className="flex items-center gap-3 py-2.5 border-b border-slate-100 dark:border-slate-800 last:border-0">
-            <img src={p?.image} className="w-10 h-10 rounded-xl object-cover" />
-            <div className="flex-1"><div className="text-xs font-semibold">{p?.nameEn || `#${pid}`}</div><div className="flex gap-2 text-[9px] text-slate-500 mt-0.5"><span className={active ? 'text-green-600 font-semibold' : 'text-slate-400'}>{active ? formatCountdown(d.end) : 'Expired'}</span><span>-{d.discount || 20}%</span><span>Max: {d.maxQty || 50}</span></div></div>
-            <button className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600" onClick={() => { const fs = { ...flashSales }; delete fs[pid]; saveSetting('flashSales', fs); }}><Trash2 size={12} /></button>
-          </div>;
-        })}
+    <div className="animate-fadeUp space-y-4 max-w-full overflow-x-hidden">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div><h2 className="text-lg font-bold">⚡ Flash Deal Studio</h2><p className="text-[10px] text-slate-500">Create time-limited discounts to drive urgency</p></div>
+        <span className="text-[9px] text-slate-400">{Object.values(flashSales).filter((d: any) => isFlashDealActive(d)).length} live now</span>
       </div>
+
+      {/* Create Form */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
-        <h3 className="text-sm font-bold mb-3">Create Flash Deal</h3>
-        <div className="grid sm:grid-cols-2 gap-3">
-          <select className="p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent col-span-2" id="fd-prod"><option value="">Select product...</option>{products.filter(p => p.inStock).map(p => <option key={p.id} value={p.id}>{p.nameEn}</option>)}</select>
-          <input type="datetime-local" className="p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" id="fd-end" />
-          <input type="number" className="p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" id="fd-discount" placeholder="Discount %" defaultValue={20} />
-          <input type="number" className="p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" id="fd-qty" placeholder="Max qty" defaultValue={50} />
-          <button className="p-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-bold col-span-2" onClick={() => {
-            const pid = (document.getElementById('fd-prod') as HTMLSelectElement)?.value;
-            const end = (document.getElementById('fd-end') as HTMLInputElement)?.value;
-            if (!pid || !end) { toast('❌ Select product and end time', 'error'); return; }
-            saveSetting('flashSales', { ...flashSales, [pid]: { end: new Date(end).getTime(), startedAt: Date.now(), discount: Number((document.getElementById('fd-discount') as HTMLInputElement)?.value) || 20, maxQty: Number((document.getElementById('fd-qty') as HTMLInputElement)?.value) || 50 } });
-            toast('✅ Flash deal created!', 'success');
-          }}>+ Create Flash Deal</button>
+        <h3 className="text-sm font-bold mb-3">New Flash Deal</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="sm:col-span-2">
+            <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Product</label>
+            <select className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" id="fd-prod">
+              <option value="">Select product...</option>
+              {products.filter(p => p.inStock).map(p => <option key={p.id} value={p.id}>{p.nameEn} - {formatPrice(p.price)}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Discount %</label>
+            <div className="flex gap-1 mt-1 flex-wrap">
+              {[10, 15, 20, 25, 30, 40, 50].map(n => (
+                <button key={n} className="px-2 py-1.5 rounded-lg border border-slate-200 text-[10px] font-medium hover:border-orange-400 hover:text-orange-600" onClick={() => { const el = document.getElementById('fd-discount') as HTMLInputElement; if (el) el.value = String(n); }}>{n}%</button>
+              ))}
+            </div>
+            <input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" id="fd-discount" placeholder="Custom %" defaultValue={20} />
+          </div>
+          <div>
+            <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">End Time</label>
+            <input type="datetime-local" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" id="fd-end" />
+            <div className="flex gap-1 mt-1 flex-wrap">
+              {[1, 3, 6, 12, 24, 48, 72].map(h => (
+                <button key={h} className="px-2 py-1 rounded border border-slate-200 text-[8px] font-medium hover:border-orange-400" onClick={() => { const el = document.getElementById('fd-end') as HTMLInputElement; if (el) { const d = new Date(Date.now() + h * 3600000); el.value = d.toISOString().slice(0, 16); } }}>{h}h</button>
+              ))}
+            </div>
+          </div>
         </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+          <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Max Quantity</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" id="fd-qty" defaultValue={50} /></div>
+          <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Deal Name</label><input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" id="fd-name" placeholder="e.g. Midnight Madness" /></div>
+          <div className="flex items-end">
+            <button className="w-full p-2.5 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl text-xs font-bold hover:shadow-lg" onClick={() => {
+              const pid = (document.getElementById('fd-prod') as HTMLSelectElement)?.value;
+              const end = (document.getElementById('fd-end') as HTMLInputElement)?.value;
+              if (!pid || !end) { toast('❌ Select product and end time', 'error'); return; }
+              const discount = Number((document.getElementById('fd-discount') as HTMLInputElement)?.value) || 20;
+              const maxQty = Number((document.getElementById('fd-qty') as HTMLInputElement)?.value) || 50;
+              const name = (document.getElementById('fd-name') as HTMLInputElement)?.value || '';
+              const p = products.find(x => x.id === Number(pid));
+              saveSetting('flashSales', { ...flashSales, [pid]: { end: new Date(end).getTime(), startedAt: Date.now(), discount, maxQty, name: name || undefined } });
+              toast('⚡ Flash deal created! ' + discount + '% off', 'success');
+              sendAdminTelegram(`⚡ <b>Flash Deal Created!</b>\n\n📦 ${p?.nameEn || 'Product'}\n💰 ${discount}% OFF\n⏰ Ends: ${new Date(end).toLocaleString()}\n📊 Max: ${maxQty} units`);
+            }}>⚡ Launch Deal</button>
+          </div>
+        </div>
+      </div>
+
+      {/* Active Deals */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-bold">Active Deals ({Object.keys(flashSales).length})</h3>
+        </div>
+        {Object.keys(flashSales).length === 0 ? <p className="text-xs text-slate-400 text-center py-8">No flash deals. Launch one above!</p> :
+          <div className="grid sm:grid-cols-2 gap-2">
+            {Object.entries(flashSales).map(([pid, d]: any) => {
+              const p = products.find(x => x.id === Number(pid));
+              const active = isFlashDealActive(d);
+              return <div key={pid} className={cn('flex items-center gap-3 p-3 rounded-xl border overflow-x-hidden', active ? 'border-orange-200 bg-orange-50/50 dark:border-orange-800 dark:bg-orange-950/20' : 'border-slate-200 dark:border-slate-700')}>
+                <img src={p?.image} className="w-12 h-12 rounded-xl object-cover flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-semibold truncate">{p?.nameEn || '#' + pid}</div>
+                  <div className="flex gap-2 text-[9px] text-slate-500 mt-0.5 flex-wrap">
+                    <span className={active ? 'text-green-600 font-semibold' : 'text-slate-400'}>{active ? formatCountdown(d.end) : 'Expired'}</span>
+                    <span className="text-red-500 font-bold">-{d.discount || 20}%</span>
+                    <span>Max: {d.maxQty || 50}</span>
+                    {d.name && <span className="text-indigo-500">🎯 {d.name}</span>}
+                  </div>
+                </div>
+                <button className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 flex-shrink-0" onClick={() => { const fs = { ...flashSales }; delete fs[pid]; saveSetting('flashSales', fs); toast('🗑️ Removed', 'info'); }}><Trash2 size={12} /></button>
+              </div>;
+            })}
+          </div>
+        }
       </div>
     </div>
   );
@@ -961,7 +1021,7 @@ function AdminSettings() {
           <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Delivery Fee (Br)</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={deliveryFee} onChange={e => setDeliveryFee(Number(e.target.value))} /></div>
           <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Free Delivery Over</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={freeThreshold} onChange={e => setFreeThreshold(Number(e.target.value))} /></div>
         </div>
-        <button className="mt-4 px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-bold" onClick={() => { saveSetting('vendorCommission', commission); saveSetting('deliveryFee', deliveryFee); saveSetting('freeDeliveryThreshold', freeThreshold); toast('✅ Settings saved!', 'success'); }}>💾 Save Settings</button>
+        <button className="mt-4 px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-bold" onClick={() => { saveSetting('vendorCommission', commission); saveSetting('deliveryFee', deliveryFee); saveSetting('freeDeliveryThreshold', freeThreshold); toast('✅ Settings saved!', 'success'); notifySettingsChanged(`Commission: ${commission}%\nDelivery Fee: Br ${deliveryFee}\nFree Delivery: Br ${freeThreshold}`); }}>💾 Save Settings</button>
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>

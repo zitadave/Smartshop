@@ -11,6 +11,7 @@ import {
   MessageSquare, AlertTriangle, ShoppingCart, Package,
 } from 'lucide-react';
 import { toast } from '@/components/Toast';
+import { notifyDemo } from '@/lib/adminNotifier';
 
 export default function AdminBotManager() {
   const [botToken, setBotToken] = useState(() => localStorage.getItem('ss_admin_bot_token') || '');
@@ -80,7 +81,7 @@ export default function AdminBotManager() {
     setSending(false);
   };
 
-  /** FIXED: Now actually queues notifications and refreshes the list */
+  /** FIXED: Queues notification locally AND sends via Telegram API */
   const demoNotification = (type: AdminNotification['type']) => {
     let n: AdminNotification;
     if (type === 'new_order') {
@@ -90,7 +91,11 @@ export default function AdminBotManager() {
     }
     queueNotification(n);
     refreshNotifs();
-    toast(`📨 Demo: ${n.title} — ${n.message}`, 'info');
+    // Also send via Telegram API if configured
+    notifyDemo(type).then(sent => {
+      if (sent) toast(`📨 ${n.title} sent to Telegram!`, 'success');
+      else toast(`📨 ${n.title} — queued locally (configure bot token to send to Telegram)`, 'info');
+    });
   };
 
   const typeIcons: Record<string, any> = {

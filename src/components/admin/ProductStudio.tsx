@@ -12,6 +12,7 @@ import {
   Shield, Gift, Calendar, Clock, ArrowUpDown, Sparkles
 } from 'lucide-react';
 import { toast } from '@/components/Toast';
+import { sendAdminTelegram } from '@/lib/adminNotifier';
 
 interface ProductForm {
   name: string;          // Amharic
@@ -239,9 +240,11 @@ export default function ProductStudio({ editProduct, onClose, onSaved }: Product
       if (editProduct) {
         await productsApi.update(editProduct.id, payload);
         toast('✅ Product updated successfully!', 'success');
+        sendAdminTelegram(`✏️ <b>Product Updated</b>\n\n📦 ${payload.nameEn}\n💰 ${formatPrice(payload.price)}\n📁 ${payload.category}`);
       } else {
         await productsApi.create(payload);
         toast('✅ Product created successfully!', 'success');
+        sendAdminTelegram(`🆕 <b>New Product Added!</b>\n\n📦 ${payload.nameEn}\n💰 ${formatPrice(payload.price)}\n📁 ${payload.category}\n📊 Stock: ${payload.stockCount}`);
       }
       onSaved();
       onClose();
