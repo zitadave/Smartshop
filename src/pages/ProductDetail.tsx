@@ -30,7 +30,11 @@ export default function ProductDetail() {
     );
   }
 
-  useEffect(() => { addRecentView(product); }, []);
+  useEffect(() => { 
+    addRecentView(product); 
+    // Force scroll to top — ensures user lands on product view, not related section
+    window.scrollTo(0, 0);
+  }, []);
 
   const images = product.images?.length ? product.images : [product.image || 'https://placehold.co/400x400/e2e8f0/94a3b8?text=📦'];
   const wis = isInWishlist(product.id);
@@ -45,11 +49,6 @@ export default function ProductDetail() {
     .filter(p => p.category === product.category && p.id !== product.id)
     .sort((a, b) => (b.soldCount || 0) - (a.soldCount || 0))
     .slice(0, 6);
-
-  const alsoBought = store.products
-    .filter(p => p.id !== product.id && Math.abs(p.price - product.price) < product.price * 0.5)
-    .sort((a, b) => (b.soldCount || 0) - (a.soldCount || 0))
-    .slice(0, 4);
 
   return (
     <div className="pb-4 max-w-lg mx-auto">
