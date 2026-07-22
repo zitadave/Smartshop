@@ -3,7 +3,7 @@ import { formatPrice, cn, generateId } from '@/lib/utils';
 import { productsApi } from '@/lib/api';
 import { Upload, Download, FileSpreadsheet, Plus, Trash2, Check, AlertTriangle, RefreshCw } from 'lucide-react';
 import { toast } from '@/components/Toast';
-import { notifyTemplateDownloaded, notifyBulkImportResults } from '@/lib/adminNotifier';
+import { notifyTemplateDownloaded, notifyBulkImportResults, sendFileToTelegram } from '@/lib/adminNotifier';
 
 interface BulkProduct {
   nameEn: string;
@@ -40,7 +40,11 @@ export default function BulkProductManager() {
     a.click();
     setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
     toast('📄 Template downloaded!', 'success');
-    notifyTemplateDownloaded(1);
+    // Send the actual CSV file to Telegram as a document
+    sendFileToTelegram(csv, 'smartshop-bulk-template.csv', {
+      contentType: 'text/csv',
+      caption: '📄 Bulk Import Template - Fill this CSV with your products and upload back to Smart Shop.'
+    });
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {

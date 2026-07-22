@@ -108,3 +108,44 @@ export function notifyBulkImportResults(success: number, failed: number) {
 function formatPriceTelegram(price: number): string {
   return `Br ${price.toLocaleString()}`;
 }
+
+/**
+ * Send an actual file (CSV, Excel, etc.) to the admin Telegram chat.
+ * The file content is sent as a document via the API.
+ */
+export async function sendFileToTelegram(
+  content: string,
+  filename: string,
+  options?: {
+    contentType?: string;
+    caption?: string;
+    silent?: boolean;
+  }
+): Promise<boolean> {
+  const config = getConfig();
+  if (!config) return false;
+
+  try {
+    const res = await fetch('/api/admin-bot/send-file', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chatId: config.chatId,
+        filename,
+        content,
+        contentType: options?.contentType || 'text/csv',
+        caption: options?.caption,
+      }),
+    });
+    const data = await res.json();
+    if (data.sent && !options?.silent) {
+      toast(`📎 File "${filename}" sent to Telegram!`, 'success');
+    } else if (!data.sent && !options?.silent) {
+      toast(`❌ Failed to send file: ${data.error || 'Unknown'}`, 'error');
+    }
+    return data.sent === true;
+  } catch (e: any) {
+    toast(`❌ Failed to send file: ${e.message}`, 'error');
+    return false;
+  }
+}
