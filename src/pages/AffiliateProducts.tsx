@@ -38,7 +38,8 @@ export default function AffiliateProducts() {
   };
 
   const copyProductLink = (product: any) => {
-    const link = `https://moonlit-kheer-826ac2.netlify.app/product/${product.id}?ref=${userCode}`;
+    const baseUrl = window.location.origin;
+    const link = `${baseUrl}/product/${product.id}?ref=${userCode}`;
     navigator.clipboard.writeText(link);
     // Update stats
     const prod = productStats[product.id] || { clicks: 0, sales: 0, commission: 0 };
@@ -51,7 +52,8 @@ export default function AffiliateProducts() {
   };
 
   const shareProduct = async (product: any) => {
-    const link = `https://moonlit-kheer-826ac2.netlify.app/product/${product.id}?ref=${userCode}`;
+    const baseUrl = window.location.origin;
+    const link = `${baseUrl}/product/${product.id}?ref=${userCode}`;
     if (navigator.share) {
       try {
         await navigator.share({ title: product.nameEn, text: `Check out ${product.nameEn} on Smart Shop!`, url: link });
