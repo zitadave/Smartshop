@@ -22,21 +22,36 @@ export default function Shop() {
   const btnAnim = useButtonAnimation();
   const wishAnim = useWishlistAnimation();
   const [showFilters, setShowFilters] = useState(false);
-  const [searchAnimate, setSearchAnimate] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const { visibleItems, hasMore, sentinelRef } = useInfiniteScroll(filtered, { pageSize: 8 });
 
-  // Read search from navigation state (header search icon click)
+  // Handle search focus: from header search icon click
   useEffect(() => {
-    const state = location.state as { search?: string } | null;
-    if (state?.search) {
-      setSearch(state.search);
-      setSearchAnimate(true);
-      // Focus the search input after animation
-      setTimeout(() => searchInputRef.current?.focus(), 400);
-      // Clear the state so it doesn't re-trigger
+    const state = location.state as { focusSearch?: number } | null;
+    if (state?.focusSearch) {
+      setSearchFocused(true);
+      // Scroll the search bar into view with smooth animation
+      setTimeout(() => {
+        searchContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        searchInputRef.current?.focus();
+      }, 100);
       window.history.replaceState({}, document.title);
     }
+  }, []);
+
+  // Listen for custom event when already on shop page
+  useEffect(() => {
+    const handler = () => {
+      setSearchFocused(true);
+      setTimeout(() => {
+        searchContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        searchInputRef.current?.focus();
+      }, 100);
+    };
+    window.addEventListener('shop-search-focus', handler);
+    return () => window.removeEventListener('shop-search-focus', handler);
   }, []);
 
   const handleAdd = useCallback((e: React.MouseEvent, product: Product) => {
@@ -56,7 +71,7 @@ export default function Shop() {
       {/* Sticky Header */}
       <div className="sticky top-14 z-30 bg-background/80 backdrop-blur-3xl border-b border-border/40 shadow-sm">
         <div className="px-4 pt-3 pb-2">
-          <div className={cn("relative group transition-all duration-500", searchAnimate && "animate-slideDown")}>
+          <div ref={searchContainerRef} className={cn("relative group transition-all duration-700", searchFocused && "animate-slideDown ring-2 ring-primary/20 rounded-2xl")}>
             <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/50 transition-colors group-focus-within:text-primary" />
             <input
               ref={searchInputRef}
