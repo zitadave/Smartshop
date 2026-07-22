@@ -1,17 +1,17 @@
-// Smart Shop Service Worker v3 — Offline-first PWA
-const CACHE = 'smartshop-v3';
-const STATIC_CACHE = 'smartshop-static-v3';
-const API_CACHE = 'smartshop-api-v3';
+// Smart Shop Service Worker v4 — Fast-refresh PWA
+const CACHE = 'smartshop-v4';
+const STATIC_CACHE = 'smartshop-static-v4';
+const API_CACHE = 'smartshop-api-v4';
 const STATIC_ASSETS = ['/', '/index.html', '/offline.html'];
 
-// Install: cache shell and show offline page
+// Install: cache shell
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(STATIC_CACHE).then((cache) => cache.addAll(STATIC_ASSETS)).then(() => self.skipWaiting())
   );
 });
 
-// Activate: clean old caches
+// Activate: clean old caches immediately
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
@@ -22,7 +22,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Helper: network-first strategy
+// Network-first: always try network, fall back to cache
 async function networkFirst(request, cacheName) {
   try {
     const response = await fetch(request);
@@ -34,30 +34,20 @@ async function networkFirst(request, cacheName) {
   } catch {
     const cached = await caches.match(request);
     if (cached) return cached;
-    // Return offline page for navigation requests
-    if (request.mode === 'navigate') {
-      return caches.match('/offline.html');
-    }
+    if (request.mode === 'navigate') return caches.match('/offline.html');
     return new Response('Offline', { status: 503 });
   }
 }
 
-// Helper: cache-first strategy
-async function cacheFirst(request, cacheName, maxAge = 86400000) {
-  const cached = await caches.match(request);
-  if (cached) {
-    const age = Date.now() - new Date(cached.headers.get('date') || 0).getTime();
-    if (age < maxAge) return cached;
-  }
+// Network-only for JS/CSS assets - ensures latest code always loads
+async function networkOnly(request) {
   try {
     const response = await fetch(request);
-    if (response.ok) {
-      const cache = await caches.open(cacheName);
-      cache.put(request, response.clone());
-    }
     return response;
   } catch {
-    return cached || new Response('Offline', { status: 503 });
+    const cached = await caches.match(request);
+    if (cached) return cached;
+    return new Response('Not found', { status: 404 });
   }
 }
 
@@ -66,21 +56,21 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // API calls: network-first with cache fallback
-  if (url.pathname.startsWith('/api/') || url.hostname.includes('supabase') || url.hostname.includes('vercel')) {
+  // API calls: network-first
+  if (url.pathname.startsWith('/api/')) {
     event.respondWith(networkFirst(request, API_CACHE));
     return;
   }
 
-  // Static assets: cache-first for 7 days
-  if (url.pathname.startsWith('/assets/') || url.pathname.startsWith('/icons/')) {
-    event.respondWith(cacheFirst(request, STATIC_CACHE, 604800000));
+  // Static JS/CSS assets: NETWORK-ONLY (always get latest)
+  if (url.pathname.startsWith('/assets/') && (url.pathname.endsWith('.js') || url.pathname.endsWith('.css'))) {
+    event.respondWith(networkOnly(request));
     return;
   }
 
-  // Images: cache-first for 30 days
+  // Images: network-first with short cache
   if (request.destination === 'image') {
-    event.respondWith(cacheFirst(request, CACHE, 2592000000));
+    event.respondWith(networkFirst(request, CACHE));
     return;
   }
 
