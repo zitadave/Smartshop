@@ -4,12 +4,28 @@ import { cn } from '@/lib/utils';
 import { Sun, Moon, Monitor, Palette, Check, Sparkles, RefreshCw } from 'lucide-react';
 import { toast } from '@/components/Toast';
 
-const ADMIN_THEMES = [
-  { id: 'light', name: 'Pure Light', icon: Sun, gradient: 'from-amber-50 to-white', border: 'border-amber-200', text: 'text-amber-700', bg: '#f8fafc', card: '#ffffff', textC: '#0b0f19', borderC: '#e2e8f0' },
-  { id: 'dark', name: 'Midnight', icon: Moon, gradient: 'from-slate-900 to-slate-800', border: 'border-slate-600', text: 'text-slate-300', bg: '#0a0e17', card: '#131a2a', textC: '#e8ecf1', borderC: '#1e293b' },
-  { id: 'ocean', name: 'Deep Ocean', icon: Monitor, gradient: 'from-blue-900 to-slate-900', border: 'border-blue-700', text: 'text-blue-300', bg: '#0c1929', card: '#0f2137', textC: '#e0f2fe', borderC: '#1e3a5f' },
-  { id: 'forest', name: 'Forest', icon: Monitor, gradient: 'from-emerald-900 to-slate-900', border: 'border-emerald-700', text: 'text-emerald-300', bg: '#0a1a0e', card: '#0f2415', textC: '#dcfce7', borderC: '#1a3a22' },
-  { id: 'grape', name: 'Grape', icon: Sparkles, gradient: 'from-purple-900 to-slate-900', border: 'border-purple-700', text: 'text-purple-300', bg: '#140a1a', card: '#1a0f24', textC: '#f3e8ff', borderC: '#2e1a3a' },
+interface AdminTheme {
+  id: string; name: string; icon: any;
+  bg: string; card: string; text: string; textMuted: string;
+  border: string; sidebar: string; header: string; hover: string;
+}
+
+const ADMIN_THEMES: AdminTheme[] = [
+  { id: 'light', name: 'Pure Light', icon: Sun,
+    bg: '#f8fafc', card: '#ffffff', text: '#0b0f19', textMuted: '#94a3b8',
+    border: '#e2e8f0', sidebar: '#ffffff', header: '#ffffff', hover: '#f1f5f9' },
+  { id: 'dark', name: 'Midnight', icon: Moon,
+    bg: '#0a0e17', card: '#131a2a', text: '#e8ecf1', textMuted: '#64748b',
+    border: '#1e293b', sidebar: '#0d111c', header: '#0d111c', hover: '#1a2332' },
+  { id: 'ocean', name: 'Deep Ocean', icon: Monitor,
+    bg: '#0c1929', card: '#0f2137', text: '#e0f2fe', textMuted: '#7ba3c7',
+    border: '#1e3a5f', sidebar: '#0b1a2a', header: '#0b1a2a', hover: '#122a45' },
+  { id: 'forest', name: 'Forest', icon: Monitor,
+    bg: '#0a1a0e', card: '#0f2415', text: '#dcfce7', textMuted: '#6ba37e',
+    border: '#1a3a22', sidebar: '#091a0e', header: '#091a0e', hover: '#112e1a' },
+  { id: 'grape', name: 'Grape', icon: Sparkles,
+    bg: '#140a1a', card: '#1a0f24', text: '#f3e8ff', textMuted: '#9a7db3',
+    border: '#2e1a3a', sidebar: '#120a18', header: '#120a18', hover: '#22163a' },
 ];
 
 export default function AdminThemeManager() {
@@ -24,17 +40,48 @@ export default function AdminThemeManager() {
     const t = ADMIN_THEMES.find(x => x.id === themeId);
     if (!t) return;
 
-    // Apply CSS variables to admin panel root
-    const root = document.querySelector('.admin-panel-root') as HTMLElement || document.querySelector('main') || document.documentElement;
+    // Store current theme in data attribute for child components to reference
+    document.documentElement.setAttribute('data-admin-theme', themeId);
+
+    // Define CSS variables that ARE actually used by the injected styles
+    const root = document.documentElement;
     root.style.setProperty('--admin-bg', t.bg);
     root.style.setProperty('--admin-card', t.card);
-    root.style.setProperty('--admin-text', t.textC);
-    root.style.setProperty('--admin-border', t.borderC);
-    root.style.setProperty('background', t.bg);
+    root.style.setProperty('--admin-text', t.text);
+    root.style.setProperty('--admin-text-muted', t.textMuted);
+    root.style.setProperty('--admin-border', t.border);
+    root.style.setProperty('--admin-sidebar', t.sidebar);
+    root.style.setProperty('--admin-header', t.header);
+    root.style.setProperty('--admin-hover', t.hover);
 
-    // Also set on body for full coverage
-    document.body.style.background = t.bg;
-    document.body.style.color = t.textC;
+    // Apply to the admin root element directly
+    const adminRoot = document.querySelector('[data-admin-root]') as HTMLElement;
+    if (adminRoot) {
+      adminRoot.style.backgroundColor = t.bg;
+      adminRoot.style.color = t.text;
+    }
+
+    // Apply to sidebar
+    const sidebar = document.querySelector('[data-admin-sidebar]') as HTMLElement;
+    if (sidebar) {
+      sidebar.style.backgroundColor = t.sidebar;
+      sidebar.style.borderColor = t.border;
+    }
+
+    // Apply to header
+    const header = document.querySelector('[data-admin-header]') as HTMLElement;
+    if (header) {
+      header.style.backgroundColor = t.header;
+      header.style.borderColor = t.border;
+    }
+
+    // Apply to all admin cards
+    document.querySelectorAll('[data-admin-card]').forEach(el => {
+      if (el instanceof HTMLElement) {
+        el.style.backgroundColor = t.card;
+        el.style.borderColor = t.border;
+      }
+    });
 
     toast(`🎨 Admin theme: ${t.name} applied!`, 'success');
   };
@@ -47,7 +94,7 @@ export default function AdminThemeManager() {
   return (
     <div className="space-y-4 animate-fadeUp max-w-full overflow-x-hidden">
       <h2 className="text-lg font-bold flex items-center gap-2"><Palette size={20} className="text-indigo-500" /> Admin Theme Manager</h2>
-      <p className="text-[10px] text-slate-500">Choose a dedicated theme for the admin panel — separate from the customer-facing store theme ("Themes" tab). The store theme changes colors for your customers; this changes the admin panel appearance only.</p>
+      <p className="text-[10px] text-slate-500">This changes the <strong>admin panel appearance</strong> only (sidebar, cards, backgrounds). The storefront colors for customers are in the <strong>"Themes"</strong> tab.</p>
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
         {ADMIN_THEMES.map(theme => {
@@ -59,52 +106,52 @@ export default function AdminThemeManager() {
               className={cn(
                 'relative rounded-2xl border-2 p-4 text-left transition-all hover:shadow-xl hover:-translate-y-0.5',
                 isActive ? 'ring-2 ring-indigo-500 shadow-lg scale-[1.02]' : '',
-                theme.border
               )}
-              style={{ background: theme.bg, color: theme.textC }}
+              style={{ background: theme.bg, color: theme.text, borderColor: theme.border }}
               onClick={() => applyAdminTheme(theme.id)}
             >
               <div className="flex items-center gap-2 mb-2">
                 <div className={cn('p-2 rounded-xl', isActive ? 'bg-white/20' : 'bg-white/10')}>
-                  <Icon size={18} className={theme.text} />
+                  <Icon size={18} />
                 </div>
                 {isActive && <Check size={14} className="text-green-400" />}
               </div>
               <h3 className="text-sm font-bold">{theme.name}</h3>
               <p className="text-[9px] mt-0.5 opacity-70">
-                {theme.id === 'light' ? 'Clean, bright interface' : 'Easy on the eyes, reduces glare'}
+                {theme.id === 'light' ? 'Clean, bright interface' : 'Dark, easy on the eyes'}
               </p>
-              {/* Preview */}
+              {/* Preview strip */}
               <div className="mt-2 h-6 rounded-lg flex gap-1 items-center px-2" style={{ background: theme.id === 'light' ? 'white' : 'rgba(0,0,0,0.3)' }}>
                 <div className="w-2 h-2 rounded-full bg-indigo-500" />
                 <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                <div className="flex-1 h-1 rounded-full" style={{ background: theme.textC + '40' }} />
+                <div className="flex-1 h-1 rounded-full" style={{ background: theme.textMuted }} />
               </div>
             </button>
           );
         })}
       </div>
 
-      {/* Preview Card */}
-      <div className="rounded-2xl border-2 p-4 transition-all" style={{ background: currentTheme.card, borderColor: currentTheme.borderC, color: currentTheme.textC }}>
+      {/* Active Theme Preview */}
+      <div className="rounded-2xl border-2 p-4 transition-all" style={{ background: currentTheme.card, borderColor: currentTheme.border, color: currentTheme.text }}>
         <div className="flex items-center gap-3 mb-3">
           <Palette size={20} />
           <div>
             <div className="text-sm font-bold">{currentTheme.name} — Active</div>
-            <div className="text-[9px] opacity-70">This theme applies only to the admin panel. Store colors are managed in the "Themes" tab.</div>
+            <div className="text-[9px]" style={{ color: currentTheme.textMuted }}>This theme applies only to the admin panel interface.</div>
           </div>
         </div>
         <div className="grid grid-cols-4 gap-2">
           {['Dashboard', 'Products', 'Orders', 'Settings'].map(label => (
-            <div key={label} className="p-2 rounded-lg text-[9px] font-medium text-center" style={{ background: currentTheme.id === 'light' ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.2)' }}>
+            <div key={label} className="p-2 rounded-lg text-[9px] font-medium text-center"
+              style={{ background: currentTheme.id === 'light' ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.2)' }}>
               {label}
             </div>
           ))}
         </div>
       </div>
 
-      {/* Quick toggle */}
-      <div className="flex items-center justify-between p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
+      {/* Dark Mode Sync */}
+      <div className="flex items-center justify-between p-3 rounded-2xl border" style={{ background: currentTheme.card, borderColor: currentTheme.border, color: currentTheme.text }}>
         <div className="flex items-center gap-2">
           <Sun size={16} className="text-amber-500" />
           <Moon size={16} className="text-indigo-500" />
@@ -114,8 +161,10 @@ export default function AdminThemeManager() {
           <input type="checkbox" checked={darkMode} onChange={e => setDarkMode(e.target.checked)} className="rounded" />
           Sync with store dark mode
         </label>
-        <button className="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-[10px] flex items-center gap-1 hover:bg-slate-200" onClick={() => { applyAdminTheme(adminTheme); toast('🔄 Theme refreshed!', 'info'); }}>
-          <RefreshCw size={11} /> Refresh
+        <button className="px-3 py-1 rounded-lg text-[10px] flex items-center gap-1 hover:opacity-80"
+          style={{ background: currentTheme.hover, color: currentTheme.text }}
+          onClick={() => { applyAdminTheme(adminTheme); toast('🔄 Theme refreshed!', 'info'); }}>
+          <RefreshCw size={11} /> Apply
         </button>
       </div>
     </div>

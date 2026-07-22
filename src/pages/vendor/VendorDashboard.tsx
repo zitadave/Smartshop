@@ -11,6 +11,7 @@ import {
   CheckCircle, Clock, Image, Trash2, Bell, ChevronRight, Activity
 } from 'lucide-react';
 import { toast } from '@/components/Toast';
+import ToastContainer from '@/components/Toast';
 
 type VendorTab = 'dashboard' | 'products' | 'analytics' | 'orders' | 'payouts' | 'settings';
 
@@ -53,6 +54,7 @@ export default function VendorDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
+      <ToastContainer />
       <header className="fixed top-0 left-0 right-0 h-13 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-700/50">
         <div className="max-w-7xl mx-auto h-full flex items-center px-4 gap-2">
           <button className="lg:hidden p-1.5 rounded-xl hover:bg-slate-100" onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X size={18} /> : <Menu size={18} />}</button>
@@ -125,7 +127,7 @@ function VendorDashboardView({ products, stats, revenueHistory }: { products: an
         ].map((s, i) => {
           const Icon = s.icon;
           return (
-            <div key={i} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+            <div key={i} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
               <div className={cn('p-2 rounded-xl bg-gradient-to-br shadow-lg inline-flex mb-2', s.color)}><Icon size={16} className="text-white" /></div>
               <div className="text-lg font-extrabold text-slate-900 dark:text-white">{s.val}</div>
               <div className="text-[9px] text-slate-500">{s.sub}</div>
@@ -136,7 +138,7 @@ function VendorDashboardView({ products, stats, revenueHistory }: { products: an
       </div>
 
       {/* Revenue Chart */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
         <h3 className="text-sm font-bold mb-3">📈 Revenue Trend (Last 12 months)</h3>
         <div className="h-32 flex items-end gap-1">
           {revenueHistory.map((d, i) => {
@@ -308,7 +310,7 @@ function VendorProductsView({ products }: { products: any[] }) {
       )}
 
       {/* Product List */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-x-hidden" data-admin-card>
         {filtered.length === 0 ? (
           <div className="text-center py-12"><Package size={40} className="mx-auto mb-2 text-slate-300" /><p className="text-xs text-slate-400">No products yet</p></div>
         ) : (
@@ -359,7 +361,7 @@ function VendorAnalyticsView({ products, stats, revenueHistory }: { products: an
           { label: 'Avg Price', val: formatPrice(stats.productCount > 0 ? Math.round(stats.revenue / stats.productCount) : 0), icon: Tag, change: '+3%', color: 'text-amber-600' },
           { label: 'Conversion', val: `${stats.conversion}%`, icon: TrendingUp, change: '+2.1%', color: 'text-purple-600' },
         ].map((s, i) => (
-          <div key={i} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+          <div key={i} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
             <div className="flex items-start justify-between mb-1">
               <s.icon size={16} className="text-slate-400" />
               <span className="text-[9px] text-green-600 font-semibold">{s.change}</span>
@@ -371,7 +373,7 @@ function VendorAnalyticsView({ products, stats, revenueHistory }: { products: an
       </div>
 
       {/* Revenue Chart */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
         <h3 className="text-sm font-bold mb-3">Revenue Over Time</h3>
         <div className="h-28 flex items-end gap-1">
           {revenueHistory.map((d, i) => {
@@ -386,7 +388,7 @@ function VendorAnalyticsView({ products, stats, revenueHistory }: { products: an
       </div>
 
       {/* Top Products */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
         <h3 className="text-sm font-bold mb-3 flex items-center gap-2"><Trophy size={14} className="text-amber-500" /> Top Selling Products</h3>
         <div className="space-y-2">
           {topProducts.map((p, i) => (
@@ -407,7 +409,7 @@ function VendorAnalyticsView({ products, stats, revenueHistory }: { products: an
       </div>
 
       {/* Product Table */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-x-hidden" data-admin-card>
         <div className="p-4 border-b border-slate-100"><h3 className="text-sm font-bold">All Products Performance</h3></div>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
@@ -453,7 +455,7 @@ function VendorOrdersView() {
           <p className="text-[9px] text-slate-400 mt-1">Orders will appear when customers purchase your products</p>
         </div>
       ) : (
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-x-hidden" data-admin-card>
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
             {orders.slice(0, 30).map(o => (
               <div key={o.orderNumber} className="p-3 hover:bg-slate-50 dark:hover:bg-slate-800/30">
@@ -515,7 +517,7 @@ function VendorPayoutsView({ stats }: { stats: any }) {
         ].map((s, i) => {
           const Icon = s.icon;
           return (
-            <div key={i} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+            <div key={i} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
               <div className={cn('p-2 rounded-xl bg-gradient-to-br shadow-lg inline-flex mb-2', s.color)}><Icon size={16} className="text-white" /></div>
               <div className="text-lg font-extrabold text-slate-900 dark:text-white">{s.val}</div>
               <div className="text-[9px] text-slate-500">{s.label}</div>
@@ -525,7 +527,7 @@ function VendorPayoutsView({ stats }: { stats: any }) {
       </div>
 
       {/* Request Payout */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
         <h3 className="text-sm font-bold mb-3">Request Payout</h3>
         <div className="flex items-center justify-between">
           <div>
@@ -539,7 +541,7 @@ function VendorPayoutsView({ stats }: { stats: any }) {
       </div>
 
       {/* Payout History */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-x-hidden" data-admin-card>
         <div className="p-4 border-b border-slate-100"><h3 className="text-sm font-bold">Payout History ({payouts.length})</h3></div>
         <div className="divide-y divide-slate-100 dark:divide-slate-800">
           {payouts.slice(0, 10).map(p => (
@@ -572,7 +574,7 @@ function VendorSettingsView({ vendorName }: { vendorName: string }) {
       <h2 className="text-lg font-bold">⚙️ Settings</h2>
 
       {/* Store Profile */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
         <h3 className="text-sm font-bold mb-3">Store Profile</h3>
         <div className="grid sm:grid-cols-2 gap-3">
           <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Store Name</label><input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={name} onChange={e => setName(e.target.value)} /></div>
@@ -587,12 +589,12 @@ function VendorSettingsView({ vendorName }: { vendorName: string }) {
 
       {/* Preferences */}
       <div className="grid sm:grid-cols-2 gap-4">
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
           <h3 className="text-sm font-bold mb-3 flex items-center gap-2"><Bell size={14} className="text-blue-500" /> Notifications</h3>
           <label className="flex items-center gap-2 text-xs mb-2"><input type="checkbox" checked={notifications} onChange={e => setNotifications(e.target.checked)} className="rounded" /> Email notifications for new orders</label>
           <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={autoRestock} onChange={e => setAutoRestock(e.target.checked)} className="rounded" /> Auto-restock alerts</label>
         </div>
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
           <h3 className="text-sm font-bold flex items-center gap-2 mb-3"><DollarSign size={14} className="text-emerald-500" /> Commission Rate</h3>
           <p className="text-xs text-slate-500">Current commission: <strong className="text-slate-800 dark:text-slate-200">10%</strong></p>
           <p className="text-[9px] text-slate-400 mt-1">Platform fee deducted from each sale</p>

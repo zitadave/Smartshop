@@ -35,6 +35,7 @@ import ReturnsManager from '@/components/admin/ReturnsManager';
 import AdminSecurity from '@/components/admin/AdminSecurity';
 import AdminBotManager from '@/components/admin/AdminBotManager';
 import ProductStudio from '@/components/admin/ProductStudio';
+import ToastContainer from '@/components/Toast';
 
 type Tab = 'overview' | 'products' | 'orders' | 'vendors' | 'marketplace' | 'reviews' 
   | 'broadcast' | 'flashdeals' | 'preorders' | 'tracking' | 'themes' | 'coupons' 
@@ -85,11 +86,13 @@ export default function AdminLayout() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900" data-admin-root>
+      {/* Toast notifications for admin panel */}
+      <ToastContainer />
       {/* Command Palette */}
       <CommandPalette onNavigate={handleCmdNavigate} />
 
-      <header className="fixed top-0 left-0 right-0 h-14 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-700/50">
+      <header className="fixed top-0 left-0 right-0 h-14 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-700/50" data-admin-header>
         <div className="max-w-7xl mx-auto h-full flex items-center px-4 gap-3">
           <button className="xl:hidden p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => setMenuOpen(!menuOpen)}>
             {menuOpen ? <X size={18} /> : <Menu size={18} />}
@@ -119,7 +122,7 @@ export default function AdminLayout() {
         </div>
       </header>
 
-      <aside className={`fixed top-14 left-0 bottom-0 w-60 z-40 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 ${menuOpen ? 'translate-x-0' : '-translate-x-full'} xl:translate-x-0 overflow-y-auto`}>
+      <aside className={`fixed top-14 left-0 bottom-0 w-60 z-40 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 ${menuOpen ? 'translate-x-0' : '-translate-x-full'} xl:translate-x-0 overflow-y-auto`} data-admin-sidebar>
         <div className="py-3 px-2 space-y-0.5">
           {NAV_ITEMS.map(item => {
             const Icon = item.icon;
@@ -235,7 +238,7 @@ function Overview({ onNavigate }: { onNavigate?: (tab: string) => void }) {
           onClick={() => goto('products')} />
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-bold">📈 Revenue Trend (12 months)</h3>
           <span className="text-[9px] text-green-600 font-semibold flex items-center gap-1"><TrendingUp size={12} /> +18% vs last year</span>
@@ -244,7 +247,7 @@ function Overview({ onNavigate }: { onNavigate?: (tab: string) => void }) {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+        <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
           <h3 className="text-sm font-bold mb-3 flex items-center gap-2"><AlertTriangle size={15} className="text-amber-500" /> Low Stock Alert ({lowStock.length})</h3>
           {lowStock.length === 0 ? <p className="text-xs text-slate-400 py-4 text-center">All stocked!</p> : lowStock.slice(0, 5).map((p, i) => (
             <div key={p.id} className="flex items-center gap-3 py-2 border-b border-slate-100 dark:border-slate-800 last:border-0">
@@ -254,7 +257,7 @@ function Overview({ onNavigate }: { onNavigate?: (tab: string) => void }) {
             </div>
           ))}
         </div>
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
           <h3 className="text-sm font-bold mb-3 flex items-center gap-2"><Zap size={15} className="text-indigo-500" /> Quick Actions</h3>
           <div className="space-y-1.5">
             {[
@@ -357,7 +360,7 @@ function AdminProducts() {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-x-hidden" data-admin-card>
         <table className="w-full text-xs">
           <thead>
             <tr className="bg-slate-50 dark:bg-slate-800/50 text-[9px] text-slate-500 uppercase tracking-wider">
@@ -477,7 +480,7 @@ function AdminOrders() {
       {viewMode === 'kanban' && <OrderKanban orders={orders} onUpdate={fetchOrders} />}
 
       {viewMode === 'list' && (
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-x-hidden" data-admin-card>
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
             {filtered.slice(0, 50).map(o => (
               <div key={o.orderNumber} className="p-3 hover:bg-slate-50 dark:hover:bg-slate-800/30">
@@ -588,7 +591,7 @@ function AdminMarketplace() {
       <p className="text-[10px] text-slate-500">Manage flash sales, sponsored products, bundle deals, and cross-sell promotions</p>
 
       {/* Sponsored Products */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
         <h3 className="text-sm font-bold mb-3">💼 Sponsored Products ({sp.length})</h3>
         <div className="flex gap-2 mb-3 flex-wrap">
           <select className="flex-1 min-w-[120px] p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] bg-transparent" value={sponsoredPid} onChange={e => setSponsoredPid(e.target.value)}>
@@ -613,7 +616,7 @@ function AdminMarketplace() {
       </div>
 
       {/* Bundle Deals */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
         <h3 className="text-sm font-bold mb-3">🔗 Bundle Deals</h3>
         {Object.keys(settings.bundleDeals || {}).length === 0 && <p className="text-[10px] text-slate-400 text-center py-4">No bundle deals. Coming soon: buy together and save!</p>}
         {Object.entries(settings.bundleDeals || {}).map(([pid, d]: any) => {
@@ -676,7 +679,7 @@ function AdminBroadcast() {
   return (
     <div className="animate-fadeUp space-y-4">
       <h2 className="text-lg font-bold">📢 Broadcasts ({broadcastMessages.length})</h2>
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
         <h3 className="text-sm font-bold mb-3">New Broadcast</h3>
         <div className="grid sm:grid-cols-2 gap-3">
           <input className="p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" placeholder="Title" value={title} onChange={e => setTitle(e.target.value)} maxLength={50} />
@@ -705,7 +708,7 @@ function AdminFlashDeals() {
   return (
     <div className="animate-fadeUp space-y-4">
       <h2 className="text-lg font-bold">⚡ Flash Deals</h2>
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
         <h3 className="text-sm font-bold mb-3">Active Deals ({Object.keys(flashSales).length})</h3>
         {Object.keys(flashSales).length === 0 && <p className="text-xs text-slate-400 text-center py-6">No flash deals yet</p>}
         {Object.entries(flashSales).map(([pid, d]: any) => {
@@ -717,7 +720,7 @@ function AdminFlashDeals() {
           </div>;
         })}
       </div>
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
         <h3 className="text-sm font-bold mb-3">Create Flash Deal</h3>
         <div className="grid sm:grid-cols-2 gap-3">
           <select className="p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent col-span-2" id="fd-prod"><option value="">Select product...</option>{products.filter(p => p.inStock).map(p => <option key={p.id} value={p.id}>{p.nameEn}</option>)}</select>
@@ -743,7 +746,7 @@ function AdminPreOrders() {
   return (
     <div className="animate-fadeUp space-y-4">
       <h2 className="text-lg font-bold">🚀 Pre-Orders ({preOrders.length})</h2>
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
         <h3 className="text-sm font-bold mb-3">⚙️ Settings</h3>
         <label className="flex items-center gap-2 text-xs mb-3"><input type="checkbox" checked={settings.preOrderEnabled !== false} onChange={e => saveSetting('preOrderEnabled', e.target.checked)} className="rounded" /> Enable Pre-Orders</label>
         <div className="flex items-center gap-3"><span className="text-xs">Default Deposit %:</span><input type="number" className="w-20 p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={settings.preOrderDefaultDeposit || 30} onChange={e => saveSetting('preOrderDefaultDeposit', Number(e.target.value))} /></div>
@@ -781,7 +784,7 @@ function AdminTracking() {
   return (
     <div className="animate-fadeUp space-y-4">
       <h2 className="text-lg font-bold">📍 Order Tracking</h2>
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
         <h3 className="text-sm font-bold mb-3">Add Tracking to Order</h3>
         <div className="grid sm:grid-cols-3 gap-3">
           <select className="p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent col-span-3" value={selectedOrder} onChange={e => setSelectedOrder(e.target.value)}>
@@ -882,7 +885,7 @@ function AdminSettings() {
     <div className="animate-fadeUp space-y-4">
       <h2 className="text-lg font-bold flex items-center gap-2"><SettingsIcon size={20} /> Settings</h2>
 
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
         <h3 className="text-sm font-bold mb-3">💰 Commission & Delivery</h3>
         <div className="grid sm:grid-cols-3 gap-3">
           <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Vendor Commission %</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={commission} onChange={e => setCommission(Number(e.target.value))} /></div>
@@ -892,14 +895,14 @@ function AdminSettings() {
         <button className="mt-4 px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-bold" onClick={() => { saveSetting('vendorCommission', commission); saveSetting('deliveryFee', deliveryFee); saveSetting('freeDeliveryThreshold', freeThreshold); toast('✅ Settings saved!', 'success'); }}>💾 Save Settings</button>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
         <h3 className="text-sm font-bold mb-3">🔔 Features</h3>
         <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={priceAlertEnabled} onChange={e => { setPriceAlertEnabled(e.target.checked); saveSetting('priceAlertEnabled', e.target.checked); }} className="rounded" /> Enable Price Drop Alerts</label>
         <label className="flex items-center gap-2 text-xs mt-2"><input type="checkbox" checked={settings.affiliateEnabled !== false} onChange={e => saveSetting('affiliateEnabled', e.target.checked)} className="rounded" /> Enable Affiliate Program</label>
         <div className="mt-2 flex items-center gap-3"><span className="text-xs">Affiliate Commission %:</span><input type="number" className="w-20 p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={settings.affiliateCommission || 10} onChange={e => saveSetting('affiliateCommission', Number(e.target.value))} /></div>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
         <h3 className="text-sm font-bold mb-3 flex items-center gap-2"><Gamepad2 size={16} /> Game & Loyalty Settings</h3>
         <div className="grid sm:grid-cols-3 gap-3 mb-4">
           <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Min Points for Cash</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={gameSettings.minPointsForCash || 100} onChange={e => updateGameSetting('minPointsForCash', Number(e.target.value))} /></div>
@@ -933,14 +936,14 @@ function AdminSettings() {
       </div>
 
       <div className="grid sm:grid-cols-2 gap-4">
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
           <h3 className="text-sm font-bold mb-3 flex items-center gap-2">🔥 Streak</h3>
           <div className="space-y-3">
             <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Streak Days</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={gameSettings.streakDays || 7} onChange={e => updateGameSetting('streakDays', Number(e.target.value))} /></div>
             <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Daily Bonus Points</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={gameSettings.streakBonus || 10} onChange={e => updateGameSetting('streakBonus', Number(e.target.value))} /></div>
           </div>
         </div>
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
           <h3 className="text-sm font-bold mb-3 flex items-center gap-2">🎁 Mystery Box</h3>
           <div className="space-y-3">
             <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Boxes per Purchase</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={gameSettings.boxesPerPurchase || 1} onChange={e => updateGameSetting('boxesPerPurchase', Number(e.target.value))} /></div>
