@@ -46,10 +46,11 @@ interface AppState {
   // Gift cards
   giftCards: GiftCard[];
 
-  // Wallet (for converted points to cash)
+  // Wallet (single source of truth for spending power)
   walletBalance: number;
+  walletHistory: { amount: number; source: string; date: string }[];
   // Actions for wallet
-  addToWallet: (amount: number) => void;
+  addToWallet: (amount: number, source?: string) => void;
   deductFromWallet: (amount: number) => void;
 
   // Saved addresses
@@ -166,6 +167,7 @@ export const useStore = create<AppState>((set, get) => ({
   loyaltyPoints: loadPersisted<number>('ss_loyalty', 0),
   giftCards: loadPersisted<GiftCard[]>('ss_giftcards', []),
   walletBalance: loadPersisted<number>('ss_wallet', 0),
+  walletHistory: loadPersisted<any[]>('ss_wallet_history', []),
   savedAddresses: loadPersisted<any[]>('ss_addresses', []),
   savedPayments: loadPersisted<any[]>('ss_payments', []),
 
@@ -380,10 +382,13 @@ export const useStore = create<AppState>((set, get) => ({
     set({ giftCards: newCards });
   },
 
-  addToWallet: (amount) => {
+  addToWallet: (amount, source = 'other') => {
     const newBalance = get().walletBalance + amount;
+    const entry = { amount, source, date: new Date().toISOString() };
+    const history = [entry, ...get().walletHistory].slice(0, 50);
     savePersisted('ss_wallet', newBalance);
-    set({ walletBalance: newBalance });
+    savePersisted('ss_wallet_history', history);
+    set({ walletBalance: newBalance, walletHistory: history });
   },
 
   deductFromWallet: (amount) => {

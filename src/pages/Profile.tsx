@@ -10,18 +10,12 @@ import LanguageSelector from '@/components/features/LanguageSelector';
 import { ActivePriceAlerts } from '@/components/features/PriceDropAlert';
 import { toast } from '@/components/Toast';
 
-const LANGUAGES = [
-  { code: 'am' as const, label: '🇪🇹 አማርኛ' },
-  { code: 'en' as const, label: '🇬🇧 English' },
-  { code: 'om' as const, label: '🌍 Afaan Oromoo' },
-  { code: 'ti' as const, label: '🇪🇹 ትግርኛ' },
-  { code: 'so' as const, label: '🇸🇴 Soomaali' },
-];
+
 
 export default function Profile() {
   const navigate = useNavigate();
   const store = useStore();
-  const { profile, language, setLanguage, darkMode, setDarkMode, orders, wishlist, cart, followedVendors, loyaltyPoints, savedPayments, preOrders, notifications, savedAddresses, walletBalance } = store;
+  const { profile, language, setLanguage, darkMode, setDarkMode, orders, wishlist, cart, followedVendors, loyaltyPoints, savedPayments, preOrders, notifications, savedAddresses, walletBalance, walletHistory } = store;
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showWallet, setShowWallet] = useState(false);
   const [editName, setEditName] = useState(profile.name);
@@ -119,19 +113,56 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* Wallet Modal */}
+      {/* Wallet Modal — unified earnings breakdown */}
       {showWallet && (
         <div className="fixed inset-0 bg-black/60 z-[200] flex items-center justify-center p-4" onClick={() => setShowWallet(false)}>
           <div className="bg-card rounded-3xl w-full max-w-sm p-5 shadow-2xl animate-bounce-in" onClick={e => e.stopPropagation()}>
-            <div className="text-center mb-4">
-              <Wallet size={32} className="mx-auto text-emerald-500 mb-1" />
+            <div className="text-center mb-3">
+              <Wallet size={28} className="mx-auto text-emerald-500 mb-1" />
               <h3 className="text-sm font-bold">Wallet</h3>
-              <p className="text-3xl font-extrabold text-primary mt-1">Br {walletBalance.toLocaleString()}</p>
+              <p className="text-2xl font-extrabold text-primary mt-0.5">Br {walletBalance.toLocaleString()}</p>
+              <p className="text-[9px] text-muted-foreground">Available balance</p>
             </div>
-            <div className="bg-muted/50 rounded-xl p-3 text-xs mb-3">
-              <p>💡 Earn points via purchases, streaks & the spin wheel. Convert them to cash in Loyalty & Rewards!</p>
+
+            {/* Breakdown */}
+            <div className="bg-muted/30 rounded-xl p-3 mb-3 text-xs space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1">🎡 Loyalty conversions</span>
+                <span className="font-semibold">Br {walletHistory.filter(e => e.source === 'conversion').reduce((s, e) => s + e.amount, 0).toLocaleString()}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1">🤝 Affiliate commissions</span>
+                <span className="font-semibold text-emerald-600">Br {walletHistory.filter(e => e.source === 'affiliate').reduce((s, e) => s + e.amount, 0).toLocaleString()}</span>
+              </div>
+              <div className="flex items-center justify-between pt-1.5 border-t border-border">
+                <span className="font-bold">Total</span>
+                <span className="font-bold text-primary">Br {walletBalance.toLocaleString()}</span>
+              </div>
             </div>
-            <button className="w-full py-3 bg-primary text-white rounded-xl text-xs font-bold" onClick={() => { setShowWallet(false); navigate('/loyalty'); }}>
+
+            {/* Recent activity */}
+            {walletHistory.length > 0 && (
+              <div className="mb-3">
+                <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Recent Activity</p>
+                <div className="space-y-1 max-h-28 overflow-y-auto">
+                  {walletHistory.slice(0, 5).map((h, i) => (
+                    <div key={i} className="flex items-center justify-between text-[10px] py-0.5">
+                      <span className="flex items-center gap-1">
+                        {h.source === 'conversion' ? '🔄' : h.source === 'affiliate' ? '🤝' : '💳'}
+                        <span className="text-muted-foreground capitalize">{h.source}</span>
+                      </span>
+                      <span className="font-semibold text-emerald-600">+Br {h.amount}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="bg-muted/50 rounded-xl p-2.5 text-[10px] text-muted-foreground mb-3">
+              💡 <strong>Affiliate earnings</strong> go directly to your wallet. <strong>Loyalty points</strong> can be converted to cash in Loyalty & Rewards.
+            </div>
+
+            <button className="w-full py-2.5 bg-primary text-white rounded-xl text-xs font-bold" onClick={() => { setShowWallet(false); navigate('/loyalty'); }}>
               Go to Loyalty & Rewards
             </button>
           </div>

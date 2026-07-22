@@ -65,7 +65,7 @@ export default function Loyalty() {
       const newPoints = loyaltyPoints - convertAmount;
       localStorage.setItem('ss_loyalty', String(newPoints));
       useStore.setState({ loyaltyPoints: newPoints });
-      addToWallet(cashValue);
+      addToWallet(cashValue, 'conversion');
       addNotification('💰', `Converted ${convertAmount} points to Br ${cashValue}!`);
       toast(`💰 Converted! Br ${cashValue} in your wallet!`, 'success');
       setShowConversion(false);

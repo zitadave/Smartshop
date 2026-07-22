@@ -8,7 +8,7 @@ import { toast } from '@/components/Toast';
 /** Affiliate: each product has its OWN unique link. Commission ONLY on sale of that specific product. */
 export default function AffiliateProducts() {
   const navigate = useNavigate();
-  const { products, settings, addNotification, addLoyaltyPoints } = useStore();
+  const { products, settings, addNotification, addToWallet } = useStore();
 
   // Generate a unique per-user affiliate code from profile name
   const [userCode] = useState(() => {
@@ -70,9 +70,9 @@ export default function AffiliateProducts() {
     setProductStats(newProdStats);
     setTotalStats(newTotals);
     saveStats(product.id, newProdStats, newTotals);
-    addLoyaltyPoints(Math.round(commission / 10));
-    addNotification('💰', `🎉 You earned Br ${commission} commission from ${product.nameEn} sale!`);
-    toast(`🎉 Br ${commission} earned from ${product.nameEn} referral sale!`, 'success');
+    addToWallet(commission, 'affiliate');
+    addNotification('💰', `🎉 Br ${commission} deposited to your wallet from ${product.nameEn} affiliate sale!`);
+    toast(`🎉 Br ${commission} deposited to your wallet!`, 'success');
   };
 
   const topProducts = products.filter(p => p.inStock && p.rating >= 3).slice(0, 12);
