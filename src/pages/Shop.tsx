@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '@/stores/AppStore';
 import { useProducts } from '@/hooks/useProducts';
@@ -22,7 +22,22 @@ export default function Shop() {
   const btnAnim = useButtonAnimation();
   const wishAnim = useWishlistAnimation();
   const [showFilters, setShowFilters] = useState(false);
+  const [searchAnimate, setSearchAnimate] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const { visibleItems, hasMore, sentinelRef } = useInfiniteScroll(filtered, { pageSize: 8 });
+
+  // Read search from navigation state (header search icon click)
+  useEffect(() => {
+    const state = location.state as { search?: string } | null;
+    if (state?.search) {
+      setSearch(state.search);
+      setSearchAnimate(true);
+      // Focus the search input after animation
+      setTimeout(() => searchInputRef.current?.focus(), 400);
+      // Clear the state so it doesn't re-trigger
+      window.history.replaceState({}, document.title);
+    }
+  }, []);
 
   const handleAdd = useCallback((e: React.MouseEvent, product: Product) => {
     e.stopPropagation();
@@ -41,9 +56,10 @@ export default function Shop() {
       {/* Sticky Header */}
       <div className="sticky top-14 z-30 bg-background/80 backdrop-blur-3xl border-b border-border/40 shadow-sm">
         <div className="px-4 pt-3 pb-2">
-          <div className="relative group">
+          <div className={cn("relative group transition-all duration-500", searchAnimate && "animate-slideDown")}>
             <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/50 transition-colors group-focus-within:text-primary" />
             <input
+              ref={searchInputRef}
               type="text"
               placeholder="🔍 Search products..."
               className="w-full pl-10 pr-10 py-3 rounded-2xl border border-border/60 bg-card/60 text-sm focus:outline-none focus:ring-2 focus:ring-ring/30 focus:bg-card transition-all duration-300 placeholder:text-muted-foreground/40 shadow-sm"

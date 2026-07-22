@@ -13,7 +13,6 @@ const THEMES: { id: ThemePreset; name: string; colors: string[]; icon: string }[
   { id: 'rose', name: 'Rose', colors: ['#EC4899', '#F43F5E'], icon: '🌹' },
 ];
 
-/** Apply theme to the document root */
 export function applyThemeToDocument(preset: ThemePreset, accentColor?: string) {
   const theme = THEMES.find(t => t.id === preset) || THEMES[0];
   const root = document.documentElement;
@@ -40,48 +39,47 @@ export default function ThemePicker() {
   return (
     <div className="relative">
       <button
-        className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-muted hover:bg-muted/80 text-[10px] font-medium transition-colors w-full"
+        className="flex items-center gap-1 px-1.5 py-1 rounded-lg bg-muted hover:bg-muted/80 text-[9px] font-medium transition-colors w-full"
         onClick={() => setOpen(!open)}
       >
-        <Palette size={12} />
+        <Palette size={10} />
         <span className="truncate">{THEMES.find(t => t.id === themePreset)?.name || 'Theme'}</span>
       </button>
 
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute left-1/2 -translate-x-1/2 mt-1 bg-card border border-border rounded-xl shadow-xl z-50 p-3 w-64">
-            <div className="text-[10px] font-semibold mb-2">🎨 Choose Theme</div>
-            {/* Vertical 3 rows x 2 columns */}
-            <div className="grid grid-cols-2 gap-2 mb-3">
+          <div className="absolute left-1/2 -translate-x-1/2 mt-1 bg-card border border-border rounded-lg shadow-xl z-50 p-2 w-48">
+            <div className="text-[8px] font-semibold mb-1.5 text-muted-foreground">🎨 Theme</div>
+            {/* Compact 3x2 grid */}
+            <div className="grid grid-cols-2 gap-1 mb-2">
               {THEMES.map(theme => (
                 <button
                   key={theme.id}
                   className={cn(
-                    'flex flex-col items-center gap-1 p-2 rounded-xl border transition-all',
+                    'flex items-center gap-1 p-1 rounded-lg border transition-all',
                     themePreset === theme.id
-                      ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                      ? 'border-primary bg-primary/5'
                       : 'border-border hover:border-muted-foreground/30'
                   )}
                   onClick={() => applyTheme(theme.id)}
                 >
-                  <div className="flex gap-1">
+                  <div className="flex gap-px">
                     {theme.colors.map((c, i) => (
-                      <div key={i} className="w-4 h-4 rounded-full" style={{ backgroundColor: c }} />
+                      <div key={i} className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: c }} />
                     ))}
                   </div>
-                  <span className="text-[8px] font-medium">{theme.icon} {theme.name}</span>
-                  {themePreset === theme.id && <Check size={8} className="text-primary" />}
+                  <span className="text-[7px] truncate flex-1">{theme.icon} {theme.name}</span>
+                  {themePreset === theme.id && <Check size={6} className="text-primary flex-shrink-0" />}
                 </button>
               ))}
             </div>
-
-            {/* Dark/Light */}
-            <div className="flex gap-1 border-t border-border pt-2">
-              <button className={cn('flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-[9px] font-medium border transition-all', !darkMode ? 'border-primary bg-primary/5 text-primary' : 'border-border')}
-                onClick={() => setDarkMode(false)}><Sun size={10} /> Light</button>
-              <button className={cn('flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-[9px] font-medium border transition-all', darkMode ? 'border-primary bg-primary/5 text-primary' : 'border-border')}
-                onClick={() => setDarkMode(true)}><Moon size={10} /> Dark</button>
+            {/* Dark/Light mini */}
+            <div className="flex gap-1 border-t border-border pt-1.5">
+              <button className={cn('flex-1 flex items-center justify-center gap-0.5 py-1 rounded-lg text-[8px] font-medium border transition-all', !darkMode ? 'border-primary bg-primary/5 text-primary' : 'border-border')}
+                onClick={() => setDarkMode(false)}><Sun size={8} /> L</button>
+              <button className={cn('flex-1 flex items-center justify-center gap-0.5 py-1 rounded-lg text-[8px] font-medium border transition-all', darkMode ? 'border-primary bg-primary/5 text-primary' : 'border-border')}
+                onClick={() => setDarkMode(true)}><Moon size={8} /> D</button>
             </div>
           </div>
         </>

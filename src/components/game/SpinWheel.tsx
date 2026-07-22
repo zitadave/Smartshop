@@ -71,7 +71,7 @@ export function SpinWheel({ onWin, segments: customSegments, adminSettings }: Sp
   return (
     <div className="flex flex-col items-center gap-4 py-4">
       <div className="relative w-64 h-64">
-        <div className="absolute inset-0 rounded-full border border-primary/10" />
+        <div className="absolute inset-0 rounded-full border-[0.5px] border-primary/5" />
         <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 z-10">
           <div className="w-0 h-0 border-l-[12px] border-r-[12px] border-t-[20px] border-l-transparent border-r-transparent border-t-primary drop-shadow-lg" />
         </div>
@@ -91,7 +91,7 @@ export function SpinWheel({ onWin, segments: customSegments, adminSettings }: Sp
             const textY = 100 + 55 * Math.sin(midAngle);
             return (
               <g key={i}>
-                <path d={path} fill={seg.color} stroke="white" strokeWidth="1" />
+                <path d={path} fill={seg.color} stroke="rgba(255,255,255,0.3)" strokeWidth="0.5" />
                 <text x={textX} y={textY} textAnchor="middle" dominantBaseline="middle"
                   fill={fontColor} fontSize={fontSize}
                   transform={`rotate(${angle + 360 / segments.length / 2}, ${textX}, ${textY})`}>

@@ -287,7 +287,7 @@ export default function Profile() {
       {showLoyalty && (
         <div className="fixed inset-0 bg-black/60 z-[200] overflow-y-auto" onClick={() => setShowLoyalty(false)}>
           <div className="min-h-full flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={e => e.stopPropagation()}>
-            <div className="bg-card rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl animate-slideUp pb-4">
+            <div className="bg-card rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[75vh] overflow-y-auto shadow-2xl animate-slideUp pb-20">
               {/* Header */}
               <div className="sticky top-0 z-10 bg-card border-b border-border/40 px-4 pt-4 pb-3">
                 <div className="flex items-center gap-2">
