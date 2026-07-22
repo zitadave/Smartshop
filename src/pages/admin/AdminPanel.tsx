@@ -787,10 +787,12 @@ function AdminThemes() {
     const t = THEMES.find(x => x.id === preset);
     if (t) {
       localStorage.setItem('ss_theme', JSON.stringify(preset));
-      document.documentElement.style.setProperty('--primary', t.colors[0]);
-      document.documentElement.style.setProperty('--primary-foreground', '#ffffff');
+      document.documentElement.style.setProperty('--color-primary', t.colors[0]);
+      document.documentElement.style.setProperty('--color-primary-foreground', '#ffffff');
+      document.documentElement.style.setProperty('--color-ring', t.colors[0] + '40');
+      document.documentElement.style.setProperty('--primary-hex', t.colors[0]);
+      document.documentElement.style.setProperty('--accent-hex', t.colors[1]);
       document.documentElement.style.setProperty('--accent-color', t.colors[1]);
-      document.documentElement.style.setProperty('--ring', t.colors[0] + '40');
       toast('🎨 Theme applied: ' + t.name, 'success');
     }
   };
@@ -809,7 +811,14 @@ function AdminThemes() {
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 flex items-center gap-4">
         <input type="color" className="w-12 h-12 rounded-xl cursor-pointer border-0" value={customAccent} onChange={e => setCustomAccent(e.target.value)} />
         <div className="flex-1"><div className="text-xs font-semibold">Accent Color</div><div className="text-[9px] text-slate-400">{customAccent}</div></div>
-        <button className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-bold" onClick={() => { document.documentElement.style.setProperty('--accent-color', customAccent); localStorage.setItem('ss_accent', JSON.stringify(customAccent)); toast('✅ Accent applied!', 'success'); }}>Apply</button>
+        <button className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-bold" onClick={() => { 
+          document.documentElement.style.setProperty('--color-primary', customAccent);
+          document.documentElement.style.setProperty('--color-ring', customAccent + '40');
+          document.documentElement.style.setProperty('--primary-hex', customAccent);
+          document.documentElement.style.setProperty('--accent-hex', customAccent);
+          localStorage.setItem('ss_accent', JSON.stringify(customAccent)); 
+          toast('✅ Accent applied!', 'success'); 
+        }}>Apply</button>
       </div>
       <div className="flex gap-3">
         <button className={cn('flex-1 py-3 rounded-xl text-xs font-bold border-2 transition-all', !darkMode ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-500')} onClick={() => setDarkMode(false)}>☀️ Light</button>
