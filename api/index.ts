@@ -504,6 +504,130 @@ export default async function handler(req: any, res: any) {
       return res.json({ products: count || 0, telegramUsers: telegramUsers?.length || 0, message: 'Smart Shop API running on Vercel!' });
     }
 
+    // ===== PAYMENT - Initiate Chapa Payment =====
+    if (path === '/api/payment/initiate-chapa' && method === 'POST') {
+      const { amount, email, firstName, lastName, phone, txRef, orderNumber } = req.body || {};
+      if (!amount || !email || !phone) return res.status(400).json({ error: 'amount, email, and phone required' });
+      
+      // In production, this would call Chapa API:
+      // const chapaRes = await fetch('https://api.chapa.co/v1/transaction/initialize', {
+      //   method: 'POST',
+      //   headers: { 'Authorization': 'Bearer ' + CHAPA_SECRET_KEY, 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ amount, currency: 'ETB', email, first_name: firstName, last_name: lastName, phone, tx_ref: txRef, callback_url: 'https://smartshop-steel.vercel.app/api/payment/verify', return_url: 'https://smartshop-steel.vercel.app/confirmation/' + orderNumber })
+      // });
+      
+      return res.json({
+        success: true,
+        checkout_url: 'https://checkout.chapa.co/payment/' + txRef,
+        tx_ref: txRef,
+        message: 'Payment initiated. Redirect customer to checkout URL.',
+      });
+    }
+
+    // ===== PAYMENT - Verify Chapa Payment =====
+    if (path === '/api/payment/verify' && method === 'POST') {
+      const { tx_ref } = req.body || {};
+      if (!tx_ref) return res.status(400).json({ error: 'tx_ref required' });
+      
+      // In production, verify with Chapa:
+      // const res = await fetch('https://api.chapa.co/v1/transaction/verify/' + tx_ref, { headers: { 'Authorization': 'Bearer ' + CHAPA_SECRET_KEY } });
+      
+      return res.json({
+        status: 'completed',
+        amount: req.body.amount || 0,
+        reference: 'CHAPA-' + Date.now().toString(36).toUpperCase(),
+        verified: true,
+      });
+    }
+
+    // ===== PAYMENT - Initiate Telebirr =====
+    if (path === '/api/payment/initiate-telebirr' && method === 'POST') {
+      const { amount, phone, orderNumber } = req.body || {};
+      if (!amount || !phone) return res.status(400).json({ error: 'amount and phone required' });
+      
+      return res.json({
+        success: true,
+        deepLink: 'telebirr://pay?amount=' + amount + '&order=' + orderNumber,
+        ussdCode: '*847#' + amount + '#' + orderNumber,
+        message: 'Payment initiated via Telebirr.',
+      });
+    }
+
+    // ===== PAYMENT - Transaction History =====
+    if (path === '/api/payment/transactions' && method === 'GET') {
+      const { data: orders } = await supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(100);
+      const txList = (orders || []).map((o: any) => ({
+        id: o.id,
+        orderNumber: o.order_number,
+        amount: o.total || 0,
+        paymentMethod: o.payment_method || 'telebirr',
+        status: o.status || 'pending',
+        customerName: o.customer?.name || 'Unknown',
+        date: o.created_at || o.date,
+      }));
+      return res.json({ transactions: txList });
+    }
+
+    // ===== TAX - Calculate Tax Breakdown =====
+    if (path === '/api/tax/calculate' && method === 'POST') {
+      const { productPrice, deliveryFee, commissionRate } = req.body || {};
+      const rate = (commissionRate || 15) / 100;
+      const basePrice = productPrice || 0;
+      const fee = deliveryFee || 0;
+      const commissionAmount = Math.round(basePrice * rate);
+      const gatewayFee = Math.round(basePrice * 0.025);
+      const vatOnCommission = Math.round(commissionAmount * 0.15);
+      const withholdingTax = Math.round(basePrice * 0.02);
+      const vendorPayout = basePrice - commissionAmount - gatewayFee - withholdingTax;
+      const totalPaid = basePrice + fee + vatOnCommission;
+      
+      return res.json({
+        basePrice, deliveryFee: fee, commissionRate: rate, commissionAmount,
+        gatewayFee, vatOnCommission, withholdingTax, vendorPayout, totalPaid,
+        vatRate: 0.15, withholdingTaxRate: 0.02,
+        totalTaxToRemit: vatOnCommission + withholdingTax,
+        shopRevenue: commissionAmount - gatewayFee,
+      });
+    }
+
+    // ===== TAX - Generate Receipt =====
+    if (path === '/api/tax/receipt' && method === 'POST') {
+      const { orderNumber } = req.body || {};
+      if (!orderNumber) return res.status(400).json({ error: 'orderNumber required' });
+      
+      const { data: order } = await supabase.from('orders').select('*').eq('order_number', orderNumber).single();
+      if (!order) return res.status(404).json({ error: 'Order not found' });
+      
+      return res.json({
+        success: true,
+        receiptNumber: 'SS-' + new Date().getFullYear() + '-' + Math.floor(Math.random() * 90000 + 10000),
+        orderNumber: order.order_number,
+        generatedAt: new Date().toISOString(),
+        html: '<html><body><h1>Tax Receipt</h1><p>Order: ' + orderNumber + '</p></body></html>',
+      });
+    }
+
+    // ===== TAX - Generate Report =====
+    if (path === '/api/tax/monthly-report' && method === 'GET') {
+      const { data: orders } = await supabase.from('orders').select('*');
+      const total = (orders || []).reduce((s: number, o: any) => s + (o.total || 0), 0);
+      const count = (orders || []).length;
+      const commission = Math.round(total * 0.1);
+      const vat = Math.round(commission * 0.15);
+      const wht = Math.round(total * 0.02);
+      
+      return res.json({
+        period: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+        totalSales: total,
+        orderCount: count,
+        totalCommission: commission,
+        vatOnCommission: vat,
+        withholdingTax: wht,
+        totalTaxToRemit: vat + wht,
+        averageOrderValue: count > 0 ? Math.round(total / count) : 0,
+      });
+    }
+
     // ===== FALLBACK =====
     return res.status(404).json({ error: 'Not found', path, method });
 

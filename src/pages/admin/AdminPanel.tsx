@@ -34,6 +34,7 @@ import DriverTracker from '@/components/admin/DriverTracker';
 import ReturnsManager from '@/components/admin/ReturnsManager';
 import AdminSecurity from '@/components/admin/AdminSecurity';
 import AdminBotManager from '@/components/admin/AdminBotManager';
+import TaxFinanceDashboard from '@/components/admin/TaxFinanceDashboard';
 import ProductStudio from '@/components/admin/ProductStudio';
 import ToastContainer from '@/components/Toast';
 import { sendAdminTelegram, notifyProductCreated, notifyProductUpdated, notifyProductDeleted, notifySettingsChanged, notifyVendorUpdated } from '@/lib/adminNotifier';
@@ -42,7 +43,7 @@ type Tab = 'overview' | 'products' | 'orders' | 'vendors' | 'marketplace' | 'rev
   | 'broadcast' | 'flashdeals' | 'preorders' | 'tracking' | 'themes' | 'coupons' 
   | 'settings' | 'alerts' | 'abandoned' | 'roles' | 'backup' | 'adminTheme' 
   | 'bulkProducts' | 'analytics' | 'forecast' | 'activity' | 'security' | 'telegram' 
-  | 'fulfillment' | 'sla' | 'driver' | 'returns';
+  | 'fulfillment' | 'sla' | 'driver' | 'returns' | 'finance';
 
 export default function AdminLayout() {
   const [tab, setTab] = useState<Tab>('overview');
@@ -84,6 +85,7 @@ export default function AdminLayout() {
     { id: 'sla', icon: Activity, label: 'SLA Monitor' },
     { id: 'driver', icon: Truck, label: 'Driver Tracking' },
     { id: 'returns', icon: RotateCcw, label: 'Returns' },
+    { id: 'finance', icon: Landmark, label: 'Finance & Tax' },
   ];
 
   return (
@@ -179,6 +181,7 @@ export default function AdminLayout() {
           {tab === 'sla' && <SLAMonitor />}
           {tab === 'driver' && <DriverTracker />}
           {tab === 'returns' && <ReturnsManager />}
+          {tab === 'finance' && <TaxFinanceDashboard />}
           {tab === 'settings' && <AdminSettings />}
         </div>
       </main>

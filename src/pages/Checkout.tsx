@@ -36,7 +36,7 @@ export default function Checkout() {
     const orderNumber = generateOrderNumber();
     const order = {
       orderNumber,
-      status: 'confirmed' as const,
+      status: payment === 'chapa' ? 'pending_payment' : 'confirmed',
       items: cart.map(i => ({ id: i.id, name: i.nameEn, quantity: i.qty, price: i.price, total: i.price * i.qty, vendorId: i.vendorId, vendorName: i.vendorName })),
       total,
       subtotal: total,
@@ -50,7 +50,7 @@ export default function Checkout() {
       language,
     };
 
-    addSavedPayment({ type: payment, icon: payment === 'telebirr' ? '📱' : payment === 'cbebirr' ? '🏦' : '💵', name: payment, number: phone });
+    addSavedPayment({ type: payment, icon: payment === 'telebirr' ? '📱' : payment === 'cbebirr' ? '🏦' : payment === 'chapa' ? '💳' : '💵', name: payment, number: phone });
 
     try {
       const res = await fetch('/api/orders', {
@@ -60,8 +60,8 @@ export default function Checkout() {
       });
       const data = await res.json();
       if (data.success) {
-        order.orderNumber = data.order.orderNumber;
-        addLoyaltyPoints(Math.floor(data.order.total / 10));
+        order.orderNumber = data.order.orderNumber || orderNumber;
+        addLoyaltyPoints(Math.floor((data.order?.total || total) / 10));
       }
     } catch (e) {
       addLoyaltyPoints(Math.floor(total / 10));
@@ -83,6 +83,35 @@ export default function Checkout() {
     clearCart();
     setLoading(false);
     haptic('success');
+
+    // Handle payment gateway redirects
+    if (payment === 'chapa') {
+      // Initiate Chapa payment and redirect to checkout
+      try {
+        const chapaRes = await fetch('/api/payment/initiate-chapa', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: total,
+            email: phone + '@smartshop.et',
+            firstName: name.split(' ')[0],
+            lastName: name.split(' ').slice(1).join(' ') || '',
+            phone,
+            txRef: 'TXN-' + order.orderNumber,
+            orderNumber: order.orderNumber,
+          }),
+        });
+        const chapaData = await chapaRes.json();
+        if (chapaData.checkout_url) {
+          window.location.href = chapaData.checkout_url;
+          return;
+        }
+      } catch {}
+    } else if (payment === 'telebirr') {
+      // For Telebirr, show USSD code
+      alert('📱 Dial *847#' + total + '#' + order.orderNumber + ' to complete payment using Telebirr');
+    }
+
     navigate('/confirmation/' + order.orderNumber);
   };
 
@@ -146,7 +175,7 @@ export default function Checkout() {
                 ))}
               </div>
             )}
-            {[{ id: 'telebirr', icon: '📱', label: 'Telebirr' }, { id: 'cbebirr', icon: '🏦', label: 'CBE Birr' }, { id: 'cash', icon: '💵', label: 'Cash on Delivery' }].map(p => (
+            {[{ id: 'telebirr', icon: '📱', label: 'Telebirr' }, { id: 'cbebirr', icon: '🏦', label: 'CBE Birr' }, { id: 'chapa', icon: '💳', label: 'Chapa (Bank/Card)' }].map(p => (
               <div key={p.id} className={`flex items-center gap-2.5 px-3 py-3 rounded-xl mb-1.5 cursor-pointer text-xs border transition-all ${payment === p.id ? 'border-primary bg-primary/5 shadow-sm' : 'border-border/60 hover:border-primary/30'}`} onClick={() => setPayment(p.id)}>
                 <span className="text-base">{p.icon}</span><span className="font-medium">{p.label}</span>
                 {payment === p.id && <span className="ml-auto text-primary font-bold">✓</span>}
