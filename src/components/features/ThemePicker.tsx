@@ -51,20 +51,20 @@ export default function ThemePicker() {
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div className="absolute left-1/2 -translate-x-1/2 mt-1 bg-card border border-border rounded-lg shadow-xl z-50 p-2 w-48">
             <div className="text-[8px] font-semibold mb-1.5 text-muted-foreground">🎨 Theme</div>
-            {/* Compact 3x2 grid */}
-            <div className="grid grid-cols-2 gap-1 mb-2">
+            {/* Single column — 6 rows */}
+            <div className="flex flex-col gap-0.5 mb-2">
               {THEMES.map(theme => (
                 <button
                   key={theme.id}
                   className={cn(
-                    'flex items-center gap-1 p-1 rounded-lg border transition-all',
+                    'flex items-center gap-2 p-1.5 rounded-lg border transition-all w-full',
                     themePreset === theme.id
                       ? 'border-primary bg-primary/5'
                       : 'border-border hover:border-muted-foreground/30'
                   )}
                   onClick={() => applyTheme(theme.id)}
                 >
-                  <div className="flex gap-px">
+                  <div className="flex gap-px flex-shrink-0">
                     {theme.colors.map((c, i) => (
                       <div key={i} className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: c }} />
                     ))}
