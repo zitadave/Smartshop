@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/stores/AppStore';
 import { t } from '@/i18n/translations';
 import { cn } from '@/lib/utils';
-import { User, Package, Heart, ShoppingCart, Gift, LogOut, Moon, Sun, ChevronRight, Store, Palette, Globe, TrendingDown, Bell, HelpCircle, Wallet } from 'lucide-react';
+import { User, Package, Heart, ShoppingCart, Gift, LogOut, Moon, Sun, ChevronRight, Store, Palette, TrendingDown, Bell, HelpCircle, Wallet } from 'lucide-react';
 import ThemePicker from '@/components/features/ThemePicker';
 import CurrencySelector from '@/components/features/CurrencySelector';
 import { ActivePriceAlerts } from '@/components/features/PriceDropAlert';
@@ -176,10 +176,11 @@ export default function Profile() {
       {/* Currency + Theme Side by Side */}
       <div className="mx-3 mt-3">
         <div className="grid grid-cols-2 gap-2 mb-2">
-          <div className="bg-card rounded-xl border border-border p-3">
-            <div className="flex items-center gap-2 mb-2"><Globe size={14} className="text-primary" /><span className="text-[10px] font-medium">Currency</span></div>
+          {/* Currency — icon only, to the right */}
+          <div className="bg-card rounded-xl border border-border p-3 flex items-center justify-end">
             <CurrencySelector />
           </div>
+          {/* Theme — 2 columns, opens to the left */}
           <div className="bg-card rounded-xl border border-border p-3">
             <div className="flex items-center gap-2 mb-2"><Palette size={14} className="text-primary" /><span className="text-[10px] font-medium">Theme</span></div>
             <ThemePicker />

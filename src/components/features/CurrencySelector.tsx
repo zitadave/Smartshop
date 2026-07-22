@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '@/stores/AppStore';
-import { formatPrice, cn } from '@/lib/utils';
-import { DollarSign, Check, ChevronDown, Globe } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Check, ChevronDown, Globe } from 'lucide-react';
 
 const CURRENCIES = [
   { code: 'ETB', name: 'Ethiopian Birr', symbol: 'Br', flag: '🇪🇹' },
@@ -19,7 +19,6 @@ export default function CurrencySelector() {
   const [rates, setRates] = useState(currencyRates);
 
   useEffect(() => {
-    // Simulate live rates (in production, fetch from API)
     const interval = setInterval(() => {
       const simulated = {
         ETB: 1,
@@ -36,23 +35,21 @@ export default function CurrencySelector() {
   return (
     <div className="relative">
       <button
-        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-muted hover:bg-muted/80 text-xs font-medium transition-colors"
+        className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-muted hover:bg-muted/80 text-xs font-medium transition-colors ml-auto"
         onClick={() => setOpen(!open)}
       >
-        <span>{current.flag}</span>
-        <span className="font-semibold">{current.symbol}</span>
-        <ChevronDown size={12} className={cn('transition-transform', open && 'rotate-180')} />
+        <span className="text-base">{current.flag}</span>
+        <ChevronDown size={10} className={cn('transition-transform', open && 'rotate-180')} />
       </button>
 
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute top-full right-0 mt-1 w-56 bg-card border border-border rounded-xl shadow-xl z-50 py-1 overflow-hidden">
-            <div className="px-3 py-2 border-b border-border">
-              <div className="text-[10px] font-semibold flex items-center gap-1.5">
-                <Globe size={12} /> Currency
+          <div className="absolute top-full right-0 mt-1 w-48 bg-card border border-border rounded-xl shadow-xl z-50 py-1 overflow-hidden">
+            <div className="px-3 py-1.5 border-b border-border">
+              <div className="text-[9px] font-semibold flex items-center gap-1">
+                <Globe size={10} /> Currency
               </div>
-              <div className="text-[8px] text-muted-foreground">Live rates updated every 30s</div>
             </div>
             {CURRENCIES.map(c => {
               const rate = rates[c.code] || 1;
@@ -60,24 +57,19 @@ export default function CurrencySelector() {
                 <button
                   key={c.code}
                   className={cn(
-                    'w-full flex items-center gap-2.5 px-3 py-2.5 text-xs hover:bg-muted transition-colors',
+                    'w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-muted transition-colors',
                     currency === c.code && 'bg-primary/5'
                   )}
                   onClick={() => { setCurrency(c.code as any); setOpen(false); }}
                 >
-                  <span className="text-base">{c.flag}</span>
+                  <span>{c.flag}</span>
                   <div className="flex-1 text-left">
-                    <div className="font-semibold">{c.code}</div>
-                    <div className="text-[9px] text-muted-foreground">{c.name}</div>
+                    <div className="font-semibold text-[10px]">{c.code}</div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-[10px] font-mono text-muted-foreground">
-                      {rate === 1 ? 'Base' : rate.toFixed(4)}
-                    </div>
+                  <div className="text-[9px] font-mono text-muted-foreground">
+                    {rate === 1 ? '' : rate.toFixed(4)}
                   </div>
-                  {currency === c.code && (
-                    <Check size={14} className="text-primary" />
-                  )}
+                  {currency === c.code && <Check size={12} className="text-primary" />}
                 </button>
               );
             })}
@@ -88,20 +80,15 @@ export default function CurrencySelector() {
   );
 }
 
-/** Price display with automatic currency conversion */
 export function ConvertedPrice({ price, className }: { price: number; className?: string }) {
   const { currency, currencyRates } = useStore();
   const rate = currencyRates[currency] || 1;
   const symbols: Record<string, string> = { ETB: 'Br', USD: '$', EUR: '€', GBP: '£', KES: 'KSh' };
   const sym = symbols[currency] || 'Br';
   const converted = price * rate;
-
   return (
     <span className={className}>
-      {currency === 'ETB'
-        ? `${sym} ${Math.round(converted).toLocaleString()}`
-        : `${sym}${converted.toFixed(2)}`
-      }
+      {currency === 'ETB' ? `${sym} ${Math.round(converted).toLocaleString()}` : `${sym}${converted.toFixed(2)}`}
     </span>
   );
 }

@@ -49,15 +49,16 @@ export default function ThemePicker() {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute left-1/2 -translate-x-1/2 mt-1 bg-card border border-border rounded-lg shadow-xl z-50 p-2 w-48">
+          {/* Opens to the RIGHT (left-aligned) but since theme is on the right side of grid, we use right-0 to open toward currency */}
+          <div className="absolute right-0 mt-1 bg-card border border-border rounded-lg shadow-xl z-50 p-2 w-52">
             <div className="text-[8px] font-semibold mb-1.5 text-muted-foreground">🎨 Theme</div>
-            {/* Single column — 6 rows */}
-            <div className="flex flex-col gap-0.5 mb-2">
+            {/* 2 columns */}
+            <div className="grid grid-cols-2 gap-1 mb-2">
               {THEMES.map(theme => (
                 <button
                   key={theme.id}
                   className={cn(
-                    'flex items-center gap-2 p-1.5 rounded-lg border transition-all w-full',
+                    'flex items-center gap-1 p-1.5 rounded-lg border transition-all',
                     themePreset === theme.id
                       ? 'border-primary bg-primary/5'
                       : 'border-border hover:border-muted-foreground/30'
@@ -74,7 +75,6 @@ export default function ThemePicker() {
                 </button>
               ))}
             </div>
-            {/* Dark/Light mini */}
             <div className="flex gap-1 border-t border-border pt-1.5">
               <button className={cn('flex-1 flex items-center justify-center gap-0.5 py-1 rounded-lg text-[8px] font-medium border transition-all', !darkMode ? 'border-primary bg-primary/5 text-primary' : 'border-border')}
                 onClick={() => setDarkMode(false)}><Sun size={8} /> L</button>
