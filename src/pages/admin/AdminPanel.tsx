@@ -26,9 +26,11 @@ import BulkProductManager from '@/components/admin/BulkProductManager';
 import ProductAnalytics from '@/components/admin/ProductAnalytics';
 import InventoryForecast from '@/components/admin/InventoryForecast';
 import ActivityLog from '@/components/admin/ActivityLog';
+import AdminSecurity from '@/components/admin/AdminSecurity';
+import TelegramNotifications from '@/components/admin/TelegramNotifications';
 
 
-type Tab = 'overview' | 'products' | 'orders' | 'vendors' | 'marketplace' | 'reviews' | 'broadcast' | 'flashdeals' | 'preorders' | 'tracking' | 'themes' | 'coupons' | 'settings' | 'alerts' | 'abandoned' | 'roles' | 'backup' | 'adminTheme' | 'bulkProducts' | 'analytics' | 'forecast' | 'activity';
+type Tab = 'overview' | 'products' | 'orders' | 'vendors' | 'marketplace' | 'reviews' | 'broadcast' | 'flashdeals' | 'preorders' | 'tracking' | 'themes' | 'coupons' | 'settings' | 'alerts' | 'abandoned' | 'roles' | 'backup' | 'adminTheme' | 'bulkProducts' | 'analytics' | 'forecast' | 'activity' | 'security' | 'telegram';
 
 export default function AdminLayout() {
   const [tab, setTab] = useState<Tab>('overview');
@@ -65,6 +67,9 @@ export default function AdminLayout() {
     { id: 'analytics', icon: BarChart3, label: 'Product Analytics' },
     { id: 'forecast', icon: Clock, label: 'Forecast' },
     { id: 'activity', icon: ClipboardList, label: 'Activity Log' },
+    { id: 'security', icon: Shield, label: 'Security' },
+    { id: 'telegram', icon: Bell, label: 'Telegram Bot' },
+
 
   ];
 
@@ -155,6 +160,9 @@ export default function AdminLayout() {
           {tab === 'analytics' && <ProductAnalytics />}
           {tab === 'forecast' && <InventoryForecast />}
           {tab === 'activity' && <ActivityLog />}
+          {tab === 'security' && <AdminSecurity />}
+          {tab === 'telegram' && <TelegramNotifications />}
+
           {tab === 'settings' && <AdminSettings />}
         </div>
       </main>
