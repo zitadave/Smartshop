@@ -3,7 +3,7 @@
  * Works with any backend: Render, Cloudflare Workers, or local dev server
  */
 
-const API_BASE = 'https://smartshop-api.zitadave61.workers.dev';
+const API_BASE = '';
 
 async function request<T = any>(path: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE}${path}`;
