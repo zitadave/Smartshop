@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { toast } from '@/components/Toast';
 import ToastContainer from '@/components/Toast';
+import ProductStudio from '@/components/admin/ProductStudio';
 
 type VendorTab = 'dashboard' | 'products' | 'analytics' | 'orders' | 'payouts' | 'settings';
 
@@ -52,9 +53,31 @@ export default function VendorDashboard() {
     }))
   );
 
+  // Product Studio state
+  const [showStudio, setShowStudio] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<any>(null);
+
+  const openStudio = (product?: any) => {
+    setEditingProduct(product || null);
+    setShowStudio(true);
+  };
+
+  const loadProducts = useCallback(() => {
+    productsApi.list().then(d => {
+      if (d?.products) store.setProducts(d.products);
+    }).catch(() => {});
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
       <ToastContainer />
+      {showStudio && (
+        <ProductStudio
+          editProduct={editingProduct}
+          onClose={() => { setShowStudio(false); setEditingProduct(null); }}
+          onSaved={() => { loadProducts(); setShowStudio(false); setEditingProduct(null); }}
+        />
+      )}
       <header className="fixed top-0 left-0 right-0 h-13 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-700/50">
         <div className="max-w-7xl mx-auto h-full flex items-center px-4 gap-2">
           <button className="lg:hidden p-1.5 rounded-xl hover:bg-slate-100" onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X size={18} /> : <Menu size={18} />}</button>
@@ -101,7 +124,7 @@ export default function VendorDashboard() {
       <main className="lg:ml-52 pt-13 min-h-screen">
         <div className="p-4 md:p-6 max-w-6xl mx-auto">
           {tab === 'dashboard' && <VendorDashboardView products={vendorProducts} stats={stats} revenueHistory={revenueHistory} />}
-          {tab === 'products' && <VendorProductsView products={vendorProducts} />}
+          {tab === 'products' && <VendorProductsView products={vendorProducts} onOpenStudio={openStudio} />}
           {tab === 'analytics' && <VendorAnalyticsView products={vendorProducts} stats={stats} revenueHistory={revenueHistory} />}
           {tab === 'orders' && <VendorOrdersView />}
           {tab === 'payouts' && <VendorPayoutsView stats={stats} />}
@@ -189,7 +212,7 @@ function VendorDashboardView({ products, stats, revenueHistory }: { products: an
 }
 
 // ===== PRODUCTS =====
-function VendorProductsView({ products }: { products: any[] }) {
+function VendorProductsView({ products, onOpenStudio }: { products: any[]; onOpenStudio: (product?: any) => void }) {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -248,9 +271,15 @@ function VendorProductsView({ products }: { products: any[] }) {
     <div className="animate-fadeUp">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-bold">📦 Products ({products.length})</h2>
-        <button className={cn('px-3 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1 transition-colors', showForm ? 'bg-red-500 text-white' : 'bg-primary text-white')} onClick={() => setShowForm(!showForm)}>
-          <Plus size={12} /> {showForm ? 'Cancel' : 'Add Product'}
-        </button>
+        <div className="flex gap-2">
+          <button className="px-3 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:shadow-lg"
+            onClick={() => onOpenStudio()}>
+            <Plus size={12} /> Studio Pro
+          </button>
+          <button className={cn('px-3 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1 transition-colors', showForm ? 'bg-red-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300')} onClick={() => setShowForm(!showForm)}>
+            <Plus size={12} /> {showForm ? 'Cancel' : 'Quick Add'}
+          </button>
+        </div>
       </div>
 
       {/* Search + Sort */}

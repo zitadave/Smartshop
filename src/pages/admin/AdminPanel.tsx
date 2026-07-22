@@ -512,25 +512,34 @@ function AdminOrders() {
 // =============================================
 function AdminVendors() {
   const [vendors, setVendors] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [selectedVendor, setSelectedVendor] = useState<any>(null);
   const [commission, setCommission] = useState(10);
   const [approved, setApproved] = useState(true);
   const [loading, setLoading] = useState(true);
   const [vendorView, setVendorView] = useState<'vendors' | 'payouts'>('vendors');
-  useEffect(() => { vendorsApi.list().then(d => { setVendors(d?.vendors || []); setLoading(false); }).catch(() => setLoading(false)); }, []);
+  const [storeName, setStoreName] = useState('');
+  const [vendorPhone, setVendorPhone] = useState('');
+  const [vendorEmail, setVendorEmail] = useState('');
+
+  useEffect(() => {
+    vendorsApi.list().then(d => { setVendors(d?.vendors || []); setLoading(false); }).catch(() => setLoading(false));
+    productsApi.list().then(d => setProducts(d?.products || [])).catch(() => {});
+  }, []);
 
   const updateVendor = async (id: number) => {
-    await vendorsApi.update(id, { commission, approved });
-    setVendors(vendors.map(v => v.id === id ? { ...v, commission, approved } : v));
+    await vendorsApi.update(id, { commission, approved, name: storeName, phone: vendorPhone, email: vendorEmail });
+    setVendors(vendors.map(v => v.id === id ? { ...v, commission, approved, name: storeName, phone: vendorPhone, email: vendorEmail } : v));
     setSelectedVendor(null);
+    toast('✅ Vendor updated!', 'success');
   };
 
   if (loading) return <div className="text-center py-12"><Loader size={24} className="animate-spin mx-auto text-indigo-500" /></div>;
 
   return (
-    <div className="animate-fadeUp space-y-4">
-      <div className="flex items-center justify-between mb-2">
-        <h2 className="text-lg font-bold">🏪 Vendors ({vendors.length})</h2>
+    <div className="animate-fadeUp space-y-4 max-w-full overflow-x-hidden">
+      <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+        <div><h2 className="text-lg font-bold">🏪 Vendor Management ({vendors.length})</h2><p className="text-[10px] text-slate-500">Manage vendor registrations, commissions, payouts and storefronts</p></div>
         <div className="flex gap-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl p-0.5">
           <button className={cn('px-3 py-1.5 rounded-lg text-[9px] font-semibold transition-all', vendorView === 'vendors' ? 'bg-white dark:bg-slate-700 shadow-sm' : 'text-slate-500')} onClick={() => setVendorView('vendors')}>Vendors</button>
           <button className={cn('px-3 py-1.5 rounded-lg text-[9px] font-semibold transition-all', vendorView === 'payouts' ? 'bg-white dark:bg-slate-700 shadow-sm' : 'text-slate-500')} onClick={() => setVendorView('payouts')}><DollarSign size={11} className="inline" /> Payouts</button>
@@ -538,33 +547,62 @@ function AdminVendors() {
       </div>
       {vendorView === 'payouts' ? <PayoutSystem /> : (
         <>
+          {/* Stats */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 text-center"><div className="text-lg font-bold text-indigo-600">{vendors.length}</div><div className="text-[9px] text-slate-500">Total Vendors</div></div>
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 text-center"><div className="text-lg font-bold text-green-600">{vendors.filter(v => v.approved !== false).length}</div><div className="text-[9px] text-slate-500">Approved</div></div>
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 text-center"><div className="text-lg font-bold text-amber-600">{vendors.filter(v => !v.approved).length}</div><div className="text-[9px] text-slate-500">Pending</div></div>
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 text-center"><div className="text-lg font-bold text-purple-600">{products.filter(p => p.vendorId).length}</div><div className="text-[9px] text-slate-500">Vendor Products</div></div>
+          </div>
+
           {selectedVendor && (
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 animate-slideUp">
               <h3 className="text-sm font-bold mb-3">Edit: {selectedVendor.name || selectedVendor.storeName}</h3>
-              <div className="space-y-3">
+              <div className="grid sm:grid-cols-2 gap-3 mb-3">
+                <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Store Name</label><input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={storeName} onChange={e => setStoreName(e.target.value)} /></div>
+                <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Email</label><input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={vendorEmail} onChange={e => setVendorEmail(e.target.value)} /></div>
+                <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Phone</label><input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={vendorPhone} onChange={e => setVendorPhone(e.target.value)} /></div>
                 <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Commission %</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={commission} onChange={e => setCommission(Number(e.target.value))} /></div>
-                <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={approved} onChange={e => setApproved(e.target.checked)} className="rounded" /> Approved Vendor</label>
-                <div className="flex gap-2"><button className="px-4 py-2 bg-primary text-white rounded-xl text-xs font-bold" onClick={() => updateVendor(selectedVendor.id)}>💾 Save</button><button className="px-4 py-2 border rounded-xl text-xs" onClick={() => setSelectedVendor(null)}>Cancel</button></div>
+              </div>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={approved} onChange={e => setApproved(e.target.checked)} className="rounded" /> Approved</label>
+                <button className="px-4 py-2 bg-primary text-white rounded-xl text-xs font-bold" onClick={() => updateVendor(selectedVendor.id)}>💾 Save</button>
+                <button className="px-4 py-2 border rounded-xl text-xs" onClick={() => setSelectedVendor(null)}>Cancel</button>
               </div>
             </div>
           )}
+
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {vendors.map(v => (
-              <div key={v.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 hover:shadow-lg transition-all">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center text-sm font-bold shadow-md">{v.name?.charAt(0) || v.storeName?.charAt(0) || '?'}</div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold truncate">{v.name || v.storeName || 'Vendor'}</div>
-                    <div className="text-[9px] text-slate-400">{v.email || v.phone || 'No contact'}</div>
+            {vendors.map(v => {
+              const vendorProds = products.filter(p => p.vendorId === v.id || p.vendorName === v.name);
+              return (
+                <div key={v.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 hover:shadow-lg transition-all overflow-x-hidden">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center text-sm font-bold shadow-md">{v.name?.charAt(0) || v.storeName?.charAt(0) || '?'}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold truncate">{v.name || v.storeName || 'Vendor'}</div>
+                      <div className="text-[9px] text-slate-400 truncate">{v.email || v.phone || 'No contact'}</div>
+                    </div>
+                    <span className={cn('px-2 py-0.5 rounded-lg text-[9px] font-semibold flex-shrink-0', v.approved ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700')}>{v.approved ? 'Approved' : 'Pending'}</span>
                   </div>
-                  <span className={cn('px-2 py-0.5 rounded-lg text-[9px] font-semibold', v.approved ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700')}>{v.approved ? 'Approved' : 'Pending'}</span>
+                  <div className="flex items-center gap-2 text-[9px] text-slate-500 mb-2">
+                    <span>📦 {vendorProds.length} products</span>
+                    <span>·</span>
+                    <span>💰 {v.commission || 10}% commission</span>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <button className="text-indigo-600 text-[9px] font-semibold hover:underline flex items-center gap-1" onClick={() => { setSelectedVendor(v); setCommission(v.commission || 10); setApproved(v.approved !== false); setStoreName(v.name || ''); setVendorEmail(v.email || ''); setVendorPhone(v.phone || ''); }}>
+                      <Edit3 size={11} /> Edit
+                    </button>
+                    {vendorProds.length > 0 && (
+                      <button className="text-emerald-600 text-[9px] font-semibold hover:underline" onClick={() => window.open(`/store/${v.id}`, '_blank')}>
+                        <Eye size={11} className="inline mr-1" /> View Store
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center justify-between text-[10px] text-slate-500 pt-2 border-t border-slate-100 dark:border-slate-800">
-                  <span>Commission: <strong>{v.commission || 10}%</strong></span>
-                  <button className="text-indigo-600 text-[9px] font-semibold hover:underline" onClick={() => { setSelectedVendor(v); setCommission(v.commission || 10); setApproved(v.approved !== false); }}>Edit</button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           {vendors.length === 0 && <p className="text-xs text-slate-400 text-center py-8">No vendors registered yet</p>}
         </>
@@ -809,54 +847,85 @@ function AdminTracking() {
 function AdminThemes() {
   const store = useStore(); const { themePreset, setThemePreset, customAccent, setCustomAccent, darkMode, setDarkMode } = store;
   const THEMES = [
-    { id: 'default' as const, name: 'Default', colors: ['#6C63FF', '#8B5CF6', '#4F46E5'], icon: '💎' },
-    { id: 'ocean' as const, name: 'Ocean', colors: ['#0EA5E9', '#06B6D4', '#0284C7'], icon: '🌊' },
-    { id: 'forest' as const, name: 'Forest', colors: ['#10B981', '#34D399', '#059669'], icon: '🌿' },
-    { id: 'sunset' as const, name: 'Sunset', colors: ['#F59E0B', '#F97316', '#D97706'], icon: '🌅' },
-    { id: 'midnight' as const, name: 'Midnight', colors: ['#6366F1', '#818CF8', '#4338CA'], icon: '🌙' },
-    { id: 'rose' as const, name: 'Rose', colors: ['#EC4899', '#F43F5E', '#DB2777'], icon: '🌹' },
+    { id: 'default' as const, name: 'Default', colors: ['#6C63FF', '#8B5CF6', '#4F46E5'], icon: '💎', desc: 'Classic indigo' },
+    { id: 'ocean' as const, name: 'Ocean', colors: ['#0EA5E9', '#06B6D4', '#0284C7'], icon: '🌊', desc: 'Cool blue tones' },
+    { id: 'forest' as const, name: 'Forest', colors: ['#10B981', '#34D399', '#059669'], icon: '🌿', desc: 'Natural green' },
+    { id: 'sunset' as const, name: 'Sunset', colors: ['#F59E0B', '#F97316', '#D97706'], icon: '🌅', desc: 'Warm orange' },
+    { id: 'midnight' as const, name: 'Midnight', colors: ['#6366F1', '#818CF8', '#4338CA'], icon: '🌙', desc: 'Deep night' },
+    { id: 'rose' as const, name: 'Rose', colors: ['#EC4899', '#F43F5E', '#DB2777'], icon: '🌹', desc: 'Elegant pink' },
   ];
   const applyTheme = (preset: typeof THEMES[0]['id']) => {
     setThemePreset(preset);
     const t = THEMES.find(x => x.id === preset);
     if (t) {
       localStorage.setItem('ss_theme', JSON.stringify(preset));
-      document.documentElement.style.setProperty('--color-primary', t.colors[0]);
-      document.documentElement.style.setProperty('--color-primary-foreground', '#ffffff');
-      document.documentElement.style.setProperty('--color-ring', t.colors[0] + '40');
-      document.documentElement.style.setProperty('--primary-hex', t.colors[0]);
-      document.documentElement.style.setProperty('--accent-hex', t.colors[1]);
-      document.documentElement.style.setProperty('--accent-color', t.colors[1]);
+      const root = document.documentElement;
+      root.style.setProperty('--color-primary', t.colors[0]);
+      root.style.setProperty('--color-primary-foreground', '#ffffff');
+      root.style.setProperty('--color-ring', t.colors[0] + '40');
+      root.style.setProperty('--primary-hex', t.colors[0]);
+      root.style.setProperty('--accent-hex', t.colors[1]);
+      root.style.setProperty('--accent-color', t.colors[1]);
       toast('🎨 Theme applied: ' + t.name, 'success');
     }
   };
+  const currentTheme = THEMES.find(t => t.id === themePreset) || THEMES[0];
   return (
-    <div className="animate-fadeUp space-y-4">
-      <h2 className="text-lg font-bold">🎨 Theme Settings</h2>
-      <div className="grid grid-cols-3 gap-3">
+    <div className="animate-fadeUp space-y-4 max-w-full overflow-x-hidden">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div><h2 className="text-lg font-bold">🎨 Store Theme Studio</h2><p className="text-[10px] text-slate-500">Customize colors for the CUSTOMER-FACING storefront. (Admin panel colors are in "Admin Theme" tab.)</p></div>
+        <div className="flex gap-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl p-0.5">
+          <button className={cn('px-3 py-1.5 rounded-lg text-[10px] font-semibold flex items-center gap-1', !darkMode ? 'bg-white dark:bg-slate-700 shadow-sm' : 'text-slate-500')} onClick={() => setDarkMode(false)}><Sun size={12} /> Light</button>
+          <button className={cn('px-3 py-1.5 rounded-lg text-[10px] font-semibold flex items-center gap-1', darkMode ? 'bg-white dark:bg-slate-700 shadow-sm' : 'text-slate-500')} onClick={() => setDarkMode(true)}><Moon size={12} /> Dark</button>
+        </div>
+      </div>
+
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {THEMES.map(t => (
-          <button key={t.id} className={cn('flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all', themePreset === t.id ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30 shadow-md' : 'border-slate-200 dark:border-slate-700 hover:border-indigo-300 bg-white dark:bg-slate-900')} onClick={() => applyTheme(t.id)}>
-            <div className="flex gap-1">{t.colors.map((c, i) => <div key={i} className="w-5 h-5 rounded-full shadow-sm" style={{ backgroundColor: c }} />)}</div>
-            <span className="text-[10px] font-medium">{t.icon} {t.name}</span>
-            {themePreset === t.id && <Check size={12} className="text-indigo-600" />}
+          <button key={t.id} className={cn('flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all', themePreset === t.id ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30 shadow-md scale-[1.02]' : 'border-slate-200 dark:border-slate-700 hover:border-indigo-300 bg-white dark:bg-slate-900')} onClick={() => applyTheme(t.id)}>
+            <div className="flex gap-1">{t.colors.map((c, i) => <div key={i} className="w-6 h-6 rounded-full shadow-sm ring-2 ring-white dark:ring-slate-800" style={{ backgroundColor: c }} />)}</div>
+            <span className="text-[11px] font-medium">{t.icon} {t.name}</span>
+            <span className="text-[8px] text-slate-400">{t.desc}</span>
+            {themePreset === t.id && <Check size={14} className="text-indigo-600" />}
           </button>
         ))}
       </div>
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 flex items-center gap-4">
-        <input type="color" className="w-12 h-12 rounded-xl cursor-pointer border-0" value={customAccent} onChange={e => setCustomAccent(e.target.value)} />
-        <div className="flex-1"><div className="text-xs font-semibold">Accent Color</div><div className="text-[9px] text-slate-400">{customAccent}</div></div>
-        <button className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-bold" onClick={() => { 
-          document.documentElement.style.setProperty('--color-primary', customAccent);
-          document.documentElement.style.setProperty('--color-ring', customAccent + '40');
-          document.documentElement.style.setProperty('--primary-hex', customAccent);
-          document.documentElement.style.setProperty('--accent-hex', customAccent);
-          localStorage.setItem('ss_accent', JSON.stringify(customAccent)); 
-          toast('✅ Accent applied!', 'success'); 
-        }}>Apply</button>
+
+      {/* Live Preview Card */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+        <div className="p-4 border-b border-slate-100 dark:border-slate-800"><h3 className="text-sm font-bold">👁️ Live Preview</h3></div>
+        <div className="p-4">
+          <div className="max-w-xs mx-auto rounded-xl border overflow-hidden shadow-lg" style={{ borderColor: currentTheme.colors[0] + '40' }}>
+            <div className="h-24 flex items-center justify-center text-white font-bold text-lg" style={{ background: 'linear-gradient(135deg, ' + currentTheme.colors[0] + ', ' + currentTheme.colors[1] + ')' }}>
+              Smart Shop
+            </div>
+            <div className="p-3 space-y-2 bg-white dark:bg-slate-800">
+              <div className="flex gap-1 flex-wrap"><span className="text-[9px] px-2 py-0.5 rounded-full text-white" style={{ backgroundColor: currentTheme.colors[0] }}>NEW</span><span className="text-[9px] text-slate-400">Premium Product</span></div>
+              <div className="text-lg font-bold" style={{ color: currentTheme.colors[0] }}>Br 2,499</div>
+              <button className="w-full py-2 rounded-xl text-xs font-bold text-white" style={{ background: 'linear-gradient(135deg, ' + currentTheme.colors[0] + ', ' + currentTheme.colors[1] + ')' }}>
+                Add to Cart
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
-      <div className="flex gap-3">
-        <button className={cn('flex-1 py-3 rounded-xl text-xs font-bold border-2 transition-all', !darkMode ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-500')} onClick={() => setDarkMode(false)}>☀️ Light</button>
-        <button className={cn('flex-1 py-3 rounded-xl text-xs font-bold border-2 transition-all', darkMode ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-500')} onClick={() => setDarkMode(true)}>🌙 Dark</button>
+
+      {/* Custom Accent */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 flex items-center gap-4 flex-wrap overflow-x-hidden">
+        <div className="flex items-center gap-3">
+          <input type="color" className="w-12 h-12 rounded-xl cursor-pointer border-0" value={customAccent} onChange={e => setCustomAccent(e.target.value)} />
+          <div><div className="text-xs font-semibold">Custom Accent</div><div className="text-[9px] text-slate-400 font-mono">{customAccent}</div></div>
+        </div>
+        <button className="px-4 py-2 rounded-xl text-xs font-bold text-white" style={{ background: customAccent }}
+          onClick={() => {
+            const root = document.documentElement;
+            root.style.setProperty('--color-primary', customAccent);
+            root.style.setProperty('--color-ring', customAccent + '40');
+            root.style.setProperty('--primary-hex', customAccent);
+            root.style.setProperty('--accent-hex', customAccent);
+            localStorage.setItem('ss_accent', JSON.stringify(customAccent));
+            toast('✅ Custom accent applied!', 'success');
+          }}>Apply Accent</button>
       </div>
     </div>
   );
