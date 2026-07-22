@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Offline — Smart Shop</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; color: #0b0f19; }
+    .card { text-align: center; padding: 2rem; max-width: 320px; }
+    .icon { font-size: 64px; margin-bottom: 1rem; }
+    h1 { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; }
+    p { font-size: 0.875rem; color: #718096; line-height: 1.5; }
+    .btn { display: inline-block; margin-top: 1.5rem; padding: 0.75rem 2rem; background: #6C63FF; color: white; border-radius: 12px; text-decoration: none; font-size: 0.875rem; font-weight: 600; }
+    @media (prefers-color-scheme: dark) {
+      body { background: #0a0e17; color: #e8ecf1; }
+      p { color: #8b95a5; }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">📡</div>
+    <h1>You're Offline</h1>
+    <p>Connect to the internet to continue shopping. Your cart and saved items will be waiting for you.</p>
+    <a href="/" class="btn">Try Again</a>
+  </div>
+</body>
+</html>

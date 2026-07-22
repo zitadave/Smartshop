@@ -1,77 +1,35 @@
 {
-  "name": "Smart Shop Ethiopia",
+  "name": "Smart Shop Ethiopia — Premium Marketplace",
   "short_name": "Smart Shop",
-  "description": "Ethiopia's premier e-commerce marketplace \u2014 curated products at exceptional prices",
-  "start_url": "/",
+  "description": "Ethiopia's premier e-commerce marketplace — curated products at exceptional prices with free delivery",
+  "start_url": "/?utm_source=pwa",
   "display": "standalone",
   "background_color": "#f8fafc",
-  "theme_color": "#1a365d",
+  "theme_color": "#6C63FF",
   "orientation": "portrait-primary",
   "lang": "en",
   "dir": "auto",
-  "categories": [
-    "shopping",
-    "lifestyle",
-    "ecommerce"
-  ],
+  "categories": ["shopping", "lifestyle", "ecommerce"],
   "prefer_related_applications": false,
   "scope": "/",
   "icons": [
-    {
-      "src": "/icons/icon-48x48.svg",
-      "sizes": "48x48",
-      "type": "image/svg+xml"
-    },
-    {
-      "src": "/icons/icon-72x72.svg",
-      "sizes": "72x72",
-      "type": "image/svg+xml"
-    },
-    {
-      "src": "/icons/icon-96x96.svg",
-      "sizes": "96x96",
-      "type": "image/svg+xml"
-    },
-    {
-      "src": "/icons/icon-128x128.svg",
-      "sizes": "128x128",
-      "type": "image/svg+xml"
-    },
-    {
-      "src": "/icons/icon-144x144.svg",
-      "sizes": "144x144",
-      "type": "image/svg+xml"
-    },
-    {
-      "src": "/icons/icon-152x152.svg",
-      "sizes": "152x152",
-      "type": "image/svg+xml"
-    },
-    {
-      "src": "/icons/icon-192x192.svg",
-      "sizes": "192x192",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icons/icon-384x384.svg",
-      "sizes": "384x384",
-      "type": "image/svg+xml"
-    },
-    {
-      "src": "/icons/icon-512x512.svg",
-      "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    }
+    { "src": "/icons/icon-48x48.svg", "sizes": "48x48", "type": "image/svg+xml" },
+    { "src": "/icons/icon-72x72.svg", "sizes": "72x72", "type": "image/svg+xml" },
+    { "src": "/icons/icon-96x96.svg", "sizes": "96x96", "type": "image/svg+xml" },
+    { "src": "/icons/icon-128x128.svg", "sizes": "128x128", "type": "image/svg+xml" },
+    { "src": "/icons/icon-144x144.svg", "sizes": "144x144", "type": "image/svg+xml" },
+    { "src": "/icons/icon-152x152.svg", "sizes": "152x152", "type": "image/svg+xml" },
+    { "src": "/icons/icon-192x192.svg", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any maskable" },
+    { "src": "/icons/icon-384x384.svg", "sizes": "384x384", "type": "image/svg+xml" },
+    { "src": "/icons/icon-512x512.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any maskable" }
   ],
   "screenshots": [
-    {
-      "src": "/screenshots/home.png",
-      "sizes": "390x844",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Smart Shop Home"
-    }
+    { "src": "/screenshots/home.png", "sizes": "390x844", "type": "image/png", "form_factor": "narrow", "label": "Smart Shop Home" }
+  ],
+  "shortcuts": [
+    { "name": "Shop", "short_name": "Shop", "description": "Browse products", "url": "/shop", "icons": [{ "src": "/icons/icon-96x96.svg", "sizes": "96x96" }] },
+    { "name": "Orders", "short_name": "Orders", "description": "View orders", "url": "/orders", "icons": [{ "src": "/icons/icon-96x96.svg", "sizes": "96x96" }] },
+    { "name": "Wishlist", "short_name": "Wishlist", "description": "Saved items", "url": "/wishlist", "icons": [{ "src": "/icons/icon-96x96.svg", "sizes": "96x96" }] },
+    { "name": "Game Center", "short_name": "Loyalty", "description": "Earn rewards", "url": "/loyalty", "icons": [{ "src": "/icons/icon-96x96.svg", "sizes": "96x96" }] }
   ]
 }

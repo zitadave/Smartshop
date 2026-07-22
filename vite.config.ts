@@ -21,6 +21,10 @@ export default defineConfig({
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           'ui-vendor': ['lucide-react'],
           'state': ['zustand'],
+          'admin': ['@/pages/admin/AdminPanel'],
+          'vendor': ['@/pages/vendor/VendorDashboard'],
+          'loyalty': ['@/pages/Loyalty'],
+          'game': ['@/components/game/SpinWheel'],
         },
       },
     },
@@ -29,6 +33,7 @@ export default defineConfig({
     cssMinify: true,
     sourcemap: false,
     reportCompressedSize: true,
+    chunkSizeWarningLimit: 500,
   },
   server: {
     headers: {

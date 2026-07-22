@@ -6,6 +6,7 @@ import QuickView from './ui/QuickView';
 import AIChat from '@/components/ai/AIChat';
 import { ShoppingCart, Package, User, Home, Store, Moon, Sun, Search, Heart } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import PWAInstallPrompt from './PWAInstallPrompt';
 
 const NAV_ITEMS = [
   { path: '/', icon: Home, label: 'home' },
@@ -31,6 +32,7 @@ export default function Layout() {
       <ToastContainer />
       <QuickView />
       <AIChat />
+      <PWAInstallPrompt />
 
       <header className="fixed top-0 left-0 right-0 h-14 z-50 glass-strong border-b border-border/40">
         <div className="max-w-2xl mx-auto h-full flex items-center px-4 gap-2">

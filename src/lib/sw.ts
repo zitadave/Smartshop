@@ -1,6 +1,6 @@
 /**
- * Service Worker registration with automatic updates.
- * Caches API responses for offline support and instant loading.
+ * Smart Shop — Service Worker Registration v3
+ * Handles offline caching, PWA install prompt, and update notifications.
  */
 
 const SW_PATH = '/sw.js';
@@ -10,33 +10,52 @@ export function registerSW() {
 
   window.addEventListener('load', async () => {
     try {
-      const registration = await navigator.serviceWorker.register(SW_PATH);
+      const registration = await navigator.serviceWorker.register(SW_PATH, {
+        updateViaCache: 'none',
+      });
 
-      // Check for updates on page navigation
+      // Check for updates every hour
+      setInterval(() => { registration.update(); }, 3600000);
+
+      // Handle updates
       registration.addEventListener('updatefound', () => {
         const installing = registration.installing;
-        if (installing) {
-          installing.addEventListener('statechange', () => {
-            if (installing.state === 'installed' && navigator.serviceWorker.controller) {
-              // New version available
-              console.log('[SW] New version available — refresh to update');
-            }
-          });
+        if (!installing) return;
+
+        installing.addEventListener('statechange', () => {
+          if (installing.state === 'installed' && navigator.serviceWorker.controller) {
+            // Dispatch custom event for UI to show update notification
+            window.dispatchEvent(new CustomEvent('sw-update', {
+              detail: { registration }
+            }));
+          }
+        });
+      });
+
+      // Handle messages from SW
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data?.type === 'CACHE_UPDATED') {
+          // Cache was updated
         }
       });
 
-      console.log('[SW] Registered');
+      console.log('[PWA] Service Worker registered');
     } catch (err) {
-      console.warn('[SW] Registration failed', err);
+      console.warn('[PWA] Service Worker registration failed:', err);
     }
   });
 }
 
-/**
- * Sends a message to the service worker to clear all caches.
- */
+/** Clear all caches */
 export async function clearSWCache() {
   if (!('serviceWorker' in navigator)) return;
   const registration = await navigator.serviceWorker.getRegistration();
   registration?.active?.postMessage({ type: 'CLEAR_CACHE' });
+}
+
+/** Prompt user to update when new SW is available */
+export function listenForSWUpdate(callback: () => void) {
+  window.addEventListener('sw-update', () => {
+    callback();
+  });
 }
