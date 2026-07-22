@@ -10,8 +10,12 @@ import {
   Camera, Megaphone, Clock, Globe, Palette, MapPin, FileText, Zap,
   Search, Plus, Edit3, Trash2, Eye, EyeOff, Check, Loader, ChevronDown,
   DollarSign, Star, Activity, AlertTriangle, Sun, Moon, Gift, CreditCard,
-  Gamepad2, Coins, Smartphone, ExternalLink
+  Gamepad2, Coins, Smartphone, ExternalLink, Command, Columns, List
 } from 'lucide-react';
+import CommandPalette from '@/components/admin/CommandPalette';
+import LiveChart, { StatCard } from '@/components/admin/LiveChart';
+import OrderKanban from '@/components/admin/OrderKanban';
+import PayoutSystem from '@/components/admin/PayoutSystem';
 
 type Tab = 'overview' | 'products' | 'orders' | 'vendors' | 'marketplace' | 'reviews' | 'broadcast' | 'flashdeals' | 'preorders' | 'tracking' | 'themes' | 'coupons' | 'settings';
 
@@ -19,7 +23,13 @@ export default function AdminLayout() {
   const [tab, setTab] = useState<Tab>('overview');
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [cmdOpen, setCmdOpen] = useState(false);
   const navigate = useNavigate();
+
+  const handleCmdNavigate = (t: string) => {
+    setTab(t as Tab);
+    setCmdOpen(false);
+  };
 
   const NAV_ITEMS: { id: Tab; icon: any; label: string }[] = [
     { id: 'overview', icon: LayoutDashboard, label: 'Overview' },
@@ -39,6 +49,9 @@ export default function AdminLayout() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
+      {/* Command Palette */}
+      <CommandPalette onNavigate={handleCmdNavigate} />
+
       <header className="fixed top-0 left-0 right-0 h-14 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-700/50">
         <div className="max-w-7xl mx-auto h-full flex items-center px-4 gap-3">
           <button className="xl:hidden p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => setMenuOpen(!menuOpen)}>
@@ -54,6 +67,13 @@ export default function AdminLayout() {
             </div>
           </div>
           <div className="ml-auto flex items-center gap-2">
+            {/* Cmd+K Button */}
+            <button className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-[10px] font-medium"
+              onClick={() => setCmdOpen(true)}>
+              <Command size={12} />
+              <span>Search</span>
+              <span className="text-[8px] text-slate-400 ml-1 font-mono">⌘K</span>
+            </button>
             <button className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-500" onClick={() => window.open('/', '_blank')}><Eye size={16} /></button>
             <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-950/30 rounded-xl">
               <Activity size={12} className="text-indigo-500" />
@@ -92,7 +112,7 @@ export default function AdminLayout() {
 
       <main className="xl:ml-60 pt-14 min-h-screen transition-all duration-300">
         <div className="p-4 md:p-6 max-w-7xl mx-auto animate-fadeUp">
-          {tab === 'overview' && <Overview />}
+          {tab === 'overview' && <Overview onNavigate={handleCmdNavigate} />}
           {tab === 'products' && <AdminProducts />}
           {tab === 'orders' && <AdminOrders />}
           {tab === 'vendors' && <AdminVendors />}
@@ -114,48 +134,103 @@ export default function AdminLayout() {
 // =============================================
 // 1. OVERVIEW
 // =============================================
-function Overview() {
+function Overview({ onNavigate }: { onNavigate?: (tab: string) => void }) {
   const [data, setData] = useState<any>({});
   const [products, setProducts] = useState<any[]>([]);
+  const [revenueHistory] = useState(() =>
+    Array.from({length: 12}, (_, i) => ({
+      label: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][i],
+      value: Math.round(50000 + Math.random() * 150000 + i * 20000),
+    }))
+  );
   const store = useStore();
   const navigate = useNavigate();
+  const goto = (tab: string) => onNavigate ? onNavigate(tab) : navigate('/admin-panel');
 
   useEffect(() => {
     analyticsApi.get().then(d => d?.analytics && setData(d.analytics)).catch(() => {});
     productsApi.list().then(d => setProducts(d?.products || [])).catch(() => {});
+    const interval = setInterval(() => {
+      analyticsApi.get().then(d => d?.analytics && setData(d.analytics)).catch(() => {});
+    }, 15000);
+    return () => clearInterval(interval);
   }, []);
 
   const lowStock = products.filter(p => p.stockCount <= 5 && p.stockCount > 0);
 
+  // Generate sparkline data for each stat
+  const generateSpark = (base: number) => Array.from({length: 8}, (_, i) => ({ label: `${i+1}h`, value: Math.round(base * (0.7 + Math.random() * 0.6)) }));
+
   return (
     <div className="space-y-5 animate-fadeUp">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-slate-900 dark:text-white">👋 Welcome back, Admin</h2>
           <p className="text-xs text-slate-500 mt-0.5">Here's what's happening with your store today</p>
         </div>
+        <div className="hidden sm:flex items-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+          <span className="text-[9px] text-green-600 font-semibold">Live</span>
+        </div>
       </div>
 
+      {/* Stat Cards with Sparklines */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {[
-          { label: 'Total Products', val: products.length, sub: `${data.totalSold || 234} sold`, icon: Package, gradient: 'from-blue-500 to-blue-600' },
-          { label: 'Revenue', val: `Br ${(data.totalRevenue || 1234567).toLocaleString()}`, sub: `${data.totalOrders || 456} orders`, icon: DollarSign, gradient: 'from-emerald-500 to-green-600' },
-          { label: 'Active Orders', val: data.pendingOrders || 12, sub: `${data.shippedOrders || 8} shipping`, icon: ShoppingCart, gradient: 'from-orange-500 to-amber-600' },
-          { label: 'Low Stock Items', val: lowStock.length, sub: `${products.filter(p => !p.inStock).length} out of stock`, icon: AlertTriangle, gradient: 'from-red-500 to-rose-600' },
-        ].map((s, i) => {
-          const Icon = s.icon;
-          return (
-            <div key={i} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 hover:shadow-xl transition-all hover:-translate-y-0.5">
-              <div className={cn('p-2.5 rounded-xl bg-gradient-to-br shadow-lg inline-flex mb-2', s.gradient)}><Icon size={16} className="text-white" /></div>
-              <div className="text-2xl font-extrabold text-slate-900 dark:text-white">{s.val}</div>
-              <div className="text-[10px] text-slate-500 mt-0.5 font-medium">{s.sub}</div>
-              <div className="text-[9px] uppercase tracking-wider text-slate-400 mt-1 font-semibold">{s.label}</div>
-            </div>
-          );
-        })}
+        <StatCard
+          label="Products"
+          value={products.length}
+          sub={`${data.totalSold || 0} sold`}
+          icon={Package}
+          color="from-blue-500 to-blue-600"
+          trend={{ value: 12, up: true }}
+          data={generateSpark(products.length || 18)}
+          onClick={() => goto('products')}
+        />
+        <StatCard
+          label="Revenue"
+          value={`Br ${(data.totalRevenue || 0).toLocaleString()}`}
+          sub={`${data.totalOrders || 0} orders`}
+          icon={DollarSign}
+          color="from-emerald-500 to-green-600"
+          trend={{ value: 8, up: true }}
+          data={revenueHistory}
+        />
+        <StatCard
+          label="Active Orders"
+          value={data.pendingOrders || 0}
+          sub={`${data.shippedOrders || 0} in transit`}
+          icon={ShoppingCart}
+          color="from-orange-500 to-amber-600"
+          trend={{ value: 3, up: false }}
+          data={generateSpark(12)}
+          onClick={() => goto('orders')}
+        />
+        <StatCard
+          label="Low Stock"
+          value={lowStock.length}
+          sub={`${products.filter(p => !p.inStock).length} out of stock`}
+          icon={AlertTriangle}
+          color="from-red-500 to-rose-600"
+          trend={{ value: lowStock.length > 0 ? 15 : 0, up: lowStock.length > 0 }}
+          data={generateSpark(lowStock.length || 3)}
+          onClick={() => goto('products')}
+        />
+      </div>
+
+      {/* Revenue Chart */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-bold">📈 Revenue Trend (12 months)</h3>
+          <span className="text-[9px] text-green-600 font-semibold flex items-center gap-1">
+            <TrendingUp size={12} /> +18% vs last year
+          </span>
+        </div>
+        <LiveChart data={revenueHistory} height={100} color="#6C63FF" />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-4">
+        {/* Low Stock */}
         <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
           <h3 className="text-sm font-bold mb-3 flex items-center gap-2"><AlertTriangle size={15} className="text-amber-500" /> Low Stock Alert ({lowStock.length})</h3>
           {lowStock.length === 0 ? <p className="text-xs text-slate-400 py-4 text-center">All stocked!</p> : lowStock.slice(0, 5).map((p, i) => (
@@ -172,12 +247,12 @@ function Overview() {
           <h3 className="text-sm font-bold mb-3 flex items-center gap-2"><Zap size={15} className="text-indigo-500" /> Quick Actions</h3>
           <div className="space-y-1.5">
             {[
-              { icon: Package, label: 'Manage Products', color: 'indigo', onClick: () => navigate('/admin-panel') },
-              { icon: Megaphone, label: 'Send Broadcast', color: 'purple', onClick: () => setTab('broadcast' as Tab) },
-              { icon: Zap, label: 'New Flash Deal', color: 'orange', onClick: () => setTab('flashdeals' as Tab) },
-              { icon: Tags, label: 'Create Coupon', color: 'green', onClick: () => setTab('coupons' as Tab) },
-              { icon: Gamepad2, label: 'Game Settings', color: 'pink', onClick: () => setTab('settings' as Tab) },
-              { icon: Store, label: 'Vendor Dashboard', color: 'emerald', onClick: () => window.open('/vendor', '_blank') },
+              { icon: Package, label: 'Manage Products', onClick: () => goto('products') },
+              { icon: Megaphone, label: 'Send Broadcast', onClick: () => goto('broadcast') },
+              { icon: Zap, label: 'New Flash Deal', onClick: () => goto('flashdeals') },
+              { icon: Tags, label: 'Create Coupon', onClick: () => goto('coupons') },
+              { icon: DollarSign, label: 'Vendor Payouts', onClick: () => goto('vendors') },
+              { icon: Store, label: 'Vendor Dashboard', onClick: () => window.open('/vendor', '_blank') },
             ].map((item, i) => {
               const Icon = item.icon;
               return (
@@ -234,35 +309,76 @@ function AdminProducts() {
 
 function AdminOrders() {
   const [orders, setOrders] = useState<any[]>([]);
+  const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
   const [statusFilter, setStatusFilter] = useState('');
-  useEffect(() => { ordersApi.list().then(d => setOrders(d?.orders || [])).catch(() => {}); try { const l = JSON.parse(localStorage.getItem('ss_orders') || '[]'); setOrders(prev => [...l, ...prev].slice(0, 100)); } catch {} }, []);
+  const fetchOrders = () => {
+    ordersApi.list().then(d => setOrders(d?.orders || [])).catch(() => {});
+    try { const l = JSON.parse(localStorage.getItem('ss_orders') || '[]'); setOrders(prev => [...l, ...prev].slice(0, 100)); } catch {}
+  };
+  useEffect(fetchOrders, []);
   const updateStatus = async (n: string, s: string) => { await ordersApi.updateStatus(n, s); setOrders(orders.map(o => o.orderNumber === n ? { ...o, status: s } : o)); };
   const filtered = statusFilter ? orders.filter(o => o.status === statusFilter) : orders;
   const statuses = ['all', 'pending', 'confirmed', 'processing', 'shipped', 'delivered', 'completed', 'cancelled'];
+
   return (
     <div className="animate-fadeUp">
-      <h2 className="text-lg font-bold mb-4">📋 Orders ({orders.length})</h2>
-      <div className="flex gap-1.5 mb-4 overflow-x-auto scrollbar-none pb-1">{statuses.map(s => {
-        const count = s === 'all' ? orders.length : orders.filter(o => o.status === s).length;
-        return <button key={s} className={cn('px-3 py-1.5 rounded-xl text-[9px] font-medium whitespace-nowrap border transition-all', (statusFilter === s || (s === 'all' && !statusFilter)) ? 'bg-indigo-500 text-white border-indigo-500' : 'bg-white dark:bg-slate-900 text-slate-500 border-slate-200 dark:border-slate-700')} onClick={() => setStatusFilter(s === 'all' ? '' : s)}>{s.charAt(0).toUpperCase() + s.slice(1)} ({count})</button>;
-      })}</div>
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-        <div className="divide-y divide-slate-100 dark:divide-slate-800">{filtered.slice(0, 50).map(o => (
-          <div key={o.orderNumber} className="p-3 hover:bg-slate-50 dark:hover:bg-slate-800/30">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-950/50 dark:to-purple-950/50 flex items-center justify-center"><ShoppingCart size={13} className="text-indigo-600" /></div>
-                <div className="min-w-0"><div className="text-xs font-bold font-mono text-indigo-600 truncate">{o.orderNumber}</div><div className="text-[9px] text-slate-400 truncate">{o.customer?.name} · {o.date}</div></div>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <span className="text-[10px] font-bold">{formatPrice(o.total || 0)}</span>
-                <select className="text-[9px] bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-1.5 py-1" value={o.status} onChange={e => updateStatus(o.orderNumber, e.target.value)}>{['pending','confirmed','processing','shipped','delivered','completed','cancelled'].map(s => <option key={s} value={s}>{s}</option>)}</select>
-              </div>
-            </div>
-            <div className="text-[9px] text-slate-400 mt-1.5 ml-[42px] truncate">{o.items?.map((it: any) => `${it.name} ×${it.quantity}`).join(', ')}</div>
-          </div>
-        ))}</div>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-bold">📋 Orders ({orders.length})</h2>
+        <div className="flex gap-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl p-0.5">
+          <button className={cn('px-3 py-1.5 rounded-lg text-[9px] font-semibold transition-all flex items-center gap-1', viewMode === 'kanban' ? 'bg-white dark:bg-slate-700 shadow-sm' : 'text-slate-500')} onClick={() => setViewMode('kanban')}>
+            <Columns size={12} /> Kanban
+          </button>
+          <button className={cn('px-3 py-1.5 rounded-lg text-[9px] font-semibold transition-all flex items-center gap-1', viewMode === 'list' ? 'bg-white dark:bg-slate-700 shadow-sm' : 'text-slate-500')} onClick={() => setViewMode('list')}>
+            <List size={12} /> List
+          </button>
+        </div>
       </div>
+
+      {/* Status Filter Pills */}
+      <div className="flex gap-1.5 mb-4 overflow-x-auto scrollbar-none pb-1">
+        {statuses.map(s => {
+          const count = s === 'all' ? orders.length : orders.filter(o => o.status === s).length;
+          return (
+            <button key={s} className={cn('px-3 py-1.5 rounded-xl text-[9px] font-medium whitespace-nowrap border transition-all flex-shrink-0',
+              viewMode === 'kanban' ? 'hidden' : '',
+              (statusFilter === s || (s === 'all' && !statusFilter)) ? 'bg-indigo-500 text-white border-indigo-500' : 'bg-white dark:bg-slate-900 text-slate-500 border-slate-200 dark:border-slate-700'
+            )} onClick={() => setStatusFilter(s === 'all' ? '' : s)}>
+              {s.charAt(0).toUpperCase() + s.slice(1)} ({count})
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Kanban View */}
+      {viewMode === 'kanban' && (
+        <OrderKanban orders={orders} onUpdate={fetchOrders} />
+      )}
+
+      {/* List View */}
+      {viewMode === 'list' && (
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+          <div className="divide-y divide-slate-100 dark:divide-slate-800">
+            {filtered.slice(0, 50).map(o => (
+              <div key={o.orderNumber} className="p-3 hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-950/50 dark:to-purple-950/50 flex items-center justify-center"><ShoppingCart size={13} className="text-indigo-600" /></div>
+                    <div className="min-w-0"><div className="text-xs font-bold font-mono text-indigo-600 truncate">{o.orderNumber}</div><div className="text-[9px] text-slate-400 truncate">{o.customer?.name} · {o.date}</div></div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="text-[10px] font-bold">{formatPrice(o.total || 0)}</span>
+                    <select className="text-[9px] bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-1.5 py-1" value={o.status} onChange={e => updateStatus(o.orderNumber, e.target.value)}>
+                      {['pending','confirmed','processing','shipped','delivered','completed','cancelled'].map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div className="text-[9px] text-slate-400 mt-1.5 ml-[42px] truncate">{o.items?.map((it: any) => `${it.name} ×${it.quantity}`).join(', ')}</div>
+              </div>
+            ))}
+          </div>
+          {filtered.length === 0 && <p className="text-center py-8 text-xs text-slate-400">No orders found</p>}
+        </div>
+      )}
     </div>
   );
 }
@@ -273,6 +389,7 @@ function AdminVendors() {
   const [commission, setCommission] = useState(10);
   const [approved, setApproved] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [vendorView, setVendorView] = useState<'vendors' | 'payouts'>('vendors');
   useEffect(() => { vendorsApi.list().then(d => { setVendors(d?.vendors || []); setLoading(false); }).catch(() => setLoading(false)); }, []);
 
   const updateVendor = async (id: number) => {
@@ -285,36 +402,54 @@ function AdminVendors() {
 
   return (
     <div className="animate-fadeUp space-y-4">
-      <h2 className="text-lg font-bold">🏪 Vendors ({vendors.length})</h2>
-      {selectedVendor && (
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 animate-slideUp">
-          <h3 className="text-sm font-bold mb-3">Edit: {selectedVendor.name || selectedVendor.storeName}</h3>
-          <div className="space-y-3">
-            <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Commission %</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={commission} onChange={e => setCommission(Number(e.target.value))} /></div>
-            <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={approved} onChange={e => setApproved(e.target.checked)} className="rounded" /> Approved Vendor</label>
-            <div className="flex gap-2"><button className="px-4 py-2 bg-primary text-white rounded-xl text-xs font-bold" onClick={() => updateVendor(selectedVendor.id)}>💾 Save</button><button className="px-4 py-2 border rounded-xl text-xs" onClick={() => setSelectedVendor(null)}>Cancel</button></div>
-          </div>
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-lg font-bold">🏪 Vendors ({vendors.length})</h2>
+        {/* Payouts toggle */}
+        <div className="flex gap-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl p-0.5">
+          <button className={cn('px-3 py-1.5 rounded-lg text-[9px] font-semibold transition-all', vendorView === 'vendors' ? 'bg-white dark:bg-slate-700 shadow-sm' : 'text-slate-500')} onClick={() => setVendorView('vendors')}>
+            Vendors
+          </button>
+          <button className={cn('px-3 py-1.5 rounded-lg text-[9px] font-semibold transition-all', vendorView === 'payouts' ? 'bg-white dark:bg-slate-700 shadow-sm' : 'text-slate-500')} onClick={() => setVendorView('payouts')}>
+            <DollarSign size={11} className="inline" /> Payouts
+          </button>
         </div>
-      )}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {vendors.map(v => (
-          <div key={v.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 hover:shadow-lg transition-all">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center text-sm font-bold shadow-md">{v.name?.charAt(0) || v.storeName?.charAt(0) || '?'}</div>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold truncate">{v.name || v.storeName || 'Vendor'}</div>
-                <div className="text-[9px] text-slate-400">{v.email || v.phone || 'No contact'}</div>
-              </div>
-              <span className={cn('px-2 py-0.5 rounded-lg text-[9px] font-semibold', v.approved ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700')}>{v.approved ? 'Approved' : 'Pending'}</span>
-            </div>
-            <div className="flex items-center justify-between text-[10px] text-slate-500 pt-2 border-t border-slate-100 dark:border-slate-800">
-              <span>Commission: <strong>{v.commission || 10}%</strong></span>
-              <button className="text-indigo-600 text-[9px] font-semibold hover:underline" onClick={() => { setSelectedVendor(v); setCommission(v.commission || 10); setApproved(v.approved !== false); }}>Edit</button>
-            </div>
-          </div>
-        ))}
       </div>
-      {vendors.length === 0 && <p className="text-xs text-slate-400 text-center py-8">No vendors</p>}
+
+      {vendorView === 'payouts' ? (
+        <PayoutSystem />
+      ) : (
+        <>
+          {selectedVendor && (
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 animate-slideUp">
+              <h3 className="text-sm font-bold mb-3">Edit: {selectedVendor.name || selectedVendor.storeName}</h3>
+              <div className="space-y-3">
+                <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Commission %</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={commission} onChange={e => setCommission(Number(e.target.value))} /></div>
+                <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={approved} onChange={e => setApproved(e.target.checked)} className="rounded" /> Approved Vendor</label>
+                <div className="flex gap-2"><button className="px-4 py-2 bg-primary text-white rounded-xl text-xs font-bold" onClick={() => updateVendor(selectedVendor.id)}>💾 Save</button><button className="px-4 py-2 border rounded-xl text-xs" onClick={() => setSelectedVendor(null)}>Cancel</button></div>
+              </div>
+            </div>
+          )}
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {vendors.map(v => (
+              <div key={v.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 hover:shadow-lg transition-all">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center text-sm font-bold shadow-md">{v.name?.charAt(0) || v.storeName?.charAt(0) || '?'}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold truncate">{v.name || v.storeName || 'Vendor'}</div>
+                    <div className="text-[9px] text-slate-400">{v.email || v.phone || 'No contact'}</div>
+                  </div>
+                  <span className={cn('px-2 py-0.5 rounded-lg text-[9px] font-semibold', v.approved ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700')}>{v.approved ? 'Approved' : 'Pending'}</span>
+                </div>
+                <div className="flex items-center justify-between text-[10px] text-slate-500 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <span>Commission: <strong>{v.commission || 10}%</strong></span>
+                  <button className="text-indigo-600 text-[9px] font-semibold hover:underline" onClick={() => { setSelectedVendor(v); setCommission(v.commission || 10); setApproved(v.approved !== false); }}>Edit</button>
+                </div>
+              </div>
+            ))}
+          </div>
+          {vendors.length === 0 && <p className="text-xs text-slate-400 text-center py-8">No vendors</p>}
+        </>
+      )}
     </div>
   );
 }
