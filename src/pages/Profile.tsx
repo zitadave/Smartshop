@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { User, Package, Heart, ShoppingCart, Gift, LogOut, Moon, Sun, ChevronRight, Store, Palette, TrendingDown, Bell, HelpCircle, Wallet } from 'lucide-react';
 import ThemePicker from '@/components/features/ThemePicker';
 import CurrencySelector from '@/components/features/CurrencySelector';
+import LanguageSelector from '@/components/features/LanguageSelector';
 import { ActivePriceAlerts } from '@/components/features/PriceDropAlert';
 import { toast } from '@/components/Toast';
 
@@ -196,9 +197,7 @@ export default function Profile() {
         </div>
         <div className="bg-card rounded-xl border border-border p-3">
           <div className="flex items-center gap-2.5 mb-2"><span className="text-base">🌐</span><span className="text-xs font-medium">{t('language', language)}</span></div>
-          <select className="w-full p-2 border border-input rounded-lg text-xs bg-card" value={language} onChange={e => setLanguage(e.target.value as any)}>
-            {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.label}</option>)}
-          </select>
+          <LanguageSelector />
         </div>
       </div>
 
