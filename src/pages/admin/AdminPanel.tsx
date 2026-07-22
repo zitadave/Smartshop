@@ -714,32 +714,184 @@ function AdminBroadcast() {
   const store = useStore();
   const { settings, setSettings, broadcastMessages, setBroadcastMessages } = store;
   const [title, setTitle] = useState(''); const [message, setMessage] = useState(''); const [type, setType] = useState<'info' | 'promo' | 'alert' | 'event'>('info');
+  const [linkUrl, setLinkUrl] = useState(''); const [expiryDate, setExpiryDate] = useState(''); const [btnText, setBtnText] = useState('');
+  const [scheduleDate, setScheduleDate] = useState(''); const [priority, setPriority] = useState<'normal' | 'high' | 'urgent'>('normal');
+
   const sendBroadcast = () => {
     if (!title.trim() || !message.trim()) { toast('❌ Title and message are required', 'error'); return; }
-    const newMsg = { id: generateId(), title: title.trim(), message: message.trim(), icon: type === 'promo' ? '🎉' : type === 'alert' ? '⚠️' : type === 'event' ? '✨' : '📢', type, createdAt: new Date().toISOString(), seen: false };
-    const updated = [...broadcastMessages, newMsg]; setBroadcastMessages(updated); setSettings({ ...settings, broadcastMessages: updated } as any); settingsApi.update({ ...settings, broadcastMessages: updated }); setTitle(''); setMessage('');
+    const newMsg = {
+      id: generateId(),
+      title: title.trim(),
+      message: message.trim(),
+      icon: type === 'promo' ? '🎉' : type === 'alert' ? '⚠️' : type === 'event' ? '✨' : '📢',
+      type, priority,
+      link: linkUrl || undefined,
+      linkText: btnText || undefined,
+      expiresAt: expiryDate || undefined,
+      scheduledAt: scheduleDate || undefined,
+      createdAt: new Date().toISOString(),
+      seen: false
+    };
+    const updated = [newMsg, ...broadcastMessages];
+    setBroadcastMessages(updated);
+    setSettings({ ...settings, broadcastMessages: updated } as any);
+    settingsApi.update({ ...settings, broadcastMessages: updated });
+    setTitle(''); setMessage(''); setLinkUrl(''); setBtnText(''); setExpiryDate(''); setScheduleDate('');
+    toast('✅ Broadcast created! It will appear on the shop.', 'success');
+    sendAdminTelegram(`📢 <b>New Broadcast</b>\n\n<b>${newMsg.title}</b>\n${newMsg.message}\n\nType: ${type} | Priority: ${priority}`);
   };
-  const deleteBroadcast = (id: string) => { const updated = broadcastMessages.filter(m => m.id !== id); setBroadcastMessages(updated); setSettings({ ...settings, broadcastMessages: updated } as any); settingsApi.update({ ...settings, broadcastMessages: updated }); return false; };
-  const typeColors: Record<string, string> = { info: 'from-blue-500 to-blue-600', promo: 'from-orange-500 to-amber-600', alert: 'from-red-500 to-rose-600', event: 'from-purple-500 to-violet-600' };
+
+  const deleteBroadcast = (id: string) => {
+    const updated = broadcastMessages.filter(m => m.id !== id);
+    setBroadcastMessages(updated);
+    setSettings({ ...settings, broadcastMessages: updated } as any);
+    settingsApi.update({ ...settings, broadcastMessages: updated });
+    toast('🗑️ Deleted', 'info');
+  };
+
+  const typeColors: Record<string, string> = {
+    info: 'from-blue-500 to-blue-600',
+    promo: 'from-orange-500 to-amber-600',
+    alert: 'from-red-500 to-rose-600',
+    event: 'from-purple-500 to-violet-600'
+  };
+  const priorityBadges: Record<string, string> = {
+    normal: 'bg-slate-100 text-slate-600',
+    high: 'bg-orange-100 text-orange-700',
+    urgent: 'bg-red-100 text-red-700'
+  };
+
+  const scheduledCount = broadcastMessages.filter((m: any) => m.scheduledAt).length;
+  const activeCount = broadcastMessages.filter((m: any) => !m.expiresAt || new Date(m.expiresAt) > new Date()).length;
+
   return (
-    <div className="animate-fadeUp space-y-4">
-      <h2 className="text-lg font-bold">📢 Broadcasts ({broadcastMessages.length})</h2>
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
-        <h3 className="text-sm font-bold mb-3">New Broadcast</h3>
-        <div className="grid sm:grid-cols-2 gap-3">
-          <input className="p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" placeholder="Title" value={title} onChange={e => setTitle(e.target.value)} maxLength={50} />
-          <select className="p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={type} onChange={e => setType(e.target.value as any)}><option value="info">📢 Info</option><option value="promo">🎉 Promo</option><option value="alert">⚠️ Alert</option><option value="event">✨ Event</option></select>
+    <div className="animate-fadeUp space-y-4 max-w-full overflow-x-hidden">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <h2 className="text-lg font-bold">📢 Broadcast Studio ({broadcastMessages.length})</h2>
+          <p className="text-[10px] text-slate-500">Create, schedule and manage in-app announcements for all users</p>
         </div>
-        <textarea className="w-full mt-3 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent resize-none h-20" placeholder="Message" value={message} onChange={e => setMessage(e.target.value)} maxLength={200} />
-        <button className="mt-3 w-full py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-bold hover:shadow-lg transition-all" onClick={sendBroadcast}>📢 Send Broadcast</button>
+        <div className="flex gap-2">
+          <span className="px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-[9px] font-semibold">{activeCount} active</span>
+          {scheduledCount > 0 && <span className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-[9px] font-semibold">{scheduledCount} scheduled</span>}
+        </div>
       </div>
-      <div className="space-y-2">{broadcastMessages.slice(0, 10).map(m => (
-        <div key={m.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 flex items-start gap-3">
-          <div className={cn('w-8 h-8 rounded-xl bg-gradient-to-br flex items-center justify-center text-white text-sm', typeColors[m.type])}>{m.icon || '📢'}</div>
-          <div className="flex-1 min-w-0"><div className="text-xs font-bold">{m.title}</div><div className="text-[10px] text-slate-500 mt-0.5">{m.message}</div></div>
-          <button className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600" onClick={() => deleteBroadcast(m.id)}><Trash2 size={12} /></button>
+
+      {/* Create Form - Comprehensive */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
+        <h3 className="text-sm font-bold mb-3">✍️ Create Campaign</h3>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <div>
+            <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Title *</label>
+            <input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" placeholder="e.g. Weekend Mega Sale" value={title} onChange={e => setTitle(e.target.value)} maxLength={60} />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Type</label>
+              <select className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={type} onChange={e => setType(e.target.value as any)}>
+                <option value="info">📢 Info - General</option>
+                <option value="promo">🎉 Promo - Sales & Offers</option>
+                <option value="alert">⚠️ Alert - Important</option>
+                <option value="event">✨ Event - Announcements</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Priority</label>
+              <select className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={priority} onChange={e => setPriority(e.target.value as any)}>
+                <option value="normal">🟢 Normal</option>
+                <option value="high">🟠 High</option>
+                <option value="urgent">🔴 Urgent</option>
+              </select>
+            </div>
+          </div>
         </div>
-      ))}</div>
+
+        <div className="mt-3">
+          <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Message *</label>
+          <textarea className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent resize-none h-20" placeholder="Write your broadcast message here. Keep it concise (max 300 chars)." value={message} onChange={e => setMessage(e.target.value)} maxLength={300} />
+          <div className="text-right text-[8px] text-slate-400">{message.length}/300</div>
+        </div>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
+          <div>
+            <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Link URL (optional)</label>
+            <input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" placeholder="https://..." value={linkUrl} onChange={e => setLinkUrl(e.target.value)} />
+          </div>
+          <div>
+            <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Button Text</label>
+            <input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" placeholder="Learn More / Shop Now" value={btnText} onChange={e => setBtnText(e.target.value)} />
+          </div>
+          <div>
+            <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Expiry Date</label>
+            <input type="date" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={expiryDate} onChange={e => setExpiryDate(e.target.value)} />
+          </div>
+          <div>
+            <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Schedule For</label>
+            <input type="datetime-local" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={scheduleDate} onChange={e => setScheduleDate(e.target.value)} />
+          </div>
+        </div>
+
+        <div className="flex gap-2 mt-4 flex-wrap">
+          <button className="flex-1 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-bold hover:shadow-lg disabled:opacity-50" onClick={sendBroadcast} disabled={!title.trim() || !message.trim()}>
+            {scheduleDate ? '📅 Schedule Broadcast' : '📢 Send to All Users'}
+          </button>
+          <button className="px-4 py-2.5 border border-slate-200 rounded-xl text-xs font-medium hover:bg-slate-50" onClick={() => { setTitle(''); setMessage(''); setLinkUrl(''); setBtnText(''); setExpiryDate(''); setScheduleDate(''); }}>Clear</button>
+        </div>
+      </div>
+
+      {/* Active Campaigns */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-x-hidden">
+        <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+          <h3 className="text-sm font-bold">Campaign History ({broadcastMessages.length})</h3>
+          <div className="flex gap-1.5">
+            <span className="text-[9px] px-2 py-1 rounded bg-blue-50 text-blue-700">📢 {broadcastMessages.filter((m: any) => m.type === 'info').length} Info</span>
+            <span className="text-[9px] px-2 py-1 rounded bg-orange-50 text-orange-700">🎉 {broadcastMessages.filter((m: any) => m.type === 'promo').length} Promo</span>
+            <span className="text-[9px] px-2 py-1 rounded bg-red-50 text-red-700">⚠️ {broadcastMessages.filter((m: any) => m.type === 'alert').length} Alert</span>
+          </div>
+        </div>
+        <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-96 overflow-y-auto">
+          {broadcastMessages.slice(0, 30).length === 0 && (
+            <div className="text-center py-10 text-xs text-slate-400"><Megaphone size={32} className="mx-auto mb-2 text-slate-300" />No broadcasts yet. Create your first campaign above!</div>
+          )}
+          {broadcastMessages.slice(0, 30).map((m: any) => {
+            const isExpired = m.expiresAt && new Date(m.expiresAt) < new Date();
+            const isScheduled = m.scheduledAt && new Date(m.scheduledAt) > new Date();
+            return (
+              <div key={m.id} className="p-3 hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                <div className="flex items-start gap-3">
+                  <div className={cn('w-9 h-9 rounded-xl bg-gradient-to-br flex items-center justify-center text-white flex-shrink-0', typeColors[m.type])}>{m.icon || '📢'}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-bold">{m.title}</span>
+                      <span className={cn('text-[8px] px-1.5 py-0.5 rounded font-semibold', priorityBadges[m.priority || 'normal'])}>{(m.priority || 'normal').toUpperCase()}</span>
+                      {isExpired && <span className="text-[8px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">EXPIRED</span>}
+                      {isScheduled && <span className="text-[8px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">SCHEDULED</span>}
+                      {m.seen ? '👁️' : '🆕'}
+                    </div>
+                    <div className="text-[10px] text-slate-500 mt-0.5">{m.message}</div>
+                    <div className="flex gap-3 text-[8px] text-slate-400 mt-1 flex-wrap">
+                      <span>{new Date(m.createdAt).toLocaleDateString()} {new Date(m.createdAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span>
+                      <span className="capitalize">📁 {m.type}</span>
+                      {m.link && <a href={m.link} className="text-indigo-500 underline" target="_blank">{m.linkText || 'Link'} ↗</a>}
+                      {m.expiresAt && <span>⏳ Exp: {new Date(m.expiresAt).toLocaleDateString()}</span>}
+                      {m.scheduledAt && <span>📅 {new Date(m.scheduledAt).toLocaleDateString()}</span>}
+                    </div>
+                  </div>
+                  <button className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 flex-shrink-0" onClick={() => deleteBroadcast(m.id)}><Trash2 size={12} /></button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 text-center"><div className="text-lg font-bold text-indigo-600">{broadcastMessages.length}</div><div className="text-[9px] text-slate-500">Total Campaigns</div></div>
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 text-center"><div className="text-lg font-bold text-green-600">{activeCount}</div><div className="text-[9px] text-slate-500">Active Now</div></div>
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 text-center"><div className="text-lg font-bold text-orange-600">{scheduledCount}</div><div className="text-[9px] text-slate-500">Scheduled</div></div>
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 text-center"><div className="text-lg font-bold text-red-600">{broadcastMessages.filter((m: any) => m.priority === 'urgent').length}</div><div className="text-[9px] text-slate-500">Urgent</div></div>
+      </div>
     </div>
   );
 }

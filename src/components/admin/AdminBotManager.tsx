@@ -81,8 +81,12 @@ export default function AdminBotManager() {
     setSending(false);
   };
 
-  /** FIXED: Queues notification locally AND sends via Telegram API */
+  /** Demo: queues locally AND sends to Telegram (only if toggle is ON) */
   const demoNotification = (type: AdminNotification['type']) => {
+    if (alertConfig[type] === false) {
+      toast(`⛔ ${type === 'new_order' ? 'New Order' : 'Low Stock'} notifications are disabled in the rules above. Toggle them ON first.`, 'error');
+      return;
+    }
     let n: AdminNotification;
     if (type === 'new_order') {
       n = generateNewOrderNotification({ orderNumber: 'ETH-DEMO-' + Date.now().toString(36).toUpperCase(), total: 4500, customerName: 'Abebe K.', itemCount: 3, paymentMethod: 'Telebirr' });
@@ -91,10 +95,9 @@ export default function AdminBotManager() {
     }
     queueNotification(n);
     refreshNotifs();
-    // Also send via Telegram API if configured
     notifyDemo(type).then(sent => {
-      if (sent) toast(`📨 ${n.title} sent to Telegram!`, 'success');
-      else toast(`📨 ${n.title} — queued locally (configure bot token to send to Telegram)`, 'info');
+      if (sent) toast(`📨 ${n.title} sent to Telegram chat!`, 'success');
+      else toast(`📨 ${n.title} queued locally (configure bot token + chat ID above to send to Telegram)`, 'info');
     });
   };
 

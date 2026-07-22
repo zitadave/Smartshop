@@ -10,7 +10,7 @@ import { CardSkeleton } from '@/components/ui/Skeletons';
 import { showQuickView } from '@/components/ui/QuickView';
 import { CATEGORIES } from '@/types';
 import { cn } from '@/lib/utils';
-import { Sparkles, Clock, Star, ChevronRight, Zap, Megaphone } from 'lucide-react';
+import { Sparkles, Clock, Star, ChevronRight, Zap, Megaphone, TrendingUp } from 'lucide-react';
 import { useButtonAnimation, useWishlistAnimation } from '@/hooks/useAnimations';
 import { useCart } from '@/hooks/useCart';
 import { productsApi } from '@/lib/api';
@@ -19,27 +19,26 @@ import { toast } from '@/components/Toast';
 import FlashDealTimer, { useFlashDeals } from '@/components/features/FlashDealTimer';
 import BroadcastBanner from '@/components/features/BroadcastBanner';
 
-/** Sponsored/Promoted Products Section */
-function SponsoredSection({ products, settings, onAdd, onWish, btnAnim, wishAnim }: any) {
+/** Trending Products Section - shows sponsored/featured items */
+function TrendingSection({ products, settings, onAdd, onWish, btnAnim, wishAnim }: any) {
   const sponsoredIds = settings.sponsoredProducts || [];
   if (sponsoredIds.length === 0) return null;
-  const sponsored = products.filter((p: any) => sponsoredIds.includes(p.id));
-  if (sponsored.length === 0) return null;
+  const trending = products.filter((p: any) => sponsoredIds.includes(p.id));
+  if (trending.length === 0) return null;
   return (
     <section className="mt-2 animate-fadeUp">
       <SectionHeader
-        icon={<Megaphone size={15} className="text-white" />}
-        title="💼 Promoted Products"
-        subtitle="Sponsored & featured products"
-        gradient="from-indigo-500 to-purple-600"
+        icon={<TrendingUp size={15} className="text-white" />}
+        title="🔥 Trending Products"
+        subtitle="Most popular picks right now"
+        gradient="from-rose-500 to-pink-600"
       />
       <HorizontalScroll>
-        {sponsored.map((p: any) => (
-          <div key={p.id} className="relative flex-shrink-0 w-44">
+        {trending.map((p: any) => (
+          <div key={p.id} className="flex-shrink-0 w-44">
             <ProductCard product={p} variant="mini"
               onAdd={onAdd} onWish={onWish}
               addingId={btnAnim.activeId} wishAnimId={wishAnim.activeId} />
-            <span className="absolute top-1 right-1 text-[8px] bg-indigo-500 text-white px-1.5 py-0.5 rounded font-bold">PROMOTED</span>
           </div>
         ))}
       </HorizontalScroll>
@@ -151,7 +150,7 @@ export default function Home() {
       )}
 
       {/* Sponsored / Promoted Products */}
-      <SponsoredSection
+      <TrendingSection
         products={products}
         settings={settings}
         onAdd={handleAdd}
