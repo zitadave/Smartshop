@@ -12,7 +12,7 @@ import {
   Search, Plus, Edit3, Trash2, Eye, EyeOff, Check, Loader, ChevronDown,
   DollarSign, Star, Activity, AlertTriangle, Sun, Moon, Gift, CreditCard,
   Gamepad2, Coins, Smartphone, ExternalLink, Command, Columns, List, Database,
-  Truck, RotateCcw, RefreshCw
+  Truck, RotateCcw, RefreshCw, Landmark, BookOpen
 } from 'lucide-react';
 import CommandPalette from '@/components/admin/CommandPalette';
 import LiveChart, { StatCard } from '@/components/admin/LiveChart';
