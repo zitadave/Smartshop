@@ -504,6 +504,69 @@ export default async function handler(req: any, res: any) {
       return res.json({ products: count || 0, telegramUsers: telegramUsers?.length || 0, message: 'Smart Shop API running on Vercel!' });
     }
 
+
+    // ===== ADMIN BOT - Send file to Telegram =====
+    if (path === '/api/admin-bot/send-file' && method === 'POST') {
+      if (!ADMIN_BOT_TOKEN) return res.status(200).json({ sent: false, error: 'No bot token' });
+      const { chatId, filename, content, contentType, caption } = req.body || {};
+      if (!chatId || !content) return res.status(400).json({ error: 'chatId and content required' });
+      try {
+        const boundary = '----FormBoundary' + Math.random().toString(36).substring(2);
+        const fileContent = typeof content === 'string' ? content : JSON.stringify(content);
+        const parts = [];
+        parts.push('--' + boundary);
+        parts.push('Content-Disposition: form-data; name="chat_id"');
+        parts.push('');
+        parts.push(String(chatId));
+        parts.push('--' + boundary);
+        parts.push('Content-Disposition: form-data; name="document"; filename="' + (filename || 'file.csv') + '"');
+        parts.push('Content-Type: ' + (contentType || 'text/csv'));
+        parts.push('');
+        parts.push(fileContent);
+        if (caption) {
+          parts.push('--' + boundary);
+          parts.push('Content-Disposition: form-data; name="caption"');
+          parts.push('');
+          parts.push(caption);
+        }
+        parts.push('--' + boundary + '--');
+        const body = parts.join('\r\n');
+        const result = await fetch('https://api.telegram.org/bot' + ADMIN_BOT_TOKEN + '/sendDocument', {
+          method: 'POST',
+          headers: { 'Content-Type': 'multipart/form-data; boundary=' + boundary },
+          body: body,
+        });
+        const data = await result.json();
+        return res.json({ sent: data.ok === true, description: data.description });
+      } catch (e: any) {
+        return res.json({ sent: false, error: e.message });
+      }
+    }
+
+    // ===== COMMISSION - Calculate =====
+    if (path === '/api/commission/calculate' && method === 'POST') {
+      const { productId, price, vendorId, category } = req.body || {};
+      const { data: settingsData } = await supabase.from('settings').select('*').single();
+      const s = settingsData?.data || {};
+      const globalCommission = s.vendorCommission || 10;
+      const categoryCommissions = s.categoryCommission || {};
+      const vendorCommissions = s.vendorCommissionOverride || {};
+      let commissionRate = globalCommission;
+      let source = 'global';
+      if (vendorId && vendorCommissions[vendorId]) { commissionRate = vendorCommissions[vendorId]; source = 'vendor_' + vendorId; }
+      else if (category && categoryCommissions[category]) { commissionRate = categoryCommissions[category]; source = 'category_' + category; }
+      const commissionAmount = Math.round((price || 0) * commissionRate / 100);
+      const vendorPayout = (price || 0) - commissionAmount;
+      return res.json({ commissionRate, commissionAmount, vendorPayout, source, productPrice: price || 0 });
+    }
+
+    // ===== COMMISSION - Settings =====
+    if (path === '/api/commission/settings' && method === 'GET') {
+      const { data: settingsData } = await supabase.from('settings').select('*').single();
+      const s = settingsData?.data || {};
+      return res.json({ globalCommission: s.vendorCommission || 10, categoryCommission: s.categoryCommission || {}, vendorCommissionOverride: s.vendorCommissionOverride || {} });
+    }
+
     // ===== PAYMENT - Initiate Chapa Payment =====
     if (path === '/api/payment/initiate-chapa' && method === 'POST') {
       const { amount, email, firstName, lastName, phone, txRef, orderNumber } = req.body || {};
@@ -635,103 +698,3 @@ export default async function handler(req: any, res: any) {
     return res.status(500).json({ error: e.message });
   }
 }
-
-    // ================================================================
-    // ADMIN BOT — Send file to Telegram chat
-    // ================================================================
-    if (path === '/api/admin-bot/send-file' && method === 'POST') {
-      if (!ADMIN_BOT_TOKEN) return res.status(200).json({ sent: false, error: 'No bot token' });
-      const { chatId, filename, content, contentType, caption } = req.body || {};
-      if (!chatId || !content) return res.status(400).json({ error: 'chatId and content required' });
-
-      try {
-        // Use Telegram sendDocument API with file content as FormData
-        const boundary = '----FormBoundary' + Math.random().toString(36).substring(2);
-        const enc = new TextEncoder();
-        const fileContent = typeof content === 'string' ? content : JSON.stringify(content);
-        const fileBytes = enc.encode(fileContent);
-        
-        // Build multipart body manually
-        const parts = [];
-        parts.push('--' + boundary);
-        parts.push('Content-Disposition: form-data; name="chat_id"');
-        parts.push('');
-        parts.push(String(chatId));
-        
-        parts.push('--' + boundary);
-        parts.push(`Content-Disposition: form-data; name="document"; filename="${filename || 'file.csv'}"`);
-        parts.push(`Content-Type: ${contentType || 'text/csv'}`);
-        parts.push('');
-        parts.push(fileContent);
-        
-        if (caption) {
-          parts.push('--' + boundary);
-          parts.push('Content-Disposition: form-data; name="caption"');
-          parts.push('');
-          parts.push(caption);
-        }
-        
-        parts.push('--' + boundary + '--');
-        
-        const body = parts.join('\r\n');
-        
-        const result = await fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN}/sendDocument`, {
-          method: 'POST',
-          headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}` },
-          body: body,
-        });
-        const data = await result.json();
-        return res.json({ sent: data.ok === true, description: data.description });
-      } catch (e: any) {
-        return res.json({ sent: false, error: e.message });
-      }
-    }
-
-    // ================================================================
-    // COMMISSION — Calculate commission for a product
-    // ================================================================
-    if (path === '/api/commission/calculate' && method === 'POST') {
-      const { productId, price, vendorId, category } = req.body || {};
-      // Get settings for commission rates
-      const { data: settingsData } = await supabase.from('settings').select('*').single();
-      const s = settingsData?.data || {};
-      const globalCommission = s.vendorCommission || 10;
-      const categoryCommissions = s.categoryCommission || {};
-      const vendorCommissions = s.vendorCommissionOverride || {};
-      
-      // Commission priority: vendor-specific > category-specific > global
-      let commissionRate = globalCommission;
-      let source = 'global';
-      
-      if (vendorId && vendorCommissions[vendorId]) {
-        commissionRate = vendorCommissions[vendorId];
-        source = `vendor_${vendorId}`;
-      } else if (category && categoryCommissions[category]) {
-        commissionRate = categoryCommissions[category];
-        source = `category_${category}`;
-      }
-      
-      const commissionAmount = Math.round((price || 0) * commissionRate / 100);
-      const vendorPayout = (price || 0) - commissionAmount;
-      
-      return res.json({
-        commissionRate,
-        commissionAmount,
-        vendorPayout,
-        source,
-        productPrice: price || 0,
-      });
-    }
-
-    // ================================================================
-    // COMMISSION — Update commission settings
-    // ================================================================
-    if (path === '/api/commission/settings' && method === 'GET') {
-      const { data: settingsData } = await supabase.from('settings').select('*').single();
-      const s = settingsData?.data || {};
-      return res.json({
-        globalCommission: s.vendorCommission || 10,
-        categoryCommission: s.categoryCommission || {},
-        vendorCommissionOverride: s.vendorCommissionOverride || {},
-      });
-    }
