@@ -7,7 +7,8 @@ import { CheckoutSteps } from '@/components/ui/CheckoutSteps';
 import { haptic } from '@/lib/confetti';
 import { getTelegramUser } from '@/lib/telegram';
 import { createFulfillment, upsertFulfillment } from '@/lib/orderFulfillment';
-import { ArrowLeft, MapPin, CreditCard, Package } from 'lucide-react';
+import { addManualPayment } from '@/components/admin/ManualPaymentReview';
+import { ArrowLeft, MapPin, CreditCard, Package, Banknote, Copy, CheckCircle } from 'lucide-react';
 
 export default function Checkout() {
   const navigate = useNavigate();
@@ -27,9 +28,30 @@ export default function Checkout() {
   const [payment, setPayment] = useState('telebirr');
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'delivery' | 'payment'>('delivery');
+  // Manual payment fields
+  const [manualBank, setManualBank] = useState('');
+  const [manualReceipt, setManualReceipt] = useState('');
+  const [manualAmount, setManualAmount] = useState('');
+  const [manualNote, setManualNote] = useState('');
+  const [manualSubmitted, setManualSubmitted] = useState(false);
+
+  const BANK_ACCOUNTS = [
+    { name: 'Commercial Bank of Ethiopia', account: '100000XXXXXXX', holder: 'Smart Shop Trading PLC' },
+    { name: 'Dashen Bank', account: '0987654321', holder: 'Smart Shop Trading PLC' },
+  ];
 
   const placeOrder = async () => {
     if (!name || !phone || !city) { alert('Please fill all fields'); return; }
+
+    // For manual payment, validate receipt info
+    if (payment === 'manual') {
+      if (!manualBank || !manualReceipt) {
+        alert('Please select your bank and enter the receipt number');
+        return;
+      }
+      setManualSubmitted(true);
+    }
+
     setLoading(true);
     haptic('medium');
 
@@ -50,7 +72,7 @@ export default function Checkout() {
       language,
     };
 
-    addSavedPayment({ type: payment, icon: payment === 'telebirr' ? '📱' : payment === 'cbebirr' ? '🏦' : payment === 'chapa' ? '💳' : '💵', name: payment, number: phone });
+    addSavedPayment({ type: payment, icon: payment === 'telebirr' ? '📱' : payment === 'cbebirr' ? '🏦' : payment === 'chapa' ? '💳' : payment === 'manual' ? '🏦' : '💵', name: payment, number: phone });
 
     try {
       const res = await fetch('/api/orders', {
@@ -80,6 +102,20 @@ export default function Checkout() {
     addOrder(order);
     addNotification('📦', 'Order placed! #' + order.orderNumber);
     addNotification('🏪', 'Vendor has been notified about your order #' + order.orderNumber);
+    // For manual payment, create the review entry instead of clearing cart yet
+    if (payment === 'manual') {
+      addManualPayment({
+        orderNumber: order.orderNumber,
+        customerName: name,
+        customerPhone: phone,
+        amount: total,
+        bankName: manualBank,
+        receiptNumber: manualReceipt,
+        paidAmount: manualAmount,
+        note: manualNote,
+      });
+    }
+
     clearCart();
     setLoading(false);
     haptic('success');
@@ -175,13 +211,50 @@ export default function Checkout() {
                 ))}
               </div>
             )}
-            {[{ id: 'telebirr', icon: '📱', label: 'Telebirr' }, { id: 'cbebirr', icon: '🏦', label: 'CBE Birr' }, { id: 'chapa', icon: '💳', label: 'Chapa (Bank/Card)' }].map(p => (
+            {[{ id: 'telebirr', icon: '📱', label: 'Telebirr' }, { id: 'cbebirr', icon: '🏦', label: 'CBE Birr' }, { id: 'chapa', icon: '💳', label: 'Chapa (Bank/Card)' }, { id: 'manual', icon: '🏛️', label: 'Bank Transfer (Manual)' }].map(p => (
               <div key={p.id} className={`flex items-center gap-2.5 px-3 py-3 rounded-xl mb-1.5 cursor-pointer text-xs border transition-all ${payment === p.id ? 'border-primary bg-primary/5 shadow-sm' : 'border-border/60 hover:border-primary/30'}`} onClick={() => setPayment(p.id)}>
                 <span className="text-base">{p.icon}</span><span className="font-medium">{p.label}</span>
                 {payment === p.id && <span className="ml-auto text-primary font-bold">✓</span>}
               </div>
             ))}
           </div>
+          {/* Manual Payment Form */}
+          {payment === 'manual' && !manualSubmitted && (
+            <div className="bg-card rounded-2xl border border-amber-200 dark:border-amber-800 p-4 shadow-sm animate-fadeUp">
+              <h3 className="text-xs font-bold mb-3 flex items-center gap-2"><Banknote size={14} className="text-amber-600" /> Bank Transfer Details</h3>
+              <div className="space-y-2 mb-3">
+                {BANK_ACCOUNTS.map((b, i) => (
+                  <div key={i} className={cn('p-2.5 rounded-xl border text-[10px] cursor-pointer transition-all', manualBank === b.name ? 'border-primary bg-primary/5' : 'border-border/60 hover:border-primary/30')} onClick={() => setManualBank(b.name)}>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold">🏦 {b.name}</span>
+                      {manualBank === b.name && <CheckCircle size={12} className="text-primary ml-auto" />}
+                    </div>
+                    <div className="text-muted-foreground font-mono mt-0.5">Account: {b.account}</div>
+                    <div className="text-muted-foreground">Name: {b.holder}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-2">
+                <input className="w-full p-2.5 border border-border/60 rounded-xl text-xs bg-transparent" placeholder="Receipt / Transaction Number *" value={manualReceipt} onChange={e => setManualReceipt(e.target.value)} />
+                <input type="number" className="w-full p-2.5 border border-border/60 rounded-xl text-xs bg-transparent" placeholder="Amount You Paid (Br)" value={manualAmount} onChange={e => setManualAmount(e.target.value)} />
+                <textarea className="w-full p-2.5 border border-border/60 rounded-xl text-xs bg-transparent resize-none h-16" placeholder="Optional note for admin..." value={manualNote} onChange={e => setManualNote(e.target.value)} />
+              </div>
+              <p className="text-[9px] text-amber-600 mt-2">After submitting, your order will be reviewed by admin. You'll be notified once approved.</p>
+            </div>
+          )}
+
+          {/* Manual submitted confirmation */}
+          {payment === 'manual' && manualSubmitted && (
+            <div className="bg-card rounded-2xl border border-emerald-200 p-4 shadow-sm animate-fadeUp">
+              <div className="flex items-center gap-2 text-emerald-700">
+                <CheckCircle size={18} />
+                <span className="text-xs font-bold">Payment Receipt Submitted!</span>
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-1">Bank: {manualBank} · Receipt: {manualReceipt}</p>
+              <p className="text-[9px] text-amber-600 mt-1">⏳ Your order is pending admin approval. We'll notify you once confirmed.</p>
+            </div>
+          )}
+
           <div className="bg-card rounded-2xl border border-border p-4 shadow-sm">
             <div className="flex justify-between text-xs text-muted-foreground mb-1"><span>Subtotal</span><span>{formatPrice(total)}</span></div>
             <div className="flex justify-between text-xs text-muted-foreground mb-1"><span>Delivery</span><span className="text-green-600 font-medium">Free</span></div>

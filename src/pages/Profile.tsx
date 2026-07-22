@@ -16,7 +16,7 @@ import { toast } from '@/components/Toast';
 export default function Profile() {
   const navigate = useNavigate();
   const store = useStore();
-  const { profile, language, setLanguage, darkMode, setDarkMode, orders, wishlist, cart, followedVendors, loyaltyPoints, savedPayments, preOrders, notifications, savedAddresses, walletBalance, walletHistory, isTelegramVerified, telegramId } = store;
+  const { profile, language, setLanguage, darkMode, setDarkMode, orders, wishlist, cart, followedVendors, loyaltyPoints, savedPayments, preOrders, notifications, savedAddresses, walletBalance, walletHistory, isTelegramVerified, telegramId, settings } = store;
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showWallet, setShowWallet] = useState(false);
   const [editName, setEditName] = useState(profile.name);
@@ -66,7 +66,7 @@ export default function Profile() {
       title: 'Engagement',
       items: [
         { icon: '🏆', label: 'Loyalty & Rewards', onClick: () => navigate('/loyalty') },
-        { icon: '🏪', label: 'Vendor Dashboard', onClick: () => navigate('/vendor') },
+        ...(settings.marketplaceMode !== false ? [{ icon: '🏪', label: 'Vendor Dashboard', onClick: () => navigate('/vendor') }] : []),
         { icon: '📉', label: 'Price Alerts', badge: store.priceAlerts.length, onClick: () => navigate('/price-alerts') },
         { icon: '🔔', label: 'Notifications', badge: notifications.length, onClick: () => navigate('/notifications') },
         { icon: '❓', label: 'Help & Support', onClick: () => navigate('/help') },

@@ -12,7 +12,7 @@ import {
   Search, Plus, Edit3, Trash2, Eye, EyeOff, Check, Loader, ChevronDown,
   DollarSign, Star, Activity, AlertTriangle, Sun, Moon, Gift, CreditCard,
   Gamepad2, Coins, Smartphone, ExternalLink, Command, Columns, List, Database,
-  Truck, RotateCcw, RefreshCw, Landmark, BookOpen
+  Truck, RotateCcw, RefreshCw, Landmark, BookOpen, Banknote
 } from 'lucide-react';
 import CommandPalette from '@/components/admin/CommandPalette';
 import LiveChart, { StatCard } from '@/components/admin/LiveChart';
@@ -36,6 +36,7 @@ import AdminSecurity from '@/components/admin/AdminSecurity';
 import AdminBotManager from '@/components/admin/AdminBotManager';
 import TaxFinanceDashboard from '@/components/admin/TaxFinanceDashboard';
 import SmartBooks from '@/components/admin/SmartBooks';
+import ManualPaymentReview from '@/components/admin/ManualPaymentReview';
 import ProductStudio from '@/components/admin/ProductStudio';
 import ToastContainer from '@/components/Toast';
 import { sendAdminTelegram, notifyProductCreated, notifyProductUpdated, notifyProductDeleted, notifySettingsChanged, notifyVendorUpdated } from '@/lib/adminNotifier';
@@ -44,7 +45,7 @@ type Tab = 'overview' | 'products' | 'orders' | 'vendors' | 'marketplace' | 'rev
   | 'broadcast' | 'flashdeals' | 'preorders' | 'tracking' | 'themes' | 'coupons' 
   | 'settings' | 'alerts' | 'abandoned' | 'roles' | 'backup' | 'adminTheme' 
   | 'bulkProducts' | 'analytics' | 'forecast' | 'activity' | 'security' | 'telegram' 
-  | 'fulfillment' | 'sla' | 'driver' | 'returns' | 'finance' | 'smartbooks';
+  | 'fulfillment' | 'sla' | 'driver' | 'returns' | 'finance' | 'smartbooks' | 'manualpayments';
 
 export default function AdminLayout() {
   const [tab, setTab] = useState<Tab>('overview');
@@ -183,6 +184,7 @@ export default function AdminLayout() {
           {tab === 'sla' && <SLAMonitor />}
           {tab === 'driver' && <DriverTracker />}
           {tab === 'returns' && <ReturnsManager />}
+          {tab === 'manualpayments' && <ManualPaymentReview />}
           {tab === 'finance' && <TaxFinanceDashboard />}
           {tab === 'smartbooks' && <SmartBooks />}
           {tab === 'settings' && <AdminSettings />}
