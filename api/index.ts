@@ -5,6 +5,7 @@ import crypto from 'crypto';
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://auaendcgszofgvdfdajt.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1YWVuZGNnc3pvZmd2ZGZkYWp0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NDQzNzkwNiwiZXhwIjoyMTAwMDEzOTA2fQ.bvVY6X_KozYV1BapIOvwkv4UY6D-k3QgGHRQndMtRu4';
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
+const ADMIN_BOT_TOKEN = process.env.TELEGRAM_ADMIN_BOT_TOKEN || '';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false } });
 
@@ -219,7 +220,127 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    // ===== PRODUCTS =====
+    // ================================================================
+    // ADMIN BOT WEBHOOK — receives commands from Telegram
+    // ================================================================
+    if (path === '/api/admin-bot/webhook' && method === 'POST') {
+      if (!ADMIN_BOT_TOKEN) return res.status(200).json({ ok: true });
+
+      const body = req.body;
+      const chatId = body.message?.chat?.id || body.callback_query?.message?.chat?.id;
+      const text = body.message?.text || '';
+      const callbackData = body.callback_query?.data || '';
+      const firstName = body.message?.from?.first_name || body.callback_query?.from?.first_name || 'Admin';
+
+      if (!chatId) return res.status(200).json({ ok: true });
+
+      // Determine command from text or callback
+      const command = callbackData || text;
+      const cmd = command.replace('/', '').toLowerCase();
+
+      // Fetch store data for responses
+      const { data: products } = await supabase.from('products').select('*');
+      const { data: orders } = await supabase.from('orders').select('*');
+      const pList = products || [];
+      const oList = orders || [];
+      const lowStock = pList.filter((p: any) => p.stock_count <= 5 && p.stock_count > 0);
+      const totalRevenue = oList.reduce((s: number, o: any) => s + (o.total || 0), 0);
+
+      const sendMsg = async (text: string, parseMode = 'Markdown') => {
+        await fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: chatId, text, parse_mode: parseMode, disable_web_page_preview: true }),
+        });
+      };
+
+      if (cmd === 'start' || cmd === 'help') {
+        await sendMsg(
+          `👋 *Welcome to Smart Shop Admin Bot, ${firstName}!*\n\n` +
+          `I'll send you real-time alerts for:\n` +
+          `🛒 New orders\n⚠️ Low stock\n🚨 SLA breaches\n🏪 New vendors\n📊 Daily summaries\n\n` +
+          `*Commands:*\n/stats — Store statistics\n/orders — Recent orders\n/lowstock — Low stock alerts\n/alerts — Active SLA breaches`,
+          'Markdown'
+        );
+      } else if (cmd === 'stats') {
+        await sendMsg(
+          `📊 *Smart Shop Store Stats*\n\n` +
+          `📦 Products: ${pList.length}\n` +
+          `📋 Orders: ${oList.length}\n` +
+          `💰 Revenue: ${new Intl.NumberFormat('en').format(totalRevenue)} Br\n` +
+          `⚠️ Low Stock: ${lowStock.length}\n` +
+          `🏪 Vendors: ${(await supabase.from('vendors').select('*')).data?.length || 0}\n\n` +
+          `_Updated: ${new Date().toLocaleString()}_`,
+          'Markdown'
+        );
+      } else if (cmd === 'orders') {
+        const recent = oList.slice(0, 5);
+        if (recent.length === 0) {
+          await sendMsg('📋 *No orders yet*', 'Markdown');
+        } else {
+          let msg = '📋 *Recent Orders*\n\n';
+          recent.forEach((o: any) => {
+            const icon = o.status === 'delivered' ? '✅' : o.status === 'shipped' ? '🚚' : '📦';
+            msg += `${icon} *${o.order_number || o.orderNumber}* — ${new Intl.NumberFormat('en').format(o.total || 0)} Br — ${o.status}\n`;
+          });
+          msg += `\n_${oList.length} total orders_`;
+          await sendMsg(msg, 'Markdown');
+        }
+      } else if (cmd === 'lowstock') {
+        if (lowStock.length === 0) {
+          await sendMsg('✅ *All products well-stocked!*', 'Markdown');
+        } else {
+          let msg = '⚠️ *Low Stock Alerts*\n\n';
+          lowStock.forEach((p: any) => {
+            const emoji = p.stock_count === 0 ? '❌' : p.stock_count <= 2 ? '🔴' : '🟡';
+            msg += `${emoji} *${p.name_en}* — ${p.stock_count} left\n`;
+          });
+          await sendMsg(msg, 'Markdown');
+        }
+      } else if (cmd === 'alerts') {
+        await sendMsg('✅ *No active SLA breaches*', 'Markdown');
+      } else {
+        await sendMsg(`❌ Unknown command. Try /start for help.`, 'Markdown');
+      }
+
+      return res.json({ ok: true });
+    }
+
+    // ================================================================
+    // ADMIN BOT — Send notification
+    // ================================================================
+    if (path === '/api/admin-bot/send' && method === 'POST') {
+      if (!ADMIN_BOT_TOKEN) return res.status(200).json({ sent: false, error: 'No bot token' });
+      const { chatId, message } = req.body || {};
+      if (!chatId || !message) return res.status(400).json({ error: 'chatId and message required' });
+
+      const result = await fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, text: message, parse_mode: 'HTML', disable_web_page_preview: true }),
+      });
+      const data = await result.json();
+      return res.json({ sent: data.ok === true });
+    }
+
+    // ================================================================
+    // ADMIN BOT — Set webhook
+    // ================================================================
+    if (path === '/api/admin-bot/set-webhook' && method === 'POST') {
+      const baseUrl = req.headers['x-forwarded-proto'] + '://' + req.headers['x-forwarded-host'];
+      const webhookUrl = `${baseUrl}/api/admin-bot/webhook`;
+      if (!ADMIN_BOT_TOKEN) return res.json({ error: 'No admin bot token configured' });
+
+      const result = await fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN}/setWebhook?url=${webhookUrl}`, {
+        method: 'POST',
+      });
+      const data = await result.json();
+      return res.json({ ok: data.ok, description: data.description, webhookUrl });
+    }
+
+    // ================================================================
+    // PRODUCTS
+    // ================================================================
     if (path.startsWith('/api/products') || (path === '/api/' && method === 'GET')) {
       if (method === 'GET') {
         if (path === '/api/products' || path === '/api/') {

@@ -6,7 +6,7 @@ import { useStore } from '@/stores/AppStore';
 import {
   LayoutDashboard, Package, ShoppingCart, Store, Settings as SettingsIcon,
   TrendingUp, Users, MessageSquare, BarChart3, Shield, LogOut, Menu, X,
-  Bell, Rocket, Tags, Scale, Calendar, ClipboardList, ChevronRight,
+  Bell, Bot, Rocket, Tags, Scale, Calendar, ClipboardList, ChevronRight,
   Camera, Megaphone, Clock, Globe, Palette, MapPin, FileText, Zap, Upload,
   Search, Plus, Edit3, Trash2, Eye, EyeOff, Check, Loader, ChevronDown,
   DollarSign, Star, Activity, AlertTriangle, Sun, Moon, Gift, CreditCard,
@@ -33,7 +33,7 @@ import ReturnsManager from '@/components/admin/ReturnsManager';
 import { Truck as TruckIcon, RotateCcw } from 'lucide-react';
 
 import AdminSecurity from '@/components/admin/AdminSecurity';
-import TelegramNotifications from '@/components/admin/TelegramNotifications';
+import AdminBotManager from '@/components/admin/AdminBotManager';
 
 
 type Tab = 'overview' | 'products' | 'orders' | 'vendors' | 'marketplace' | 'reviews' | 'broadcast' | 'flashdeals' | 'preorders' | 'tracking' | 'themes' | 'coupons' | 'settings' | 'alerts' | 'abandoned' | 'roles' | 'backup' | 'adminTheme' | 'bulkProducts' | 'analytics' | 'forecast' | 'activity' | 'security' | 'telegram' | 'fulfillment' | 'sla' | 'driver' | 'returns';
@@ -75,7 +75,7 @@ export default function AdminLayout() {
     { id: 'activity', icon: ClipboardList, label: 'Activity Log' },
     { id: 'security', icon: Shield, label: 'Security' },
 
-    { id: 'telegram', icon: Bell, label: 'Telegram Bot' },
+    { id: 'telegram', icon: Bot, label: 'Admin Bot' },
     { id: 'fulfillment' | 'sla' | 'driver' | 'returns', icon: ShoppingCart, label: 'Fulfillment' },
 
 
@@ -170,7 +170,7 @@ export default function AdminLayout() {
           {tab === 'activity' && <ActivityLog />}
           {tab === 'security' && <AdminSecurity />}
 
-          {tab === 'telegram' && <TelegramNotifications />}
+          {tab === 'telegram' && <AdminBotManager />}
           {tab === 'fulfillment' | 'sla' | 'driver' | 'returns' && <OrderFulfillment />}
 
           {tab === 'settings' && <AdminSettings />}
