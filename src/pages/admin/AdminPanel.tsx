@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Package, ShoppingCart, Store, Settings as SettingsIcon,
   TrendingUp, Users, MessageSquare, BarChart3, Shield, LogOut, Menu, X,
   Bell, Rocket, Tags, Scale, Calendar, ClipboardList, ChevronRight,
-  Camera, Megaphone, Clock, Globe, Palette, MapPin, FileText, Zap,
+  Camera, Megaphone, Clock, Globe, Palette, MapPin, FileText, Zap, Upload,
   Search, Plus, Edit3, Trash2, Eye, EyeOff, Check, Loader, ChevronDown,
   DollarSign, Star, Activity, AlertTriangle, Sun, Moon, Gift, CreditCard,
   Gamepad2, Coins, Smartphone, ExternalLink, Command, Columns, List, Database
@@ -21,8 +21,14 @@ import SmartAlerts from '@/components/admin/SmartAlerts';
 import AbandonedCartRecovery from '@/components/admin/AbandonedCarts';
 import AdminRoles from '@/components/admin/AdminRoles';
 import DatabaseBackup from '@/components/admin/DatabaseBackup';
+import AdminThemeManager from '@/components/admin/AdminThemeManager';
+import BulkProductManager from '@/components/admin/BulkProductManager';
+import ProductAnalytics from '@/components/admin/ProductAnalytics';
+import InventoryForecast from '@/components/admin/InventoryForecast';
+import ActivityLog from '@/components/admin/ActivityLog';
 
-type Tab = 'overview' | 'products' | 'orders' | 'vendors' | 'marketplace' | 'reviews' | 'broadcast' | 'flashdeals' | 'preorders' | 'tracking' | 'themes' | 'coupons' | 'settings' | 'alerts' | 'abandoned' | 'roles' | 'backup';
+
+type Tab = 'overview' | 'products' | 'orders' | 'vendors' | 'marketplace' | 'reviews' | 'broadcast' | 'flashdeals' | 'preorders' | 'tracking' | 'themes' | 'coupons' | 'settings' | 'alerts' | 'abandoned' | 'roles' | 'backup' | 'adminTheme' | 'bulkProducts' | 'analytics' | 'forecast' | 'activity';
 
 export default function AdminLayout() {
   const [tab, setTab] = useState<Tab>('overview');
@@ -54,6 +60,12 @@ export default function AdminLayout() {
     { id: 'abandoned', icon: ShoppingCart, label: 'Cart Recovery' },
     { id: 'roles', icon: Shield, label: 'Admin Roles' },
     { id: 'backup', icon: Database, label: 'Backup' },
+    { id: 'adminTheme', icon: Palette, label: 'Admin Theme' },
+    { id: 'bulkProducts', icon: Upload, label: 'Bulk Import' },
+    { id: 'analytics', icon: BarChart3, label: 'Product Analytics' },
+    { id: 'forecast', icon: Clock, label: 'Forecast' },
+    { id: 'activity', icon: ClipboardList, label: 'Activity Log' },
+
   ];
 
   return (
@@ -137,6 +149,12 @@ export default function AdminLayout() {
           {tab === 'abandoned' && <AbandonedCartRecovery />}
           {tab === 'roles' && <AdminRoles />}
           {tab === 'backup' && <DatabaseBackup />}
+
+          {tab === 'adminTheme' && <AdminThemeManager />}
+          {tab === 'bulkProducts' && <BulkProductManager />}
+          {tab === 'analytics' && <ProductAnalytics />}
+          {tab === 'forecast' && <InventoryForecast />}
+          {tab === 'activity' && <ActivityLog />}
           {tab === 'settings' && <AdminSettings />}
         </div>
       </main>
