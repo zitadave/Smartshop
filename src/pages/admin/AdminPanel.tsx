@@ -10,14 +10,19 @@ import {
   Camera, Megaphone, Clock, Globe, Palette, MapPin, FileText, Zap,
   Search, Plus, Edit3, Trash2, Eye, EyeOff, Check, Loader, ChevronDown,
   DollarSign, Star, Activity, AlertTriangle, Sun, Moon, Gift, CreditCard,
-  Gamepad2, Coins, Smartphone, ExternalLink, Command, Columns, List
+  Gamepad2, Coins, Smartphone, ExternalLink, Command, Columns, List, Database
 } from 'lucide-react';
 import CommandPalette from '@/components/admin/CommandPalette';
 import LiveChart, { StatCard } from '@/components/admin/LiveChart';
 import OrderKanban from '@/components/admin/OrderKanban';
 import PayoutSystem from '@/components/admin/PayoutSystem';
+import CouponAnalytics from '@/components/admin/CouponAnalytics';
+import SmartAlerts from '@/components/admin/SmartAlerts';
+import AbandonedCartRecovery from '@/components/admin/AbandonedCarts';
+import AdminRoles from '@/components/admin/AdminRoles';
+import DatabaseBackup from '@/components/admin/DatabaseBackup';
 
-type Tab = 'overview' | 'products' | 'orders' | 'vendors' | 'marketplace' | 'reviews' | 'broadcast' | 'flashdeals' | 'preorders' | 'tracking' | 'themes' | 'coupons' | 'settings';
+type Tab = 'overview' | 'products' | 'orders' | 'vendors' | 'marketplace' | 'reviews' | 'broadcast' | 'flashdeals' | 'preorders' | 'tracking' | 'themes' | 'coupons' | 'settings' | 'alerts' | 'abandoned' | 'roles' | 'backup';
 
 export default function AdminLayout() {
   const [tab, setTab] = useState<Tab>('overview');
@@ -45,6 +50,10 @@ export default function AdminLayout() {
     { id: 'themes', icon: Palette, label: 'Themes' },
     { id: 'coupons', icon: Tags, label: 'Coupons' },
     { id: 'settings', icon: SettingsIcon, label: 'Settings' },
+    { id: 'alerts', icon: Bell, label: 'Alerts' },
+    { id: 'abandoned', icon: ShoppingCart, label: 'Cart Recovery' },
+    { id: 'roles', icon: Shield, label: 'Admin Roles' },
+    { id: 'backup', icon: Database, label: 'Backup' },
   ];
 
   return (
@@ -124,6 +133,10 @@ export default function AdminLayout() {
           {tab === 'tracking' && <AdminTracking />}
           {tab === 'themes' && <AdminThemes />}
           {tab === 'coupons' && <AdminCoupons />}
+          {tab === 'alerts' && <SmartAlerts />}
+          {tab === 'abandoned' && <AbandonedCartRecovery />}
+          {tab === 'roles' && <AdminRoles />}
+          {tab === 'backup' && <DatabaseBackup />}
           {tab === 'settings' && <AdminSettings />}
         </div>
       </main>
@@ -686,27 +699,7 @@ function AdminThemes() {
 // GAME SETTINGS — Admin controls wheel, streak, mystery box, points
 // =============================================
 function AdminCoupons() {
-  const store = useStore(); const { settings, setSettings } = store;
-  const [code, setCode] = useState(''); const [discount, setDiscount] = useState(10);
-  const coupons = settings.coupons || [];
-  const saveSetting = (key: string, val: any) => { const updated = { ...settings, [key]: val }; setSettings(updated as any); settingsApi.update(updated); };
-  return (
-    <div className="animate-fadeUp space-y-4">
-      <h2 className="text-lg font-bold">🏷️ Coupons ({coupons.length})</h2>
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
-        <div className="flex gap-2"><input className="flex-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent uppercase" placeholder="CODE" value={code} onChange={e => setCode(e.target.value)} /><input className="w-20 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-center" type="number" value={discount} onChange={e => setDiscount(Number(e.target.value))} /><button className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-bold" onClick={() => { if (!code) return; saveSetting('coupons', [...coupons, { code: code.toUpperCase(), discount, used: 0, active: true, createdAt: new Date().toISOString() }]); setCode(''); }}>+ Add</button></div>
-      </div>
-      <div className="space-y-2">{coupons.map((c: any, i: number) => (
-        <div key={i} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 flex items-center gap-3">
-          <span className="text-sm">🏷️</span>
-          <div className="flex-1"><span className="text-xs font-bold font-mono text-indigo-600">{c.code}</span><span className="text-[10px] text-slate-500 ml-2">{c.discount}% OFF</span></div>
-          <span className="text-[9px] text-slate-400">Used: {c.used || 0}</span>
-          <span className={cn('px-2 py-0.5 rounded-lg text-[9px] font-semibold', c.active !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600')}>{c.active !== false ? 'Active' : 'Inactive'}</span>
-          <button className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600" onClick={() => saveSetting('coupons', coupons.filter((_: any, j: number) => j !== i))}><Trash2 size={12} /></button>
-        </div>
-      ))}{coupons.length === 0 && <p className="text-xs text-slate-400 text-center py-8">No coupons</p>}</div>
-    </div>
-  );
+  return <CouponAnalytics />;
 }
 
 function AdminSettings() {
