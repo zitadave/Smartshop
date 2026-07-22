@@ -27,11 +27,16 @@ import ProductAnalytics from '@/components/admin/ProductAnalytics';
 import InventoryForecast from '@/components/admin/InventoryForecast';
 import ActivityLog from '@/components/admin/ActivityLog';
 import OrderFulfillment from '@/components/admin/OrderFulfillment';
+import SLAMonitor from '@/components/admin/SLAMonitor';
+import DriverTracker from '@/components/admin/DriverTracker';
+import ReturnsManager from '@/components/admin/ReturnsManager';
+import { Truck as TruckIcon, RotateCcw } from 'lucide-react';
+
 import AdminSecurity from '@/components/admin/AdminSecurity';
 import TelegramNotifications from '@/components/admin/TelegramNotifications';
 
 
-type Tab = 'overview' | 'products' | 'orders' | 'vendors' | 'marketplace' | 'reviews' | 'broadcast' | 'flashdeals' | 'preorders' | 'tracking' | 'themes' | 'coupons' | 'settings' | 'alerts' | 'abandoned' | 'roles' | 'backup' | 'adminTheme' | 'bulkProducts' | 'analytics' | 'forecast' | 'activity' | 'security' | 'telegram' | 'fulfillment';
+type Tab = 'overview' | 'products' | 'orders' | 'vendors' | 'marketplace' | 'reviews' | 'broadcast' | 'flashdeals' | 'preorders' | 'tracking' | 'themes' | 'coupons' | 'settings' | 'alerts' | 'abandoned' | 'roles' | 'backup' | 'adminTheme' | 'bulkProducts' | 'analytics' | 'forecast' | 'activity' | 'security' | 'telegram' | 'fulfillment' | 'sla' | 'driver' | 'returns';
 
 export default function AdminLayout() {
   const [tab, setTab] = useState<Tab>('overview');
@@ -71,7 +76,7 @@ export default function AdminLayout() {
     { id: 'security', icon: Shield, label: 'Security' },
 
     { id: 'telegram', icon: Bell, label: 'Telegram Bot' },
-    { id: 'fulfillment', icon: ShoppingCart, label: 'Fulfillment' },
+    { id: 'fulfillment' | 'sla' | 'driver' | 'returns', icon: ShoppingCart, label: 'Fulfillment' },
 
 
   ];
@@ -166,7 +171,7 @@ export default function AdminLayout() {
           {tab === 'security' && <AdminSecurity />}
 
           {tab === 'telegram' && <TelegramNotifications />}
-          {tab === 'fulfillment' && <OrderFulfillment />}
+          {tab === 'fulfillment' | 'sla' | 'driver' | 'returns' && <OrderFulfillment />}
 
           {tab === 'settings' && <AdminSettings />}
         </div>

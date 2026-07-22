@@ -4,7 +4,7 @@ import { t } from '@/i18n/translations';
 import { formatPrice, cn } from '@/lib/utils';
 import { ReceiptButton } from '@/components/features/DigitalReceipt';
 import { OrderProgressBar } from '@/components/features/OrderTrackingMap';
-import { FileText, MapPin } from 'lucide-react';
+import { FileText, MapPin, RotateCcw } from 'lucide-react';
 
 export default function Orders() {
   const navigate = useNavigate();
@@ -69,6 +69,11 @@ export default function Orders() {
                 <button className="text-[9px] text-primary font-semibold flex items-center gap-0.5" onClick={(e) => { e.stopPropagation(); navigate(`/orders/${o.orderNumber}`); }}>
                   <MapPin size={10} /> Track
                 </button>
+                {(o.status === 'delivered' || o.status === 'completed') && (
+                  <button className="text-[9px] text-orange-600 font-semibold flex items-center gap-0.5" onClick={(e) => { e.stopPropagation(); navigate('/returns'); }}>
+                    <RotateCcw size={10} /> Return
+                  </button>
+                )}
               </div>
             </div>
           );
