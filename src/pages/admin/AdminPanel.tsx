@@ -147,7 +147,7 @@ export default function AdminLayout() {
               const hasActive = group.ids.includes(tab);
               return (
                 <div key={group.title} className="space-y-0.5">
-                  <button className="flex items-center gap-1.5 w-full px-3 py-1.5 text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-400 hover:text-slate-600 transition-colors"
+                  <button className="flex items-center gap-1.5 w-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.1em] text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
                     onClick={() => toggle(group.title)}>
                     <ChevronRight size={10} className={cn('transition-transform', !isCollapsed(group.title) && 'rotate-90')} />
                     {group.title}
@@ -157,7 +157,7 @@ export default function AdminLayout() {
                     const Icon = item.icon;
                     const isActive = tab === item.id;
                     return (
-                      <button key={item.id} className={cn('w-full flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs font-medium transition-all duration-200 group',
+                      <button key={item.id} className={cn('w-full flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 group',
                         isActive ? 'bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/50 dark:to-purple-950/50 text-indigo-700 dark:text-indigo-300 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white'
                       )} onClick={() => { setTab(item.id); setMenuOpen(false); }}>
                         <div className={cn('p-1.5 rounded-lg transition-all', isActive ? 'bg-indigo-500/10' : 'group-hover:bg-slate-100 dark:group-hover:bg-slate-800')}>
