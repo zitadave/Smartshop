@@ -31,6 +31,7 @@ const AffiliateProducts = lazy(() => import('@/pages/AffiliateProducts'));
 const VendorDashboard = lazy(() => import('@/pages/vendor/VendorDashboard'));
 const Notifications = lazy(() => import('@/pages/Notifications'));
 const PriceAlerts = lazy(() => import('@/pages/PriceAlerts'));
+const Loyalty = lazy(() => import('@/pages/Loyalty'));
 
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-[60vh]">
@@ -130,6 +131,7 @@ export default function App() {
           <Route path="/affiliate" element={<Suspense fallback={<PageLoader />}><AffiliateProducts /></Suspense>} />
           <Route path="/notifications" element={<Suspense fallback={<PageLoader />}><Notifications /></Suspense>} />
           <Route path="/price-alerts" element={<Suspense fallback={<PageLoader />}><PriceAlerts /></Suspense>} />
+          <Route path="/loyalty" element={<Suspense fallback={<PageLoader />}><Loyalty /></Suspense>} />
         </Route>
         <Route path="/admin" element={<Suspense fallback={<PageLoader />}><AdminRedirect /></Suspense>} />
         <Route path="/admin-panel/*" element={<Suspense fallback={<PageLoader />}><AdminPanel /></Suspense>} />

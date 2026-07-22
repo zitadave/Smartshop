@@ -22,36 +22,15 @@ export default function Shop() {
   const btnAnim = useButtonAnimation();
   const wishAnim = useWishlistAnimation();
   const [showFilters, setShowFilters] = useState(false);
-  const [searchFocused, setSearchFocused] = useState(false);
-  const searchContainerRef = useRef<HTMLDivElement>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
   const { visibleItems, hasMore, sentinelRef } = useInfiniteScroll(filtered, { pageSize: 8 });
 
-  // Handle search focus: from header search icon click
+  // Read search from navigation state (header search overlay)
   useEffect(() => {
-    const state = location.state as { focusSearch?: number } | null;
-    if (state?.focusSearch) {
-      setSearchFocused(true);
-      // Scroll the search bar into view with smooth animation
-      setTimeout(() => {
-        searchContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        searchInputRef.current?.focus();
-      }, 100);
+    const state = location.state as { search?: string } | null;
+    if (state?.search) {
+      setSearch(state.search);
       window.history.replaceState({}, document.title);
     }
-  }, []);
-
-  // Listen for custom event when already on shop page
-  useEffect(() => {
-    const handler = () => {
-      setSearchFocused(true);
-      setTimeout(() => {
-        searchContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        searchInputRef.current?.focus();
-      }, 100);
-    };
-    window.addEventListener('shop-search-focus', handler);
-    return () => window.removeEventListener('shop-search-focus', handler);
   }, []);
 
   const handleAdd = useCallback((e: React.MouseEvent, product: Product) => {
@@ -71,10 +50,9 @@ export default function Shop() {
       {/* Sticky Header */}
       <div className="sticky top-14 z-30 bg-background/80 backdrop-blur-3xl border-b border-border/40 shadow-sm">
         <div className="px-4 pt-3 pb-2">
-          <div ref={searchContainerRef} className={cn("relative group transition-all duration-700", searchFocused && "animate-slideDown ring-2 ring-primary/20 rounded-2xl")}>
+          <div className="relative group">
             <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/50 transition-colors group-focus-within:text-primary" />
             <input
-              ref={searchInputRef}
               type="text"
               placeholder="🔍 Search products..."
               className="w-full pl-10 pr-10 py-3 rounded-2xl border border-border/60 bg-card/60 text-sm focus:outline-none focus:ring-2 focus:ring-ring/30 focus:bg-card transition-all duration-300 placeholder:text-muted-foreground/40 shadow-sm"

@@ -21,8 +21,10 @@ export default function Layout() {
   const { language, darkMode, setDarkMode, getCartCount, wishlist } = useStore();
   const cartCount = getCartCount();
   const wishlistCount = wishlist.length;
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {}, [location.pathname]);
+  useEffect(() => { setSearchOpen(false); }, [location.pathname]);
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
@@ -35,12 +37,36 @@ export default function Layout() {
       <QuickView />
       <AIChat />
 
+      {/* Search Overlay */}
+      {searchOpen && <div className="search-overlay show" onClick={() => setSearchOpen(false)} />}
+
+      {/* Animated Search Bar */}
+      <div className={cn(
+        'fixed top-0 left-0 right-0 z-[99] px-4 pt-4 pb-4 bg-card/90 backdrop-blur-3xl border-b border-border/50 transition-all duration-500 ease-out',
+        searchOpen ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
+      )}>
+        <div className="flex items-center gap-3 max-w-xl mx-auto">
+          <div className="relative flex-1 group">
+            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/60 transition-colors group-focus-within:text-primary" />
+            <input
+              type="text"
+              autoFocus
+              placeholder={`🔍 ${t('search', language)}...`}
+              className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-border bg-muted/60 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40 focus:bg-card transition-all duration-300"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && searchQuery.trim()) { navigate('/shop', { state: { search: searchQuery } }); setSearchOpen(false); } }}
+            />
+          </div>
+          <button className="px-5 py-3 text-sm font-semibold text-primary hover:bg-primary/5 rounded-2xl transition-all duration-200 active:scale-95"
+            onClick={() => setSearchOpen(false)}>Cancel</button>
+        </div>
+      </div>
+
       <header className="fixed top-0 left-0 right-0 h-14 z-50 glass-strong border-b border-border/40">
         <div className="max-w-2xl mx-auto h-full flex items-center px-4 gap-2">
           <div className="flex items-center gap-3 flex-1 cursor-pointer group" onClick={() => navigate('/')}>
-            <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-primary to-blue-600 text-white flex items-center justify-center text-lg shadow-lg shadow-primary/20 group-hover:shadow-xl group-hover:scale-105 transition-all duration-300">
-              🏪
-            </div>
+            <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-primary to-blue-600 text-white flex items-center justify-center text-lg shadow-lg shadow-primary/20 group-hover:shadow-xl group-hover:scale-105 transition-all duration-300">🏪</div>
             <div className="hidden sm:block">
               <div className="text-sm font-bold leading-tight text-foreground tracking-tight">{t('appName', language)}</div>
               <div className="text-[7px] text-muted-foreground/60 uppercase tracking-[0.2em] font-medium">{t('appSub', language)}</div>
@@ -48,18 +74,11 @@ export default function Layout() {
           </div>
 
           <div className="flex items-center gap-1.5">
-            {/* Search icon → navigates to Shop page's search bar */}
+            {/* Search - opens overlay */}
             <button className="w-9 h-9 rounded-2xl flex items-center justify-center text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-all duration-200 active:scale-90"
-              onClick={() => {
-                if (location.pathname === '/shop') {
-                  // Already on shop — animate existing search bar
-                  window.dispatchEvent(new CustomEvent('shop-search-focus'));
-                } else {
-                  navigate('/shop', { state: { focusSearch: Date.now() } });
-                }
-              }}><Search size={17} /></button>
+              onClick={() => setSearchOpen(true)}><Search size={17} /></button>
 
-            {/* Wishlist — only when items exist */}
+            {/* Wishlist - only when items exist */}
             {wishlistCount > 0 && (
               <button className="w-9 h-9 rounded-2xl flex items-center justify-center text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-all duration-200 active:scale-90 relative"
                 onClick={() => navigate('/wishlist')}>
@@ -73,7 +92,7 @@ export default function Layout() {
             <button className="w-9 h-9 rounded-2xl flex items-center justify-center text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-all duration-200 active:scale-90"
               onClick={() => setDarkMode(!darkMode)}>{darkMode ? <Sun size={17} /> : <Moon size={17} />}</button>
 
-            {/* Cart — only when items exist */}
+            {/* Cart - only when items exist */}
             {cartCount > 0 && (
               <button className="w-9 h-9 rounded-2xl flex items-center justify-center text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-all duration-200 active:scale-90 relative"
                 onClick={() => navigate('/cart')}>
