@@ -51,6 +51,7 @@ export default function AdminLayout() {
   const [tab, setTab] = useState<Tab>('overview');
   const [menuOpen, setMenuOpen] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const navigate = useNavigate();
 
   const handleCmdNavigate = (t: string) => {
@@ -72,7 +73,8 @@ export default function AdminLayout() {
     { id: 'themes', icon: Palette, label: 'Themes' },
     { id: 'coupons', icon: Tags, label: 'Coupons' },
     { id: 'settings', icon: SettingsIcon, label: 'Settings' },
-    { id: 'alerts', icon: Bell, label: 'Alerts' },
+    { id: 'manualpayments', icon: Banknote, label: 'Manual Payments' },
+    { id: 'alerts', icon: Bell, label: 'Smart Alerts' },
     { id: 'abandoned', icon: ShoppingCart, label: 'Cart Recovery' },
     { id: 'roles', icon: Shield, label: 'Admin Roles' },
     { id: 'backup', icon: Database, label: 'Backup' },
@@ -129,22 +131,47 @@ export default function AdminLayout() {
       </header>
 
       <aside className={`fixed top-14 left-0 bottom-0 w-60 z-40 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 ${menuOpen ? 'translate-x-0' : '-translate-x-full'} xl:translate-x-0 overflow-y-auto`} data-admin-sidebar>
-        <div className="py-3 px-2 space-y-0.5">
-          {NAV_ITEMS.map(item => {
-            const Icon = item.icon;
-            const isActive = tab === item.id;
-            return (
-              <button key={item.id} className={cn('w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 group',
-                isActive ? 'bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/50 dark:to-purple-950/50 text-indigo-700 dark:text-indigo-300 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white'
-              )} onClick={() => { setTab(item.id); setMenuOpen(false); }}>
-                <div className={cn('p-1.5 rounded-lg transition-all', isActive ? 'bg-indigo-500/10' : 'group-hover:bg-slate-100 dark:group-hover:bg-slate-800')}>
-                  <Icon size={15} className={cn(isActive ? 'text-indigo-600' : 'text-slate-400')} />
+        <div className="py-3 px-2 space-y-1">
+          {(() => {
+            const groups: { title: string; ids: Tab[] }[] = [
+              { title: 'STORE', ids: ['overview', 'products', 'orders', 'vendors', 'marketplace', 'reviews'] },
+              { title: 'PROMOTION', ids: ['broadcast', 'flashdeals', 'preorders', 'coupons', 'tracking', 'themes'] },
+              { title: 'OPERATIONS', ids: ['manualpayments', 'alerts', 'abandoned', 'fulfillment', 'sla', 'driver', 'returns'] },
+              { title: 'FINANCE', ids: ['finance', 'smartbooks', 'settings'] },
+              { title: 'ADMIN', ids: ['roles', 'security', 'backup', 'adminTheme', 'telegram', 'activity'] },
+              { title: 'INSIGHTS', ids: ['analytics', 'forecast', 'bulkProducts'] },
+            ];
+            const isCollapsed = (g: string) => collapsedGroups[g] === true;
+            const toggle = (g: string) => setCollapsedGroups(c => ({ ...c, [g]: !isCollapsed(g) }));
+            return groups.map(group => {
+              const hasActive = group.ids.includes(tab);
+              return (
+                <div key={group.title} className="space-y-0.5">
+                  <button className="flex items-center gap-1.5 w-full px-3 py-1.5 text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-400 hover:text-slate-600 transition-colors"
+                    onClick={() => toggle(group.title)}>
+                    <ChevronRight size={10} className={cn('transition-transform', !isCollapsed(group.title) && 'rotate-90')} />
+                    {group.title}
+                    {hasActive && <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 ml-auto" />}
+                  </button>
+                  {!isCollapsed(group.title) && NAV_ITEMS.filter(i => group.ids.includes(i.id)).map(item => {
+                    const Icon = item.icon;
+                    const isActive = tab === item.id;
+                    return (
+                      <button key={item.id} className={cn('w-full flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs font-medium transition-all duration-200 group',
+                        isActive ? 'bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/50 dark:to-purple-950/50 text-indigo-700 dark:text-indigo-300 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white'
+                      )} onClick={() => { setTab(item.id); setMenuOpen(false); }}>
+                        <div className={cn('p-1.5 rounded-lg transition-all', isActive ? 'bg-indigo-500/10' : 'group-hover:bg-slate-100 dark:group-hover:bg-slate-800')}>
+                          <Icon size={14} className={cn(isActive ? 'text-indigo-600' : 'text-slate-400')} />
+                        </div>
+                        <span className="flex-1 text-left">{item.label}</span>
+                        <ChevronRight size={10} className={cn('opacity-0 transition-all', isActive && 'opacity-100')} />
+                      </button>
+                    );
+                  })}
                 </div>
-                <span className="flex-1 text-left">{item.label}</span>
-                <ChevronRight size={12} className={cn('opacity-0 -ml-2 transition-all', isActive && 'opacity-100 ml-0')} />
-              </button>
-            );
-          })}
+              );
+            });
+          })()}
         </div>
         <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
           <button className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors" onClick={() => window.location.href = '/'}>
