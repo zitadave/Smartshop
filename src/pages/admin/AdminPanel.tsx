@@ -1183,10 +1183,17 @@ function AdminSettings() {
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
-        <h3 className="text-sm font-bold mb-3">🔔 Features</h3>
-        <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={priceAlertEnabled} onChange={e => { setPriceAlertEnabled(e.target.checked); saveSetting('priceAlertEnabled', e.target.checked); }} className="rounded" /> Enable Price Drop Alerts</label>
-        <label className="flex items-center gap-2 text-xs mt-2"><input type="checkbox" checked={settings.affiliateEnabled !== false} onChange={e => saveSetting('affiliateEnabled', e.target.checked)} className="rounded" /> Enable Affiliate Program</label>
-        <div className="mt-2 flex items-center gap-3"><span className="text-xs">Affiliate Commission %:</span><input type="number" className="w-20 p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={settings.affiliateCommission || 10} onChange={e => saveSetting('affiliateCommission', Number(e.target.value))} /></div>
+        <h3 className="text-sm font-bold mb-3">🔔 Features & Toggles</h3>
+        <div className="space-y-3">
+          <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={priceAlertEnabled} onChange={e => { setPriceAlertEnabled(e.target.checked); saveSetting('priceAlertEnabled', e.target.checked); }} className="rounded" /> Enable Price Drop Alerts</label>
+          <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={settings.affiliateEnabled !== false} onChange={e => saveSetting('affiliateEnabled', e.target.checked)} className="rounded" /> Enable Affiliate Program</label>
+          <div className="border-t border-slate-100 dark:border-slate-800 pt-3 mt-3">
+            <h4 className="text-[10px] font-bold text-slate-600 dark:text-slate-400 mb-2">🛠️ System Toggles</h4>
+            <label className="flex items-center gap-2 text-xs mb-2"><input type="checkbox" checked={settings.chapaTestMode !== false} onChange={e => saveSetting('chapaTestMode', e.target.checked)} className="rounded" /> Chapa Test Mode (sandbox for testing without license)</label>
+            <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={settings.marketplaceMode !== false} onChange={e => saveSetting('marketplaceMode', e.target.checked)} className="rounded" /> Marketplace Mode (show "Become a Vendor" on shop)</label>
+          </div>
+          <div className="mt-2 flex items-center gap-3"><span className="text-xs">Affiliate Commission %:</span><input type="number" className="w-20 p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={settings.affiliateCommission || 10} onChange={e => saveSetting('affiliateCommission', Number(e.target.value))} /></div>
+        </div>
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>

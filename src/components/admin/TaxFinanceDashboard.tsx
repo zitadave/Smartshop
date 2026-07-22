@@ -33,7 +33,7 @@ export default function TaxFinanceDashboard() {
           <h2 className="text-lg font-bold flex items-center gap-2"><Landmark size={20} className="text-emerald-500" /> Finance &amp; Tax Dashboard</h2>
           <p className="text-[10px] text-slate-500">Payment processing, VAT compliance, tax reporting, vendor payouts</p>
         </div>
-        <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl p-0.5">
+        <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl p-0.5 overflow-x-auto scrollbar-none max-w-full">
           {tabs.map(t => {
             const Icon = t.icon;
             return (
