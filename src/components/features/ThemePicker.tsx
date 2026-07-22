@@ -49,10 +49,8 @@ export default function ThemePicker() {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          {/* Opens to the RIGHT (left-aligned) but since theme is on the right side of grid, we use right-0 to open toward currency */}
-          <div className="absolute right-0 mt-1 bg-card border border-border rounded-lg shadow-xl z-50 p-2 w-52">
+          <div className="absolute right-0 mt-1 bg-card border border-border rounded-lg shadow-xl z-50 p-2 w-56">
             <div className="text-[8px] font-semibold mb-1.5 text-muted-foreground">🎨 Theme</div>
-            {/* 2 columns */}
             <div className="grid grid-cols-2 gap-1 mb-2">
               {THEMES.map(theme => (
                 <button
@@ -67,11 +65,11 @@ export default function ThemePicker() {
                 >
                   <div className="flex gap-px flex-shrink-0">
                     {theme.colors.map((c, i) => (
-                      <div key={i} className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: c }} />
+                      <div key={i} className="w-3 h-3 rounded-full" style={{ backgroundColor: c }} />
                     ))}
                   </div>
-                  <span className="text-[7px] truncate flex-1">{theme.icon} {theme.name}</span>
-                  {themePreset === theme.id && <Check size={6} className="text-primary flex-shrink-0" />}
+                  <span className="text-[8px] font-semibold truncate flex-1">{theme.icon} {theme.name}</span>
+                  {themePreset === theme.id && <Check size={7} className="text-primary flex-shrink-0" />}
                 </button>
               ))}
             </div>
