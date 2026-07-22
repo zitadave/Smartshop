@@ -5,17 +5,25 @@ import { t } from '@/i18n/translations';
 import { formatPrice, generateOrderNumber } from '@/lib/utils';
 import { CheckoutSteps } from '@/components/ui/CheckoutSteps';
 import { haptic } from '@/lib/confetti';
-import { ArrowLeft, MapPin, CreditCard, Package } from 'lucide-react';
+import { getTelegramUser } from '@/lib/telegram';
+import { ArrowLeft, MapPin, CreditCard, Package, Smartphone, CheckCircle } from 'lucide-react';
 
 export default function Checkout() {
   const navigate = useNavigate();
   const store = useStore();
-  const { cart, language, getCartTotal, addOrder, clearCart, addLoyaltyPoints, addNotification, profile, savedPayments, addSavedPayment } = store;
+  const { cart, language, getCartTotal, addOrder, clearCart, addLoyaltyPoints, addNotification, profile, savedPayments, addSavedPayment, isTelegramVerified } = store;
   const total = getCartTotal();
 
-  const [name, setName] = useState(profile.name);
-  const [phone, setPhone] = useState(profile.phone);
-  const [city, setCity] = useState('');
+  // Try to get Telegram user data for pre-fill
+  const tgUser = getTelegramUser();
+  const cachedAuth = (() => {
+    try { return JSON.parse(localStorage.getItem('ss_telegram_auth') || 'null'); } catch { return null; }
+  })();
+  const authUser = cachedAuth?.user;
+
+  const [name, setName] = useState(profile.name || authUser?.fullName || authUser?.firstName || tgUser?.first_name || '');
+  const [phone, setPhone] = useState(profile.phone || authUser?.phone || '');
+  const [city, setCity] = useState(authUser?.city || '');
   const [payment, setPayment] = useState('telebirr');
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'delivery' | 'payment'>('delivery');

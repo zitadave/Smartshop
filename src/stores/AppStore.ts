@@ -85,6 +85,10 @@ interface AppState {
   // Seen Broadcast IDs
   seenBroadcasts: string[];
 
+  // Telegram Auth
+  telegramId: number | null;
+  isTelegramVerified: boolean;
+
   // Actions
   setProducts: (products: Product[]) => void;
   setSettings: (settings: AppSettings) => void;
@@ -180,6 +184,8 @@ export const useStore = create<AppState>((set, get) => ({
   digitalReceipts: loadPersisted<Record<string, string>>('ss_receipts', {}),
   orderTracking: loadPersisted<Record<string, any>>('ss_tracking', {}),
   seenBroadcasts: loadPersisted<string[]>('ss_seen_broadcasts', []),
+  telegramId: loadPersisted<number | null>('ss_telegram_id', null),
+  isTelegramVerified: loadPersisted<boolean>('ss_telegram_verified', false),
 
   setProducts: (products) => set({ products }),
   setSettings: (settings) => set({ settings }),

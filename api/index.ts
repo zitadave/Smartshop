@@ -1,8 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
+import crypto from 'crypto';
 
 // ===== CONFIG =====
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://auaendcgszofgvdfdajt.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1YWVuZGNnc3pvZmd2ZGZkYWp0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NDQzNzkwNiwiZXhwIjoyMTAwMDEzOTA2fQ.bvVY6X_KozYV1BapIOvwkv4UY6D-k3QgGHRQndMtRu4';
+const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false } });
 
@@ -28,6 +30,44 @@ function normalizeProduct(p: any) {
   };
 }
 
+/**
+ * Verify Telegram WebApp initData HMAC-SHA256 signature.
+ * This ensures the data came from Telegram and hasn't been tampered with.
+ */
+function verifyTelegramInitData(initData: string): { valid: boolean; user?: any } {
+  try {
+    if (!initData || !BOT_TOKEN) {
+      // If no bot token configured, accept data as-is (dev mode)
+      const params = new URLSearchParams(initData);
+      const userStr = params.get('user');
+      return { valid: true, user: userStr ? JSON.parse(userStr) : null };
+    }
+
+    const params = new URLSearchParams(initData);
+    const hash = params.get('hash') || '';
+    if (!hash) return { valid: false };
+
+    params.delete('hash');
+
+    // Sort keys alphabetically
+    const dataCheckString = [...params.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([k, v]) => `${k}=${v}`)
+      .join('\n');
+
+    // HMAC-SHA256: secret = HMAC_SHA256('WebAppData', botToken)
+    const secretKey = crypto.createHmac('sha256', 'WebAppData').update(BOT_TOKEN).digest();
+    const computedHash = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
+
+    if (computedHash !== hash) return { valid: false };
+
+    const userStr = params.get('user');
+    return { valid: true, user: userStr ? JSON.parse(userStr) : null };
+  } catch (e) {
+    return { valid: false };
+  }
+}
+
 // ===== MAIN HANDLER =====
 export default async function handler(req: any, res: any) {
   cors(res);
@@ -37,6 +77,148 @@ export default async function handler(req: any, res: any) {
   const method = req.method || 'GET';
 
   try {
+    // ================================================================
+    // TELEGRAM AUTH
+    // ================================================================
+    if (path === '/api/auth/telegram' && method === 'POST') {
+      const { initData } = req.body || {};
+      if (!initData) return res.status(400).json({ error: 'initData is required' });
+
+      // Verify HMAC signature
+      const { valid, user: tgUser } = verifyTelegramInitData(initData);
+      if (!valid && BOT_TOKEN) {
+        return res.status(401).json({ error: 'Invalid Telegram authentication' });
+      }
+
+      if (!tgUser) return res.status(400).json({ error: 'No user data in initData' });
+
+      // Check if user exists in our database
+      const { data: existing } = await supabase
+        .from('users')
+        .select('*')
+        .eq('telegram_id', tgUser.id)
+        .single();
+
+      const now = new Date().toISOString();
+
+      if (existing) {
+        // Update last seen
+        await supabase
+          .from('users')
+          .update({ last_seen: now, first_name: tgUser.first_name, last_name: tgUser.last_name || '', username: tgUser.username || '' })
+          .eq('telegram_id', tgUser.id);
+
+        return res.json({
+          success: true,
+          user: {
+            telegramId: existing.telegram_id,
+            firstName: existing.first_name || tgUser.first_name,
+            lastName: existing.last_name || tgUser.last_name,
+            username: existing.username || tgUser.username,
+            languageCode: tgUser.language_code || 'en',
+            photoUrl: tgUser.photo_url || null,
+            phone: existing.phone || null,
+            fullName: existing.full_name || null,
+            city: existing.city || null,
+            address: existing.address || null,
+            profileComplete: !!(existing.full_name && existing.city && existing.address),
+            firstSeen: existing.created_at || now,
+            lastSeen: now,
+          },
+        });
+      } else {
+        // Create new user
+        const { data: newUser } = await supabase
+          .from('users')
+          .insert({
+            telegram_id: tgUser.id,
+            first_name: tgUser.first_name,
+            last_name: tgUser.last_name || '',
+            username: tgUser.username || '',
+            language_code: tgUser.language_code || 'en',
+            photo_url: tgUser.photo_url || null,
+            created_at: now,
+            last_seen: now,
+          })
+          .select()
+          .single();
+
+        return res.json({
+          success: true,
+          user: {
+            telegramId: tgUser.id,
+            firstName: tgUser.first_name,
+            lastName: tgUser.last_name || '',
+            username: tgUser.username || '',
+            languageCode: tgUser.language_code || 'en',
+            photoUrl: tgUser.photo_url || null,
+            phone: null,
+            fullName: null,
+            city: null,
+            address: null,
+            profileComplete: false,
+            firstSeen: now,
+            lastSeen: now,
+          },
+        });
+      }
+    }
+
+    // ================================================================
+    // TELEGRAM AUTH — Register Phone
+    // ================================================================
+    if (path === '/api/auth/telegram/register-phone' && method === 'POST') {
+      const { telegramId, phone } = req.body || {};
+      if (!telegramId || !phone) return res.status(400).json({ error: 'telegramId and phone required' });
+
+      await supabase.from('users').update({ phone, phone_verified: true }).eq('telegram_id', telegramId);
+
+      return res.json({ success: true });
+    }
+
+    // ================================================================
+    // TELEGRAM AUTH — Complete Profile
+    // ================================================================
+    if (path === '/api/auth/telegram/complete-profile' && method === 'POST') {
+      const { telegramId, fullName, city, address } = req.body || {};
+      if (!telegramId || !fullName) return res.status(400).json({ error: 'telegramId and fullName required' });
+
+      await supabase
+        .from('users')
+        .update({ full_name: fullName, city: city || '', address: address || '' })
+        .eq('telegram_id', telegramId);
+
+      return res.json({ success: true });
+    }
+
+    // ================================================================
+    // TELEGRAM AUTH — Get current user
+    // ================================================================
+    if (path.startsWith('/api/auth/telegram/user/') && method === 'GET') {
+      const telegramId = parseInt(path.split('/').pop() || '0');
+      if (!telegramId) return res.status(400).json({ error: 'Invalid telegram ID' });
+
+      const { data } = await supabase.from('users').select('*').eq('telegram_id', telegramId).single();
+      if (!data) return res.status(404).json({ error: 'User not found' });
+
+      return res.json({
+        success: true,
+        user: {
+          telegramId: data.telegram_id,
+          firstName: data.first_name,
+          lastName: data.last_name,
+          username: data.username,
+          phone: data.phone,
+          fullName: data.full_name,
+          city: data.city,
+          address: data.address,
+          profileComplete: !!(data.full_name && data.city && data.address),
+          firstSeen: data.created_at,
+          lastSeen: data.last_seen,
+        },
+      });
+    }
+
     // ===== PRODUCTS =====
     if (path.startsWith('/api/products') || (path === '/api/' && method === 'GET')) {
       if (method === 'GET') {
@@ -131,7 +313,11 @@ export default async function handler(req: any, res: any) {
     if (path === '/api/upload' && method === 'POST') { return res.json({ url: 'https://placehold.co/400x400/e2e8f0/94a3b8?text=Uploaded' }); }
 
     // ===== SEED / HEALTH =====
-    if (path === '/api/seed' && method === 'GET') { const { count } = await supabase.from('products').select('*', { count: 'exact', head: true }); return res.json({ products: count || 0, message: 'Smart Shop API running on Vercel!' }); }
+    if (path === '/api/seed' && method === 'GET') {
+      const { count } = await supabase.from('products').select('*', { count: 'exact', head: true });
+      const { data: telegramUsers } = await supabase.from('users').select('*');
+      return res.json({ products: count || 0, telegramUsers: telegramUsers?.length || 0, message: 'Smart Shop API running on Vercel!' });
+    }
 
     // ===== FALLBACK =====
     return res.status(404).json({ error: 'Not found', path, method });

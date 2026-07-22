@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/stores/AppStore';
 import { t } from '@/i18n/translations';
 import { cn } from '@/lib/utils';
-import { User, Package, Heart, ShoppingCart, Gift, LogOut, Moon, Sun, ChevronRight, Store, Palette, TrendingDown, Bell, HelpCircle, Wallet } from 'lucide-react';
+import { User, Package, Heart, ShoppingCart, Gift, LogOut, Moon, Sun, ChevronRight, Store, Palette, TrendingDown, Bell, HelpCircle, Wallet, Smartphone, CheckCircle } from 'lucide-react';
 import ThemePicker from '@/components/features/ThemePicker';
 import CurrencySelector from '@/components/features/CurrencySelector';
 import LanguageSelector from '@/components/features/LanguageSelector';
 import { ActivePriceAlerts } from '@/components/features/PriceDropAlert';
+import TelegramLogin from '@/components/auth/TelegramLogin';
 import { toast } from '@/components/Toast';
 
 
@@ -15,7 +16,7 @@ import { toast } from '@/components/Toast';
 export default function Profile() {
   const navigate = useNavigate();
   const store = useStore();
-  const { profile, language, setLanguage, darkMode, setDarkMode, orders, wishlist, cart, followedVendors, loyaltyPoints, savedPayments, preOrders, notifications, savedAddresses, walletBalance, walletHistory } = store;
+  const { profile, language, setLanguage, darkMode, setDarkMode, orders, wishlist, cart, followedVendors, loyaltyPoints, savedPayments, preOrders, notifications, savedAddresses, walletBalance, walletHistory, isTelegramVerified, telegramId } = store;
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showWallet, setShowWallet] = useState(false);
   const [editName, setEditName] = useState(profile.name);
@@ -83,6 +84,11 @@ export default function Profile() {
         <h2 className="text-base font-bold mt-2">{profile.name || 'Guest'}</h2>
         {profile.phone && <p className="text-xs text-muted-foreground mt-0.5">📞 {profile.phone}</p>}
         <p className="text-[10px] text-muted-foreground mt-1">📅 Joined {profile.joinedAt ? new Date(profile.joinedAt).toLocaleDateString() : 'Today'}</p>
+      </div>
+
+      {/* Telegram Connect */}
+      <div className="mx-3 mt-3">
+        <TelegramLogin variant="card" />
       </div>
 
       {/* Stats */}
