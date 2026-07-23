@@ -51,7 +51,7 @@ export default function Checkout() {
 
   // Bank transfer form
   const [selectedBank, setSelectedBank] = useState('');
-  const [receiptNumber, setReceiptNumber] = useState('');
+  const [depositorName, setDepositorName] = useState('');
   const [paidAmount, setPaidAmount] = useState('');
   const [customerNote, setCustomerNote] = useState('');
   const [receiptImage, setReceiptImage] = useState<string>('');
@@ -114,7 +114,7 @@ export default function Checkout() {
     if (!name || !phone || !city) { toast('Please fill delivery info', 'error'); return; }
     if (!paymentMethod) { toast('Select a payment method', 'error'); return; }
     if (paymentMethod === 'bank') {
-      if (!selectedBank || (!receiptNumber && !receiptText && !receiptImage)) {
+      if (!selectedBank || (!depositorName && !receiptText && !receiptImage)) {
         toast('Select bank and provide receipt', 'error'); return;
       }
     }
@@ -163,7 +163,7 @@ export default function Checkout() {
     addOrder(order);
 
     if (paymentMethod === 'bank') {
-      const receiptToSend = useTextReceipt ? receiptText : receiptNumber;
+      const receiptToSend = useTextReceipt ? receiptText : depositorName;
       addManualPayment({
         orderNumber: orderNum, customerName: name, customerPhone: phone,
         amount: grandTotal, bankName: selectedBank, receiptNumber: receiptToSend,
@@ -171,7 +171,7 @@ export default function Checkout() {
         receiptImage: receiptImage || undefined,
       });
       sendAdminTelegram(
-        `🏦 <b>Manual Payment Submitted</b>\n\nOrder: ${orderNum}\nCustomer: ${name} (${phone})\nAmount: Br ${grandTotal.toLocaleString()}\nBank: ${selectedBank}\nReceipt: ${receiptToSend}`
+        `🏦 <b>Manual Payment Submitted</b>\n\nOrder: ${orderNum}\nCustomer: ${name} (${phone})\nAmount: Br ${grandTotal.toLocaleString()}\nBank: ${selectedBank}\nDepositor: ${receiptToSend}`
       );
     }
 
@@ -418,31 +418,36 @@ export default function Checkout() {
             <div className="text-[9px] text-slate-500 mt-1">Transfer this exact amount to any bank below</div>
           </div>
 
-          {/* Bank Selection */}
+          {/* Bank Selection — Dropdown */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm mb-3">
             <h3 className="text-xs font-bold mb-3 flex items-center gap-2"><Building2 size={14} className="text-blue-500" /> Select Bank</h3>
-            <div className="space-y-2">
-              {BANK_ACCOUNTS.map(b => (
-                <div key={b.name} className={cn(
-                  'p-3 rounded-xl border-2 cursor-pointer transition-all',
-                  selectedBank === b.name ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20' : 'border-slate-200 dark:border-slate-700 hover:border-emerald-300'
-                )} onClick={() => setSelectedBank(b.name)}>
-                  <div className="flex items-center gap-2">
-                    <input type="radio" checked={selectedBank === b.name} onChange={() => setSelectedBank(b.name)} className="accent-emerald-500" />
+            <select className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent focus:outline-none focus:ring-2 focus:ring-emerald-500/30" value={selectedBank} onChange={e => setSelectedBank(e.target.value)}>
+              <option value="">-- Choose your bank --</option>
+              {BANK_ACCOUNTS.map(b => <option key={b.name} value={b.name}>{b.name}</option>)}
+            </select>
+
+            {/* Auto-filled bank details */}
+            {selectedBank && (() => {
+              const bank = BANK_ACCOUNTS.find(b => b.name === selectedBank);
+              if (!bank) return null;
+              return (
+                <div className="mt-3 animate-fadeUp space-y-2">
+                  <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/30">
+                    <div className="text-[9px] text-slate-400 font-medium">Account Holder</div>
+                    <div className="text-sm font-bold text-slate-800 dark:text-slate-200">{bank.holder}</div>
+                  </div>
+                  <div className="flex items-center gap-2 p-3 rounded-xl bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/30">
                     <div className="flex-1">
-                      <div className="text-xs font-bold">{b.name}</div>
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <span className="text-[10px] font-mono text-slate-500">{b.account}</span>
-                        <button className="p-0.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(b.account); toast('📋 Copied!', 'success'); }}>
-                          <Copy size={10} className="text-slate-400" />
-                        </button>
-                      </div>
-                      <div className="text-[9px] text-slate-400">Account Name: {b.holder}</div>
+                      <div className="text-[9px] text-slate-400 font-medium">Account Number</div>
+                      <div className="text-sm font-bold font-mono text-slate-800 dark:text-slate-200">{bank.account}</div>
                     </div>
+                    <button className="p-2 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-sm" onClick={() => { navigator.clipboard.writeText(bank.account); toast('📋 Copied!', 'success'); }}>
+                      <Copy size={16} className="text-blue-600" />
+                    </button>
                   </div>
                 </div>
-              ))}
-            </div>
+              );
+            })()}
           </div>
 
           {/* Receipt Upload */}
@@ -492,21 +497,22 @@ export default function Checkout() {
             </div>
           </div>
 
-          {/* Confirmation fields */}
+          {/* Depositor & Payment Details */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm mb-4">
             <div className="space-y-2.5">
               <div>
-                <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Receipt Number *</label>
-                <input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500/30" placeholder="e.g. CBE-20260723-XXXX" value={receiptNumber} onChange={e => setReceiptNumber(e.target.value)} />
+                <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Depositor Full Name *</label>
+                <input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500/30" placeholder="The name on your bank account" value={depositorName} onChange={e => setDepositorName(e.target.value)} />
+                <p className="text-[8px] text-slate-400 mt-0.5">Enter the name exactly as shown on your transfer receipt</p>
               </div>
               <div>
                 <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Amount Paid (Br)</label>
                 <input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500/30" placeholder={String(grandTotal)} value={paidAmount} onChange={e => setPaidAmount(e.target.value)} />
-                <p className="text-[8px] text-slate-400 mt-0.5">Expected amount: {formatPrice(grandTotal)}</p>
+                <p className="text-[8px] text-slate-400 mt-0.5">Expected: {formatPrice(grandTotal)}</p>
               </div>
               <div>
                 <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Note (optional)</label>
-                <input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500/30" placeholder="Any message for the admin..." value={customerNote} onChange={e => setCustomerNote(e.target.value)} />
+                <textarea className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500/30 resize-none h-16" placeholder="Any extra info for the admin..." value={customerNote} onChange={e => setCustomerNote(e.target.value)} />
               </div>
             </div>
           </div>
