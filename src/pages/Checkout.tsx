@@ -166,7 +166,7 @@ export default function Checkout() {
   if (showConfirm) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-        <div className="bg-card rounded-3xl max-w-sm w-full shadow-2xl border border-border overflow-hidden animate-scaleIn">
+        <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden animate-scaleIn">
           <div className="bg-gradient-to-br from-emerald-400 via-green-500 to-teal-600 p-8 text-center relative overflow-hidden">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.2),transparent_70%)]" />
             <div className="relative z-10">
@@ -178,8 +178,8 @@ export default function Checkout() {
               <div className="inline-block bg-white/20 backdrop-blur rounded-lg px-3 py-1 mt-3 font-mono text-xs text-white">#{orderNumber}</div>
             </div>
           </div>
-          <div className="p-5 space-y-3 bg-card">
-            <h3 className="text-xs font-bold text-foreground flex items-center gap-2"><Gift size={14} className="text-pink-500" /> You received:</h3>
+          <div className="p-5 space-y-3 bg-white dark:bg-slate-900">
+            <h3 className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2"><Gift size={14} className="text-pink-500" /> You received:</h3>
             <div className="grid grid-cols-2 gap-2">
               <div className="bg-amber-50 dark:bg-amber-950/20 rounded-xl p-3 text-center border border-amber-200 dark:border-amber-800/30">
                 <Star size={18} className="mx-auto text-amber-500 mb-1" />
@@ -196,8 +196,8 @@ export default function Checkout() {
               {paymentMethod === 'bank' ? 'Your payment is being reviewed by admin. You will be notified once confirmed.' : 'Your payment has been processed. Your order is being prepared!'}
             </div>
             <div className="flex gap-2">
-              <button className="flex-1 py-3 border border-border rounded-xl text-xs font-medium text-foreground hover:bg-muted transition-colors" onClick={() => { setShowConfirm(false); navigate('/loyalty'); }}>View Rewards</button>
-              <button className="flex-[2] py-3 bg-primary text-primary-foreground rounded-xl text-xs font-bold hover:shadow-lg transition-all" onClick={() => { setShowConfirm(false); navigate('/shop'); }}>Back to Shop</button>
+              <button className="flex-1 py-3 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors" onClick={() => { window.location.href = '/loyalty'; }}>View Rewards</button>
+              <button className="flex-[2] py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-bold hover:shadow-lg transition-all" onClick={() => { window.location.href = '/shop'; }}>Back to Shop</button>
             </div>
           </div>
         </div>
@@ -205,7 +205,7 @@ export default function Checkout() {
     );
   }
 
-  if (cart.length === 0) { navigate('/cart'); return null; }
+  if (cart.length === 0 && !showConfirm) { navigate('/cart'); return null; }
 
   // ===== STEP 1: REVIEW =====
   if (step === 'review') {
