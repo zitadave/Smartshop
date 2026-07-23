@@ -38,7 +38,6 @@ import TaxFinanceDashboard from '@/components/admin/TaxFinanceDashboard';
 import SmartBooks from '@/components/admin/SmartBooks';
 import ManualPaymentReview from '@/components/admin/ManualPaymentReview';
 import ProductStudio from '@/components/admin/ProductStudio';
-import ToastContainer from '@/components/Toast';
 import { sendAdminTelegram, notifyProductCreated, notifyProductUpdated, notifyProductDeleted, notifySettingsChanged, notifyVendorUpdated } from '@/lib/adminNotifier';
 
 type Tab = 'overview' | 'products' | 'orders' | 'vendors' | 'marketplace' | 'reviews' 
@@ -96,7 +95,6 @@ export default function AdminLayout() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900" data-admin-root>
       {/* Toast notifications for admin panel */}
-      <ToastContainer />
       {/* Command Palette */}
       <CommandPalette onNavigate={handleCmdNavigate} />
 

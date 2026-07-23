@@ -2,7 +2,6 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '@/stores/AppStore';
 import { t } from '@/i18n/translations';
 import { isRunningInTelegram } from '@/lib/telegram';
-import ToastContainer from './Toast';
 import QuickView from './ui/QuickView';
 import AIChat from '@/components/ai/AIChat';
 import PWAInstallPrompt from './PWAInstallPrompt';
@@ -34,7 +33,6 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-background text-foreground pb-16">
-      <ToastContainer />
       <QuickView />
       <AIChat />
       {!TG && <PWAInstallPrompt />}

@@ -8,6 +8,7 @@ import { registerSW } from '@/lib/sw';
 import { getSampleBroadcasts, getSampleFlashDeals } from '@/lib/seed';
 import { isRunningInTelegram } from '@/lib/telegram';
 import Layout from '@/components/Layout';
+import ToastContainer from '@/components/Toast';
 
 const Home = lazy(() => import('@/pages/Home'));
 const Shop = lazy(() => import('@/pages/Shop'));
@@ -133,6 +134,7 @@ export default function App() {
   return (
     <BrowserRouter>
       {TG && <TelegramBackButton />}
+      <ToastContainer />
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<Suspense fallback={<PageLoader />}><Home /></Suspense>} />

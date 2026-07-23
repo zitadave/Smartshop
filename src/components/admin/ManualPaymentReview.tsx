@@ -59,9 +59,23 @@ export function addManualPayment(payment: Omit<ManualPayment, 'id' | 'status' | 
     createdAt: new Date().toISOString(),
   });
   savePayments(all);
+  
+  // Send text notification
   sendAdminTelegram(
     `🏦 <b>New Manual Payment Submitted</b>\n\nOrder: ${payment.orderNumber}\nCustomer: ${payment.customerName}\nAmount: ${formatPrice(payment.amount)}\nBank: ${payment.bankName}\nDepositor: ${payment.receiptNumber}\n\nReview: https://smartshop-steel.vercel.app/admin-panel`
   );
+  
+  // If there's a receipt image, send it as a file too
+  if (payment.receiptImage) {
+    try {
+      const base64Data = payment.receiptImage.split(',')[1] || payment.receiptImage;
+      sendFileToTelegram(base64Data, `receipt-${payment.orderNumber}.jpg`, {
+        contentType: 'image/jpeg',
+        caption: `📸 Receipt for order ${payment.orderNumber} - ${payment.bankName}`,
+        silent: true,
+      });
+    } catch {}
+  }
 }
 
 export default function ManualPaymentReview() {

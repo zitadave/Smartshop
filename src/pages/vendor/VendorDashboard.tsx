@@ -11,7 +11,6 @@ import {
   CheckCircle, Clock, Image, Trash2, Bell, ChevronRight, Activity
 } from 'lucide-react';
 import { toast } from '@/components/Toast';
-import ToastContainer from '@/components/Toast';
 import ProductStudio from '@/components/admin/ProductStudio';
 
 type VendorTab = 'dashboard' | 'products' | 'analytics' | 'orders' | 'payouts' | 'settings';
@@ -70,7 +69,6 @@ export default function VendorDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
-      <ToastContainer />
       {showStudio && (
         <ProductStudio
           editProduct={editingProduct}
