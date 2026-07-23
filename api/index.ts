@@ -512,15 +512,24 @@ export default async function handler(req: any, res: any) {
       if (!chatId || !content) return res.status(400).json({ error: 'chatId and content required' });
       try {
         const boundary = '----FormBoundary' + Math.random().toString(36).substring(2);
-        const fileContent = typeof content === 'string' ? content : JSON.stringify(content);
+        let fileContent = typeof content === 'string' ? content : JSON.stringify(content);
+        // Handle base64 data URLs (e.g., data:image/jpeg;base64,...)
+        let actualContentType = contentType || 'text/csv';
+        if (typeof content === 'string' && content.startsWith('data:')) {
+          const parts2 = content.split(';base64,');
+          if (parts2.length === 2) {
+            actualContentType = parts2[0].replace('data:', '');
+            fileContent = Buffer.from(parts2[1], 'base64');
+          }
+        }
         const parts = [];
         parts.push('--' + boundary);
         parts.push('Content-Disposition: form-data; name="chat_id"');
         parts.push('');
         parts.push(String(chatId));
         parts.push('--' + boundary);
-        parts.push('Content-Disposition: form-data; name="document"; filename="' + (filename || 'file.csv') + '"');
-        parts.push('Content-Type: ' + (contentType || 'text/csv'));
+        parts.push('Content-Disposition: form-data; name="document"; filename="' + (filename || 'file.' + (actualContentType.includes('jpeg') ? 'jpg' : actualContentType.includes('png') ? 'png' : 'csv')) + '"');
+        parts.push('Content-Type: ' + actualContentType);
         parts.push('');
         parts.push(fileContent);
         if (caption) {

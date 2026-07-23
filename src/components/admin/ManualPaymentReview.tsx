@@ -191,20 +191,39 @@ export default function ManualPaymentReview() {
                   {p.note && <div className="text-[9px] text-slate-500 italic mt-0.5">"{p.note}"</div>}
                 </div>
                 <div className="text-[8px] text-slate-400 mt-1">{new Date(p.createdAt).toLocaleString()}</div>
-              </div>
-              <div className="flex flex-col gap-1 flex-shrink-0">
+                {/* Receipt Image — shown inline with the info */}
                 {p.receiptImage && (
-                  <div className="relative group">
-                    <img src={p.receiptImage} className="w-16 h-16 rounded-lg object-cover border border-slate-200 cursor-pointer" alt="Receipt" onClick={() => window.open(p.receiptImage, '_blank')} />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center cursor-pointer" onClick={() => window.open(p.receiptImage, '_blank')}>
-                      <ExternalLink size={14} className="text-white" />
+                  <div className="mt-2 p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                    <div className="text-[9px] font-semibold text-slate-500 mb-1.5 flex items-center gap-1"><span>📸 Receipt Screenshot</span></div>
+                    <div className="relative group rounded-lg overflow-hidden cursor-pointer" onClick={() => window.open(p.receiptImage, '_blank')}>
+                      <img src={p.receiptImage} className="w-full max-h-48 object-contain bg-white rounded-lg" alt="Receipt" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <ExternalLink size={24} className="text-white" />
+                      </div>
                     </div>
                   </div>
                 )}
+              </div>
+              <div className="flex flex-col gap-2 flex-shrink-0">
+                {p.receiptImage && (
+                  <div className="flex flex-col items-center gap-1">
+                    <div className="relative group w-28 h-36 rounded-xl overflow-hidden border-2 border-indigo-200 dark:border-indigo-800 shadow-md">
+                      <img src={p.receiptImage} className="w-full h-full object-contain bg-slate-50 dark:bg-slate-800" alt="Receipt screenshot" />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer" onClick={() => window.open(p.receiptImage, '_blank')}>
+                        <ExternalLink size={20} className="text-white" />
+                      </div>
+                    </div>
+                    <span className="text-[8px] text-indigo-500 font-semibold">📸 View Receipt</span>
+                  </div>
+                )}
                 {p.status === 'pending' && (
-                  <div className="flex gap-1">
-                    <button className="px-2.5 py-1.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-lg text-[9px] font-bold flex items-center gap-1 hover:shadow-lg" onClick={() => approve(p.id)} title="Approve"><Check size={11} /></button>
-                    <button className="px-2.5 py-1.5 bg-red-500 text-white rounded-lg text-[9px] font-bold flex items-center gap-1 hover:bg-red-600" onClick={() => reject(p.id)} title="Reject"><X size={11} /></button>
+                  <div className="flex gap-2 mt-1">
+                    <button className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-[10px] font-bold flex items-center gap-1.5 hover:shadow-lg hover:scale-105 active:scale-95 transition-all" onClick={() => approve(p.id)}>
+                      <Check size={14} /> Approve
+                    </button>
+                    <button className="px-4 py-2 bg-red-500 text-white rounded-xl text-[10px] font-bold flex items-center gap-1.5 hover:bg-red-600 hover:scale-105 active:scale-95 transition-all" onClick={() => reject(p.id)}>
+                      <X size={14} /> Reject
+                    </button>
                   </div>
                 )}
               </div>
