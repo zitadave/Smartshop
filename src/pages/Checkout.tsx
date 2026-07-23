@@ -20,11 +20,22 @@ import {
   ExternalLink, Wallet, Ticket, X, Check
 } from 'lucide-react';
 
-const BANK_ACCOUNTS = [
-  { name: 'Commercial Bank of Ethiopia', account: '100000XXXXXXX', holder: 'Smart Shop Trading PLC' },
-  { name: 'Dashen Bank', account: '0987654321', holder: 'Smart Shop Trading PLC' },
-  { name: 'Awash Bank', account: '013005432100', holder: 'Smart Shop Trading PLC' },
-];
+// Read bank accounts from admin settings (ManualPaymentReview writes them here)
+function getBankAccounts(): { name: string; account: string; holder: string }[] {
+  try {
+    const saved = localStorage.getItem('ss_bank_accounts');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch {}
+  return [
+    { name: 'Commercial Bank of Ethiopia', account: '100000XXXXXXX', holder: 'Smart Shop Trading PLC' },
+    { name: 'Dashen Bank', account: '0987654321', holder: 'Smart Shop Trading PLC' },
+    { name: 'Awash Bank', account: '013005432100', holder: 'Smart Shop Trading PLC' },
+  ];
+}
+const BANK_ACCOUNTS = getBankAccounts();
 
 export default function Checkout() {
   const navigate = useNavigate();
@@ -184,7 +195,8 @@ export default function Checkout() {
 
   const backToShop = () => { setShowConfirm(false); navigate('/'); };
 
-  if (cart.length === 0) { navigate('/cart'); return null; }
+  // Show confirmation modal even after cart is cleared
+  if (cart.length === 0 && !showConfirm) { navigate('/cart'); return null; }
 
   /* ====== STEP 1: REVIEW & DELIVERY ====== */
   if (step === 'review') {
@@ -450,11 +462,32 @@ export default function Checkout() {
             })()}
           </div>
 
-          {/* Receipt Upload */}
+
+
+          {/* Depositor & Payment Details */}
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm mb-4">
+            <div className="space-y-2.5">
+              <div>
+                <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Depositor Full Name *</label>
+                <input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500/30" placeholder="The name on your bank account" value={depositorName} onChange={e => setDepositorName(e.target.value)} />
+                <p className="text-[8px] text-slate-400 mt-0.5">Enter the name exactly as shown on your transfer receipt</p>
+              </div>
+              <div>
+                <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Amount Paid (Br)</label>
+                <input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500/30" placeholder={String(grandTotal)} value={paidAmount} onChange={e => setPaidAmount(e.target.value)} />
+                <p className="text-[8px] text-slate-400 mt-0.5">Expected: {formatPrice(grandTotal)}</p>
+              </div>
+              <div>
+                <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Note (optional)</label>
+                <textarea className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500/30 resize-none h-16" placeholder="Any extra info for the admin..." value={customerNote} onChange={e => setCustomerNote(e.target.value)} />
+              </div>
+            </div>
+          </div>
+
+          {/* Receipt Upload — right above submit */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm mb-3">
             <h3 className="text-xs font-bold mb-3 flex items-center gap-2"><Upload size={14} className="text-amber-500" /> Upload Receipt</h3>
             
-            {/* Toggle between image and text */}
             <div className="flex gap-2 mb-3">
               <button className={cn('flex-1 py-2 rounded-lg text-[10px] font-semibold border transition-all', !useTextReceipt ? 'bg-indigo-100 dark:bg-indigo-900/50 border-indigo-300 text-indigo-700' : 'border-slate-200 text-slate-500')} onClick={() => setUseTextReceipt(false)}>
                 <Camera size={12} className="inline mr-1" /> Photo
@@ -486,34 +519,13 @@ export default function Checkout() {
               </div>
             ) : (
               <div className="space-y-2">
-                <p className="text-[9px] text-slate-400">Paste your receipt/transaction number below (recommended — fastest approval):</p>
-                <textarea className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent resize-none h-20 focus:outline-none focus:ring-2 focus:ring-indigo-500/30" placeholder="Paste your receipt number or transaction reference here..." value={receiptText} onChange={e => setReceiptText(e.target.value)} />
+                <p className="text-[9px] text-slate-400">Paste your receipt/transaction number below:</p>
+                <textarea className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent resize-none h-20 focus:outline-none focus:ring-2 focus:ring-indigo-500/30" placeholder="Paste your transaction reference here..." value={receiptText} onChange={e => setReceiptText(e.target.value)} />
               </div>
             )}
-
             <div className="mt-3 flex items-center gap-2 p-2.5 bg-amber-50 dark:bg-amber-950/20 rounded-xl">
               <Copy size={12} className="text-amber-500 flex-shrink-0" />
-              <p className="text-[9px] text-amber-700 dark:text-amber-400"><strong>💡 Tip:</strong> Copying your receipt number is faster and helps admin verify your payment quickly!</p>
-            </div>
-          </div>
-
-          {/* Depositor & Payment Details */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm mb-4">
-            <div className="space-y-2.5">
-              <div>
-                <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Depositor Full Name *</label>
-                <input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500/30" placeholder="The name on your bank account" value={depositorName} onChange={e => setDepositorName(e.target.value)} />
-                <p className="text-[8px] text-slate-400 mt-0.5">Enter the name exactly as shown on your transfer receipt</p>
-              </div>
-              <div>
-                <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Amount Paid (Br)</label>
-                <input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500/30" placeholder={String(grandTotal)} value={paidAmount} onChange={e => setPaidAmount(e.target.value)} />
-                <p className="text-[8px] text-slate-400 mt-0.5">Expected: {formatPrice(grandTotal)}</p>
-              </div>
-              <div>
-                <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Note (optional)</label>
-                <textarea className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500/30 resize-none h-16" placeholder="Any extra info for the admin..." value={customerNote} onChange={e => setCustomerNote(e.target.value)} />
-              </div>
+              <p className="text-[9px] text-amber-700 dark:text-amber-400"><strong>💡 Tip:</strong> Pasting your transaction reference helps admin verify your payment faster!</p>
             </div>
           </div>
 

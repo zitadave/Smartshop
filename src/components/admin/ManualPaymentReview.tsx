@@ -60,7 +60,7 @@ export function addManualPayment(payment: Omit<ManualPayment, 'id' | 'status' | 
   });
   savePayments(all);
   sendAdminTelegram(
-    `🏦 <b>New Manual Payment Submitted</b>\n\nOrder: ${payment.orderNumber}\nCustomer: ${payment.customerName}\nAmount: ${formatPrice(payment.amount)}\nBank: ${payment.bankName}\nReceipt: ${payment.receiptNumber}\n\nReview: https://smartshop-steel.vercel.app/admin-panel`
+    `🏦 <b>New Manual Payment Submitted</b>\n\nOrder: ${payment.orderNumber}\nCustomer: ${payment.customerName}\nAmount: ${formatPrice(payment.amount)}\nBank: ${payment.bankName}\nDepositor: ${payment.receiptNumber}\n\nReview: https://smartshop-steel.vercel.app/admin-panel`
   );
 }
 
@@ -172,7 +172,7 @@ export default function ManualPaymentReview() {
                   <div className="text-[10px]"><span className="text-slate-400">Amount:</span> <span className="font-bold text-emerald-600">{formatPrice(p.amount)}</span>{p.paidAmount ? <span className="text-slate-400 ml-1">(Customer paid: {formatPrice(Number(p.paidAmount))})</span> : ''}</div>
                   <div className="flex gap-3 text-[10px] flex-wrap">
                     <span><span className="text-slate-400">Bank:</span> {p.bankName}</span>
-                    <span><span className="text-slate-400">Receipt:</span> <span className="font-mono font-bold">{p.receiptNumber}</span></span>
+                    <span><span className="text-slate-400">Depositor:</span> <span className="font-mono font-bold">{p.receiptNumber}</span></span>
                   </div>
                   {p.note && <div className="text-[9px] text-slate-500 italic mt-0.5">"{p.note}"</div>}
                 </div>
