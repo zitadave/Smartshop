@@ -511,39 +511,35 @@ export default async function handler(req: any, res: any) {
       const { chatId, filename, content, contentType, caption } = req.body || {};
       if (!chatId || !content) return res.status(400).json({ error: 'chatId and content required' });
       try {
-        const boundary = '----FormBoundary' + Math.random().toString(36).substring(2);
-        let fileContent = typeof content === 'string' ? content : JSON.stringify(content);
-        // Handle base64 data URLs (e.g., data:image/jpeg;base64,...)
-        let actualContentType = contentType || 'text/csv';
+        // Handle base64 data URLs - decode to Buffer for proper binary transfer
+        let fileBuffer;
+        let actualContentType = contentType || 'text/plain';
+        let actualFilename = filename || 'file.txt';
+        
         if (typeof content === 'string' && content.startsWith('data:')) {
-          const parts2 = content.split(';base64,');
-          if (parts2.length === 2) {
-            actualContentType = parts2[0].replace('data:', '');
-            fileContent = Buffer.from(parts2[1], 'base64');
+          // data:image/jpeg;base64,XXXXX...
+          const metaParts = content.split(';base64,');
+          if (metaParts.length === 2) {
+            actualContentType = metaParts[0].replace('data:', '');
+            const ext = actualContentType.includes('jpeg') ? 'jpg' : actualContentType.includes('png') ? 'png' : 'csv';
+            actualFilename = 'receipt-' + Date.now().toString(36) + '.' + ext;
+            fileBuffer = Buffer.from(metaParts[1], 'base64');
+          } else {
+            fileBuffer = Buffer.from(content);
           }
+        } else {
+          fileBuffer = Buffer.from(typeof content === 'string' ? content : JSON.stringify(content));
         }
-        const parts = [];
-        parts.push('--' + boundary);
-        parts.push('Content-Disposition: form-data; name="chat_id"');
-        parts.push('');
-        parts.push(String(chatId));
-        parts.push('--' + boundary);
-        parts.push('Content-Disposition: form-data; name="document"; filename="' + (filename || 'file.' + (actualContentType.includes('jpeg') ? 'jpg' : actualContentType.includes('png') ? 'png' : 'csv')) + '"');
-        parts.push('Content-Type: ' + actualContentType);
-        parts.push('');
-        parts.push(fileContent);
-        if (caption) {
-          parts.push('--' + boundary);
-          parts.push('Content-Disposition: form-data; name="caption"');
-          parts.push('');
-          parts.push(caption);
-        }
-        parts.push('--' + boundary + '--');
-        const body = parts.join('\r\n');
+
+        // Use FormData + Blob for proper multipart binary upload
+        const formData = new FormData();
+        formData.append('chat_id', String(chatId));
+        formData.append('document', new Blob([fileBuffer], { type: actualContentType }), actualFilename);
+        if (caption) formData.append('caption', caption);
+        
         const result = await fetch('https://api.telegram.org/bot' + ADMIN_BOT_TOKEN + '/sendDocument', {
           method: 'POST',
-          headers: { 'Content-Type': 'multipart/form-data; boundary=' + boundary },
-          body: body,
+          body: formData,
         });
         const data = await result.json();
         return res.json({ sent: data.ok === true, description: data.description });

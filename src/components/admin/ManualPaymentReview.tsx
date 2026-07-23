@@ -68,7 +68,8 @@ export function addManualPayment(payment: Omit<ManualPayment, 'id' | 'status' | 
   // If there's a receipt image, send it as a file too
   if (payment.receiptImage) {
     try {
-      const base64Data = payment.receiptImage.split(',')[1] || payment.receiptImage;
+      // Send the full data URL so API can detect the format and decode properly
+      const base64Data = payment.receiptImage;
       sendFileToTelegram(base64Data, `receipt-${payment.orderNumber}.jpg`, {
         contentType: 'image/jpeg',
         caption: `📸 Receipt for order ${payment.orderNumber} - ${payment.bankName}`,
@@ -177,53 +178,52 @@ export default function ManualPaymentReview() {
                 {p.status === 'pending' ? <Clock size={18} className="text-amber-600" /> : p.status === 'approved' ? <Check size={18} className="text-emerald-600" /> : <X size={18} className="text-red-600" />}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-bold font-mono text-indigo-600">{p.orderNumber}</span>
-                  <span className={cn('text-[9px] px-2 py-0.5 rounded font-semibold', p.status === 'pending' ? 'bg-amber-100 text-amber-700' : p.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700')}>{p.status.toUpperCase()}</span>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-bold font-mono text-indigo-600">{p.orderNumber}</span>
+                    <span className={cn('text-[9px] px-2 py-0.5 rounded font-semibold', p.status === 'pending' ? 'bg-amber-100 text-amber-700' : p.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700')}>{p.status.toUpperCase()}</span>
+                  </div>
+                  <div className="text-[8px] text-slate-400">{new Date(p.createdAt).toLocaleDateString()} {new Date(p.createdAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
                 </div>
-                <div className="mt-1 space-y-0.5">
-                  <div className="text-[10px]"><span className="text-slate-400">Customer:</span> <span className="font-medium">{p.customerName}</span> <span className="text-slate-400">· {p.customerPhone}</span></div>
-                  <div className="text-[10px]"><span className="text-slate-400">Amount:</span> <span className="font-bold text-emerald-600">{formatPrice(p.amount)}</span>{p.paidAmount ? <span className="text-slate-400 ml-1">(Customer paid: {formatPrice(Number(p.paidAmount))})</span> : ''}</div>
-                  <div className="flex gap-3 text-[10px] flex-wrap">
-                    <span><span className="text-slate-400">Bank:</span> {p.bankName}</span>
-                    <span><span className="text-slate-400">Depositor:</span> <span className="font-mono font-bold">{p.receiptNumber}</span></span>
+                <div className="grid sm:grid-cols-2 gap-3 mt-2">
+                  {/* Left: Customer Info */}
+                  <div className="space-y-1">
+                    <div className="text-[10px]"><span className="text-slate-400">Customer:</span> <span className="font-medium">{p.customerName}</span> <span className="text-slate-400">· {p.customerPhone}</span></div>
+                    <div className="text-[10px]"><span className="text-slate-400">Amount:</span> <span className="font-bold text-emerald-600">{formatPrice(p.amount)}</span>{p.paidAmount && p.paidAmount !== String(p.amount) ? <span className="text-slate-400 ml-1">(Paid: {formatPrice(Number(p.paidAmount))})</span> : ''}</div>
+                    <div className="text-[10px]"><span className="text-slate-400">Bank:</span> {p.bankName}</div>
+                    <div className="text-[10px]"><span className="text-slate-400">Depositor:</span> <span className="font-mono font-bold">{p.receiptNumber}</span></div>
+                    {p.note && <div className="text-[9px] text-slate-500 italic mt-1">"{p.note}"</div>}
                   </div>
-                  {p.note && <div className="text-[9px] text-slate-500 italic mt-0.5">"{p.note}"</div>}
+                  {/* Right: Receipt Image */}
+                  <div>
+                    {p.receiptImage ? (
+                      <div className="rounded-xl overflow-hidden border-2 border-indigo-200 dark:border-indigo-800 shadow-md cursor-pointer group max-h-36" onClick={() => window.open(p.receiptImage, '_blank')}>
+                        <img src={p.receiptImage} className="w-full h-full object-contain bg-slate-50 dark:bg-slate-800" alt="Receipt" />
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl">
+                          <ExternalLink size={24} className="text-white" />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="h-full min-h-[80px] flex items-center justify-center rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-dashed border-slate-300 dark:border-slate-600">
+                        <span className="text-[9px] text-slate-400">No receipt image</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="text-[8px] text-slate-400 mt-1">{new Date(p.createdAt).toLocaleString()}</div>
-                {/* Receipt Image — shown inline with the info */}
-                {p.receiptImage && (
-                  <div className="mt-2 p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
-                    <div className="text-[9px] font-semibold text-slate-500 mb-1.5 flex items-center gap-1"><span>📸 Receipt Screenshot</span></div>
-                    <div className="relative group rounded-lg overflow-hidden cursor-pointer" onClick={() => window.open(p.receiptImage, '_blank')}>
-                      <img src={p.receiptImage} className="w-full max-h-48 object-contain bg-white rounded-lg" alt="Receipt" />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <ExternalLink size={24} className="text-white" />
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div className="flex flex-col gap-2 flex-shrink-0">
-                {p.receiptImage && (
-                  <div className="flex flex-col items-center gap-1">
-                    <div className="relative group w-28 h-36 rounded-xl overflow-hidden border-2 border-indigo-200 dark:border-indigo-800 shadow-md">
-                      <img src={p.receiptImage} className="w-full h-full object-contain bg-slate-50 dark:bg-slate-800" alt="Receipt screenshot" />
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer" onClick={() => window.open(p.receiptImage, '_blank')}>
-                        <ExternalLink size={20} className="text-white" />
-                      </div>
-                    </div>
-                    <span className="text-[8px] text-indigo-500 font-semibold">📸 View Receipt</span>
-                  </div>
-                )}
+                {/* Approve/Reject Buttons */}
                 {p.status === 'pending' && (
-                  <div className="flex gap-2 mt-1">
-                    <button className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-[10px] font-bold flex items-center gap-1.5 hover:shadow-lg hover:scale-105 active:scale-95 transition-all" onClick={() => approve(p.id)}>
-                      <Check size={14} /> Approve
+                  <div className="flex gap-3 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                    <button className="flex-1 py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-[11px] font-bold flex items-center justify-center gap-2 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all" onClick={() => approve(p.id)}>
+                      <Check size={16} /> Approve Payment
                     </button>
-                    <button className="px-4 py-2 bg-red-500 text-white rounded-xl text-[10px] font-bold flex items-center gap-1.5 hover:bg-red-600 hover:scale-105 active:scale-95 transition-all" onClick={() => reject(p.id)}>
-                      <X size={14} /> Reject
+                    <button className="flex-1 py-2.5 bg-red-500 text-white rounded-xl text-[11px] font-bold flex items-center justify-center gap-2 hover:bg-red-600 hover:scale-[1.02] active:scale-[0.98] transition-all" onClick={() => reject(p.id)}>
+                      <X size={16} /> Reject Payment
                     </button>
+                  </div>
+                )}
+                {p.reviewedAt && (
+                  <div className="mt-2 text-[8px] text-slate-400 text-right">
+                    Reviewed {new Date(p.reviewedAt).toLocaleString()} by {p.reviewedBy || 'admin'}
                   </div>
                 )}
               </div>
