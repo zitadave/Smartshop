@@ -23,7 +23,6 @@ import SmartAlerts from '@/components/admin/SmartAlerts';
 import AbandonedCartRecovery from '@/components/admin/AbandonedCarts';
 import AdminRoles from '@/components/admin/AdminRoles';
 import DatabaseBackup from '@/components/admin/DatabaseBackup';
-import AdminThemeManager from '@/components/admin/AdminThemeManager';
 import BulkProductManager from '@/components/admin/BulkProductManager';
 import ProductAnalytics from '@/components/admin/ProductAnalytics';
 import InventoryForecast from '@/components/admin/InventoryForecast';
@@ -42,7 +41,7 @@ import { sendAdminTelegram, notifyProductCreated, notifyProductUpdated, notifyPr
 
 type Tab = 'overview' | 'products' | 'orders' | 'vendors' | 'marketplace' | 'reviews' 
   | 'broadcast' | 'flashdeals' | 'preorders' | 'tracking' | 'themes' | 'coupons' 
-  | 'settings' | 'alerts' | 'abandoned' | 'roles' | 'backup' | 'adminTheme' 
+  | 'settings' | 'alerts' | 'abandoned' | 'roles' | 'backup' 
   | 'bulkProducts' | 'analytics' | 'forecast' | 'activity' | 'security' | 'telegram' 
   | 'fulfillment' | 'sla' | 'driver' | 'returns' | 'finance' | 'smartbooks' | 'manualpayments';
 
@@ -77,7 +76,6 @@ export default function AdminLayout() {
     { id: 'abandoned', icon: ShoppingCart, label: 'Cart Recovery' },
     { id: 'roles', icon: Shield, label: 'Admin Roles' },
     { id: 'backup', icon: Database, label: 'Backup' },
-    { id: 'adminTheme', icon: Palette, label: 'Admin Theme' },
     { id: 'bulkProducts', icon: Upload, label: 'Bulk Import' },
     { id: 'analytics', icon: BarChart3, label: 'Product Analytics' },
     { id: 'forecast', icon: Clock, label: 'Forecast' },
@@ -128,15 +126,15 @@ export default function AdminLayout() {
         </div>
       </header>
 
-      <aside className={`fixed top-14 left-0 bottom-0 w-60 z-40 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 ${menuOpen ? 'translate-x-0' : '-translate-x-full'} xl:translate-x-0 overflow-y-auto`} data-admin-sidebar>
-        <div className="py-3 px-2 space-y-1">
+      <aside className={`fixed top-14 left-0 bottom-0 w-60 z-40 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 ${menuOpen ? 'translate-x-0' : '-translate-x-full'} xl:translate-x-0 flex flex-col`} data-admin-sidebar>
+        <div className="flex-1 overflow-y-auto py-3 px-2 space-y-1">
           {(() => {
             const groups: { title: string; ids: Tab[] }[] = [
               { title: 'STORE', ids: ['overview', 'products', 'orders', 'vendors', 'marketplace', 'reviews'] },
               { title: 'PROMOTION', ids: ['broadcast', 'flashdeals', 'preorders', 'coupons', 'tracking', 'themes'] },
               { title: 'OPERATIONS', ids: ['manualpayments', 'alerts', 'abandoned', 'fulfillment', 'sla', 'driver', 'returns'] },
               { title: 'FINANCE', ids: ['finance', 'smartbooks', 'settings'] },
-              { title: 'ADMIN', ids: ['roles', 'security', 'backup', 'adminTheme', 'telegram', 'activity'] },
+              { title: 'ADMIN', ids: ['roles', 'security', 'backup', 'telegram', 'activity'] },
               { title: 'INSIGHTS', ids: ['analytics', 'forecast', 'bulkProducts'] },
             ];
             const isCollapsed = (g: string) => collapsedGroups[g] === true;
@@ -171,7 +169,7 @@ export default function AdminLayout() {
             });
           })()}
         </div>
-        <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+        <div className="flex-shrink-0 p-3 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 sticky bottom-0">
           <button className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors" onClick={() => window.location.href = '/'}>
             <LogOut size={14} /> <span>Back to Store</span>
           </button>
@@ -198,7 +196,7 @@ export default function AdminLayout() {
           {tab === 'abandoned' && <AbandonedCartRecovery />}
           {tab === 'roles' && <AdminRoles />}
           {tab === 'backup' && <DatabaseBackup />}
-          {tab === 'adminTheme' && <AdminThemeManager />}
+          {/* Admin Theme moved to Settings */}
           {tab === 'bulkProducts' && <BulkProductManager />}
           {tab === 'analytics' && <ProductAnalytics />}
           {tab === 'forecast' && <InventoryForecast />}
@@ -1210,6 +1208,11 @@ function AdminSettings() {
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
+        <h3 className="text-sm font-bold mb-3">🎨 Appearance</h3>
+        <div className="flex gap-3 mb-4">
+          <button className={cn('flex-1 py-2.5 rounded-xl text-[11px] font-bold border-2 transition-all', !darkMode ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-500')} onClick={() => { setDarkMode(false); localStorage.setItem('ss_dark', 'false'); document.documentElement.classList.remove('dark'); }}>☀️ Light</button>
+          <button className={cn('flex-1 py-2.5 rounded-xl text-[11px] font-bold border-2 transition-all', darkMode ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-500')} onClick={() => { setDarkMode(true); localStorage.setItem('ss_dark', 'true'); document.documentElement.classList.add('dark'); }}>🌙 Dark</button>
+        </div>
         <h3 className="text-sm font-bold mb-3">🔔 Features & Toggles</h3>
         <div className="space-y-3">
           <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={priceAlertEnabled} onChange={e => { setPriceAlertEnabled(e.target.checked); saveSetting('priceAlertEnabled', e.target.checked); }} className="rounded" /> Enable Price Drop Alerts</label>
