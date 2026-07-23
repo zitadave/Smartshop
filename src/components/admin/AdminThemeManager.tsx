@@ -40,48 +40,60 @@ export default function AdminThemeManager() {
     const t = ADMIN_THEMES.find(x => x.id === themeId);
     if (!t) return;
 
-    // Store current theme in data attribute for child components to reference
     document.documentElement.setAttribute('data-admin-theme', themeId);
 
-    // Define CSS variables that ARE actually used by the injected styles
-    const root = document.documentElement;
-    root.style.setProperty('--admin-bg', t.bg);
-    root.style.setProperty('--admin-card', t.card);
-    root.style.setProperty('--admin-text', t.text);
-    root.style.setProperty('--admin-text-muted', t.textMuted);
-    root.style.setProperty('--admin-border', t.border);
-    root.style.setProperty('--admin-sidebar', t.sidebar);
-    root.style.setProperty('--admin-header', t.header);
-    root.style.setProperty('--admin-hover', t.hover);
-
-    // Apply to the admin root element directly
-    const adminRoot = document.querySelector('[data-admin-root]') as HTMLElement;
-    if (adminRoot) {
-      adminRoot.style.backgroundColor = t.bg;
-      adminRoot.style.color = t.text;
+    // Inject CSS variables into a style tag that overrides Tailwind classes
+    let styleEl = document.getElementById('admin-theme-styles');
+    if (!styleEl) {
+      styleEl = document.createElement('style');
+      styleEl.id = 'admin-theme-styles';
+      document.head.appendChild(styleEl);
     }
-
-    // Apply to sidebar
-    const sidebar = document.querySelector('[data-admin-sidebar]') as HTMLElement;
-    if (sidebar) {
-      sidebar.style.backgroundColor = t.sidebar;
-      sidebar.style.borderColor = t.border;
-    }
-
-    // Apply to header
-    const header = document.querySelector('[data-admin-header]') as HTMLElement;
-    if (header) {
-      header.style.backgroundColor = t.header;
-      header.style.borderColor = t.border;
-    }
-
-    // Apply to all admin cards
-    document.querySelectorAll('[data-admin-card]').forEach(el => {
-      if (el instanceof HTMLElement) {
-        el.style.backgroundColor = t.card;
-        el.style.borderColor = t.border;
+    
+    styleEl.innerHTML = `
+      [data-admin-root] {
+        background-color: ${t.bg} !important;
+        color: ${t.text} !important;
       }
-    });
+      [data-admin-sidebar] {
+        background-color: ${t.sidebar} !important;
+        border-color: ${t.border} !important;
+      }
+      [data-admin-header] {
+        background-color: ${t.header} !important;
+        border-color: ${t.border} !important;
+      }
+      [data-admin-card] {
+        background-color: ${t.card} !important;
+        border-color: ${t.border} !important;
+      }
+      [data-admin-card] .text-slate-400,
+      [data-admin-card] .text-slate-500,
+      [data-admin-card] .text-slate-600 {
+        color: ${t.textMuted} !important;
+      }
+      [data-admin-card] .text-slate-700,
+      [data-admin-card] .text-slate-800,
+      [data-admin-card] .text-slate-900,
+      [data-admin-card] .dark\\:text-slate-200,
+      [data-admin-card] .dark\\:text-white {
+        color: ${t.text} !important;
+      }
+      [data-admin-sidebar] .text-slate-400,
+      [data-admin-sidebar] .text-slate-500 {
+        color: ${t.textMuted} !important;
+      }
+      [data-admin-sidebar] .hover\\:text-slate-900:hover {
+        color: ${t.text} !important;
+      }
+      [data-admin-sidebar] .bg-gradient-to-r.from-indigo-50 {
+        background: ${t.hover} !important;
+      }
+      body {
+        background-color: ${t.bg} !important;
+        color: ${t.text} !important;
+      }
+    `;
 
     toast(`🎨 Admin theme: ${t.name} applied!`, 'success');
   };

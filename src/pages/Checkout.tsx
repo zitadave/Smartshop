@@ -138,6 +138,7 @@ export default function Checkout() {
         amount: grandTotal, bankName: selectedBank, receiptNumber: receiptToSend,
         paidAmount: paidAmount || String(grandTotal), note: customerNote,
         receiptImage: receiptImage || undefined,
+        receiptText: useTextReceipt ? receiptText : undefined,
       });
       sendAdminTelegram(`🏦 <b>Manual Payment Submitted</b>\n\nOrder: ${orderNum}\nCustomer: ${name} (${phone})\nAmount: Br ${grandTotal.toLocaleString()}\nBank: ${selectedBank}\nDepositor: ${receiptToSend}`);
     }
