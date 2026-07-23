@@ -70,10 +70,29 @@ export default function Checkout() {
             const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`);
             const data = await res.json();
             const addr = data.address || {};
-            const detectedCity = addr.city || addr.town || addr.county || addr.state || '';
-            if (detectedCity) { setCity(detectedCity); setLocationDetected(true); }
-            const full = [addr.road, addr.suburb, addr.city_district].filter(Boolean).join(', ');
-            if (full) setAddress(full);
+            const detectedCity = addr.city || addr.town || addr.county || addr.state || addr.village || '';
+            // Normalize city names to match our dropdown
+            const normalizedCities: Record<string, string> = {
+              'addis ababa': 'Addis Ababa', 'addis': 'Addis Ababa',
+              'bahir dar': 'Bahir Dar', 'adar': 'Bahir Dar',
+              'nazret': 'Adama', 'nazareth': 'Adama', 'adama': 'Adama',
+              'awasa': 'Hawassa', 'awassa': 'Hawassa', 'hawassa': 'Hawassa',
+              'gonder': 'Gondar', 'gondar': 'Gondar',
+              'mekele': 'Mekelle', 'mekelle': 'Mekelle',
+              'dir dawa': 'Dire Dawa', 'dire dawa': 'Dire Dawa',
+              'jima': 'Jimma', 'jimma': 'Jimma',
+            };
+            const key = detectedCity.toLowerCase().trim();
+            const finalCity = normalizedCities[key] || detectedCity;
+            if (finalCity) {
+              setCity(finalCity);
+              setLocationDetected(true);
+            }
+            const full = [addr.road, addr.suburb, addr.city_district, addr.neighbourhood].filter(Boolean).join(', ');
+            if (full || detectedCity) {
+              const addressStr = full ? full + (detectedCity ? ', ' + detectedCity : '') : detectedCity;
+              setAddress(addressStr);
+            }
           } catch {}
         }, () => {}, { timeout: 5000 }
       );
@@ -124,15 +143,16 @@ export default function Checkout() {
     addOrder(order);
 
     if (paymentMethod === 'bank') {
-      const receiptToSend = useTextReceipt ? receiptText : depositorName;
+      // ALWAYS send depositorName as receiptNumber, receiptText separately
       addManualPayment({
         orderNumber: orderNum, customerName: name, customerPhone: phone,
-        amount: grandTotal, bankName: selectedBank, receiptNumber: receiptToSend,
+        amount: grandTotal, bankName: selectedBank,
+        receiptNumber: depositorName || 'Not provided',
         paidAmount: paidAmount || String(grandTotal), note: customerNote,
         receiptImage: receiptImage || undefined,
         receiptText: useTextReceipt ? receiptText : undefined,
       });
-      // addManualPayment already sends Telegram notification — no duplicate here
+      // addManualPayment sends Telegram notification
     }
 
     clearCart();
