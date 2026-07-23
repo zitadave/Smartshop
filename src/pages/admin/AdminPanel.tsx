@@ -50,6 +50,21 @@ export default function AdminLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+  // Clean up any old admin theme CSS injection that could bleed into shop
+  useEffect(() => {
+    const style = document.getElementById('admin-theme-styles');
+    if (style) style.remove();
+    document.querySelectorAll('[data-admin-root]').forEach(el => {
+      if (el instanceof HTMLElement) {
+        el.removeAttribute('style');
+      }
+    });
+    document.querySelectorAll('[data-admin-card]').forEach(el => {
+      if (el instanceof HTMLElement) {
+        el.removeAttribute('style');
+      }
+    });
+  }, []);
   const navigate = useNavigate();
 
   const handleCmdNavigate = (t: string) => {
@@ -170,8 +185,8 @@ export default function AdminLayout() {
           })()}
         </div>
         <div className="flex-shrink-0 p-3 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 sticky bottom-0">
-          <button className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors" onClick={() => window.location.href = '/'}>
-            <LogOut size={14} /> <span>Back to Store</span>
+          <button className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors" onClick={() => { document.documentElement.classList.remove('dark'); window.location.href = '/'; }}>
+<LogOut size={14} /> <span>Back to Store</span>
           </button>
         </div>
       </aside>
