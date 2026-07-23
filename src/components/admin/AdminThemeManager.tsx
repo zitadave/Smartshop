@@ -42,60 +42,33 @@ export default function AdminThemeManager() {
 
     document.documentElement.setAttribute('data-admin-theme', themeId);
 
-    // Inject CSS variables into a style tag that overrides Tailwind classes
+    // Inject CSS via style tag to override Tailwind classes
+    // Use raw string concatenation to avoid template literal issues
     let styleEl = document.getElementById('admin-theme-styles');
     if (!styleEl) {
       styleEl = document.createElement('style');
       styleEl.id = 'admin-theme-styles';
       document.head.appendChild(styleEl);
     }
-    
-    styleEl.innerHTML = `
-      [data-admin-root] {
-        background-color: ${t.bg} !important;
-        color: ${t.text} !important;
-      }
-      [data-admin-sidebar] {
-        background-color: ${t.sidebar} !important;
-        border-color: ${t.border} !important;
-      }
-      [data-admin-header] {
-        background-color: ${t.header} !important;
-        border-color: ${t.border} !important;
-      }
-      [data-admin-card] {
-        background-color: ${t.card} !important;
-        border-color: ${t.border} !important;
-      }
-      [data-admin-card] .text-slate-400,
-      [data-admin-card] .text-slate-500,
-      [data-admin-card] .text-slate-600 {
-        color: ${t.textMuted} !important;
-      }
-      [data-admin-card] .text-slate-700,
-      [data-admin-card] .text-slate-800,
-      [data-admin-card] .text-slate-900,
-      [data-admin-card] .dark\\:text-slate-200,
-      [data-admin-card] .dark\\:text-white {
-        color: ${t.text} !important;
-      }
-      [data-admin-sidebar] .text-slate-400,
-      [data-admin-sidebar] .text-slate-500 {
-        color: ${t.textMuted} !important;
-      }
-      [data-admin-sidebar] .hover\\:text-slate-900:hover {
-        color: ${t.text} !important;
-      }
-      [data-admin-sidebar] .bg-gradient-to-r.from-indigo-50 {
-        background: ${t.hover} !important;
-      }
-      body {
-        background-color: ${t.bg} !important;
-        color: ${t.text} !important;
-      }
-    `;
 
-    toast(`🎨 Admin theme: ${t.name} applied!`, 'success');
+    const css = [
+      '[data-admin-root] { background-color: ' + t.bg + ' !important; color: ' + t.text + ' !important; }',
+      '[data-admin-sidebar] { background-color: ' + t.sidebar + ' !important; border-color: ' + t.border + ' !important; }',
+      '[data-admin-header] { background-color: ' + t.header + ' !important; border-color: ' + t.border + ' !important; }',
+      '[data-admin-card] { background-color: ' + t.card + ' !important; border-color: ' + t.border + ' !important; }',
+      '[data-admin-card] .text-slate-400, [data-admin-card] .text-slate-500, [data-admin-card] .text-slate-600 { color: ' + t.textMuted + ' !important; }',
+      '[data-admin-card] .text-slate-700, [data-admin-card] .text-slate-800, [data-admin-card] .text-slate-900, [data-admin-card] .dark\\:text-slate-200, [data-admin-card] .dark\\:text-white { color: ' + t.text + ' !important; }',
+      '[data-admin-card] .font-bold, [data-admin-card] .font-semibold, [data-admin-card] .font-medium { color: ' + t.text + ' !important; }',
+      '[data-admin-sidebar] .text-slate-400, [data-admin-sidebar] .text-slate-500 { color: ' + t.textMuted + ' !important; }',
+      '[data-admin-sidebar] .hover\\:text-slate-900:hover { color: ' + t.text + ' !important; }',
+      '[data-admin-card] .bg-white { background-color: ' + t.card + ' !important; }',
+      'body { background-color: ' + t.bg + ' !important; color: ' + t.text + ' !important; }',
+      '[data-admin-card] .text-xs, [data-admin-card] .text-sm, [data-admin-card] .text-lg { color: ' + t.text + ' !important; }',
+      '.dark [data-admin-card] *, [data-admin-card] .dark\\:* { color: inherit; }',
+    ].join('\n');
+
+    styleEl.innerHTML = css;
+    toast(t.name + ' theme applied!', 'success');
   };
 
   // Apply on mount
