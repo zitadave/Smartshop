@@ -657,6 +657,28 @@ function AdminVendors() {
     toast('Application rejected.', 'info');
     window.location.reload();
   };
+  const deleteVendorApp = function(id) {
+    if (!confirm('Delete this vendor permanently?')) return;
+    var updated = [];
+    for (var di = 0; di < apps.length; di++) {
+      if (apps[di].id !== id) { updated.push(apps[di]); }
+    }
+    localStorage.setItem('ss_vendor_applications', JSON.stringify(updated));
+    toast('Vendor deleted.', 'info');
+    window.location.reload();
+  };
+  const toggleVendorStatus = function(id) {
+    var updated = apps.slice();
+    for (var ti = 0; ti < updated.length; ti++) {
+      if (updated[ti].id === id) {
+        if (updated[ti].status === 'approved') { updated[ti].status = 'paused'; }
+        else if (updated[ti].status === 'paused') { updated[ti].status = 'approved'; }
+      }
+    }
+    localStorage.setItem('ss_vendor_applications', JSON.stringify(updated));
+    toast('Vendor status updated!', 'success');
+    window.location.reload();
+  };
 
   const [vendors, setVendors] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
@@ -779,6 +801,47 @@ function AdminVendors() {
             })}
           </div>
           {vendors.length === 0 && <p className="text-xs text-slate-400 text-center py-8">No vendors registered yet</p>}
+
+          {/* All Vendor Applications */}
+          {apps.length > 0 && (
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-x-hidden">
+              <div className="p-4 border-b border-slate-100 dark:border-slate-800">
+                <h3 className="text-sm font-bold">All Vendor Applications ({apps.length})</h3>
+              </div>
+              <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                {apps.sort(function(a,b) { return new Date(b.appliedAt) - new Date(a.appliedAt); }).map(function(a) {
+                  var badgeColor = a.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : a.status === 'paused' ? 'bg-amber-100 text-amber-700' : a.status === 'rejected' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700';
+                  var badgeText = a.status === 'paused' ? 'Paused' : a.status.charAt(0).toUpperCase() + a.status.slice(1);
+                  return (
+                    <div key={a.id} className="flex items-center justify-between p-3 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-950/50 dark:to-purple-950/50 flex items-center justify-center">
+                          <span className="text-sm">{a.status === 'approved' ? '✅' : a.status === 'rejected' ? '❌' : '⏳'}</span>
+                        </div>
+                        <div>
+                          <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">{a.name || 'Unknown'}</div>
+                          <div className="text-[9px] text-slate-400">Phone: {a.phone || 'N/A'} · {new Date(a.appliedAt).toLocaleDateString()}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={'px-2 py-0.5 rounded text-[9px] font-semibold ' + badgeColor}>{badgeText}</span>
+                        {(a.status === 'approved' || a.status === 'paused') && (
+                          <button className={'px-2 py-1 rounded-lg text-[9px] border font-semibold ' + (a.status === 'paused' ? 'border-emerald-300 text-emerald-600 hover:bg-emerald-50' : 'border-amber-300 text-amber-600 hover:bg-amber-50')}
+                            onClick={function() { toggleVendorStatus(a.id); }}>
+                            {a.status === 'paused' ? '▶ Resume' : '⏸ Pause'}
+                          </button>
+                        )}
+                        <button className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600" onClick={function() { deleteVendorApp(a.id); }} title="Delete">
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
         </>
       )}
     </div>
