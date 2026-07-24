@@ -237,11 +237,11 @@ export default async function handler(req: any, res: any) {
       var tid = b.telegram_id || '';
       if (!tid) return res.json({ success: false });
       
-      var result: any = { success: true };
+      var result = { success: true };
       
       // Upsert user
       try {
-        var userData: any = { 
+        var userData = { 
           telegram_id: parseInt(tid), 
           username: b.username || '', 
           first_name: b.first_name || '',
@@ -564,12 +564,12 @@ export default async function handler(req: any, res: any) {
           var { data: v } = await supabase.from('vendors').select('*').eq('id', appId);
           if (v && v.length > 0) {
             var vRec = v[0];
-            var lookups: any[] = [];
+            var lookups = [];
             if (vRec.telegram_id) lookups.push({ key: 'telegram_id', val: vRec.telegram_id });
             if (vRec.phone) lookups.push({ key: 'phone', val: vRec.phone });
             for (var li = 0; li < lookups.length; li++) {
               try {
-                var upd: any = {};
+                var upd = {};
                 upd[lookups[li].key] = lookups[li].val;
                 await supabase.from('users').update({ vendor_status: 'approved' }).eq(lookups[li].key, lookups[li].val);
               } catch(eu) {}

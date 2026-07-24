@@ -37,6 +37,17 @@ export default function Profile() {
     { name: 'Bronze', icon: '🥉', next: { need: 200 - pts, label: 'Silver' }, color: 'from-amber-700 to-amber-800' };
   const tier = getTier(loyaltyPoints);
 
+  // Clear old pending data to allow fresh start
+  try {
+    var oldStatus = localStorage.getItem('ss_vendor_status');
+    if (oldStatus === 'pending') {
+      // Clear old pending requests - user can re-apply
+      localStorage.removeItem('ss_vendor_applications');
+      localStorage.removeItem('ss_vendor_app_id');
+      localStorage.removeItem('ss_vendor_status');
+    }
+  } catch(e) {}
+  
   var initialVS = 'none';
   try { initialVS = localStorage.getItem('ss_vendor_status') || 'none'; } catch(e) {}
   const [vendorStatus, setVendorStatus] = useState(initialVS);
@@ -55,6 +66,11 @@ export default function Profile() {
         body: JSON.stringify(payload)
       }).then(function(r) { return r.json(); }).then(function(d) {
         if (d && d.vendor_status) {
+          if (d.vendor_status === 'approved' && localStorage.getItem('ss_vendor_status') !== 'approved') {
+            localStorage.setItem('ss_vendor_status', 'approved');
+            window.location.reload();
+            return;
+          }
           localStorage.setItem('ss_vendor_status', d.vendor_status);
           setVendorStatus(d.vendor_status);
           if (d.vendor_id) localStorage.setItem('ss_vendor_app_id', String(d.vendor_id));
@@ -69,7 +85,7 @@ export default function Profile() {
           for (var i = 0; i < d.applications.length; i++) {
             if (String(d.applications[i].id) === appId && d.applications[i].status === 'approved') {
               localStorage.setItem('ss_vendor_status', 'approved');
-              setVendorStatus('approved');
+              window.location.reload();
               return;
             }
           }
