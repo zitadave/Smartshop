@@ -435,10 +435,40 @@ export default async function handler(req: any, res: any) {
 
     // ===== VENDORS =====
     if (path.startsWith('/api/vendors')) {
+      if (path === '/api/vendors/applications' && method === 'GET') { const { data } = await supabase.from('vendors').select('*').order('joined_at', { ascending: false }); return res.json({ applications: data || [] }); }
       if (method === 'GET' && (path === '/api/vendors' || path === '/api/')) { const { data } = await supabase.from('vendors').select('*'); return res.json({ vendors: data || [] }); }
       if (method === 'GET' && path === '/api/vendors/register') { const { data } = await supabase.from('vendors').select('*').eq('status', 'pending'); return res.json({ applications: data || [] }); }
-      if (method === 'POST' && path === '/api/vendors/register') { const vendor = { ...req.body, status: 'pending', joined_at: new Date().toISOString() }; const { data } = await supabase.from('vendors').insert(vendor).select().single(); return res.json({ success: true, vendor: data }); }
-      if (method === 'PUT') { const id = parseInt(path.split('/').pop() || '0'); await supabase.from('vendors').update(req.body).eq('id', id); return res.json({ success: true }); }
+      if (method === 'POST' && path === '/api/vendors/register') { 
+        const vendor = { ...req.body, status: 'pending', joined_at: new Date().toISOString() }; 
+        const { data } = await supabase.from('vendors').insert(vendor).select().single(); 
+        // Send Telegram notification to admin
+        try {
+          const adminChatId = process.env.ADMIN_TELEGRAM_CHAT_ID || '8951025148';
+          const botToken = ADMIN_BOT_TOKEN || '8951025148:AAG456KIIBnyLBQqbkeDLajcT_TaPSYCIYc';
+          const msg = '📝 *New Vendor Application*\n\nName: ' + (req.body.name || 'N/A') + '\nPhone: ' + (req.body.phone || 'N/A') + '\nEmail: ' + (req.body.email || 'N/A') + '\nDescription: ' + (req.body.description || 'N/A') + '\n\nApprove in Admin Panel → Vendors tab';
+          await fetch('https://api.telegram.org/bot' + botToken + '/sendMessage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: adminChatId, text: msg, parse_mode: 'Markdown' })
+          });
+        } catch(e) { console.log('Telegram notify error:', e); }
+        return res.json({ success: true, vendor: data }); 
+      }
+      if (method === 'PUT') { const id = parseInt(path.split('/').pop() || '0'); await supabase.from('vendors').update(req.body).eq('id', id); 
+        // Send Telegram notification to admin about status change
+        try {
+          const adminChatId = process.env.ADMIN_TELEGRAM_CHAT_ID || '8951025148';
+          const botToken = ADMIN_BOT_TOKEN || '8951025148:AAG456KIIBnyLBQqbkeDLajcT_TaPSYCIYc';
+          const statusEmoji = req.body.status === 'approved' ? '✅' : req.body.status === 'rejected' ? '❌' : '⏸️';
+          const msg = statusEmoji + ' *Vendor Status Updated*\n\nVendor ID: ' + id + '\nNew Status: ' + (req.body.status || 'updated') + '\nCommission: ' + (req.body.commission || '10') + '%';
+          await fetch('https://api.telegram.org/bot' + botToken + '/sendMessage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: adminChatId, text: msg, parse_mode: 'Markdown' })
+          });
+        } catch(e) {}
+        return res.json({ success: true }); 
+      }
     }
 
     // ===== ANALYTICS =====

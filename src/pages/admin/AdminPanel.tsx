@@ -650,7 +650,7 @@ function AdminVendors() {
 
   // Fetch API data
   useEffect(function() {
-    fetch('/api/vendors/register').then(function(r) { return r.json(); }).then(function(d) {
+    fetch('/api/vendors/applications').then(function(r) { return r.json(); }).then(function(d) {
       if (d && d.applications) { setApiApps(d.applications); }
     }).catch(function() {});
     vendorsApi.list().then(d => { setVendors(d?.vendors || []); setLoading(false); }).catch(() => setLoading(false));
