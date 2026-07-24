@@ -750,19 +750,31 @@ function VendorPromotionsView() {
     try { return JSON.parse(localStorage.getItem("ss_promotions_data") || "{\"slots\":[]}").slots || []; }
     catch { return []; }
   });
+  // Modal state for promotion request
+  const [showModal, setShowModal] = useState(false);
+  const [reqType, setReqType] = useState<"discount" | "flashdeal" | "bogo">("discount");
+  const [selProduct, setSelProduct] = useState("");
+  const [selDiscount, setSelDiscount] = useState("20");
 
-  const submitRequest = (type: "discount" | "flashdeal" | "bogo") => {
-    const pid = prompt("Product ID (enter product number):");
-    const pct = prompt("Discount percentage:");
-    if (!pid || !pct) return;
-    const product = vendorProducts[Number(pid) - 1];
+  const openRequestModal = (type: "discount" | "flashdeal" | "bogo") => {
+    setReqType(type);
+    setSelProduct("");
+    setSelDiscount("20");
+    setShowModal(true);
+  };
+
+  const submitRequest = () => {
+    if (!selProduct) { toast("❌ Please select a product", "error"); return; }
+    const product = vendorProducts.find(p => String(p.id) === selProduct);
     if (!product) { toast("❌ Product not found", "error"); return; }
+    const pct = Number(selDiscount);
+    if (pct <= 0 || pct > 100) { toast("❌ Invalid discount percentage", "error"); return; }
     const start = new Date();
     const end = new Date(Date.now() + 7 * 86400000);
     const req = {
       id: "req-" + Date.now(), vendorId: 1, vendorName: "My Store",
       productId: product.id, productName: product.nameEn,
-      type, discountPercent: Number(pct), originalPrice: product.price,
+      type: reqType, discountPercent: pct, originalPrice: product.price,
       startDate: start.toISOString(), endDate: end.toISOString(),
       status: "pending", submittedAt: new Date().toISOString(),
     };
@@ -770,6 +782,7 @@ function VendorPromotionsView() {
     const allData = { requests: updated, priceFloors: [], slots };
     localStorage.setItem("ss_promotions_data", JSON.stringify(allData));
     setPromos(updated);
+    setShowModal(false);
     toast("✅ Promotion request submitted! Admin will review.", "success");
   };
 
@@ -810,7 +823,7 @@ function VendorPromotionsView() {
             { type: "bogo" as const, title: "🎁 Buy One Get One", desc: "Buy one, get one free or at a discount.", color: "from-purple-500 to-violet-600" },
           ].map(s => (
             <button key={s.type} className={cn("bg-gradient-to-br rounded-2xl p-4 text-white text-left hover:shadow-lg transition-all", s.color)}
-              onClick={() => submitRequest(s.type)}>
+              onClick={() => openRequestModal(s.type)}>
               <div className="text-lg font-bold mb-1">{s.title}</div>
               <p className="text-[9px] opacity-80">{s.desc}</p>
               <div className="mt-2 text-[8px] opacity-60">Commission based on original price</div>
@@ -862,6 +875,48 @@ function VendorPromotionsView() {
           {slots.filter(s => s.active).length === 0 && <p className="text-center py-6 text-xs text-slate-400">No slots available right now</p>}
         </div>
       )}
+      {/* Promotion Request Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setShowModal(false)}>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 w-full max-w-sm mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">
+              {reqType === 'discount' ? '🏷️ Discount Sale' : reqType === 'flashdeal' ? '⚡ Flash Deal' : '🎁 BOGO'} — Select Product
+            </h3>
+            <div className="space-y-3">
+              <div>
+                <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Product</label>
+                <select className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200" value={selProduct} onChange={e => setSelProduct(e.target.value)}>
+                  <option value="">Select a product...</option>
+                  {vendorProducts.map(p => (
+                    <option key={p.id} value={String(p.id)}>{p.nameEn} — {formatPrice(p.price)}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Discount %</label>
+                <input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200" min={1} max={100} value={selDiscount} onChange={e => setSelDiscount(e.target.value)} />
+              </div>
+              {selProduct && (() => {
+                const prod = vendorProducts.find(p => String(p.id) === selProduct);
+                if (!prod) return null;
+                const salePrice = Math.round(prod.price * (1 - Number(selDiscount) / 100));
+                const commission = Math.round(prod.price * 0.1);
+                return (
+                  <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 space-y-1">
+                    <div className="flex justify-between text-[9px]"><span className="text-slate-500">Original price</span><span className="font-semibold text-slate-700 dark:text-slate-300">{formatPrice(prod.price)}</span></div>
+                    <div className="flex justify-between text-[9px]"><span className="text-slate-500">Sale price</span><span className="font-semibold text-emerald-600">{formatPrice(salePrice)}</span></div>
+                    <div className="flex justify-between text-[9px]"><span className="text-slate-500">Your commission (10% of original)</span><span className="font-semibold text-blue-600">{formatPrice(commission)}</span></div>
+                  </div>
+                );
+              })()}
+            </div>
+            <div className="flex gap-2 mt-4">
+              <button className="flex-1 py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold hover:shadow-lg disabled:opacity-50" onClick={submitRequest} disabled={!selProduct || !selDiscount}>Submit Request</button>
+              <button className="px-4 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-500 hover:bg-slate-50" onClick={() => setShowModal(false)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -884,7 +939,7 @@ function VendorSettingsView({ vendorName }: { vendorName: string }) {
             <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Email</label><input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200" value={email} onChange={e => setEmail(e.target.value)} /></div>
             <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Phone</label><input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200" value={phone} onChange={e => setPhone(e.target.value)} /></div>
             <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Bio</label><textarea className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent resize-none h-16 text-slate-800 dark:text-slate-200" value={bio} onChange={e => setBio(e.target.value)} placeholder="Tell customers about your store" /></div>
-            <button className="w-full py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold hover:shadow-lg transition-all" onClick={() => toast('✅ Settings saved!', 'success')}><Save size={12} className="inline mr-1" /> Save Changes</button>
+            <button className="w-full py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold hover:shadow-lg transition-all" onClick={() => { const s = {name,email,phone,bio,notifications,autoRestock}; localStorage.setItem('ss_vendor_settings', JSON.stringify(s)); toast('✅ Settings saved!', 'success'); }}><Save size={12} className="inline mr-1" /> Save Changes</button>
           </div>
         </div>
         <div className="space-y-4">

@@ -4,7 +4,6 @@ import { t } from '@/i18n/translations';
 import { isRunningInTelegram } from '@/lib/telegram';
 import QuickView from './ui/QuickView';
 import AIChat from '@/components/ai/AIChat';
-import PWAInstallPrompt from './PWAInstallPrompt';
 import { ShoppingCart, Package, User, Home, Store, Moon, Sun, Search, Heart } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -35,7 +34,6 @@ export default function Layout() {
     <div className="min-h-screen bg-background text-foreground pb-16">
       <QuickView />
       <AIChat />
-      {!TG && <PWAInstallPrompt />}
 
       <header className="fixed top-0 left-0 right-0 h-14 z-50 glass-strong border-b border-border/40">
         <div className="max-w-2xl mx-auto h-full flex items-center px-4 gap-2">
