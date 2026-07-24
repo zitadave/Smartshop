@@ -934,8 +934,47 @@ function VendorSettingsView({ vendorName }: { vendorName: string }) {
     if (sl) sl.remove();
     document.documentElement.classList.remove('dark');
   } catch(e) {}
-  return React.createElement('div', null,
-    React.createElement('h2', null, 'Settings - test'),
-    React.createElement('p', null, 'If you see this, settings works')
+  var sd = {};
+  try { sd = JSON.parse(localStorage.getItem('ss_vendor_settings') || '{}'); } catch(e) {}
+  var n = sd.name || vendorName;
+  var em = sd.email || 'vendor@mystore.com';
+  var ph = sd.phone || '+251-911-XXXXXX';
+  var bi = sd.bio || '';
+  var no = sd.notifications;
+  var au = sd.autoRestock;
+  return (
+    <div className="space-y-4">
+      <div><h2 className="text-lg font-bold">⚙️ Settings</h2><p className="text-[10px] text-slate-500">Manage your account and preferences</p></div>
+      <div className="grid lg:grid-cols-2 gap-4">
+        <div className="bg-white rounded-2xl border border-slate-200 p-4">
+          <h3 className="text-sm font-bold mb-3">Store Profile</h3>
+          <div className="space-y-3">
+            <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Store Name</label><input className="w-full mt-1 p-2.5 border border-slate-200 rounded-xl text-xs" defaultValue={n} /></div>
+            <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Email</label><input className="w-full mt-1 p-2.5 border border-slate-200 rounded-xl text-xs" defaultValue={em} /></div>
+            <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Phone</label><input className="w-full mt-1 p-2.5 border border-slate-200 rounded-xl text-xs" defaultValue={ph} /></div>
+            <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Bio</label><textarea className="w-full mt-1 p-2.5 border border-slate-200 rounded-xl text-xs resize-none h-16" defaultValue={bi} /></div>
+            <button className="w-full py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold" onClick={() => { var x = {name:n,email:em,phone:ph,bio:bi,notifications:no,autoRestock:au}; localStorage.setItem('ss_vendor_settings', JSON.stringify(x)); }}><Save size={12} className="inline mr-1" /> Save Changes</button>
+          </div>
+        </div>
+        <div className="space-y-4">
+          <div className="bg-white rounded-2xl border border-slate-200 p-4">
+            <h3 className="text-sm font-bold mb-3 flex items-center gap-2"><Bell size={14} className="text-blue-500" /> Notifications</h3>
+            <label className="flex items-center gap-2 text-xs mb-2"><input type="checkbox" defaultChecked={no !== false} className="rounded" /> Email for new orders</label>
+            <label className="flex items-center gap-2 text-xs mb-2"><input type="checkbox" defaultChecked={au} className="rounded" /> Auto-restock alerts</label>
+            <label className="flex items-center gap-2 text-xs"><input type="checkbox" defaultChecked className="rounded" /> Low stock warnings</label>
+          </div>
+          <div className="bg-white rounded-2xl border border-slate-200 p-4">
+            <h3 className="text-sm font-bold mb-3 flex items-center gap-2"><Percent size={14} className="text-emerald-500" /> Commission</h3>
+            <div className="flex items-center justify-between"><span className="text-xs text-slate-500">Platform fee per sale</span><span className="text-lg font-bold text-emerald-600">10%</span></div>
+            <div className="mt-2 bg-emerald-50 rounded-lg p-2.5 text-[9px] text-emerald-700 flex items-center gap-1.5"><CheckCircle size={10} /> Your store is active and visible</div>
+          </div>
+          <div className="bg-white rounded-2xl border border-red-200 p-4">
+            <h3 className="text-sm font-bold mb-2 flex items-center gap-2 text-red-600"><AlertTriangle size={14} /> Danger Zone</h3>
+            <p className="text-[9px] text-slate-500 mb-3">Temporarily disable your store from appearing in search results</p>
+            <button className="px-4 py-2 border border-red-300 text-red-600 rounded-xl text-[10px] font-semibold" onClick={() => {}}><EyeOff size={12} className="inline mr-1" /> Pause Storefront</button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
