@@ -640,25 +640,19 @@ function AdminVendors() {
   try { apps = JSON.parse(localStorage.getItem('ss_vendor_applications') || '[]'); } catch(e) {}
   var pendingApps = apps.filter(function(a) { return a.status === 'pending'; });
   const approveVendorApp = function(id) {
-    var updated = apps.map(function(a) {
-      if (a.id === id) a.status = 'approved';
-      return a;
-    });
-    localStorage.setItem('ss_vendor_applications', JSON.stringify(updated));
-    // Also create a vendor record
-    var app = apps.find(function(a) { return a.id === id; });
-    if (app) {
-      vendorsApi.create({ name: app.name, phone: app.phone, telegramId: app.telegramId, approved: true, commission: 10 }).then(function() {
-        toast('Vendor approved! They can now access their dashboard.', 'success');
-      }).catch(function() { toast('Vendor approved!', 'success'); });
+    var updated = apps.slice();
+    for (var i = 0; i < updated.length; i++) {
+      if (updated[i].id === id) updated[i].status = 'approved';
     }
+    localStorage.setItem('ss_vendor_applications', JSON.stringify(updated));
+    toast('Vendor approved!', 'success');
     window.location.reload();
   };
   const rejectVendorApp = function(id) {
-    var updated = apps.map(function(a) {
-      if (a.id === id) a.status = 'rejected';
-      return a;
-    });
+    var updated = apps.slice();
+    for (var i = 0; i < updated.length; i++) {
+      if (updated[i].id === id) updated[i].status = 'rejected';
+    }
     localStorage.setItem('ss_vendor_applications', JSON.stringify(updated));
     toast('Application rejected.', 'info');
     window.location.reload();

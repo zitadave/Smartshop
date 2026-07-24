@@ -55,6 +55,8 @@ export const ordersApi = {
 
 export const vendorsApi = {
   list: () => request<{ vendors: any[] }>('/api/vendors'),
+  get: (id: number) => request<{ vendor: any }>(`/api/vendors/${id}`),
+  create: (data: any) => request<{ success: boolean; vendor: any }>('/api/vendors', { method: 'POST', body: JSON.stringify(data) }),
   register: (data: any) => request<{ success: boolean; vendor: any }>('/api/vendors/register', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: number, data: any) => request<{ success: boolean }>(`/api/vendors/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
 };
