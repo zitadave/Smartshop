@@ -34,9 +34,7 @@ export default function VendorRegister() {
       var res = await fetch('/api/vendors/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        var userProfile = {};
-        try { userProfile = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
-        body: JSON.stringify({ name: storeName.trim(), phone: storePhone.trim(), email: storeEmail.trim(), description: storeDesc.trim(), status: 'pending', appliedAt: new Date().toISOString(), telegram_id: userProfile.telegramId || '' })
+        body: JSON.stringify({ name: storeName.trim(), phone: storePhone.trim(), email: storeEmail.trim(), description: storeDesc.trim(), status: 'pending', appliedAt: new Date().toISOString(), telegram_id: '' })
       });
       var d = await res.json();
       if (d && d.vendor && d.vendor.id) {
