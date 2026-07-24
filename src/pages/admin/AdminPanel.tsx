@@ -36,6 +36,7 @@ import AdminBotManager from '@/components/admin/AdminBotManager';
 import TaxFinanceDashboard from '@/components/admin/TaxFinanceDashboard';
 import SmartBooks from '@/components/admin/SmartBooks';
 import ManualPaymentReview from '@/components/admin/ManualPaymentReview';
+import AdminPromotions from '@/components/admin/AdminPromotions';
 import ProductStudio from '@/components/admin/ProductStudio';
 import { sendAdminTelegram, notifyProductCreated, notifyProductUpdated, notifyProductDeleted, notifySettingsChanged, notifyVendorUpdated } from '@/lib/adminNotifier';
 
@@ -43,7 +44,7 @@ type Tab = 'overview' | 'products' | 'orders' | 'vendors' | 'marketplace' | 'rev
   | 'broadcast' | 'flashdeals' | 'preorders' | 'tracking' | 'themes' | 'coupons' 
   | 'settings' | 'alerts' | 'abandoned' | 'roles' | 'backup' 
   | 'bulkProducts' | 'analytics' | 'forecast' | 'activity' | 'security' | 'telegram' 
-  | 'fulfillment' | 'sla' | 'driver' | 'returns' | 'finance' | 'smartbooks' | 'manualpayments';
+  | 'fulfillment' | 'sla' | 'driver' | 'returns' | 'finance' | 'smartbooks' | 'promotions' | 'manualpayments';
 
 export default function AdminLayout() {
   const [tab, setTab] = useState<Tab>('overview');
@@ -146,6 +147,7 @@ export default function AdminLayout() {
     { id: 'themes', icon: Palette, label: 'Themes' },
     { id: 'coupons', icon: Tags, label: 'Coupons' },
     { id: 'settings', icon: SettingsIcon, label: 'Settings' },
+    { id: 'promotions', icon: Zap, label: 'Promotions' },
     { id: 'manualpayments', icon: Banknote, label: 'Manual Payments' },
     { id: 'alerts', icon: Bell, label: 'Smart Alerts' },
     { id: 'abandoned', icon: ShoppingCart, label: 'Cart Recovery' },
@@ -215,7 +217,7 @@ export default function AdminLayout() {
           {(() => {
             const groups: { title: string; ids: Tab[] }[] = [
               { title: 'STORE', ids: ['overview', 'products', 'orders', 'vendors', 'marketplace', 'reviews'] },
-              { title: 'PROMOTION', ids: ['broadcast', 'flashdeals', 'preorders', 'coupons', 'tracking', 'themes'] },
+              { title: 'PROMOTION', ids: ['promotions', 'broadcast', 'flashdeals', 'preorders', 'coupons', 'tracking', 'themes'] },
               { title: 'OPERATIONS', ids: ['manualpayments', 'alerts', 'abandoned', 'fulfillment', 'sla', 'driver', 'returns'] },
               { title: 'FINANCE', ids: ['finance', 'smartbooks', 'settings'] },
               { title: 'ADMIN', ids: ['roles', 'security', 'backup', 'telegram', 'activity'] },
@@ -291,6 +293,7 @@ export default function AdminLayout() {
           {tab === 'sla' && <SLAMonitor />}
           {tab === 'driver' && <DriverTracker />}
           {tab === 'returns' && <ReturnsManager />}
+          {tab === 'promotions' && <AdminPromotions />}
           {tab === 'manualpayments' && <ManualPaymentReview />}
           {tab === 'finance' && <TaxFinanceDashboard />}
           {tab === 'smartbooks' && <SmartBooks />}

@@ -16,7 +16,7 @@ import {
 import { toast } from '@/components/Toast';
 import ProductStudio from '@/components/admin/ProductStudio';
 
-type VendorTab = 'dashboard' | 'products' | 'storefront' | 'analytics' | 'orders' | 'reviews' | 'inventory' | 'payouts' | 'settings';
+type VendorTab = 'dashboard' | 'products' | 'storefront' | 'analytics' | 'orders' | 'reviews' | 'inventory' | 'payouts' | 'promotions' | 'settings';
 
 export default function VendorDashboard() {
   const [tab, setTab] = useState<VendorTab>('dashboard');
@@ -95,6 +95,7 @@ export default function VendorDashboard() {
             { id: 'orders' as VendorTab, icon: ShoppingCart, label: 'Orders', badge: stats.pendingOrders },
             { id: 'reviews' as VendorTab, icon: Star, label: 'Reviews', badge: stats.totalReviews },
             { id: 'inventory' as VendorTab, icon: Box, label: 'Inventory', badge: stats.lowStock.length },
+            { id: 'promotions' as VendorTab, icon: Gift, label: 'Promotions' },
             { id: 'payouts' as VendorTab, icon: Wallet, label: 'Payouts' },
             { id: 'settings' as VendorTab, icon: Settings, label: 'Settings' },
           ] as const).map(item => {
@@ -134,6 +135,7 @@ export default function VendorDashboard() {
           {tab === 'orders' && <VendorOrdersView orders={orders} />}
           {tab === 'reviews' && <VendorReviewsView products={vendorProducts} />}
           {tab === 'inventory' && <VendorInventoryView products={vendorProducts} />}
+          {tab === 'promotions' && <VendorPromotionsView />}
           {tab === 'payouts' && <VendorPayoutsView stats={stats} />}
           {tab === 'settings' && <VendorSettingsView vendorName={vendorName} />}
         </div>
@@ -733,6 +735,136 @@ function VendorPayoutsView({ stats }: { stats: any }) {
 }
 
 // ===== SETTINGS =====
+// ===== PROMOTIONS =====
+function VendorPromotionsView() {
+  const [tab, setTab] = useState<"request" | "active" | "slots">("request");
+  const store = useStore();
+  const { products } = store;
+  const vendorProducts = products.filter(p => p.vendorId === 1 || !p.vendorId);
+  const [promos, setPromos] = useState<any[]>(() => {
+    try { return JSON.parse(localStorage.getItem("ss_promotions_data") || "{\"requests\":[]}").requests || []; }
+    catch { return []; }
+  });
+  const vendorPromos = promos.filter(p => p.vendorId === 1);
+  const [slots, setSlots] = useState<any[]>(() => {
+    try { return JSON.parse(localStorage.getItem("ss_promotions_data") || "{\"slots\":[]}").slots || []; }
+    catch { return []; }
+  });
+
+  const submitRequest = (type: "discount" | "flashdeal" | "bogo") => {
+    const pid = prompt("Product ID (enter product number):");
+    const pct = prompt("Discount percentage:");
+    if (!pid || !pct) return;
+    const product = vendorProducts[Number(pid) - 1];
+    if (!product) { toast("❌ Product not found", "error"); return; }
+    const start = new Date();
+    const end = new Date(Date.now() + 7 * 86400000);
+    const req = {
+      id: "req-" + Date.now(), vendorId: 1, vendorName: "My Store",
+      productId: product.id, productName: product.nameEn,
+      type, discountPercent: Number(pct), originalPrice: product.price,
+      startDate: start.toISOString(), endDate: end.toISOString(),
+      status: "pending", submittedAt: new Date().toISOString(),
+    };
+    const updated = [...promos, req];
+    const allData = { requests: updated, priceFloors: [], slots };
+    localStorage.setItem("ss_promotions_data", JSON.stringify(allData));
+    setPromos(updated);
+    toast("✅ Promotion request submitted! Admin will review.", "success");
+  };
+
+  const buySlot = (slot: any) => {
+    if (!confirm("Purchase " + slot.name + " for Br " + slot.price + "?")) return;
+    const req = {
+      id: "slot-req-" + Date.now(), vendorId: 1, vendorName: "My Store",
+      productId: 0, productName: "Featured Slot: " + slot.name,
+      type: "discount", discountPercent: 0, originalPrice: 0,
+      startDate: new Date().toISOString(), endDate: new Date(Date.now() + 7 * 86400000).toISOString(),
+      status: "pending", submittedAt: new Date().toISOString(),
+      featuredSlot: true, slotFee: slot.price,
+    };
+    const updated = [...promos, req];
+    const allData = { requests: updated, priceFloors: [], slots };
+    localStorage.setItem("ss_promotions_data", JSON.stringify(allData));
+    setPromos(updated);
+    toast("✅ Slot purchase request submitted!", "success");
+  };
+
+  return (
+    <div className="animate-fadeUp space-y-4">
+      <div><h2 className="text-lg font-bold text-slate-900 dark:text-white">🎯 Promotions</h2>
+      <p className="text-[10px] text-slate-500">Create promotions to boost your sales. Commission is always on original price.</p></div>
+
+      <div className="flex gap-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl p-0.5 w-fit">
+        {[["request","✍️ Request"],["active","✅ Active"],["slots","💎 Slots"]].map(([t, l]) => (
+          <button key={t} className={cn("px-3 py-1.5 rounded-lg text-[9px] font-semibold transition-all", tab === t ? "bg-white dark:bg-slate-700 shadow-sm" : "text-slate-500")}
+            onClick={() => setTab(t as any)}>{l}</button>
+        ))}
+      </div>
+
+      {tab === "request" && (
+        <div className="grid sm:grid-cols-3 gap-3">
+          {[
+            { type: "discount" as const, title: "🏷️ Discount Sale", desc: "Offer % off on a product. Runs for 7 days.", color: "from-blue-500 to-blue-600" },
+            { type: "flashdeal" as const, title: "⚡ Flash Deal", desc: "Time-limited deep discount. Creates urgency!", color: "from-orange-500 to-red-500" },
+            { type: "bogo" as const, title: "🎁 Buy One Get One", desc: "Buy one, get one free or at a discount.", color: "from-purple-500 to-violet-600" },
+          ].map(s => (
+            <button key={s.type} className={cn("bg-gradient-to-br rounded-2xl p-4 text-white text-left hover:shadow-lg transition-all", s.color)}
+              onClick={() => submitRequest(s.type)}>
+              <div className="text-lg font-bold mb-1">{s.title}</div>
+              <p className="text-[9px] opacity-80">{s.desc}</p>
+              <div className="mt-2 text-[8px] opacity-60">Commission based on original price</div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {tab === "active" && (
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-x-hidden">
+          <div className="p-4 border-b border-slate-100 dark:border-slate-800"><h3 className="text-sm font-bold text-slate-900 dark:text-white">Your Promotions ({vendorPromos.length})</h3></div>
+          {vendorPromos.length === 0 ? <p className="text-center py-8 text-xs text-slate-400">No promotions yet. Create one above!</p> :
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
+              {[...vendorPromos].sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()).map((p, i) => (
+                <div key={p.id || i} className="p-3 flex items-center gap-3">
+                  <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs",
+                    p.type === "flashdeal" ? "bg-orange-500" : p.type === "bogo" ? "bg-purple-500" : "bg-blue-500")}>{p.type === "bogo" ? "🎁" : p.type === "flashdeal" ? "⚡" : "🏷️"}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[10px] font-semibold truncate text-slate-800 dark:text-slate-200">{p.productName}</div>
+                    <div className="text-[8px] text-slate-400">-{p.discountPercent}% · Original: {formatPrice(p.originalPrice)}</div>
+                  </div>
+                  <span className={cn("text-[9px] px-2 py-0.5 rounded font-semibold",
+                    p.status === "approved" ? "bg-emerald-100 text-emerald-700" : p.status === "rejected" ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-700")}>{p.status}</span>
+                </div>
+              ))}
+            </div>
+          }
+        </div>
+      )}
+
+      {tab === "slots" && (
+        <div className="space-y-3">
+          <p className="text-[10px] text-slate-500">Purchase featured promotion slots for extra visibility across the marketplace.</p>
+          {slots.filter(s => s.active).map(slot => (
+            <div key={slot.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center"><DollarSign size={18} className="text-purple-600" /></div>
+                  <div><h4 className="text-xs font-bold text-slate-900 dark:text-white">{slot.name}</h4><p className="text-[9px] text-slate-400">{slot.duration}</p></div>
+                </div>
+                <div className="text-right flex items-center gap-2">
+                  <div className="text-lg font-bold text-emerald-600">Br {slot.price.toLocaleString()}</div>
+                  <button className="px-3 py-1.5 bg-gradient-to-r from-purple-500 to-violet-600 text-white rounded-lg text-[9px] font-bold hover:shadow-md"
+                    onClick={() => buySlot(slot)}>Purchase</button>
+                </div>
+              </div>
+            </div>
+          ))}
+          {slots.filter(s => s.active).length === 0 && <p className="text-center py-6 text-xs text-slate-400">No slots available right now</p>}
+        </div>
+      )}
+    </div>
+  );
+}
 function VendorSettingsView({ vendorName }: { vendorName: string }) {
   const [name, setName] = useState(vendorName);
   const [email, setEmail] = useState('vendor@mystore.com');
