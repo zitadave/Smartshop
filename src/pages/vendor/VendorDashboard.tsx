@@ -404,7 +404,7 @@ function VendorStorefrontView(_props) {
       if (d.success) { alert('Test message sent! Check your Telegram.'); }
       else {
         var msg = d.error || 'Unknown error';
-        if (msg.indexOf('chat not found') >= 0) { msg = 'Chat not found! Make sure you messaged @Smart_shop_admin_bot first and typed /start.'; }
+        if (msg.indexOf('chat not found') >= 0) { msg = 'Chat not found! Message @smart_shopping_et_bot and type /start first (you already did this if you use the shop!).'; }
         alert('Failed: ' + msg);
       }
       if (btn) { btn.disabled = false; btn.textContent = 'Test'; }
@@ -476,7 +476,7 @@ try {
             React.createElement('input', { id: 'tg-id', defaultValue: settingsData.telegramId || '', placeholder: 'e.g. 123456789', className: 'flex-1 p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] bg-transparent text-slate-800 dark:text-slate-200' }),
             React.createElement('button', { id: 'tg-test-btn', onClick: function() { testTelegram(); }, className: 'px-3 py-2 bg-blue-500 text-white rounded-lg text-[9px] font-bold hover:bg-blue-600 transition-colors' }, 'Test')
           ),
-          React.createElement('p', { className: 'text-[8px] text-slate-400 mt-1.5 leading-relaxed' }, 'Get your Telegram ID by messaging ', React.createElement('a', { href: 'https://t.me/userinfobot', target: '_blank', className: 'text-blue-500 underline' }, '@userinfobot'), ' on Telegram. Type /start to get your numeric ID. Then message ', React.createElement('a', { href: 'https://t.me/Smart_shop_admin_bot', target: '_blank', className: 'text-blue-500 underline' }, '@Smart_shop_admin_bot'), ' and type /start. Save your ID below and tap Test.')
+          React.createElement('p', { className: 'text-[8px] text-slate-400 mt-1.5 leading-relaxed' }, 'Get your Telegram ID by messaging ', React.createElement('a', { href: 'https://t.me/userinfobot', target: '_blank', className: 'text-blue-500 underline' }, '@userinfobot'), ' on Telegram. Type /start to get your numeric ID. Then message ', React.createElement('a', { href: 'https://t.me/smart_shopping_et_bot', target: '_blank', className: 'text-blue-500 underline' }, '@smart_shopping_et_bot'), ' and type /start (you already did this as a customer!). Save your ID below and tap Test.')
         ),
         React.createElement('button', { onClick: function() { var d = {name: document.getElementById('inp-name').value, email: document.getElementById('inp-email').value, phone: document.getElementById('inp-phone').value, bio: document.getElementById('inp-desc').value, notifications: document.getElementById('notif-email').checked, autoRestock: document.getElementById('notif-stock').checked}; d.telegramId = document.getElementById('tg-id') ? document.getElementById('tg-id').value : ''; localStorage.setItem('ss_vendor_settings', JSON.stringify(d)); try { toast('Settings saved!', 'success'); } catch(e) { alert('Saved!'); } }, className: 'mt-3 px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-[10px] font-bold' }, 'Save Settings')
       ),
