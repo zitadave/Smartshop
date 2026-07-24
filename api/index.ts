@@ -250,7 +250,7 @@ export default async function handler(req: any, res: any) {
       var hasPhone = userContact || (st !== '/start' && st !== '/menu');
       
       if (st === '/start' || !hasPhone) {
-        await sSend('⚠️ *Contact Required*\n\nYou must share your phone number to use Smart Shop.\n\nTap the button below to continue:', {
+        await sSend('⚠️ *Contact Required*\n\nYou must share your phone number to use Smart Shop.\n\nTap \"📱 Share Contact\" below:', {
           keyboard: [[{ text: '📱 Share Contact', request_contact: true }]],
           resize_keyboard: true,
           one_time_keyboard: true
@@ -272,7 +272,11 @@ export default async function handler(req: any, res: any) {
             contact_shared: true
           }, { onConflict: 'telegram_id' });
         } catch(se) { console.log('Save contact error:', se.message); }
-        await sSend('✅ Phone number saved! You can now use the app.', {
+        // Remove keyboard, show only the web app button
+        await sSend('✅ Phone number saved! Tap below to enter:', {
+          remove_keyboard: true
+        });
+        await sSend('🚀 *Ready!*\n\nOpen Smart Shop:', {
           inline_keyboard: [[{ text: '🚀 Open Smart Shop', web_app: { url: 'https://smartshop-steel.vercel.app' } }]]
         });
       }
