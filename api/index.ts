@@ -231,6 +231,36 @@ export default async function handler(req: any, res: any) {
     // ================================================================
     // ADMIN BOT WEBHOOK — receives commands from Telegram
     // ================================================================
+    // ===== SHOP BOT - Webhook (for contact sharing & vendor notifications) =====
+    if (path === '/api/shop-bot/webhook' && method === 'POST') {
+      const sb = req.body;
+      const sc = sb.message?.chat?.id;
+      const st = sb.message?.text || '';
+      const sBotToken = VENDOR_BOT_TOKEN || '7761374287:AAHreFF93x92F4tMqRoA1swcNiJoDv5M-Rk';
+      const sSend = async (txt: string, keyboard?: any) => {
+        var body: any = { chat_id: sc, text: txt };
+        if (keyboard) body.reply_markup = JSON.stringify(keyboard);
+        await fetch('https://api.telegram.org/bot' + sBotToken + '/sendMessage', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+        });
+      };
+      if (!sc) return res.json({ ok: true });
+      if (st === '/start') {
+        await sSend('Welcome to Smart Shop! 🎉\n\nPlease share your contact to get started.', {
+          keyboard: [[{ text: '📱 Share Contact', request_contact: true }]],
+          resize_keyboard: true,
+          one_time_keyboard: true
+        });
+      } else if (sb.message?.contact) {
+        var contact = sb.message.contact;
+        await sSend('✅ Thank you! Now open the app:', {
+          inline_keyboard: [[{ text: '🚀 Open Smart Shop', url: 'https://smartshop-steel.vercel.app' }]]
+        });
+      }
+      return res.json({ ok: true });
+    }
+
+    // ===== ADMIN BOT - Webhook =====
     if (path === '/api/admin-bot/webhook' && method === 'POST') {
       if (!ADMIN_BOT_TOKEN) return res.status(200).json({ ok: true });
 
