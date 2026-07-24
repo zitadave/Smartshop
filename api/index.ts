@@ -832,7 +832,7 @@ export default async function handler(req: any, res: any) {
       return res.json({ success: true, chatId: adminChatId });
     }
     if (path === '/api/admin-bot/config' && method === 'GET') {
-      return res.json({ botToken: adminBotToken || process.env.TELEGRAM_ADMIN_BOT_TOKEN || '', chatId: adminChatId || process.env.ADMIN_CHAT_ID || '' });
+      return res.json({ botToken: adminBotToken || process.env.TELEGRAM_ADMIN_BOT_TOKEN || '8951025148:AAG456KIIBnyLBQqbkeDLajcT_TaPSYCIYc', chatId: adminChatId || '336997351' });
     }
 
     // ===== VENDOR - Send Telegram Notification =====

@@ -27,27 +27,18 @@
 
     <!-- Vite injects CSS/JS automatically -->
 
-    <!-- STOPGAP: Prevent old cached JS from infinite reloading + clear old data -->
+    <!-- CLEAR ALL DATA + BUMP VERSION -->
     <script>
       try {
-        localStorage.setItem('ss_app_version', 'v9');
-        localStorage.setItem('ss_reset_v2', 'done');
-        // Clear old user/vendor data - no reload
-        localStorage.removeItem('ss_vendor_status');
-        localStorage.removeItem('ss_vendor_applications');
-        localStorage.removeItem('ss_vendor_payouts');
-        localStorage.removeItem('ss_vendor_store');
-        localStorage.removeItem('ss_vendor_settings');
-        localStorage.removeItem('ss_vendor_logo');
-        localStorage.removeItem('ss_vendor_banner');
-        localStorage.removeItem('ss_wishlist');
-        localStorage.removeItem('ss_orders');
-        localStorage.removeItem('ss_cart');
-        localStorage.removeItem('ss_profile');
-        localStorage.removeItem('ss_telegram_auth');
+        var v = 'v11';
+        var cur = localStorage.getItem('ss_app_version');
+        if (cur !== v) {
+          localStorage.clear();
+          localStorage.setItem('ss_app_version', v);
+        }
       } catch(e) {}
     </script>
-    <script type="module" crossorigin src="/assets/index-kzmi8Dje.js"></script>
+    <script type="module" crossorigin src="/assets/index-Dqsgl4qU.js"></script>
     <link rel="modulepreload" crossorigin href="/assets/jsx-runtime-n5LQ9ujS.js">
     <link rel="modulepreload" crossorigin href="/assets/createLucideIcon-DN0J77WO.js">
     <link rel="stylesheet" crossorigin href="/assets/index-M79p2OzM.css">
