@@ -437,46 +437,32 @@ export default async function handler(req: any, res: any) {
 
     // ===== VENDORS =====
     if (path.startsWith('/api/vendors')) {
-      if (path === '/api/vendors/applications' && method === 'GET') { const { data } = await supabase.from('vendors').select('*').order('joined_at', { ascending: false }); return res.json({ applications: data || [] }); }
+      if (path === '/api/vendors/applications' && method === 'GET') { var allApps = vendorApplications.slice().sort(function(a,b) { return new Date(b.joined_at) - new Date(a.joined_at); }); try { var { data } = await supabase.from('vendors').select('*').order('joined_at', { ascending: false }); if (data) { for (var i=0;i<data.length;i++) { var exists=false; for (var j=0;j<allApps.length;j++) { if (allApps[j].id===data[i].id) { exists=true; break; } } if(!exists) allApps.push(data[i]); } } } catch(e) {} return res.json({ applications: allApps }); }
       if (method === 'GET' && (path === '/api/vendors' || path === '/api/')) { const { data } = await supabase.from('vendors').select('*'); return res.json({ vendors: data || [] }); }
-      if (method === 'GET' && path === '/api/vendors/register') { const { data } = await supabase.from('vendors').select('*').eq('status', 'pending'); return res.json({ applications: data || [] }); }
+      if (method === 'GET' && path === '/api/vendors/register') { var apps = vendorApplications.slice(); try { var { data } = await supabase.from('vendors').select('*').eq('status', 'pending'); if (data) apps = apps.concat(data); } catch(e) {} return res.json({ applications: apps }); }
       if (method === 'POST' && path === '/api/vendors/register') { 
-        var vendor = { id: Date.now(), ...req.body, status: 'pending', joined_at: new Date().toISOString() }; 
+        var v = { id: Date.now(), ...req.body, status: 'pending', joined_at: new Date().toISOString() }; 
+        vendorApplications.push(v);
+        // Try Supabase but don't crash if it fails
         try { 
-          var { data } = await supabase.from('vendors').insert(vendor).select().single(); 
-          if (data) vendor = data;
-        } catch(se) { console.log('Supabase note:', se.message); }
-        // Send Telegram notification using admin's configured bot (or env var fallback)
+          var { data: sd } = await supabase.from('vendors').insert(v).select().single(); 
+          if (sd) v = sd;
+        } catch(se) { console.log('DB note:', se.message); }
+        // Send Telegram using admin's configured bot
         try {
-          // First try to load config from Supabase
-          var botChatId = '';
-          var botTk = process.env.TELEGRAM_ADMIN_BOT_TOKEN || '8951025148:AAG456KIIBnyLBQqbkeDLajcT_TaPSYCIYc';
-          try {
-            var { data: configData } = await supabase.from('settings').select('data').eq('key', 'admin_bot_config').single();
-            if (configData?.data?.chatId) botChatId = configData.data.chatId;
-            if (configData?.data?.botToken) botTk = configData.data.botToken;
-          } catch(e) {}
-          // Also check process env
-          if (!botChatId) botChatId = process.env.ADMIN_CHAT_ID || '';
-          if (botChatId) {
-            var msg = '📝 New Vendor Registration
-
-Store: ' + (req.body.name || 'N/A') + '
-Phone: ' + (req.body.phone || 'N/A') + '
-Check Admin Panel -> Vendors tab to approve.';
-            try {
-              await fetch('https://api.telegram.org/bot' + botTk + '/sendMessage', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ chat_id: botChatId, text: msg })
-              });
-              console.log('Telegram notification sent to', botChatId);
-            } catch(e) { console.log('Telegram send error:', e.message); }
-          } else {
-            console.log('Admin chat ID not configured');
+          var bc = adminChatId || process.env.ADMIN_CHAT_ID || '';
+          if (!bc) { console.log('ADMIN_CHAT_ID not set'); }
+          if (bc) {
+            var bt = process.env.TELEGRAM_ADMIN_BOT_TOKEN || '8951025148:AAG456KIIBnyLBQqbkeDLajcT_TaPSYCIYc';
+            var msg = 'New Vendor Registration\n\nStore: ' + (req.body.name || 'N/A') + '\nPhone: ' + (req.body.phone || 'N/A') + '\nCheck Admin Panel -> Vendors tab to approve.';
+            await fetch('https://api.telegram.org/bot' + bt + '/sendMessage', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ chat_id: bc, text: msg })
+            });
           }
-        } catch(e) { console.log('Telegram notify error:', e.message); }
-        return res.json({ success: true, vendor: vendor }); 
+        } catch(e) { console.log('TG error:', e.message); }
+        return res.json({ success: true, vendor: v }); 
       }
       if (method === 'PUT') { const id = parseInt(path.split('/').pop() || '0'); await supabase.from('vendors').update(req.body).eq('id', id); 
         // Send Telegram notification to admin about status change
@@ -787,6 +773,18 @@ Check Admin Panel -> Vendors tab to approve.';
         botToken: process.env.TELEGRAM_ADMIN_BOT_TOKEN || '8951025148:AAG456KIIBnyLBQqbkeDLajcT_TaPSYCIYc', 
         chatId: process.env.ADMIN_CHAT_ID || '' 
       });
+    }
+
+    // ===== ADMIN BOT - Save Config (in-memory, persists per instance) =====
+    if (path === '/api/admin-bot/config' && method === 'POST') {
+      var cfg = req.body || {};
+      if (cfg.chatId) adminChatId = cfg.chatId;
+      if (cfg.botToken) adminBotToken = cfg.botToken;
+      console.log('Admin config saved, chatId:', adminChatId);
+      return res.json({ success: true, chatId: adminChatId });
+    }
+    if (path === '/api/admin-bot/config' && method === 'GET') {
+      return res.json({ botToken: adminBotToken || process.env.TELEGRAM_ADMIN_BOT_TOKEN || '', chatId: adminChatId || process.env.ADMIN_CHAT_ID || '' });
     }
 
     // ===== VENDOR - Send Telegram Notification =====
