@@ -32,8 +32,8 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-background text-foreground pb-16">
-      /* QuickView disabled */
-      /* AIChat disabled */
+      <QuickView />
+      <AIChat />
 
       <header className="fixed top-0 left-0 right-0 h-14 z-50 glass-strong border-b border-border/40">
         <div className="max-w-2xl mx-auto h-full flex items-center px-4 gap-2">
