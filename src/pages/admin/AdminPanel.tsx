@@ -1228,6 +1228,8 @@ function AdminSettings() {
             localStorage.setItem('ss_dark', 'false'); 
             document.documentElement.classList.remove('dark');
             setDarkMode(false);
+            // Force reload so index.html inline script cleans old injected CSS
+            setTimeout(() => window.location.reload(), 100);
           }}>☀️ Light</button>
           <button className={cn('flex-1 py-2.5 rounded-xl text-[11px] font-bold border-2 transition-all', darkMode ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 bg-white text-slate-500')} onClick={() => { 
             localStorage.setItem('ss_dark', 'true'); 
