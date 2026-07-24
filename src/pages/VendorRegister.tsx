@@ -8,42 +8,19 @@ export default function VendorRegister() {
   const [storeName, setStoreName] = useState('');
   const [storePhone, setStorePhone] = useState('');
 
-  // Auto-fill phone on mount - try localStorage first, then API
+  // Auto-fill phone on mount
   useEffect(function() {
     try {
       var p = JSON.parse(localStorage.getItem('ss_profile') || '{}');
       var up = localStorage.getItem('ss_user_phone') || '';
-      var phone = p.phone || up || '';
+      var tgPhone = (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.phone_number || '';
+      var phone = tgPhone || p.phone || up || '';
       if (phone) {
         setStorePhone(phone);
+        p.phone = phone;
+        localStorage.setItem('ss_profile', JSON.stringify(p));
+        localStorage.setItem('ss_user_phone', phone);
         return;
-      }
-    } catch(e) {}
-    // If not in localStorage, try fetching from Telegram initData
-    try {
-      var tg = (window as any).Telegram?.WebApp;
-      var user = tg?.initDataUnsafe?.user;
-      if (user && user.phone_number) {
-        setStorePhone(user.phone_number);
-        localStorage.setItem('ss_user_phone', user.phone_number);
-        localStorage.setItem('ss_phone_shared', 'true');
-        return;
-      }
-    } catch(e) {}
-    // Last resort: fetch from API
-    try {
-      var prof = JSON.parse(localStorage.getItem('ss_profile') || '{}');
-      var tid = prof.telegramId || '';
-      if (tid) {
-        fetch('/api/user/contact?telegram_id=' + tid).then(function(r) { return r.json(); }).then(function(d) {
-          if (d && d.phone) {
-            setStorePhone(d.phone);
-            prof.phone = d.phone;
-            localStorage.setItem('ss_profile', JSON.stringify(prof));
-            localStorage.setItem('ss_user_phone', d.phone);
-            localStorage.setItem('ss_phone_shared', 'true');
-          }
-        }).catch(function() {});
       }
     } catch(e) {}
   }, []);
@@ -54,15 +31,12 @@ export default function VendorRegister() {
   const submit = async function() {
     if (!storeName.trim()) { toast('Store name is required', 'error'); return; }
     if (!storePhone.trim()) {
-      // Try one more time to get phone from localStorage
       try {
         var pp = JSON.parse(localStorage.getItem('ss_profile') || '{}');
         var uu = localStorage.getItem('ss_user_phone') || '';
         var pp2 = pp.phone || uu || '';
-        if (pp2) { setStorePhone(pp2); setTimeout(function() { toast('Phone auto-filled. Try again.', 'info'); }, 500); return; }
+        if (pp2) { setStorePhone(pp2); }
       } catch(e) {}
-      toast('Phone number is required. Please share contact via @smart_shopping_et_bot first.', 'error'); 
-      return;
     }
     setSubmitting(true);
     var apps = [];
@@ -83,10 +57,12 @@ export default function VendorRegister() {
     try {
       var profData2 = {};
       try { profData2 = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
+      var tgPhoneVal = (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.phone_number || '';
+      var finalPhone = storePhone || profData2.phone || tgPhoneVal || localStorage.getItem('ss_user_phone') || 'shared';
       var res = await fetch('/api/vendors/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: storeName.trim(), phone: storePhone.trim(), email: storeEmail.trim(), description: storeDesc.trim(), status: 'pending', appliedAt: new Date().toISOString(), telegram_id: profData2.telegramId || '' })
+        body: JSON.stringify({ name: storeName.trim(), phone: finalPhone, email: storeEmail.trim(), description: storeDesc.trim(), status: 'pending', appliedAt: new Date().toISOString(), telegram_id: profData2.telegramId || '' })
       });
       var d = await res.json();
       if (d && d.vendor && d.vendor.id) {
@@ -122,7 +98,7 @@ export default function VendorRegister() {
                 placeholder="e.g. Selam Electronics" value={storeName} onChange={e => setStoreName(e.target.value)} />
             </div>
             <div>
-              <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Phone Number *</label>
+              <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Phone Number</label>
               <input className="w-full mt-1 p-3 border border-slate-200 rounded-xl text-sm bg-slate-50 text-slate-500" 
                 value={storePhone} readOnly />
             </div>
