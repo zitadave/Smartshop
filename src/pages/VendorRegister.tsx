@@ -7,13 +7,44 @@ export default function VendorRegister() {
   const nav = useNavigate();
   const [storeName, setStoreName] = useState('');
   const [storePhone, setStorePhone] = useState('');
-  // Auto-fill phone from profile on mount
+
+  // Auto-fill phone on mount - try localStorage first, then API
   useEffect(function() {
     try {
       var p = JSON.parse(localStorage.getItem('ss_profile') || '{}');
       var up = localStorage.getItem('ss_user_phone') || '';
       var phone = p.phone || up || '';
-      if (phone) setStorePhone(phone);
+      if (phone) {
+        setStorePhone(phone);
+        return;
+      }
+    } catch(e) {}
+    // If not in localStorage, try fetching from Telegram initData
+    try {
+      var tg = (window as any).Telegram?.WebApp;
+      var user = tg?.initDataUnsafe?.user;
+      if (user && user.phone_number) {
+        setStorePhone(user.phone_number);
+        localStorage.setItem('ss_user_phone', user.phone_number);
+        localStorage.setItem('ss_phone_shared', 'true');
+        return;
+      }
+    } catch(e) {}
+    // Last resort: fetch from API
+    try {
+      var prof = JSON.parse(localStorage.getItem('ss_profile') || '{}');
+      var tid = prof.telegramId || '';
+      if (tid) {
+        fetch('/api/user/contact?telegram_id=' + tid).then(function(r) { return r.json(); }).then(function(d) {
+          if (d && d.phone) {
+            setStorePhone(d.phone);
+            prof.phone = d.phone;
+            localStorage.setItem('ss_profile', JSON.stringify(prof));
+            localStorage.setItem('ss_user_phone', d.phone);
+            localStorage.setItem('ss_phone_shared', 'true');
+          }
+        }).catch(function() {});
+      }
     } catch(e) {}
   }, []);
   const [storeEmail, setStoreEmail] = useState('');

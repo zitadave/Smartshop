@@ -10,89 +10,61 @@ import './index.css';
     tg.expand();
     
     var user = tg.initDataUnsafe?.user;
-    if (!user) {
-      createRoot(document.getElementById('root')!).render(<App />);
-      return;
-    }
+    if (!user) return;
     
-    var tgId = user.id || '';
-    var phoneFromTelegram = user.phone_number || '';
+    var tgId = String(user.id || '');
+    var phoneFromTg = user.phone_number || '';
     
-    // ===== 1. Save Telegram data to localStorage =====
+    // Step 1: Load existing profile from localStorage
     var profile = {};
     try { profile = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
-    var changed = false;
-    if (tgId) { profile.telegramId = tgId; changed = true; }
-    if (user.username) { profile.telegramUsername = user.username; changed = true; }
-    if (user.first_name && !profile.name) { profile.name = user.first_name; changed = true; }
-    if (!profile.joinedAt) { profile.joinedAt = new Date().toISOString(); changed = true; }
-    if (!profile.registered) { profile.registered = true; changed = true; }
     
-    // Phone from Telegram initData
-    if (phoneFromTelegram) { 
-      profile.phone = phoneFromTelegram;
-      localStorage.setItem('ss_user_phone', phoneFromTelegram);
-      localStorage.setItem('ss_phone_shared', 'true');
-      changed = true; 
-    }
-    if (changed) localStorage.setItem('ss_profile', JSON.stringify(profile));
+    // Step 2: Always save/update Telegram info
+    profile.telegramId = tgId;
+    if (user.username) profile.telegramUsername = user.username;
+    if (user.first_name && !profile.name) profile.name = user.first_name;
+    if (!profile.joinedAt) profile.joinedAt = new Date().toISOString();
+    if (!profile.registered) profile.registered = true;
     
-    // ===== 2. Try to sync with server =====
-    var syncDone = localStorage.getItem('ss_sync_' + tgId);
+    // Step 3: Get phone number - priority: initData > localStorage > API sync
+    var finalPhone = phoneFromTg || profile.phone || '';
     
-    fetch('/api/user/sync', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        telegram_id: tgId,
-        username: user.username || '',
-        first_name: user.first_name || '',
-        phone: phoneFromTelegram || profile.phone || ''
-      })
-    }).then(function(r) { return r.json(); }).then(function(data) {
-      if (data && data.success) {
-        // Save synced data to localStorage
-        if (data.phone) {
-          var p = JSON.parse(localStorage.getItem('ss_profile') || '{}');
-          p.phone = data.phone;
-          localStorage.setItem('ss_profile', JSON.stringify(p));
-          localStorage.setItem('ss_user_phone', data.phone);
-          localStorage.setItem('ss_phone_shared', 'true');
+    if (!finalPhone) {
+      // Try fetching from API synchronously (blocking XHR)
+      try {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', '/api/user/contact?telegram_id=' + tgId, false); // false = synchronous
+        xhr.send();
+        if (xhr.status === 200) {
+          var resp = JSON.parse(xhr.responseText);
+          if (resp && resp.phone) finalPhone = resp.phone;
         }
-        if (data.vendor_status) {
-          localStorage.setItem('ss_vendor_status', data.vendor_status);
-        }
-        if (data.vendor_id) {
-          localStorage.setItem('ss_vendor_app_id', String(data.vendor_id));
-        }
-        localStorage.setItem('ss_sync_' + tgId, 'done');
-        
-        // Reload if we got new data
-        if (data.phone && !phoneFromTelegram && !profile.phone) {
-          window.location.reload();
-        }
-      }
-    }).catch(function() {});
-    
-    // ===== 3. Check if phone is available, block if not =====
-    var hasPhone = phoneFromTelegram || profile.phone || localStorage.getItem('ss_phone_shared');
-    
-    if (!hasPhone) {
-      // Try API one more time
-      if (tgId) {
-        fetch('/api/user/contact?telegram_id=' + tgId).then(function(r) { return r.json(); }).then(function(resp) {
-          if (resp && resp.phone) {
-            var p2 = JSON.parse(localStorage.getItem('ss_profile') || '{}');
-            p2.phone = resp.phone;
-            localStorage.setItem('ss_profile', JSON.stringify(p2));
-            localStorage.setItem('ss_user_phone', resp.phone);
-            localStorage.setItem('ss_phone_shared', 'true');
-            window.location.reload();
+      } catch(e) {}
+      // Also try sync endpoint
+      if (!finalPhone) {
+        try {
+          var xhr2 = new XMLHttpRequest();
+          xhr2.open('POST', '/api/user/sync', false);
+          xhr2.setRequestHeader('Content-Type', 'application/json');
+          xhr2.send(JSON.stringify({ telegram_id: tgId }));
+          if (xhr2.status === 200) {
+            var syncResp = JSON.parse(xhr2.responseText);
+            if (syncResp && syncResp.phone) finalPhone = syncResp.phone;
           }
-        }).catch(function() {});
+        } catch(e) {}
       }
-      
-      // Block screen
+    }
+    
+    // Step 4: Save phone to profile
+    if (finalPhone) {
+      profile.phone = finalPhone;
+      localStorage.setItem('ss_user_phone', finalPhone);
+      localStorage.setItem('ss_phone_shared', 'true');
+    }
+    localStorage.setItem('ss_profile', JSON.stringify(profile));
+    
+    // Step 5: Block if no phone
+    if (!finalPhone) {
       var root = document.getElementById('root');
       if (root) {
         root.innerHTML = 
@@ -112,11 +84,25 @@ import './index.css';
       return;
     }
     
+    // Step 6: Async sync to update vendor status (doesn't block)
+    fetch('/api/user/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: tgId, phone: finalPhone, username: user.username || '', first_name: user.first_name || '' })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      if (d && d.phone && d.phone !== finalPhone) {
+        profile.phone = d.phone;
+        localStorage.setItem('ss_profile', JSON.stringify(profile));
+        localStorage.setItem('ss_user_phone', d.phone);
+      }
+    }).catch(function() {});
+    
     // Preconnect
     var link = document.createElement('link');
     link.rel = 'preconnect';
     link.href = window.location.origin;
     document.head.appendChild(link);
+    
   } catch(e) {}
 })();
 
