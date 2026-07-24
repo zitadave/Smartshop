@@ -258,8 +258,9 @@ export default async function handler(req: any, res: any) {
       // Check vendor status by telegram_id or phone
       try {
         var vendorRecord = null;
-        if (tid) {
-          var { data: v1 } = await supabase.from('vendors').select('*').eq('telegram_id', parseInt(tid));
+        var tidNum = tid ? parseInt(tid) : 0;
+        if (tidNum) {
+          var { data: v1 } = await supabase.from('vendors').select('*').eq('telegram_id', tidNum);
           if (v1 && v1.length > 0) vendorRecord = v1[0];
         }
         if (!vendorRecord && b.phone) {
@@ -269,6 +270,7 @@ export default async function handler(req: any, res: any) {
         if (vendorRecord) {
           result.vendor_status = vendorRecord.status || 'pending';
           result.vendor_id = vendorRecord.id;
+          result.vendor_name = vendorRecord.name || '';
         }
       } catch(e) {}
       
@@ -557,13 +559,20 @@ export default async function handler(req: any, res: any) {
         for (var i=0; i<vendorApplications.length; i++) {
           if (vendorApplications[i].id === appId) vendorApplications[i].status = 'approved';
         }
-        // Also update the user's synced status if found
+        // Also update the user's synced status if found - lookup by telegram_id or phone
         try {
-          var { data: v } = await supabase.from('vendors').select('telegram_id,phone').eq('id', appId);
+          var { data: v } = await supabase.from('vendors').select('*').eq('id', appId);
           if (v && v.length > 0) {
-            var tgId = v[0].telegram_id;
-            if (tgId) {
-              await supabase.from('users').update({ vendor_status: 'approved' }).eq('telegram_id', tgId);
+            var vRec = v[0];
+            var lookups: any[] = [];
+            if (vRec.telegram_id) lookups.push({ key: 'telegram_id', val: vRec.telegram_id });
+            if (vRec.phone) lookups.push({ key: 'phone', val: vRec.phone });
+            for (var li = 0; li < lookups.length; li++) {
+              try {
+                var upd: any = {};
+                upd[lookups[li].key] = lookups[li].val;
+                await supabase.from('users').update({ vendor_status: 'approved' }).eq(lookups[li].key, lookups[li].val);
+              } catch(eu) {}
             }
           }
         } catch(e) {}

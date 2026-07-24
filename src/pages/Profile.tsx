@@ -61,6 +61,21 @@ export default function Profile() {
         }
       }).catch(function() {});
     }
+    // Also check applications endpoint as backup
+    var appId = localStorage.getItem('ss_vendor_app_id') || '';
+    if (appId && appId !== 'undefined') {
+      fetch('/api/vendors/applications').then(function(r) { return r.json(); }).then(function(d) {
+        if (d && d.applications) {
+          for (var i = 0; i < d.applications.length; i++) {
+            if (String(d.applications[i].id) === appId && d.applications[i].status === 'approved') {
+              localStorage.setItem('ss_vendor_status', 'approved');
+              setVendorStatus('approved');
+              return;
+            }
+          }
+        }
+      }).catch(function() {});
+    }
   }, []);
   
   const applyAsVendor = function() {
