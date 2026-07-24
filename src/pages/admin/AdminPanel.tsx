@@ -66,6 +66,36 @@ export default function AdminLayout() {
   const store = useStore();
   const globalDarkMode = store.darkMode;
 
+  // NUCLEAR OPTION: Directly apply inline styles to admin-panel based on darkMode
+  // This bypasses ALL CSS specificity wars, parse errors, and !important issues
+  useEffect(() => {
+    const panel = document.getElementById('admin-panel');
+    if (!panel) return;
+    if (globalDarkMode) {
+      panel.style.setProperty('background', 'linear-gradient(135deg, #0a0e17, #0f172a)', 'important');
+      panel.style.setProperty('color', '#e2e8f0', 'important');
+    } else {
+      panel.style.setProperty('background', 'linear-gradient(135deg, #f8fafc, #f1f5f9)', 'important');
+      panel.style.setProperty('color', '#0b0f19', 'important');
+    }
+  }, [globalDarkMode]);
+
+  // Also apply inline styles to ALL data-admin-card elements
+  useEffect(() => {
+    const cards = document.querySelectorAll('[data-admin-card]');
+    cards.forEach(card => {
+      if (card instanceof HTMLElement) {
+        if (globalDarkMode) {
+          card.style.setProperty('background-color', '#131a2a', 'important');
+          card.style.setProperty('border-color', '#1e293b', 'important');
+        } else {
+          card.style.setProperty('background-color', '#ffffff', 'important');
+          card.style.setProperty('border-color', '#e2e8f0', 'important');
+        }
+      }
+    });
+  }, [globalDarkMode]);
+
   const handleCmdNavigate = (t: string) => {
     setTab(t as Tab);
     setCmdOpen(false);
@@ -132,6 +162,15 @@ export default function AdminLayout() {
               <span className="text-[8px] text-slate-400 ml-1 font-mono">⌘K</span>
             </button>
             <button className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-500" onClick={() => window.open('/', '_blank')}><Eye size={16} /></button>
+            <button className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => {
+              const isDark = !globalDarkMode;
+              localStorage.setItem('ss_dark', JSON.stringify(isDark));
+              document.documentElement.classList.toggle('dark', isDark);
+              store.setDarkMode(isDark);
+              setTimeout(function(){ window.location.reload(); }, 100);
+            }} title={globalDarkMode ? 'Switch to Light' : 'Switch to Dark'}>
+              {globalDarkMode ? <Sun size={16} className="text-amber-500" /> : <Moon size={16} className="text-indigo-500" />}
+            </button>
             <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-950/30 rounded-xl">
               <Activity size={12} className="text-indigo-500" />
               <span className="text-[10px] font-medium text-indigo-600 dark:text-indigo-400 capitalize">{tab}</span>
