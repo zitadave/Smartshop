@@ -60,7 +60,18 @@ import './index.css';
       
       // Request contact sharing for new users
       if (tg.initDataUnsafe?.user?.id && !localStorage.getItem('ss_contact_shared')) {
-        tg.requestContact = true; // This enables the "Share Contact" button
+        tg.MainButton.text = '📱 Share Contact';
+        tg.MainButton.show();
+        var origClick = tg.MainButton.onClick;
+        tg.MainButton.onClick = function() {
+          tg.requestContact(function(contact) {
+            if (contact && contact.phone_number) {
+              localStorage.setItem('ss_contact_shared', 'true');
+              tg.MainButton.hide();
+              window.location.reload();
+            }
+          }, function() {});
+        };
       }
     }
   } catch {}

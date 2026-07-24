@@ -17,6 +17,7 @@ const Wishlist = lazy(() => import('@/pages/Wishlist'));
 const Orders = lazy(() => import('@/pages/Orders'));
 const OrderDetail = lazy(() => import('@/pages/OrderDetail'));
 const Profile = lazy(() => import('@/pages/Profile'));
+const VendorRegister = lazy(() => import('@/pages/VendorRegister'));
 const Checkout = lazy(() => import('@/pages/Checkout'));
 const Confirmation = lazy(() => import('@/pages/Confirmation'));
 const GiftCards = lazy(() => import('@/pages/GiftCards'));
@@ -148,6 +149,7 @@ export default function App() {
           <Route path="/confirmation/:orderNumber" element={<Suspense fallback={<PageLoader />}><Confirmation /></Suspense>} />
           <Route path="/gift-cards" element={<Suspense fallback={<PageLoader />}><GiftCards /></Suspense>} />
           <Route path="/compare" element={<Suspense fallback={<PageLoader />}><Compare /></Suspense>} />
+          <Route path="/vendor-register" element={<Suspense fallback={<PageLoader />}><VendorRegister /></Suspense>} />
           <Route path="/tracking" element={<Suspense fallback={<PageLoader />}><Tracking /></Suspense>} />
           <Route path="/store/:vendorId" element={<Suspense fallback={<PageLoader />}><Storefront /></Suspense>} />
           <Route path="/addresses" element={<Suspense fallback={<PageLoader />}><SavedAddresses /></Suspense>} />

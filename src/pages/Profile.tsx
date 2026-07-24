@@ -82,7 +82,7 @@ export default function Profile() {
       items: [
         { icon: '🏆', label: 'Loyalty & Rewards', onClick: () => navigate('/loyalty') },
         ...(vendorStatus === 'approved' && settings.marketplaceMode !== false ? [{ icon: '🏪', label: 'Vendor Dashboard', onClick: () => navigate('/vendor') }] : []),
-        ...(vendorStatus === 'none' ? [{ icon: '📝', label: 'Become a Vendor', onClick: applyAsVendor }] : []),
+        ...(vendorStatus === 'none' ? [{ icon: '📝', label: 'Become a Vendor', onClick: function() { navigate('/vendor-register'); } }] : []),
         ...(vendorStatus === 'pending' ? [{ icon: '⏳', label: 'Application Pending', onClick: function() { toast('Your application is being reviewed.', 'info'); } }] : []),
         { icon: '📉', label: 'Price Alerts', badge: store.priceAlerts.length, onClick: () => navigate('/price-alerts') },
         { icon: '🔔', label: 'Notifications', badge: notifications.length, onClick: () => navigate('/notifications') },
