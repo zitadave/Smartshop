@@ -41,10 +41,19 @@ export default function Profile() {
   try { vendorStatus = localStorage.getItem('ss_vendor_status') || 'none'; } catch(e) {}
   // Also check API for approved status
   if (vendorStatus === 'pending' || vendorStatus === 'none') {
-    var phone = profile.phone || localStorage.getItem('ss_user_phone') || '';
-    if (phone) {
-      fetch('/api/vendors/check-status?phone=' + encodeURIComponent(phone)).then(function(r) { return r.json(); }).then(function(d) {
-        if (d && d.status === 'approved') { localStorage.setItem('ss_vendor_status', 'approved'); window.location.reload(); }
+    var appId = localStorage.getItem('ss_vendor_app_id') || '';
+    var phone2 = profile.phone || localStorage.getItem('ss_user_phone') || '';
+    if (appId) {
+      fetch('/api/vendors/applications').then(function(r) { return r.json(); }).then(function(d) {
+        if (d && d.applications) {
+          for (var i = 0; i < d.applications.length; i++) {
+            if (String(d.applications[i].id) === appId && d.applications[i].status === 'approved') {
+              localStorage.setItem('ss_vendor_status', 'approved');
+              window.location.reload();
+              return;
+            }
+          }
+        }
       }).catch(function() {});
     }
   }

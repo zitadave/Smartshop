@@ -35,6 +35,10 @@ export default function VendorRegister() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: storeName.trim(), phone: storePhone.trim(), email: storeEmail.trim(), description: storeDesc.trim(), status: 'pending', appliedAt: new Date().toISOString() })
+      }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d && d.vendor && d.vendor.id) {
+          localStorage.setItem('ss_vendor_app_id', String(d.vendor.id));
+        }
       }).catch(function() {});
     } catch(e) {}
     toast('Application submitted! Admin will review.', 'success');

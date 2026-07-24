@@ -8,7 +8,7 @@ const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const ADMIN_BOT_TOKEN = process.env.TELEGRAM_ADMIN_BOT_TOKEN || '';
 var adminBotToken = process.env.TELEGRAM_ADMIN_BOT_TOKEN || '';
 var adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID || '336997351';
-var vendorApplications : any[] = [];
+var vendorApplications = [];
 const VENDOR_BOT_TOKEN = process.env.VENDOR_BOT_TOKEN || '7761374287:AAHreFF93x92F4tMqRoA1swcNiJoDv5M-Rk';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false } });
@@ -462,12 +462,19 @@ export default async function handler(req: any, res: any) {
     }
     if (path === '/api/vendors/check-status' && method === 'GET') {
       var qs = req.url?.split('?')[1] || '';
+      var id = new URLSearchParams(qs).get('id') || '';
       var phone = new URLSearchParams(qs).get('phone') || '';
-      if (!phone) return res.json({ status: 'none' });
       try {
-        var { data } = await supabase.from('vendors').select('status').eq('phone', phone).single();
-        return res.json({ status: data?.status || 'none' });
-      } catch(e) { return res.json({ status: 'none' }); }
+        if (id) {
+          var { data } = await supabase.from('vendors').select('status').eq('id', parseInt(id)).single();
+          return res.json({ status: data?.status || 'none' });
+        }
+        if (phone) {
+          var { data } = await supabase.from('vendors').select('status').eq('phone', phone).single();
+          return res.json({ status: data?.status || 'none' });
+        }
+      } catch(e) {}
+      return res.json({ status: 'none' });
     }
     if (path === '/api/vendors/applications' && method === 'GET') {
       var allApps = vendorApplications.slice();
