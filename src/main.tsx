@@ -2,6 +2,20 @@ import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 
+// ===== CACHE BUSTER — Force reload if old code is cached =====
+(function() {
+  var VERSION = 'v8';
+  try {
+    var cached = localStorage.getItem('ss_app_version');
+    if (cached && cached !== VERSION) {
+      localStorage.setItem('ss_app_version', VERSION);
+      window.location.reload(true);
+      return;
+    }
+    localStorage.setItem('ss_app_version', VERSION);
+  } catch(e) {}
+})();
+
 // ===== TELEGRAM INIT — Must run before React renders =====
 // This ensures Telegram knows we're ready immediately
 (function initTelegram() {
