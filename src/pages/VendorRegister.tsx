@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/components/Toast';
 import { ArrowLeft, Store, Save } from 'lucide-react';
@@ -6,14 +6,33 @@ import { ArrowLeft, Store, Save } from 'lucide-react';
 export default function VendorRegister() {
   const nav = useNavigate();
   const [storeName, setStoreName] = useState('');
-  const [storePhone, setStorePhone] = useState((function(){try{return JSON.parse(localStorage.getItem('ss_profile')||'{}').phone||''}catch(e){return ''}})());
+  const [storePhone, setStorePhone] = useState('');
+  // Auto-fill phone from profile on mount
+  useEffect(function() {
+    try {
+      var p = JSON.parse(localStorage.getItem('ss_profile') || '{}');
+      var up = localStorage.getItem('ss_user_phone') || '';
+      var phone = p.phone || up || '';
+      if (phone) setStorePhone(phone);
+    } catch(e) {}
+  }, []);
   const [storeEmail, setStoreEmail] = useState('');
   const [storeDesc, setStoreDesc] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const submit = async function() {
     if (!storeName.trim()) { toast('Store name is required', 'error'); return; }
-    if (!storePhone.trim()) { toast('Phone number is required', 'error'); return; }
+    if (!storePhone.trim()) {
+      // Try one more time to get phone from localStorage
+      try {
+        var pp = JSON.parse(localStorage.getItem('ss_profile') || '{}');
+        var uu = localStorage.getItem('ss_user_phone') || '';
+        var pp2 = pp.phone || uu || '';
+        if (pp2) { setStorePhone(pp2); setTimeout(function() { toast('Phone auto-filled. Try again.', 'info'); }, 500); return; }
+      } catch(e) {}
+      toast('Phone number is required. Please share contact via @smart_shopping_et_bot first.', 'error'); 
+      return;
+    }
     setSubmitting(true);
     var apps = [];
     try { apps = JSON.parse(localStorage.getItem('ss_vendor_applications') || '[]'); } catch(e) {}
