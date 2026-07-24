@@ -884,39 +884,44 @@ function VendorPromotionsView() {
         </div>
       )}
       {/* Promotion Request Modal */}
-      {showModal && React.createElement('div', { className: 'fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm', onClick: function() { setShowModal(false); } },
-        React.createElement('div', { className: 'bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 w-full max-w-sm mx-4 shadow-2xl', onClick: function(e) { e.stopPropagation(); } },
-          React.createElement('h3', { className: 'text-sm font-bold text-slate-900 dark:text-white mb-3' }, (reqType === 'discount' ? '\uD83C\uDFF7\uFE0F Discount Sale' : reqType === 'flashdeal' ? '\u26A1 Flash Deal' : '\uD83C\uDF81 BOGO') + ' \u2014 Select Product'),
-          React.createElement('div', { className: 'space-y-3' },
-            React.createElement('div', null,
-              React.createElement('label', { className: 'text-[9px] font-semibold text-slate-400 uppercase tracking-wider' }, 'Product'),
-              React.createElement('select', { className: 'w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200', value: selProduct, onChange: function(e) { setSelProduct(e.target.value); } },
-                React.createElement('option', { value: '' }, 'Select a product...'),
-                vendorProducts.map(function(p) { return React.createElement('option', { key: p.id, value: String(p.id) }, p.nameEn + ' \u2014 ' + formatPrice(p.price)); })
-              )
-            ),
-            React.createElement('div', null,
-              React.createElement('label', { className: 'text-[9px] font-semibold text-slate-400 uppercase tracking-wider' }, 'Discount %'),
-              React.createElement('input', { type: 'number', className: 'w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200', min: 1, max: 100, value: selDiscount, onChange: function(e) { setSelDiscount(e.target.value); } })
-            ),
-            selProduct && (function() {
-              var p = null;
-              for (var i = 0; i < vendorProducts.length; i++) { if (String(vendorProducts[i].id) === selProduct) { p = vendorProducts[i]; break; } }
-              if (!p) return null;
-              var saleP = Math.round(p.price * (1 - Number(selDiscount) / 100));
-              var comm = Math.round(p.price * 0.1);
-              return React.createElement('div', { className: 'bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 space-y-1' },
-                React.createElement('div', { className: 'flex justify-between text-xs' }, React.createElement('span', { className: 'text-slate-500' }, 'Original'), React.createElement('span', { className: 'font-semibold text-slate-800 dark:text-slate-200' }, formatPrice(p.price))),
-                React.createElement('div', { className: 'flex justify-between text-xs' }, React.createElement('span', { className: 'text-slate-500' }, 'Sale price'), React.createElement('span', { className: 'font-semibold text-emerald-600' }, formatPrice(saleP))),
-                React.createElement('div', { className: 'flex justify-between text-xs' }, React.createElement('span', { className: 'text-slate-500' }, 'Commission (10% of original)'), React.createElement('span', { className: 'font-semibold text-blue-600' }, formatPrice(comm)))
-              );
-            })()
-          ),
-          React.createElement('div', { className: 'flex gap-2 mt-4' },
-            React.createElement('button', { className: 'flex-1 py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold hover:shadow-lg disabled:opacity-50', onClick: submitRequest, disabled: !selProduct || !selDiscount }, 'Submit Request'),
-            React.createElement('button', { className: 'px-4 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-500 hover:bg-slate-50', onClick: function() { setShowModal(false); } }, 'Cancel')
-          )
-        )
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setShowModal(false)}>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 w-full max-w-sm mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">
+              {reqType === 'discount' ? '🏷️ Discount Sale' : reqType === 'flashdeal' ? '⚡ Flash Deal' : '🎁 BOGO'} — Select Product
+            </h3>
+            <div className="space-y-3">
+              <div>
+                <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Product</label>
+                <select className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200" value={selProduct} onChange={e => setSelProduct(e.target.value)}>
+                  <option value="">Select a product...</option>
+                  {vendorProducts.map(p => (
+                    <option key={p.id} value={String(p.id)}>{p.nameEn} — {formatPrice(p.price)}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Discount %</label>
+                <input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200" min={1} max={100} value={selDiscount} onChange={e => setSelDiscount(e.target.value)} />
+              </div>
+              {selProduct !== '' && vendorProducts.filter(p => String(p.id) === selProduct).map(p => {
+                const salePrice = Math.round(p.price * (1 - Number(selDiscount) / 100));
+                const commission = Math.round(p.price * 0.1);
+                return (
+                  <div key={p.id} className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 space-y-1">
+                    <div className="flex justify-between text-xs"><span className="text-slate-500">Original</span><span className="font-semibold text-slate-800 dark:text-slate-200">{formatPrice(p.price)}</span></div>
+                    <div className="flex justify-between text-xs"><span className="text-slate-500">Sale price</span><span className="font-semibold text-emerald-600">{formatPrice(salePrice)}</span></div>
+                    <div className="flex justify-between text-xs"><span className="text-slate-500">Commission (10% of original)</span><span className="font-semibold text-blue-600">{formatPrice(commission)}</span></div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex gap-2 mt-4">
+              <button className="flex-1 py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold hover:shadow-lg disabled:opacity-50" onClick={submitRequest} disabled={!selProduct || !selDiscount}>Submit Request</button>
+              <button className="px-4 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-500 hover:bg-slate-50" onClick={() => setShowModal(false)}>Cancel</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
