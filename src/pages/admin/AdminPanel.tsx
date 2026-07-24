@@ -50,20 +50,36 @@ export default function AdminLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
-  // Clean up any old admin theme CSS injection that could bleed into shop
+  // Inject admin dark mode CSS and clean up old theme styles
   useEffect(() => {
     const style = document.getElementById('admin-theme-styles');
     if (style) style.remove();
     document.querySelectorAll('[data-admin-root]').forEach(el => {
-      if (el instanceof HTMLElement) {
-        el.removeAttribute('style');
-      }
+      if (el instanceof HTMLElement) el.removeAttribute('style');
     });
     document.querySelectorAll('[data-admin-card]').forEach(el => {
-      if (el instanceof HTMLElement) {
-        el.removeAttribute('style');
-      }
+      if (el instanceof HTMLElement) el.removeAttribute('style');
     });
+    // Inject CSS for proper dark mode text visibility
+    let darkStyle = document.getElementById('admin-dark-mode');
+    if (!darkStyle) {
+      darkStyle = document.createElement('style');
+      darkStyle.id = 'admin-dark-mode';
+      document.head.appendChild(darkStyle);
+    }
+    darkStyle.innerHTML = [
+      '.dark [data-admin-root], .dark [data-admin-root] * { color-scheme: dark; }',
+      '.dark [data-admin-card] .text-slate-400, .dark [data-admin-card] .text-slate-500, .dark [data-admin-card] .text-slate-600 { color: #94a3b8 !important; }',
+      '.dark [data-admin-card] .text-slate-700, .dark [data-admin-card] .text-slate-800, .dark [data-admin-card] .text-slate-900 { color: #e2e8f0 !important; }',
+      '.dark [data-admin-sidebar] .text-slate-400, .dark [data-admin-sidebar] .text-slate-500 { color: #94a3b8 !important; }',
+      '.dark [data-admin-sidebar] .hover\\:text-slate-900:hover { color: #e2e8f0 !important; }',
+      '.dark .text-muted-foreground { color: #94a3b8 !important; }',
+      '.dark .text-foreground { color: #e2e8f0 !important; }',
+      '.dark label { color: #cbd5e1 !important; }',
+      '.dark input, .dark select, .dark textarea { color: #e2e8f0 !important; background-color: #1e293b !important; border-color: #334155 !important; }',
+      '.dark input::placeholder, .dark textarea::placeholder { color: #64748b !important; }',
+    ].join('\n');
+    return () => { if (darkStyle) darkStyle.remove(); };
   }, []);
   const navigate = useNavigate();
 
@@ -1225,8 +1241,26 @@ function AdminSettings() {
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
         <h3 className="text-sm font-bold mb-3">🎨 Appearance</h3>
         <div className="flex gap-3 mb-4">
-          <button className={cn('flex-1 py-2.5 rounded-xl text-[11px] font-bold border-2 transition-all', !darkMode ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-500')} onClick={() => { setDarkMode(false); localStorage.setItem('ss_dark', 'false'); document.documentElement.classList.remove('dark'); }}>☀️ Light</button>
-          <button className={cn('flex-1 py-2.5 rounded-xl text-[11px] font-bold border-2 transition-all', darkMode ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-500')} onClick={() => { setDarkMode(true); localStorage.setItem('ss_dark', 'true'); document.documentElement.classList.add('dark'); }}>🌙 Dark</button>
+          <button className={cn('flex-1 py-2.5 rounded-xl text-[11px] font-bold border-2 transition-all', !darkMode ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 bg-white text-slate-500')} onClick={() => { 
+            localStorage.setItem('ss_dark', 'false'); 
+            document.documentElement.classList.remove('dark');
+            // Remove old admin theme CSS
+            const s = document.getElementById('admin-theme-styles');
+            if (s) s.remove();
+            document.querySelectorAll('[data-admin-root],[data-admin-card],[data-admin-sidebar]').forEach(el => {
+              if (el instanceof HTMLElement) el.removeAttribute('style');
+            });
+          }}>☀️ Light</button>
+          <button className={cn('flex-1 py-2.5 rounded-xl text-[11px] font-bold border-2 transition-all', darkMode ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 bg-white text-slate-500')} onClick={() => { 
+            localStorage.setItem('ss_dark', 'true'); 
+            document.documentElement.classList.add('dark');
+            // Remove old admin theme CSS
+            const s = document.getElementById('admin-theme-styles');
+            if (s) s.remove();
+            document.querySelectorAll('[data-admin-root],[data-admin-card],[data-admin-sidebar]').forEach(el => {
+              if (el instanceof HTMLElement) el.removeAttribute('style');
+            });
+          }}>🌙 Dark</button>
         </div>
         <h3 className="text-sm font-bold mb-3">🔔 Features & Toggles</h3>
         <div className="space-y-3">
