@@ -231,6 +231,51 @@ export default async function handler(req: any, res: any) {
     // ================================================================
     // ADMIN BOT WEBHOOK — receives commands from Telegram
     // ================================================================
+    // ===== USER - Sync (universal identity) =====
+    if (path === '/api/user/sync' && method === 'POST') {
+      var b = req.body || {};
+      var tid = b.telegram_id || '';
+      if (!tid) return res.json({ success: false });
+      
+      var result: any = { success: true };
+      
+      // Upsert user
+      try {
+        var userData: any = { 
+          telegram_id: parseInt(tid), 
+          username: b.username || '', 
+          first_name: b.first_name || '',
+          last_seen: new Date().toISOString()
+        };
+        if (b.phone) { userData.phone = b.phone; userData.contact_shared = true; }
+        await supabase.from('users').upsert(userData, { onConflict: 'telegram_id' });
+        
+        // Get user data back
+        var { data: userRecord } = await supabase.from('users').select('*').eq('telegram_id', parseInt(tid)).single();
+        if (userRecord?.phone) result.phone = userRecord.phone;
+      } catch(se) { console.log('User sync error:', se.message); }
+      
+      // Check vendor status
+      try {
+        var { data: vendorRecord } = await supabase.from('vendors').select('*').eq('telegram_id', parseInt(tid)).single();
+        if (vendorRecord) {
+          result.vendor_status = vendorRecord.status || 'pending';
+          result.vendor_id = vendorRecord.id;
+        } else {
+          // Also check by phone
+          if (b.phone) {
+            var { data: vendorByPhone } = await supabase.from('vendors').select('*').eq('phone', b.phone).single();
+            if (vendorByPhone) {
+              result.vendor_status = vendorByPhone.status || 'pending';
+              result.vendor_id = vendorByPhone.id;
+            }
+          }
+        }
+      } catch(e) {}
+      
+      return res.json(result);
+    }
+
     // ===== SHOP BOT - Webhook (for contact sharing & vendor notifications) =====
     if (path === '/api/shop-bot/webhook' && method === 'POST') {
       const sb = req.body;
@@ -557,7 +602,8 @@ export default async function handler(req: any, res: any) {
       if (method === 'GET' && (path === '/api/vendors' || path === '/api/')) { const { data } = await supabase.from('vendors').select('*'); return res.json({ vendors: data || [] }); }
       if (method === 'GET' && path === '/api/vendors/register') { var apps = vendorApplications.slice(); try { var { data } = await supabase.from('vendors').select('*').eq('status', 'pending'); if (data) apps = apps.concat(data); } catch(e) {} return res.json({ applications: apps }); }
       if (method === 'POST' && path === '/api/vendors/register') { 
-        var v = { id: Date.now(), ...req.body, status: 'pending', joined_at: new Date().toISOString() }; 
+        var v = { id: Date.now(), ...req.body, status: 'pending', joined_at: new Date().toISOString() };
+        if (!v.telegram_id && v.phone) { try { var {data:u} = await supabase.from('users').select('telegram_id').eq('phone', v.phone).single(); if (u) v.telegram_id = u.telegram_id; } catch(e) {} } 
         // Save to Supabase - this is the SOURCE OF TRUTH
         try { 
           var { data: sd } = await supabase.from('vendors').insert(v).select().single(); 

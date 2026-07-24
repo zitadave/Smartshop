@@ -41,25 +41,23 @@ export default function Profile() {
   try { initialVS = localStorage.getItem('ss_vendor_status') || 'none'; } catch(e) {}
   const [vendorStatus, setVendorStatus] = useState(initialVS);
   
-  // Check API for approved status
+  // Check API for approved status via sync
   useEffect(function() {
-    if (vendorStatus === 'pending' || vendorStatus === 'none') {
-      var appId = localStorage.getItem('ss_vendor_app_id') || '';
-      if (appId) {
-        fetch('/api/vendors/applications').then(function(r) { return r.json(); }).then(function(d) {
-          if (d && d.applications) {
-            for (var i = 0; i < d.applications.length; i++) {
-              if (String(d.applications[i].id) === appId && d.applications[i].status === 'approved') {
-                localStorage.setItem('ss_vendor_status', 'approved');
-                setVendorStatus('approved');
-                return;
-              }
-            }
-          }
-        }).catch(function() {});
-      }
+    var tid = profile.telegramId || '';
+    if (tid) {
+      fetch('/api/user/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telegram_id: tid })
+      }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d && d.vendor_status) {
+          localStorage.setItem('ss_vendor_status', d.vendor_status);
+          setVendorStatus(d.vendor_status);
+          if (d.vendor_id) localStorage.setItem('ss_vendor_app_id', String(d.vendor_id));
+        }
+      }).catch(function() {});
     }
-  }, [vendorStatus]);
+  }, []);
   
   const applyAsVendor = function() {
     if (vendorStatus === 'pending') { toast('Already applied! Admin will review.', 'info'); return; }
