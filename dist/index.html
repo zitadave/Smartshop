@@ -26,6 +26,24 @@
     <!-- Preconnect to API (relative — same domain) -->
 
     <!-- Vite injects CSS/JS automatically -->
+
+    <!-- CRITICAL: Remove old injected CSS from AdminThemeManager (browser cache survivor) -->
+    <script>
+      (function() {
+        // Remove old injected style tags that didn't have .dark prefix
+        var s = document.getElementById('admin-theme-styles');
+        if (s) s.remove();
+        s = document.getElementById('admin-dark-mode');
+        if (s) s.remove();
+        document.documentElement.removeAttribute('data-admin-theme');
+        // Sync dark mode class from localStorage immediately
+        try {
+          var dark = JSON.parse(localStorage.getItem('ss_dark') || 'false');
+          if (dark) document.documentElement.classList.add('dark');
+          else document.documentElement.classList.remove('dark');
+        } catch(e) {}
+      })();
+    </script>
     <script type="module" crossorigin src="/assets/index-BnKDfX4X.js"></script>
     <link rel="modulepreload" crossorigin href="/assets/jsx-runtime-n5LQ9ujS.js">
     <link rel="modulepreload" crossorigin href="/assets/createLucideIcon-i0MYM3i7.js">
