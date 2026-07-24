@@ -927,6 +927,15 @@ function VendorPromotionsView() {
   );
 }
 function VendorSettingsView({ vendorName }: { vendorName: string }) {
+  // Force light mode for settings page - clean injected styles
+  useEffect(function() {
+    var s = document.getElementById('ap-theme-style');
+    if (s) s.remove();
+    s = document.getElementById('admin-theme-styles');
+    if (s) s.remove();
+    document.documentElement.classList.remove('dark');
+  }, []);
+
   var savedData = {};
   try { savedData = JSON.parse(localStorage.getItem('ss_vendor_settings') || '{}'); } catch (e) {}
   const [name, setName] = useState(savedData.name || vendorName);
