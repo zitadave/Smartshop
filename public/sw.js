@@ -1,7 +1,7 @@
-// Smart Shop Service Worker v4 — Fast-refresh PWA
-const CACHE = 'smartshop-v5';
-const STATIC_CACHE = 'smartshop-static-v5';
-const API_CACHE = 'smartshop-api-v5';
+// Smart Shop Service Worker v6 — Fast-refresh PWA (cache-bust)
+const CACHE = 'smartshop-v6';
+const STATIC_CACHE = 'smartshop-static-v6';
+const API_CACHE = 'smartshop-api-v6';
 const STATIC_ASSETS = ['/', '/index.html', '/offline.html'];
 
 // Install: cache shell

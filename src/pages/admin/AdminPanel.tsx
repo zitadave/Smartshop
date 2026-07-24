@@ -1118,8 +1118,8 @@ function AdminThemes() {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div><h2 className="text-lg font-bold">🎨 Store Theme Studio</h2><p className="text-[10px] text-slate-500">Customize colors for the CUSTOMER-FACING storefront. (Admin panel colors are in "Admin Theme" tab.)</p></div>
         <div className="flex gap-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl p-0.5">
-          <button className={cn('px-3 py-1.5 rounded-lg text-[10px] font-semibold flex items-center gap-1', !darkMode ? 'bg-white dark:bg-slate-700 shadow-sm' : 'text-slate-500')} onClick={() => { localStorage.setItem('ss_dark', 'false'); document.documentElement.classList.remove('dark'); }}><Sun size={12} /> Light</button>
-          <button className={cn('px-3 py-1.5 rounded-lg text-[10px] font-semibold flex items-center gap-1', darkMode ? 'bg-white dark:bg-slate-700 shadow-sm' : 'text-slate-500')} onClick={() => { localStorage.setItem('ss_dark', 'true'); document.documentElement.classList.add('dark'); }}><Moon size={12} /> Dark</button>
+          <button className={cn('px-3 py-1.5 rounded-lg text-[10px] font-semibold flex items-center gap-1', !darkMode ? 'bg-white dark:bg-slate-700 shadow-sm' : 'text-slate-500')} onClick={() => { localStorage.setItem('ss_dark', 'false'); document.documentElement.classList.remove('dark'); setDarkMode(false); }}><Sun size={12} /> Light</button>
+          <button className={cn('px-3 py-1.5 rounded-lg text-[10px] font-semibold flex items-center gap-1', darkMode ? 'bg-white dark:bg-slate-700 shadow-sm' : 'text-slate-500')} onClick={() => { localStorage.setItem('ss_dark', 'true'); document.documentElement.classList.add('dark'); setDarkMode(true); }}><Moon size={12} /> Dark</button>
         </div>
       </div>
 
@@ -1175,7 +1175,7 @@ function AdminThemes() {
 }
 
 function AdminSettings() {
-  const store = useStore(); const { settings, setSettings } = store;
+  const store = useStore(); const { settings, setSettings, darkMode, setDarkMode } = store;
   const [commission, setCommission] = useState(settings.vendorCommission || 10);
   const [deliveryFee, setDeliveryFee] = useState(settings.deliveryFee || 50);
   const [freeThreshold, setFreeThreshold] = useState(settings.freeDeliveryThreshold || 1000);
@@ -1213,22 +1213,12 @@ function AdminSettings() {
           <button className={cn('flex-1 py-2.5 rounded-xl text-[11px] font-bold border-2 transition-all', !darkMode ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 bg-white text-slate-500')} onClick={() => { 
             localStorage.setItem('ss_dark', 'false'); 
             document.documentElement.classList.remove('dark');
-            // Remove old admin theme CSS
-            const s = document.getElementById('admin-theme-styles');
-            if (s) s.remove();
-            document.querySelectorAll('[data-admin-root],[data-admin-card],[data-admin-sidebar]').forEach(el => {
-              if (el instanceof HTMLElement) el.removeAttribute('style');
-            });
+            setDarkMode(false);
           }}>☀️ Light</button>
           <button className={cn('flex-1 py-2.5 rounded-xl text-[11px] font-bold border-2 transition-all', darkMode ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 bg-white text-slate-500')} onClick={() => { 
             localStorage.setItem('ss_dark', 'true'); 
             document.documentElement.classList.add('dark');
-            // Remove old admin theme CSS
-            const s = document.getElementById('admin-theme-styles');
-            if (s) s.remove();
-            document.querySelectorAll('[data-admin-root],[data-admin-card],[data-admin-sidebar]').forEach(el => {
-              if (el instanceof HTMLElement) el.removeAttribute('style');
-            });
+            setDarkMode(true);
           }}>🌙 Dark</button>
         </div>
         <h3 className="text-sm font-bold mb-3">🔔 Features & Toggles</h3>
