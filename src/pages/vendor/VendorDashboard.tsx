@@ -16,7 +16,7 @@ import {
 import { toast } from '@/components/Toast';
 import ProductStudio from '@/components/admin/ProductStudio';
 
-type VendorTab = 'dashboard' | 'products' | 'storefront' | 'analytics' | 'orders' | 'reviews' | 'inventory' | 'payouts' | 'promotions' ;
+type VendorTab = 'dashboard' | 'products' | 'storefront' | 'analytics' | 'orders' | 'reviews' | 'inventory' | 'payouts' | 'notifications' | 'promotions' ;
 
 export default function VendorDashboard() {
   const [tab, setTab] = useState<VendorTab>('dashboard');
@@ -103,6 +103,7 @@ export default function VendorDashboard() {
             { id: 'orders' as VendorTab, icon: ShoppingCart, label: 'Orders', badge: stats.pendingOrders },
             { id: 'reviews' as VendorTab, icon: Star, label: 'Reviews', badge: stats.totalReviews },
             { id: 'inventory' as VendorTab, icon: Box, label: 'Inventory', badge: stats.lowStock.length },
+            { id: 'notifications' as VendorTab, icon: Bell, label: 'Notifications', badge: 0 },
             { id: 'promotions' as VendorTab, icon: Gift, label: 'Promotions' },
             { id: 'payouts' as VendorTab, icon: Wallet, label: 'Payouts' },
             
@@ -143,6 +144,7 @@ export default function VendorDashboard() {
           {tab === 'orders' && <VendorOrdersView orders={orders} />}
           {tab === 'reviews' && <VendorReviewsView products={vendorProducts} />}
           {tab === 'inventory' && <VendorInventoryView products={vendorProducts} />}
+          {tab === 'notifications' && <VendorNotificationsView />}
           {tab === 'promotions' && <VendorPromotionsView />}
           {tab === 'payouts' && <VendorPayoutsView stats={stats} />}
           
@@ -761,6 +763,44 @@ function VendorPayoutsView({ stats }: { stats: any }) {
 
 // ===== SETTINGS =====
 // ===== PROMOTIONS =====
+
+// ===== NOTIFICATIONS =====
+function VendorNotificationsView() {
+  var notifs = [];
+  try { notifs = JSON.parse(localStorage.getItem('ss_vendor_notifications') || '[]'); } catch(e) {}
+  // Add sample notifications if empty
+  if (notifs.length === 0) {
+    notifs = [
+      { id: 1, type: 'info', text: 'Welcome to your vendor dashboard!', time: new Date().toISOString(), read: false },
+      { id: 2, type: 'order', text: 'When customers order your products, notifications will appear here.', time: new Date(Date.now() - 86400000).toISOString(), read: true },
+    ];
+    localStorage.setItem('ss_vendor_notifications', JSON.stringify(notifs));
+  }
+  var unread = notifs.filter(function(n) { return !n.read; }).length;
+  var rows = notifs.slice(0, 20).map(function(n) {
+    var icon = n.type === 'order' ? '\ud83d\udecd\ufe0f' : n.type === 'stock' ? '\ud83d\udce6' : n.type === 'promo' ? '\ud83c\udf89' : '\ud83d\udd14';
+    var bg = n.read ? 'bg-white dark:bg-slate-900' : 'bg-blue-50 dark:bg-blue-950/20';
+    return React.createElement('div', { className: bg + ' rounded-xl border border-slate-200 dark:border-slate-800 p-3 flex items-start gap-3', key: n.id },
+      React.createElement('span', { className: 'text-lg flex-shrink-0' }, icon),
+      React.createElement('div', { className: 'flex-1 min-w-0' },
+        React.createElement('p', { className: 'text-[10px] text-slate-700 dark:text-slate-300' }, n.text),
+        React.createElement('p', { className: 'text-[8px] text-slate-400 mt-0.5' }, new Date(n.time).toLocaleDateString())
+      ),
+      n.read ? null : React.createElement('span', { className: 'w-2 h-2 rounded-full bg-blue-500 flex-shrink-0 mt-1' })
+    );
+  });
+  return React.createElement('div', { className: 'space-y-4 animate-fadeUp' },
+    React.createElement('div', null,
+      React.createElement('h2', { className: 'text-lg font-bold text-slate-900 dark:text-white' }, '\ud83d\udd14 Notifications'),
+      React.createElement('p', { className: 'text-[10px] text-slate-500' }, unread > 0 ? unread + ' unread notifications' : 'No new notifications')
+    ),
+    rows.length > 0 ? React.createElement('div', { className: 'space-y-2' }, ...rows) :
+      React.createElement('div', { className: 'bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-8 text-center' },
+        React.createElement('p', { className: 'text-xs text-slate-400' }, 'No notifications yet')
+      )
+  );
+}
+
 function VendorPromotionsView() {
   const [tab, setTab] = useState<"request" | "active" | "slots">("request");
   const store = useStore();
