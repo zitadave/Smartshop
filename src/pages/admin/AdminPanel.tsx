@@ -50,55 +50,6 @@ export default function AdminLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
-  // Inject admin dark mode CSS and clean up old theme styles
-  useEffect(() => {
-    const style = document.getElementById('admin-theme-styles');
-    if (style) style.remove();
-    document.querySelectorAll('[data-admin-root]').forEach(el => {
-      if (el instanceof HTMLElement) el.removeAttribute('style');
-    });
-    document.querySelectorAll('[data-admin-card]').forEach(el => {
-      if (el instanceof HTMLElement) el.removeAttribute('style');
-    });
-    // Inject CSS for proper dark mode text visibility
-    // Create or update the admin-dark-mode style tag
-    let darkStyle = document.getElementById('admin-dark-mode');
-    if (!darkStyle) {
-      darkStyle = document.createElement('style');
-      darkStyle.id = 'admin-dark-mode';
-      document.head.appendChild(darkStyle);
-    }
-    darkStyle.textContent = [
-      '.dark [data-admin-root], .dark [data-admin-card], .dark [data-admin-sidebar], .dark [data-admin-header] { color-scheme: dark; }',
-      '.dark [data-admin-card] .text-slate-400, .dark [data-admin-card] .text-slate-500, .dark [data-admin-card] .text-slate-600 { color: #94a3b8 !important; }',
-      '.dark [data-admin-card] .text-slate-700, .dark [data-admin-card] .text-slate-800, .dark [data-admin-card] .text-slate-900 { color: #f1f5f9 !important; }',
-      '.dark [data-admin-card] .text-xs, .dark [data-admin-card] .text-sm, .dark [data-admin-card] .text-lg, .dark [data-admin-card] .text-xl, .dark [data-admin-card] .text-base { color: #f1f5f9 !important; }',
-      '.dark [data-admin-card] .font-bold, .dark [data-admin-card] .font-semibold, .dark [data-admin-card] .font-medium { color: #f1f5f9 !important; }',
-      '.dark [data-admin-card] .text-indigo-600, .dark [data-admin-card] .text-indigo-700, .dark [data-admin-card] .text-indigo-500 { color: #818cf8 !important; }',
-      '.dark [data-admin-card] .text-emerald-600, .dark [data-admin-card] .text-green-600 { color: #34d399 !important; }',
-      '.dark [data-admin-card] .text-amber-600, .dark [data-admin-card] .text-orange-600 { color: #fbbf24 !important; }',
-      '.dark [data-admin-card] .text-red-500, .dark [data-admin-card] .text-red-600 { color: #f87171 !important; }',
-      '.dark [data-admin-card] .text-blue-500, .dark [data-admin-card] .text-blue-600 { color: #60a5fa !important; }',
-      '.dark [data-admin-card] .text-purple-600 { color: #a78bfa !important; }',
-      '.dark [data-admin-card] .text-pink-500 { color: #f472b6 !important; }',
-      '.dark [data-admin-card] .bg-white { background-color: #1e293b !important; }',
-      '.dark [data-admin-card] h1, .dark [data-admin-card] h2, .dark [data-admin-card] h3 { color: #f1f5f9 !important; }',
-      '.dark [data-admin-card] p, .dark [data-admin-card] span, .dark [data-admin-card] div { color: inherit; }',
-      '.dark [data-admin-sidebar] .text-slate-400, .dark [data-admin-sidebar] .text-slate-500 { color: #94a3b8 !important; }',
-      '.dark [data-admin-sidebar] .hover\\:text-slate-900:hover { color: #f1f5f9 !important; }',
-      '.dark .text-muted-foreground { color: #94a3b8 !important; }',
-      '.dark .text-foreground { color: #f1f5f9 !important; }',
-      '.dark label { color: #cbd5e1 !important; }',
-      '.dark [data-admin-card] input, .dark [data-admin-card] select, .dark [data-admin-card] textarea { color: #f1f5f9 !important; background-color: #0f172a !important; border-color: #334155 !important; }',
-      '.dark [data-admin-card] input::placeholder, .dark [data-admin-card] textarea::placeholder { color: #64748b !important; }',
-      '.dark [data-admin-card] .bg-slate-50 { background-color: #0f172a !important; }',
-      '.dark [data-admin-card] .bg-indigo-50 { background-color: #1e1b4b !important; }',
-      '.dark [data-admin-card] .bg-emerald-50 { background-color: #022c22 !important; }',
-      '.dark [data-admin-card] .bg-amber-50 { background-color: #451a03 !important; }',
-      '.dark [data-admin-card] .bg-red-50 { background-color: #450a0a !important; }',
-      '.dark [data-admin-sidebar] .bg-gradient-to-r.from-indigo-50 { background: #1e1b4b !important; }',
-    ].join('\n');
-  }, []);
   const navigate = useNavigate();
 
   const handleCmdNavigate = (t: string) => {
@@ -140,7 +91,7 @@ export default function AdminLayout() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900" data-admin-root>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900" id="admin-panel" data-admin-root>
       {/* Toast notifications for admin panel */}
       {/* Command Palette */}
       <CommandPalette onNavigate={handleCmdNavigate} />
@@ -219,7 +170,7 @@ export default function AdminLayout() {
           })()}
         </div>
         <div className="flex-shrink-0 p-3 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 sticky bottom-0">
-          <button className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors" onClick={() => { document.documentElement.classList.remove('dark'); window.location.href = '/'; }}>
+          <button className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors" onClick={() => { localStorage.setItem('ss_dark', 'false'); document.documentElement.classList.remove('dark'); window.location.href = '/'; }}>
 <LogOut size={14} /> <span>Back to Store</span>
           </button>
         </div>
