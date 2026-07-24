@@ -934,21 +934,124 @@ function VendorSettingsView(_props) {
     if (el) el.remove();
     document.documentElement.classList.remove('dark');
   } catch(e) {}
-  return React.createElement('div', { style: { padding: '20px' } },
-    React.createElement('h2', { style: { fontSize: '18px', fontWeight: 'bold' } }, '⚙️ Settings'),
-    React.createElement('p', { style: { fontSize: '12px', color: '#666' } }, 'Manage your store'),
-    React.createElement('div', { style: { marginTop: '16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' } },
-      React.createElement('div', { style: { background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '16px' } },
-        React.createElement('h3', { style: { fontSize: '14px', fontWeight: 'bold', marginBottom: '12px' } }, 'Store Profile'),
-        React.createElement('button', { style: { padding: '10px 20px', background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', borderRadius: '12px', border: 'none', fontSize: '12px', fontWeight: 'bold' } }, 'Save Changes')
+  var sd = {};
+  try { sd = JSON.parse(localStorage.getItem('ss_vendor_settings') || '{}'); } catch(e) {}
+  function saveForm() {
+    var form = document.getElementById('vendor-settings-form');
+    if (!form) return;
+    var data = {
+      name: form.storeName ? form.storeName.value : (sd.name || 'My Store'),
+      email: form.storeEmail ? form.storeEmail.value : (sd.email || ''),
+      phone: form.storePhone ? form.storePhone.value : (sd.phone || ''),
+      bio: form.storeBio ? form.storeBio.value : (sd.bio || ''),
+      notifications: form.notifEmail ? form.notifEmail.checked : true,
+      autoRestock: form.autoRestock ? form.autoRestock.checked : false,
+    };
+    localStorage.setItem('ss_vendor_settings', JSON.stringify(data));
+    try { toast('\u2705 Settings saved!', 'success'); } catch(e) { alert('Saved!'); }
+  }
+  return React.createElement('div', { className: 'animate-fadeUp space-y-4', style: { padding: '4px' } },
+    React.createElement('div', null,
+      React.createElement('h2', { className: 'text-lg font-bold text-slate-900 dark:text-white' }, '\u2699\uFE0F Settings'),
+      React.createElement('p', { className: 'text-[10px] text-slate-500' }, 'Manage your account and preferences')
+    ),
+    React.createElement('div', { className: 'grid lg:grid-cols-2 gap-4' },
+      // Store Profile Card
+      React.createElement('div', { className: 'bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden' },
+        React.createElement('h3', { className: 'text-sm font-bold mb-3 text-slate-900 dark:text-white' }, 'Store Profile'),
+        React.createElement('form', { id: 'vendor-settings-form' },
+          React.createElement('div', { className: 'space-y-3' },
+            React.createElement('div', null,
+              React.createElement('label', { className: 'text-[9px] font-semibold text-slate-400 uppercase tracking-wider' }, 'Store Name'),
+              React.createElement('input', { name: 'storeName', defaultValue: sd.name || _props.vendorName || 'My Store', className: 'w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200' })
+            ),
+            React.createElement('div', null,
+              React.createElement('label', { className: 'text-[9px] font-semibold text-slate-400 uppercase tracking-wider' }, 'Email'),
+              React.createElement('input', { name: 'storeEmail', defaultValue: sd.email || 'vendor@mystore.com', className: 'w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200' })
+            ),
+            React.createElement('div', null,
+              React.createElement('label', { className: 'text-[9px] font-semibold text-slate-400 uppercase tracking-wider' }, 'Phone'),
+              React.createElement('input', { name: 'storePhone', defaultValue: sd.phone || '+251-911-XXXXXX', className: 'w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200' })
+            ),
+            React.createElement('div', null,
+              React.createElement('label', { className: 'text-[9px] font-semibold text-slate-400 uppercase tracking-wider' }, 'Bio'),
+              React.createElement('textarea', { name: 'storeBio', defaultValue: sd.bio || '', placeholder: 'Tell customers about your store', className: 'w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent resize-none h-16 text-slate-800 dark:text-slate-200' })
+            ),
+            React.createElement('button', { type: 'button', onClick: saveForm, className: 'w-full py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold hover:shadow-lg transition-all' },
+              React.createElement('svg', { width: '12', height: '12', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2', style: { display: 'inline', marginRight: '4px' } },
+                React.createElement('path', { d: 'M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z' }),
+                React.createElement('polyline', { points: '17 21 17 13 7 13 7 21' }),
+                React.createElement('polyline', { points: '7 3 7 8 15 8' })
+              ),
+              ' Save Changes'
+            )
+          )
+        )
       ),
-      React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '16px' } },
-        React.createElement('div', { style: { background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '16px' } },
-          React.createElement('h3', { style: { fontSize: '14px', fontWeight: 'bold' } }, 'Notifications')
+      // Right Column
+      React.createElement('div', { className: 'space-y-4' },
+        // Notifications
+        React.createElement('div', { className: 'bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden' },
+          React.createElement('h3', { className: 'text-sm font-bold mb-3 flex items-center gap-2 text-slate-900 dark:text-white' },
+            React.createElement('svg', { width: '14', height: '14', viewBox: '0 0 24 24', fill: 'none', stroke: '#3b82f6', strokeWidth: '2' },
+              React.createElement('path', { d: 'M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9' }),
+              React.createElement('path', { d: 'M13.73 21a2 2 0 0 1-3.46 0' })
+            ),
+            ' Notifications'
+          ),
+          React.createElement('label', { className: 'flex items-center gap-2 text-xs mb-2 text-slate-700 dark:text-slate-300' },
+            React.createElement('input', { name: 'notifEmail', type: 'checkbox', defaultChecked: sd.notifications !== false, className: 'rounded' }),
+            ' Email for new orders'
+          ),
+          React.createElement('label', { className: 'flex items-center gap-2 text-xs mb-2 text-slate-700 dark:text-slate-300' },
+            React.createElement('input', { name: 'autoRestock', type: 'checkbox', defaultChecked: sd.autoRestock || false, className: 'rounded' }),
+            ' Auto-restock alerts'
+          ),
+          React.createElement('label', { className: 'flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300' },
+            React.createElement('input', { type: 'checkbox', defaultChecked: true, className: 'rounded' }),
+            ' Low stock warnings'
+          )
         ),
-        React.createElement('div', { style: { background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '16px' } },
-          React.createElement('h3', { style: { fontSize: '14px', fontWeight: 'bold' } }, 'Commission'),
-          React.createElement('div', { style: { marginTop: '8px', padding: '8px', background: '#ecfdf5', borderRadius: '8px', fontSize: '11px', color: '#065f46' } }, 'Your store is active')
+        // Commission
+        React.createElement('div', { className: 'bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden' },
+          React.createElement('h3', { className: 'text-sm font-bold mb-3 flex items-center gap-2 text-slate-900 dark:text-white' },
+            React.createElement('svg', { width: '14', height: '14', viewBox: '0 0 24 24', fill: 'none', stroke: '#10b981', strokeWidth: '2' },
+              React.createElement('line', { x1: '19', y1: '5', x2: '5', y2: '19' }),
+              React.createElement('circle', { cx: '6.5', cy: '6.5', r: '2.5' }),
+              React.createElement('circle', { cx: '17.5', cy: '17.5', r: '2.5' })
+            ),
+            ' Commission'
+          ),
+          React.createElement('div', { className: 'flex items-center justify-between' },
+            React.createElement('span', { className: 'text-xs text-slate-500' }, 'Platform fee per sale'),
+            React.createElement('span', { className: 'text-lg font-bold text-emerald-600' }, '10%')
+          ),
+          React.createElement('div', { className: 'mt-2 bg-emerald-50 dark:bg-emerald-950/20 rounded-lg p-2.5 text-[9px] text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5' },
+            React.createElement('svg', { width: '10', height: '10', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2' },
+              React.createElement('polyline', { points: '20 6 9 17 4 12' })
+            ),
+            ' Your store is active and visible'
+          )
+        ),
+        // Danger Zone
+        React.createElement('div', { className: 'bg-white dark:bg-slate-900 rounded-2xl border border-red-200 dark:border-red-900/30 p-4 overflow-x-hidden' },
+          React.createElement('h3', { className: 'text-sm font-bold mb-2 flex items-center gap-2 text-red-600' },
+            React.createElement('svg', { width: '14', height: '14', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2' },
+              React.createElement('path', { d: 'M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z' }),
+              React.createElement('line', { x1: '12', y1: '9', x2: '12', y2: '13' }),
+              React.createElement('line', { x1: '12', y1: '17', x2: '12.01', y2: '17' })
+            ),
+            ' Danger Zone'
+          ),
+          React.createElement('p', { className: 'text-[9px] text-slate-500 mb-3' }, 'Temporarily disable your store from appearing in search results'),
+          React.createElement('button', { onClick: function() { try { toast('Store visibility toggled', 'warning'); } catch(e) { alert('Toggled'); } }, className: 'px-4 py-2 border border-red-300 text-red-600 rounded-xl text-[10px] font-semibold hover:bg-red-50 transition-colors' },
+            React.createElement('svg', { width: '12', height: '12', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2', style: { display: 'inline', marginRight: '4px' } },
+              React.createElement('path', { d: 'M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94' }),
+              React.createElement('path', { d: 'M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19' }),
+              React.createElement('line', { x1: '1', y1: '1', x2: '23', y2: '23' })
+            ),
+            ' Pause Storefront'
+          )
         )
       )
     )
