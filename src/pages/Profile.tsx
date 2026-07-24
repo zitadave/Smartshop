@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/stores/AppStore';
 import { t } from '@/i18n/translations';
@@ -37,26 +37,29 @@ export default function Profile() {
     { name: 'Bronze', icon: '🥉', next: { need: 200 - pts, label: 'Silver' }, color: 'from-amber-700 to-amber-800' };
   const tier = getTier(loyaltyPoints);
 
-  var vendorStatus = 'none';
-  try { vendorStatus = localStorage.getItem('ss_vendor_status') || 'none'; } catch(e) {}
-  // Also check API for approved status
-  if (vendorStatus === 'pending' || vendorStatus === 'none') {
-    var appId = localStorage.getItem('ss_vendor_app_id') || '';
-    var phone2 = profile.phone || localStorage.getItem('ss_user_phone') || '';
-    if (appId) {
-      fetch('/api/vendors/applications').then(function(r) { return r.json(); }).then(function(d) {
-        if (d && d.applications) {
-          for (var i = 0; i < d.applications.length; i++) {
-            if (String(d.applications[i].id) === appId && d.applications[i].status === 'approved') {
-              localStorage.setItem('ss_vendor_status', 'approved');
-              window.location.reload();
-              return;
+  var initialVS = 'none';
+  try { initialVS = localStorage.getItem('ss_vendor_status') || 'none'; } catch(e) {}
+  const [vendorStatus, setVendorStatus] = useState(initialVS);
+  
+  // Check API for approved status
+  useEffect(function() {
+    if (vendorStatus === 'pending' || vendorStatus === 'none') {
+      var appId = localStorage.getItem('ss_vendor_app_id') || '';
+      if (appId) {
+        fetch('/api/vendors/applications').then(function(r) { return r.json(); }).then(function(d) {
+          if (d && d.applications) {
+            for (var i = 0; i < d.applications.length; i++) {
+              if (String(d.applications[i].id) === appId && d.applications[i].status === 'approved') {
+                localStorage.setItem('ss_vendor_status', 'approved');
+                setVendorStatus('approved');
+                return;
+              }
             }
           }
-        }
-      }).catch(function() {});
+        }).catch(function() {});
+      }
     }
-  }
+  }, [vendorStatus]);
   
   const applyAsVendor = function() {
     if (vendorStatus === 'pending') { toast('Already applied! Admin will review.', 'info'); return; }

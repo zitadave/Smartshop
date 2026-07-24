@@ -11,7 +11,7 @@ export default function VendorRegister() {
   const [storeDesc, setStoreDesc] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const submit = function() {
+  const submit = async function() {
     if (!storeName.trim()) { toast('Store name is required', 'error'); return; }
     if (!storePhone.trim()) { toast('Phone number is required', 'error'); return; }
     setSubmitting(true);
@@ -29,17 +29,17 @@ export default function VendorRegister() {
     });
     localStorage.setItem('ss_vendor_applications', JSON.stringify(apps));
     localStorage.setItem('ss_vendor_status', 'pending');
-    // Send to API so admin can see it
+    // Send to API and wait for response
     try {
-      fetch('/api/vendors/register', {
+      var res = await fetch('/api/vendors/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: storeName.trim(), phone: storePhone.trim(), email: storeEmail.trim(), description: storeDesc.trim(), status: 'pending', appliedAt: new Date().toISOString() })
-      }).then(function(r) { return r.json(); }).then(function(d) {
-        if (d && d.vendor && d.vendor.id) {
-          localStorage.setItem('ss_vendor_app_id', String(d.vendor.id));
-        }
-      }).catch(function() {});
+      });
+      var d = await res.json();
+      if (d && d.vendor && d.vendor.id) {
+        localStorage.setItem('ss_vendor_app_id', String(d.vendor.id));
+      }
     } catch(e) {}
     toast('Application submitted! Admin will review.', 'success');
     setTimeout(function() { nav('/profile'); }, 1500);
