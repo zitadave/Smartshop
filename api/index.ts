@@ -448,17 +448,32 @@ export default async function handler(req: any, res: any) {
         } catch(se) { console.log('Supabase note:', se.message); }
         // Send Telegram notification using admin's configured bot (or env var fallback)
         try {
-          var botTk = adminBotToken || process.env.TELEGRAM_ADMIN_BOT_TOKEN || '8951025148:AAG456KIIBnyLBQqbkeDLajcT_TaPSYCIYc';
-          var chat = adminChatId || process.env.ADMIN_CHAT_ID || '';
-          if (chat && botTk) {
-            var msg = '📝 New Vendor Registration\n\nStore: ' + (req.body.name || 'N/A') + '\nPhone: ' + (req.body.phone || 'N/A') + '\nCheck Admin Panel → Vendors tab to approve.';
-            await fetch('https://api.telegram.org/bot' + botTk + '/sendMessage', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ chat_id: chat, text: msg })
-            });
+          // First try to load config from Supabase
+          var botChatId = '';
+          var botTk = process.env.TELEGRAM_ADMIN_BOT_TOKEN || '8951025148:AAG456KIIBnyLBQqbkeDLajcT_TaPSYCIYc';
+          try {
+            var { data: configData } = await supabase.from('settings').select('data').eq('key', 'admin_bot_config').single();
+            if (configData?.data?.chatId) botChatId = configData.data.chatId;
+            if (configData?.data?.botToken) botTk = configData.data.botToken;
+          } catch(e) {}
+          // Also check process env
+          if (!botChatId) botChatId = process.env.ADMIN_CHAT_ID || '';
+          if (botChatId) {
+            var msg = '📝 New Vendor Registration
+
+Store: ' + (req.body.name || 'N/A') + '
+Phone: ' + (req.body.phone || 'N/A') + '
+Check Admin Panel -> Vendors tab to approve.';
+            try {
+              await fetch('https://api.telegram.org/bot' + botTk + '/sendMessage', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chat_id: botChatId, text: msg })
+              });
+              console.log('Telegram notification sent to', botChatId);
+            } catch(e) { console.log('Telegram send error:', e.message); }
           } else {
-            console.log('Admin bot not configured - set chat ID in AdminBotManager');
+            console.log('Admin chat ID not configured');
           }
         } catch(e) { console.log('Telegram notify error:', e.message); }
         return res.json({ success: true, vendor: vendor }); 
@@ -757,15 +772,21 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    // ===== ADMIN BOT - Save Config =====
+    // ===== ADMIN BOT - Save Config to Supabase =====
     if (path === '/api/admin-bot/config' && method === 'POST') {
       const { botToken, chatId } = req.body || {};
-      if (botToken) adminBotToken = botToken;
-      if (chatId) adminChatId = chatId;
+      try {
+        await supabase.from('settings').upsert({ key: 'admin_bot_config', data: { botToken, chatId } }, { onConflict: 'key' });
+      } catch(e) { console.log('Supabase save error:', e.message); }
       return res.json({ success: true });
     }
     if (path === '/api/admin-bot/config' && method === 'GET') {
-      return res.json({ botToken: adminBotToken, chatId: adminChatId });
+      var result = { botToken: process.env.TELEGRAM_ADMIN_BOT_TOKEN || '', chatId: '' };
+      try {
+        var { data } = await supabase.from('settings').select('data').eq('key', 'admin_bot_config').single();
+        if (data?.data) result = { ...result, ...data.data };
+      } catch(e) {}
+      return res.json(result);
     }
 
     // ===== VENDOR - Send Telegram Notification =====
