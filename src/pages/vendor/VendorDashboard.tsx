@@ -927,57 +927,15 @@ function VendorPromotionsView() {
   );
 }
 function VendorSettingsView({ vendorName }: { vendorName: string }) {
-  // Force light mode for settings page - clean injected styles
-  useEffect(function() {
-    var s = document.getElementById('ap-theme-style');
-    if (s) s.remove();
-    s = document.getElementById('admin-theme-styles');
-    if (s) s.remove();
+  try {
+    var sl = document.getElementById('ap-theme-style');
+    if (sl) sl.remove();
+    sl = document.getElementById('admin-theme-styles');
+    if (sl) sl.remove();
     document.documentElement.classList.remove('dark');
-  }, []);
-
-  var savedData = {};
-  try { savedData = JSON.parse(localStorage.getItem('ss_vendor_settings') || '{}'); } catch (e) {}
-  const [name, setName] = useState(savedData.name || vendorName);
-  const [email, setEmail] = useState(savedData.email || 'vendor@mystore.com');
-  const [phone, setPhone] = useState(savedData.phone || '+251-911-XXXXXX');
-  const [bio, setBio] = useState(savedData.bio || '');
-  const [notifications, setNotifications] = useState(savedData.notifications !== undefined ? savedData.notifications : true);
-  const [autoRestock, setAutoRestock] = useState(savedData.autoRestock || false);
-
-  return (
-    <div className="animate-fadeUp space-y-4">
-      <div><h2 className="text-lg font-bold text-slate-900 dark:text-white">⚙️ Settings</h2><p className="text-[10px] text-slate-500">Manage your account and preferences</p></div>
-      <div className="grid lg:grid-cols-2 gap-4">
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden">
-          <h3 className="text-sm font-bold mb-3 text-slate-900 dark:text-white">Store Profile</h3>
-          <div className="space-y-3">
-            <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Store Name</label><input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200" value={name} onChange={e => setName(e.target.value)} /></div>
-            <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Email</label><input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200" value={email} onChange={e => setEmail(e.target.value)} /></div>
-            <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Phone</label><input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200" value={phone} onChange={e => setPhone(e.target.value)} /></div>
-            <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Bio</label><textarea className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent resize-none h-16 text-slate-800 dark:text-slate-200" value={bio} onChange={e => setBio(e.target.value)} placeholder="Tell customers about your store" /></div>
-            <button className="w-full py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold hover:shadow-lg transition-all" onClick={() => { const s = {name,email,phone,bio,notifications,autoRestock}; localStorage.setItem('ss_vendor_settings', JSON.stringify(s)); toast('✅ Settings saved!', 'success'); }}><Save size={12} className="inline mr-1" /> Save Changes</button>
-          </div>
-        </div>
-        <div className="space-y-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden">
-            <h3 className="text-sm font-bold mb-3 flex items-center gap-2 text-slate-900 dark:text-white"><Bell size={14} className="text-blue-500" /> Notifications</h3>
-            <label className="flex items-center gap-2 text-xs mb-2 text-slate-700 dark:text-slate-300"><input type="checkbox" checked={notifications} onChange={e => setNotifications(e.target.checked)} className="rounded" /> Email for new orders</label>
-            <label className="flex items-center gap-2 text-xs mb-2 text-slate-700 dark:text-slate-300"><input type="checkbox" checked={autoRestock} onChange={e => setAutoRestock(e.target.checked)} className="rounded" /> Auto-restock alerts</label>
-            <label className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300"><input type="checkbox" defaultChecked className="rounded" /> Low stock warnings</label>
-          </div>
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden">
-            <h3 className="text-sm font-bold mb-3 flex items-center gap-2 text-slate-900 dark:text-white"><Percent size={14} className="text-emerald-500" /> Commission</h3>
-            <div className="flex items-center justify-between"><span className="text-xs text-slate-500">Platform fee per sale</span><span className="text-lg font-bold text-emerald-600">10%</span></div>
-            <div className="mt-2 bg-emerald-50 dark:bg-emerald-950/20 rounded-lg p-2.5 text-[9px] text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5"><CheckCircle size={10} /> Your store is active and visible</div>
-          </div>
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-red-200 dark:border-red-900/30 p-4 overflow-x-hidden">
-            <h3 className="text-sm font-bold mb-2 flex items-center gap-2 text-red-600"><AlertTriangle size={14} /> Danger Zone</h3>
-            <p className="text-[9px] text-slate-500 mb-3">Temporarily disable your store from appearing in search results</p>
-            <button className="px-4 py-2 border border-red-300 text-red-600 rounded-xl text-[10px] font-semibold hover:bg-red-50 transition-colors" onClick={() => toast('⚠️ Store visibility toggled', 'warning')}><EyeOff size={12} className="inline mr-1" /> Pause Storefront</button>
-          </div>
-        </div>
-      </div>
-    </div>
+  } catch(e) {}
+  return React.createElement('div', null,
+    React.createElement('h2', null, 'Settings - test'),
+    React.createElement('p', null, 'If you see this, settings works')
   );
 }
