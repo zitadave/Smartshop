@@ -6,8 +6,8 @@ const SUPABASE_URL = process.env.SUPABASE_URL || 'https://auaendcgszofgvdfdajt.s
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1YWVuZGNnc3pvZmd2ZGZkYWp0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NDQzNzkwNiwiZXhwIjoyMTAwMDEzOTA2fQ.bvVY6X_KozYV1BapIOvwkv4UY6D-k3QgGHRQndMtRu4';
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const ADMIN_BOT_TOKEN = process.env.TELEGRAM_ADMIN_BOT_TOKEN || '';
-var adminBotToken = '';
-var adminChatId = '';
+var adminBotToken = process.env.TELEGRAM_ADMIN_BOT_TOKEN || '';
+var adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID || '336997351';
 const VENDOR_BOT_TOKEN = process.env.VENDOR_BOT_TOKEN || '7761374287:AAHreFF93x92F4tMqRoA1swcNiJoDv5M-Rk';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false } });
@@ -437,31 +437,71 @@ export default async function handler(req: any, res: any) {
 
     // ===== VENDORS =====
     if (path.startsWith('/api/vendors')) {
-      if (path === '/api/vendors/applications' && method === 'GET') { var allApps = vendorApplications.slice().sort(function(a,b) { return new Date(b.joined_at) - new Date(a.joined_at); }); try { var { data } = await supabase.from('vendors').select('*').order('joined_at', { ascending: false }); if (data) { for (var i=0;i<data.length;i++) { var exists=false; for (var j=0;j<allApps.length;j++) { if (allApps[j].id===data[i].id) { exists=true; break; } } if(!exists) allApps.push(data[i]); } } } catch(e) {} return res.json({ applications: allApps }); }
+          if (path === '/api/vendors/approve' && method === 'POST') {
+      var appId = req.body.id;
+      try {
+        // Update in Supabase
+        await supabase.from('vendors').update({ status: 'approved' }).eq('id', appId);
+        // Update in-memory
+        for (var i=0; i<vendorApplications.length; i++) {
+          if (vendorApplications[i].id === appId) vendorApplications[i].status = 'approved';
+        }
+        // Notify admin
+        try {
+          var bc = adminChatId || '336997351';
+          var bt = process.env.TELEGRAM_ADMIN_BOT_TOKEN || '8951025148:AAG456KIIBnyLBQqbkeDLajcT_TaPSYCIYc';
+          await fetch('https://api.telegram.org/bot' + bt + '/sendMessage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: bc, text: '✅ Vendor approved: ' + (req.body.name || 'ID: ' + appId) })
+          });
+        } catch(e) {}
+        return res.json({ success: true });
+      } catch(e) { return res.status(500).json({ error: e.message }); }
+    }
+    if (path === '/api/vendors/check-status' && method === 'GET') {
+      var qs = req.url?.split('?')[1] || '';
+      var phone = new URLSearchParams(qs).get('phone') || '';
+      if (!phone) return res.json({ status: 'none' });
+      try {
+        var { data } = await supabase.from('vendors').select('status').eq('phone', phone).single();
+        return res.json({ status: data?.status || 'none' });
+      } catch(e) { return res.json({ status: 'none' }); }
+    }
+    if (path === '/api/vendors/applications' && method === 'GET') {
+      var allApps = vendorApplications.slice();
+      try {
+        var { data } = await supabase.from('vendors').select('*').order('joined_at', { ascending: false });
+        if (data) { for (var i=0;i<data.length;i++) {
+          var exists=false;
+          for (var j=0;j<allApps.length;j++) { if (allApps[j].id===data[i].id || allApps[j].id===String(data[i].id)) { exists=true; break; } }
+          if(!exists) allApps.push(data[i]); else { for(var k=0;k<allApps.length;k++) { if(allApps[k].id===data[i].id || allApps[k].id===String(data[i].id)) allApps[k]=data[i]; } }
+        } }
+      } catch(e) {}
+      return res.json({ applications: allApps }); 
+    }
       if (method === 'GET' && (path === '/api/vendors' || path === '/api/')) { const { data } = await supabase.from('vendors').select('*'); return res.json({ vendors: data || [] }); }
       if (method === 'GET' && path === '/api/vendors/register') { var apps = vendorApplications.slice(); try { var { data } = await supabase.from('vendors').select('*').eq('status', 'pending'); if (data) apps = apps.concat(data); } catch(e) {} return res.json({ applications: apps }); }
       if (method === 'POST' && path === '/api/vendors/register') { 
         var v = { id: Date.now(), ...req.body, status: 'pending', joined_at: new Date().toISOString() }; 
-        vendorApplications.push(v);
-        // Try Supabase but don't crash if it fails
+        // Save to Supabase - this is the SOURCE OF TRUTH
         try { 
           var { data: sd } = await supabase.from('vendors').insert(v).select().single(); 
           if (sd) v = sd;
-        } catch(se) { console.log('DB note:', se.message); }
-        // Send Telegram using admin's configured bot
+        } catch(se) { console.log('Supabase save error:', se.message); }
+        // Keep in memory as fallback
+        vendorApplications.push(v);
+        // Send Telegram notification to admin
         try {
-          var bc = adminChatId || process.env.ADMIN_CHAT_ID || '';
-          if (!bc) { console.log('ADMIN_CHAT_ID not set'); }
-          if (bc) {
-            var bt = process.env.TELEGRAM_ADMIN_BOT_TOKEN || '8951025148:AAG456KIIBnyLBQqbkeDLajcT_TaPSYCIYc';
-            var msg = 'New Vendor Registration\n\nStore: ' + (req.body.name || 'N/A') + '\nPhone: ' + (req.body.phone || 'N/A') + '\nCheck Admin Panel -> Vendors tab to approve.';
-            await fetch('https://api.telegram.org/bot' + bt + '/sendMessage', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ chat_id: bc, text: msg })
-            });
-          }
-        } catch(e) { console.log('TG error:', e.message); }
+          var bc = adminChatId || '336997351';
+          var bt = process.env.TELEGRAM_ADMIN_BOT_TOKEN || '8951025148:AAG456KIIBnyLBQqbkeDLajcT_TaPSYCIYc';
+          var msg = '🆕 New Vendor Registration\n\nStore: ' + (req.body.name || 'N/A') + '\nPhone: ' + (req.body.phone || 'N/A') + '\n\nApprove: ' + (process.env.VERCEL_URL || 'smartshop-steel.vercel.app') + '/admin-panel';
+          await fetch('https://api.telegram.org/bot' + bt + '/sendMessage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: bc, text: msg })
+          });
+        } catch(e) { console.log('TG notify error:', e.message); }
         return res.json({ success: true, vendor: v }); 
       }
       if (method === 'PUT') { const id = parseInt(path.split('/').pop() || '0'); await supabase.from('vendors').update(req.body).eq('id', id); 
@@ -778,8 +818,8 @@ export default async function handler(req: any, res: any) {
     // ===== ADMIN BOT - Save Config (in-memory, persists per instance) =====
     if (path === '/api/admin-bot/config' && method === 'POST') {
       var cfg = req.body || {};
-      if (cfg.chatId) adminChatId = cfg.chatId;
-      if (cfg.botToken) adminBotToken = cfg.botToken;
+      if (cfg.chatId) { adminChatId = cfg.chatId; try { process.env.TELEGRAM_ADMIN_CHAT_ID = cfg.chatId; } catch(e) {} }
+      if (cfg.botToken) { adminBotToken = cfg.botToken; try { process.env.TELEGRAM_ADMIN_BOT_TOKEN = cfg.botToken; } catch(e) {} }
       console.log('Admin config saved, chatId:', adminChatId);
       return res.json({ success: true, chatId: adminChatId });
     }

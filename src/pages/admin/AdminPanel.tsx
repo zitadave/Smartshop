@@ -673,14 +673,22 @@ function AdminVendors() {
     }
   }
   var pendingApps = apps.filter(function(a) { return a.status === 'pending'; });
-  const approveVendorApp = function(id) {
-    var updated = apps.slice();
-    for (var i = 0; i < updated.length; i++) {
-      if (updated[i].id === id) updated[i].status = 'approved';
-    }
-    localStorage.setItem('ss_vendor_applications', JSON.stringify(updated));
-    toast('Vendor approved!', 'success');
-    window.location.reload();
+  const approveVendorApp = function(id, name) {
+    fetch('/api/vendors/approve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: id, name: name || '' })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      if (d.success) {
+        var updated = apps.slice();
+        for (var i = 0; i < updated.length; i++) {
+          if (updated[i].id === id) updated[i].status = 'approved';
+        }
+        localStorage.setItem('ss_vendor_applications', JSON.stringify(updated));
+        toast('Vendor approved! They can now access their dashboard.', 'success');
+        window.location.reload();
+      } else { toast('Error approving: ' + (d.error || 'unknown'), 'error'); }
+    }).catch(function(e) { toast('Error: ' + e.message, 'error'); });
   };
   const rejectVendorApp = function(id) {
     var updated = apps.slice();
@@ -752,7 +760,7 @@ function AdminVendors() {
                   <div className="text-[8px] text-amber-500">Applied: {new Date(a.appliedAt).toLocaleDateString()}</div>
                 </div>
                 <div className="flex gap-2 flex-shrink-0">
-                  <button className="px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-[9px] font-bold hover:shadow-md transition-all" onClick={function() { approveVendorApp(a.id); }}>
+                  <button className="px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-[9px] font-bold hover:shadow-md transition-all" onClick={function() { approveVendorApp(a.id, a.name); }}>
                     <CheckCircle size={12} className="inline mr-1" /> Approve
                   </button>
                   <button className="px-3 py-1.5 bg-red-500 text-white rounded-lg text-[9px] font-bold hover:shadow-md transition-all" onClick={function() { rejectVendorApp(a.id); }}>

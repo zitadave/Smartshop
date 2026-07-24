@@ -39,6 +39,15 @@ export default function Profile() {
 
   var vendorStatus = 'none';
   try { vendorStatus = localStorage.getItem('ss_vendor_status') || 'none'; } catch(e) {}
+  // Also check API for approved status
+  if (vendorStatus === 'pending' || vendorStatus === 'none') {
+    var phone = profile.phone || localStorage.getItem('ss_user_phone') || '';
+    if (phone) {
+      fetch('/api/vendors/check-status?phone=' + encodeURIComponent(phone)).then(function(r) { return r.json(); }).then(function(d) {
+        if (d && d.status === 'approved') { localStorage.setItem('ss_vendor_status', 'approved'); window.location.reload(); }
+      }).catch(function() {});
+    }
+  }
   
   const applyAsVendor = function() {
     if (vendorStatus === 'pending') { toast('Already applied! Admin will review.', 'info'); return; }
