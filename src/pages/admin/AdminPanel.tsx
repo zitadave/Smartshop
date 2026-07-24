@@ -62,6 +62,10 @@ export default function AdminLayout() {
     document.documentElement.removeAttribute('data-admin-theme');
   }, []);
 
+  // Read dark mode from store for independent admin panel styling
+  const store = useStore();
+  const globalDarkMode = store.darkMode;
+
   const handleCmdNavigate = (t: string) => {
     setTab(t as Tab);
     setCmdOpen(false);
@@ -101,7 +105,7 @@ export default function AdminLayout() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900" id="admin-panel" data-admin-root>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900" id="admin-panel" data-admin-root data-admin-mode={globalDarkMode ? 'dark' : 'light'}>
       {/* Toast notifications for admin panel */}
       {/* Command Palette */}
       <CommandPalette onNavigate={handleCmdNavigate} />

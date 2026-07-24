@@ -466,71 +466,71 @@ body {
 
 /* ===== Admin Panel Dark Mode -- COMPLETE COVERAGE ===== */
 /* Use [data-admin-root] to cover ALL admin panel content */
-.dark [data-admin-root] .text-slate-400,
-.dark [data-admin-root] .text-slate-500,
-.dark [data-admin-root] .text-slate-600,
-.dark [data-admin-sidebar] .text-slate-400,
-.dark [data-admin-sidebar] .text-slate-500 {
+[data-admin-root][data-admin-mode="dark"] .text-slate-400,
+[data-admin-root][data-admin-mode="dark"] .text-slate-500,
+[data-admin-root][data-admin-mode="dark"] .text-slate-600,
+[data-admin-sidebar][data-admin-mode="dark"] .text-slate-400,
+[data-admin-sidebar][data-admin-mode="dark"] .text-slate-500 {
   color: #94a3b8 !important;
 }
-.dark [data-admin-root] .text-slate-700,
-.dark [data-admin-root] .text-slate-800,
-.dark [data-admin-root] .text-slate-900,
-.dark [data-admin-root] .font-bold,
-.dark [data-admin-root] .font-semibold,
-.dark [data-admin-root] .font-medium,
-.dark [data-admin-root] h1,
-.dark [data-admin-root] h2,
-.dark [data-admin-root] h3,
-.dark [data-admin-root] h4,
-.dark [data-admin-root] label,
-.dark [data-admin-root] th,
-.dark [data-admin-root] td {
+[data-admin-root][data-admin-mode="dark"] .text-slate-700,
+[data-admin-root][data-admin-mode="dark"] .text-slate-800,
+[data-admin-root][data-admin-mode="dark"] .text-slate-900,
+[data-admin-root][data-admin-mode="dark"] .font-bold,
+[data-admin-root][data-admin-mode="dark"] .font-semibold,
+[data-admin-root][data-admin-mode="dark"] .font-medium,
+[data-admin-root][data-admin-mode="dark"] h1,
+[data-admin-root][data-admin-mode="dark"] h2,
+[data-admin-root][data-admin-mode="dark"] h3,
+[data-admin-root][data-admin-mode="dark"] h4,
+[data-admin-root][data-admin-mode="dark"] label,
+[data-admin-root][data-admin-mode="dark"] th,
+[data-admin-root][data-admin-mode="dark"] td {
   color: #e2e8f0 !important;
 }
-.dark [data-admin-root] .text-muted-foreground,
-.dark .text-muted-foreground {
+[data-admin-root][data-admin-mode="dark"] .text-muted-foreground,
+[data-admin-root][data-admin-mode="dark"] .text-muted-foreground {
   color: #94a3b8 !important;
 }
-.dark [data-admin-root] .text-foreground {
+[data-admin-root][data-admin-mode="dark"] .text-foreground {
   color: #e2e8f0 !important;
 }
-.dark [data-admin-root] input,
-.dark [data-admin-root] select,
-.dark [data-admin-root] textarea {
+[data-admin-root][data-admin-mode="dark"] input,
+[data-admin-root][data-admin-mode="dark"] select,
+[data-admin-root][data-admin-mode="dark"] textarea {
   color: #e2e8f0 !important;
   background-color: #1e293b !important;
   border-color: #475569 !important;
 }
-.dark [data-admin-root] input::placeholder,
-.dark [data-admin-root] textarea::placeholder {
+[data-admin-root][data-admin-mode="dark"] input::placeholder,
+[data-admin-root][data-admin-mode="dark"] textarea::placeholder {
   color: #64748b !important;
 }
-.dark [data-admin-root] .text-indigo-600,
-.dark [data-admin-root] .text-indigo-700 {
+[data-admin-root][data-admin-mode="dark"] .text-indigo-600,
+[data-admin-root][data-admin-mode="dark"] .text-indigo-700 {
   color: #818cf8 !important;
 }
-.dark [data-admin-root] .text-emerald-600 {
+[data-admin-root][data-admin-mode="dark"] .text-emerald-600 {
   color: #34d399 !important;
 }
-.dark [data-admin-root] .text-amber-600,
-.dark [data-admin-root] .text-amber-700 {
+[data-admin-root][data-admin-mode="dark"] .text-amber-600,
+[data-admin-root][data-admin-mode="dark"] .text-amber-700 {
   color: #fbbf24 !important;
 }
-.dark [data-admin-root] .text-red-500,
-.dark [data-admin-root] .text-red-600 {
+[data-admin-root][data-admin-mode="dark"] .text-red-500,
+[data-admin-root][data-admin-mode="dark"] .text-red-600 {
   color: #f87171 !important;
 }
-.dark [data-admin-root] .text-blue-500,
-.dark [data-admin-root] .text-blue-600 {
+[data-admin-root][data-admin-mode="dark"] .text-blue-500,
+[data-admin-root][data-admin-mode="dark"] .text-blue-600 {
   color: #60a5fa !important;
 }
-.dark [data-admin-root] .text-purple-600,
-.dark [data-admin-root] .text-purple-700 {
+[data-admin-root][data-admin-mode="dark"] .text-purple-600,
+[data-admin-root][data-admin-mode="dark"] .text-purple-700 {
   color: #a78bfa !important;
 }
-.dark [data-admin-root] .text-green-600,
-.dark [data-admin-root] .text-green-700 {
+[data-admin-root][data-admin-mode="dark"] .text-green-600,
+[data-admin-root][data-admin-mode="dark"] .text-green-700 {
   color: #34d399 !important;
 }
 .dark [data-admin-root] .text-orange-600,
