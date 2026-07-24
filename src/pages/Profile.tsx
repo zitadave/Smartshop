@@ -153,7 +153,11 @@ export default function Profile() {
           {initials}
         </div>
         <h2 className="text-base font-bold mt-2">{profile.name || 'Guest'}</h2>
-        {profile.phone && <p className="text-xs text-muted-foreground mt-0.5">📞 {profile.phone}</p>}
+        <div className="flex flex-col items-center gap-0.5 mt-1">
+          {profile.phone && <p className="text-[10px] text-muted-foreground">📞 {profile.phone}</p>}
+          {profile.telegramUsername && <p className="text-[10px] text-muted-foreground">@ {profile.telegramUsername}</p>}
+          {profile.telegramId && <p className="text-[8px] text-muted-foreground/50 font-mono">ID: {profile.telegramId}</p>}
+        </div>
         <p className="text-[10px] text-muted-foreground mt-1">📅 Joined {profile.joinedAt ? new Date(profile.joinedAt).toLocaleDateString() : 'Today'}</p>
       </div>
 
@@ -330,6 +334,10 @@ export default function Profile() {
             <div className="space-y-3">
               <div><label className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Name</label><input className="w-full p-3 border border-input rounded-xl text-sm bg-card mt-1" value={editName} onChange={e => setEditName(e.target.value)} placeholder="Your name" /></div>
               <div><label className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Phone</label><input className="w-full p-3 border border-input rounded-xl text-sm bg-card mt-1" value={editPhone} onChange={e => setEditPhone(e.target.value)} placeholder="09XXXXXXXX" /></div>
+              {profile.telegramId && <div className="bg-muted/30 rounded-xl p-2.5 text-[9px] text-muted-foreground">
+                <div className="flex items-center justify-between"><span>Telegram ID</span><span className="font-mono font-semibold">{profile.telegramId}</span></div>
+                {profile.telegramUsername && <div className="flex items-center justify-between mt-1"><span>Username</span><span className="font-semibold">@{profile.telegramUsername}</span></div>}
+              </div>}
             </div>
             <div className="flex gap-2 mt-4">
               <button className="flex-1 py-3 bg-primary text-white rounded-xl text-xs font-bold" onClick={saveProfile}>💾 Save</button>

@@ -12,14 +12,9 @@ export default function VendorRegister() {
   useEffect(function() {
     try {
       var p = JSON.parse(localStorage.getItem('ss_profile') || '{}');
-      var up = localStorage.getItem('ss_user_phone') || '';
-      var tgPhone = (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.phone_number || '';
-      var phone = tgPhone || p.phone || up || '';
+      var phone = p.phone || localStorage.getItem('ss_user_phone') || '';
       if (phone) {
         setStorePhone(phone);
-        p.phone = phone;
-        localStorage.setItem('ss_profile', JSON.stringify(p));
-        localStorage.setItem('ss_user_phone', phone);
         return;
       }
     } catch(e) {}
@@ -39,12 +34,15 @@ export default function VendorRegister() {
       } catch(e) {}
     }
     setSubmitting(true);
+    var profData2 = {};
+    try { profData2 = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
+    var finalPhone = storePhone || profData2.phone || localStorage.getItem('ss_user_phone') || '';
     var apps = [];
     try { apps = JSON.parse(localStorage.getItem('ss_vendor_applications') || '[]'); } catch(e) {}
     apps.push({
       id: Date.now(),
       name: storeName.trim(),
-      phone: storePhone.trim(),
+      phone: finalPhone,
       email: storeEmail.trim(),
       description: storeDesc.trim(),
       telegramId: (function(){try{return JSON.parse(localStorage.getItem('ss_profile')||'{}').telegramId||''}catch(e){return ''}})(),
@@ -55,10 +53,6 @@ export default function VendorRegister() {
     localStorage.setItem('ss_vendor_status', 'pending');
     // Send to API and wait for response
     try {
-      var profData2 = {};
-      try { profData2 = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
-      var tgPhoneVal = (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.phone_number || '';
-      var finalPhone = storePhone || profData2.phone || tgPhoneVal || localStorage.getItem('ss_user_phone') || 'shared';
       var res = await fetch('/api/vendors/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
