@@ -26,36 +26,36 @@ import './index.css';
       document.documentElement.setAttribute('data-tg-user', (user.first_name || ''));
     }
     
-    // Request phone number - Telegram Mini App way
-    // The button shows "Share Contact" at the bottom
+    // Request phone number - using Telegram Mini App API's requestContact
     if (user && !localStorage.getItem('ss_phone_shared')) {
       tg.MainButton.setText('📱 Share Contact');
       tg.MainButton.setBgColor('#10b981');
       tg.MainButton.setTextColor('#ffffff');
       tg.MainButton.show();
-      
-      // Check if Telegram supports requestContact on MainButton
-      try {
-        tg.MainButton.requestContact = true;
-        // When user taps the button, Telegram handles the contact request
-        // The contact comes through initData
-        var interval = setInterval(function() {
-          try {
-            var newUser = tg.initDataUnsafe?.user;
-            if (newUser && newUser.phone_number) {
-              clearInterval(interval);
-              var p = {};
-              try { p = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
-              p.phone = newUser.phone_number;
-              localStorage.setItem('ss_profile', JSON.stringify(p));
-              localStorage.setItem('ss_user_phone', newUser.phone_number);
-              localStorage.setItem('ss_phone_shared', 'true');
-              tg.MainButton.hide();
-              window.location.reload();
-            }
-          } catch(ex) {}
-        }, 2000);
-      } catch(ex) {}
+      tg.MainButton.onClick(function() {
+        try {
+          tg.requestContact();
+        } catch(e2) { console.log('requestContact error:', e2); }
+      });
+      // Poll for contact - Telegram adds phone_number to initDataUnsafe.user after sharing
+      var pollInterval = setInterval(function() {
+        try {
+          var phone = tg.initDataUnsafe?.user?.phone_number;
+          if (phone && !localStorage.getItem('ss_phone_shared')) {
+            clearInterval(pollInterval);
+            var p = {};
+            try { p = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
+            p.phone = phone;
+            localStorage.setItem('ss_profile', JSON.stringify(p));
+            localStorage.setItem('ss_user_phone', phone);
+            localStorage.setItem('ss_phone_shared', 'true');
+            tg.MainButton.hide();
+            window.location.reload();
+          }
+        } catch(e) {}
+      }, 1500);
+      // Stop polling after 30 seconds
+      setTimeout(function() { clearInterval(pollInterval); }, 30000);
     }
     
     // Preconnect to API
