@@ -45,7 +45,13 @@ export default function AdminBotManager() {
   const saveConfig = () => {
     localStorage.setItem('ss_admin_bot_token', botToken);
     localStorage.setItem('ss_admin_chat_id', chatId);
-    toast('✅ Bot configuration saved!', 'success');
+    // Also save to server so vendor registration can notify admin
+    fetch('/api/admin-bot/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ botToken, chatId })
+    }).catch(function() {});
+    toast('✅ Bot configuration saved! Notifications active.', 'success');
   };
 
   const setWebhookFn = async () => {

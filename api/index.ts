@@ -6,6 +6,8 @@ const SUPABASE_URL = process.env.SUPABASE_URL || 'https://auaendcgszofgvdfdajt.s
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1YWVuZGNnc3pvZmd2ZGZkYWp0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NDQzNzkwNiwiZXhwIjoyMTAwMDEzOTA2fQ.bvVY6X_KozYV1BapIOvwkv4UY6D-k3QgGHRQndMtRu4';
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const ADMIN_BOT_TOKEN = process.env.TELEGRAM_ADMIN_BOT_TOKEN || '';
+var adminBotToken = '';
+var adminChatId = '';
 const VENDOR_BOT_TOKEN = process.env.VENDOR_BOT_TOKEN || '7761374287:AAHreFF93x92F4tMqRoA1swcNiJoDv5M-Rk';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false } });
@@ -444,17 +446,19 @@ export default async function handler(req: any, res: any) {
           var { data } = await supabase.from('vendors').insert(vendor).select().single(); 
           if (data) vendor = data;
         } catch(se) { console.log('Supabase note:', se.message); }
-        // Send Telegram notification to admin - NEEDS ACTUAL ADMIN CHAT ID
+        // Send Telegram notification using admin's configured bot (or env var fallback)
         try {
-          var adminChatId = process.env.ADMIN_CHAT_ID || '';
-          if (adminChatId) {
-            var botToken = process.env.TELEGRAM_ADMIN_BOT_TOKEN || '8951025148:AAG456KIIBnyLBQqbkeDLajcT_TaPSYCIYc';
-            var msg = 'New Vendor Registration\n\nStore: ' + (req.body.name || 'N/A') + '\nPhone: ' + (req.body.phone || 'N/A');
-            await fetch('https://api.telegram.org/bot' + botToken + '/sendMessage', {
+          var botTk = adminBotToken || process.env.TELEGRAM_ADMIN_BOT_TOKEN || '8951025148:AAG456KIIBnyLBQqbkeDLajcT_TaPSYCIYc';
+          var chat = adminChatId || process.env.ADMIN_CHAT_ID || '';
+          if (chat && botTk) {
+            var msg = '📝 New Vendor Registration\n\nStore: ' + (req.body.name || 'N/A') + '\nPhone: ' + (req.body.phone || 'N/A') + '\nCheck Admin Panel → Vendors tab to approve.';
+            await fetch('https://api.telegram.org/bot' + botTk + '/sendMessage', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ chat_id: adminChatId, text: msg })
+              body: JSON.stringify({ chat_id: chat, text: msg })
             });
+          } else {
+            console.log('Admin bot not configured - set chat ID in AdminBotManager');
           }
         } catch(e) { console.log('Telegram notify error:', e.message); }
         return res.json({ success: true, vendor: vendor }); 
@@ -751,6 +755,17 @@ export default async function handler(req: any, res: any) {
         totalTaxToRemit: vat + wht,
         averageOrderValue: count > 0 ? Math.round(total / count) : 0,
       });
+    }
+
+    // ===== ADMIN BOT - Save Config =====
+    if (path === '/api/admin-bot/config' && method === 'POST') {
+      const { botToken, chatId } = req.body || {};
+      if (botToken) adminBotToken = botToken;
+      if (chatId) adminChatId = chatId;
+      return res.json({ success: true });
+    }
+    if (path === '/api/admin-bot/config' && method === 'GET') {
+      return res.json({ botToken: adminBotToken, chatId: adminChatId });
     }
 
     // ===== VENDOR - Send Telegram Notification =====
