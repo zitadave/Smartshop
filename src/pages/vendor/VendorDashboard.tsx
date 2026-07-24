@@ -42,6 +42,12 @@ export default function VendorDashboard() {
     return { sold, revenue, lowStock, outOfStock, avgRating, totalViews, conversion, productCount: vendorProducts.length, pendingOrders, totalReviews };
   }, [vendorProducts, orders]);
 
+  // Clean up admin panel injected styles that bleed into vendor dashboard
+  useEffect(() => {
+    const s = document.getElementById('ap-theme-style');
+    if (s) s.remove();
+  }, []);
+
   const [revenueHistory] = useState(() =>
     Array.from({ length: 12 }, (_, i) => ({
       label: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][i],
@@ -742,48 +748,43 @@ function VendorPromotionsView() {
   const { products } = store;
   const vendorProducts = products.filter(p => p.vendorId === 1 || !p.vendorId);
   const [promos, setPromos] = useState<any[]>(() => {
-    try { return JSON.parse(localStorage.getItem("ss_promotions_data") || "{\"requests\":[]}").requests || []; }
+    try { return JSON.parse(localStorage.getItem("ss_promotions_data") || '{"requests":[]}').requests || []; }
     catch { return []; }
   });
   const vendorPromos = promos.filter(p => p.vendorId === 1);
   const [slots, setSlots] = useState<any[]>(() => {
-    try { return JSON.parse(localStorage.getItem("ss_promotions_data") || "{\"slots\":[]}").slots || []; }
+    try { return JSON.parse(localStorage.getItem("ss_promotions_data") || '{"slots":[]}').slots || []; }
     catch { return []; }
   });
-  // Modal state for promotion request
-  const [showModal, setShowModal] = useState(false);
-  const [reqType, setReqType] = useState<"discount" | "flashdeal" | "bogo">("discount");
-  const [selProduct, setSelProduct] = useState("");
-  const [selDiscount, setSelDiscount] = useState("20");
+  const [showForm, setShowForm] = useState(false);
+  const [formType, setFormType] = useState<"discount" | "flashdeal" | "bogo">("discount");
+  const [formProduct, setFormProduct] = useState("");
+  const [formDiscount, setFormDiscount] = useState("20");
 
-  const openRequestModal = (type: "discount" | "flashdeal" | "bogo") => {
-    setReqType(type);
-    setSelProduct("");
-    setSelDiscount("20");
-    setShowModal(true);
+  const openForm = (type: "discount" | "flashdeal" | "bogo") => {
+    setFormType(type); setFormProduct(""); setFormDiscount("20"); setShowForm(true);
   };
 
   const submitRequest = () => {
-    if (!selProduct) { toast("❌ Please select a product", "error"); return; }
-    const product = vendorProducts.find(p => String(p.id) === selProduct);
-    if (!product) { toast("❌ Product not found", "error"); return; }
-    const pct = Number(selDiscount);
-    if (pct <= 0 || pct > 100) { toast("❌ Invalid discount percentage", "error"); return; }
+    if (!formProduct) { toast("Select a product", "error"); return; }
+    const product = vendorProducts.find(p => String(p.id) === formProduct);
+    if (!product) { toast("Product not found", "error"); return; }
+    const pct = Number(formDiscount);
+    if (pct <= 0 || pct > 100) { toast("Invalid discount", "error"); return; }
     const start = new Date();
     const end = new Date(Date.now() + 7 * 86400000);
     const req = {
       id: "req-" + Date.now(), vendorId: 1, vendorName: "My Store",
       productId: product.id, productName: product.nameEn,
-      type: reqType, discountPercent: pct, originalPrice: product.price,
+      type: formType, discountPercent: pct, originalPrice: product.price,
       startDate: start.toISOString(), endDate: end.toISOString(),
       status: "pending", submittedAt: new Date().toISOString(),
     };
     const updated = [...promos, req];
     const allData = { requests: updated, priceFloors: [], slots };
     localStorage.setItem("ss_promotions_data", JSON.stringify(allData));
-    setPromos(updated);
-    setShowModal(false);
-    toast("✅ Promotion request submitted! Admin will review.", "success");
+    setPromos(updated); setShowForm(false);
+    toast("Promotion request submitted! Admin will review.", "success");
   };
 
   const buySlot = (slot: any) => {
@@ -800,133 +801,128 @@ function VendorPromotionsView() {
     const allData = { requests: updated, priceFloors: [], slots };
     localStorage.setItem("ss_promotions_data", JSON.stringify(allData));
     setPromos(updated);
-    toast("✅ Slot purchase request submitted!", "success");
+    toast("Slot purchase submitted!", "success");
   };
+
+  const selProd = vendorProducts.find(p => String(p.id) === formProduct);
 
   return (
     <div className="animate-fadeUp space-y-4">
       <div><h2 className="text-lg font-bold text-slate-900 dark:text-white">🎯 Promotions</h2>
-      <p className="text-[10px] text-slate-500">Create promotions to boost your sales. Commission is always on original price.</p></div>
+      <p className="text-[10px] text-slate-500">Create promotions. Commission always on original price.</p></div>
 
       <div className="flex gap-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl p-0.5 w-fit">
         {[["request","✍️ Request"],["active","✅ Active"],["slots","💎 Slots"]].map(([t, l]) => (
-          <button key={t} className={cn("px-3 py-1.5 rounded-lg text-[9px] font-semibold transition-all", tab === t ? "bg-white dark:bg-slate-700 shadow-sm" : "text-slate-500")}
+          <button key={t} className={"px-3 py-1.5 rounded-lg text-[9px] font-semibold transition-all " + (tab === t ? "bg-white dark:bg-slate-700 shadow-sm" : "text-slate-500")}
             onClick={() => setTab(t as any)}>{l}</button>
         ))}
       </div>
 
-      {tab === "request" && (
+      {tab === "request" && !showForm && (
         <div className="grid sm:grid-cols-3 gap-3">
           {[
-            { type: "discount" as const, title: "🏷️ Discount Sale", desc: "Offer % off on a product. Runs for 7 days.", color: "from-blue-500 to-blue-600" },
+            { type: "discount" as const, title: "🏷️ Discount Sale", desc: "Offer % off on a product. Runs 7 days.", color: "from-blue-500 to-blue-600" },
             { type: "flashdeal" as const, title: "⚡ Flash Deal", desc: "Time-limited deep discount. Creates urgency!", color: "from-orange-500 to-red-500" },
-            { type: "bogo" as const, title: "🎁 Buy One Get One", desc: "Buy one, get one free or at a discount.", color: "from-purple-500 to-violet-600" },
+            { type: "bogo" as const, title: "🎁 BOGO", desc: "Buy one, get one free or discounted.", color: "from-purple-500 to-violet-600" },
           ].map(s => (
-            <button key={s.type} className={cn("bg-gradient-to-br rounded-2xl p-4 text-white text-left hover:shadow-lg transition-all", s.color)}
-              onClick={() => openRequestModal(s.type)}>
+            <button key={s.type} className={"bg-gradient-to-br rounded-2xl p-4 text-white text-left hover:shadow-lg transition-all " + s.color}
+              onClick={() => openForm(s.type)}>
               <div className="text-lg font-bold mb-1">{s.title}</div>
               <p className="text-[9px] opacity-80">{s.desc}</p>
-              <div className="mt-2 text-[8px] opacity-60">Commission based on original price</div>
+              <div className="mt-2 text-[8px] opacity-60">Commission on original price</div>
             </button>
           ))}
+        </div>
+      )}
+
+      {tab === "request" && showForm && (
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">✍️ New Promotion Request</h3>
+          <div className="space-y-3">
+            <div>
+              <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Select Product</label>
+              <select className="w-full mt-1 p-3 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200" value={formProduct} onChange={e => setFormProduct(e.target.value)}>
+                <option value="">-- Select a product --</option>
+                {vendorProducts.map(p => (
+                  <option key={p.id} value={String(p.id)}>{p.nameEn} — {formatPrice(p.price)}</option>
+                ))}
+              </select>
+              {vendorProducts.length === 0 && <p className="text-[9px] text-amber-600 mt-1">No products found. Add products first.</p>}
+            </div>
+            <div>
+              <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Discount: {formDiscount}%</label>
+              <input type="range" min={1} max={90} value={formDiscount} onChange={e => setFormDiscount(e.target.value)}
+                className="w-full mt-1 accent-emerald-500 h-2" />
+              <div className="flex justify-between text-[9px] text-slate-400 mt-0.5"><span>1%</span><span>90%</span></div>
+            </div>
+            {selProd && (
+              <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 space-y-1">
+                <div className="flex justify-between text-[10px]"><span className="text-slate-500">Original</span><span className="font-bold text-slate-800 dark:text-slate-200">{formatPrice(selProd.price)}</span></div>
+                <div className="flex justify-between text-[10px]"><span className="text-slate-500">Sale price</span><span className="font-bold text-emerald-600">{formatPrice(Math.round(selProd.price * (1 - Number(formDiscount) / 100)))}</span></div>
+                <div className="flex justify-between text-[10px]"><span className="text-slate-500">Your commission (10% of original)</span><span className="font-bold text-blue-600">{formatPrice(Math.round(selProd.price * 0.1))}</span></div>
+              </div>
+            )}
+          </div>
+          <div className="flex gap-2 mt-4">
+            <button className="flex-1 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold hover:shadow-lg disabled:opacity-50" onClick={submitRequest} disabled={!formProduct}>✅ Submit Request</button>
+            <button className="px-5 py-3 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-500 hover:bg-slate-50" onClick={() => setShowForm(false)}>Cancel</button>
+          </div>
         </div>
       )}
 
       {tab === "active" && (
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-x-hidden">
           <div className="p-4 border-b border-slate-100 dark:border-slate-800"><h3 className="text-sm font-bold text-slate-900 dark:text-white">Your Promotions ({vendorPromos.length})</h3></div>
-          {vendorPromos.length === 0 ? <p className="text-center py-8 text-xs text-slate-400">No promotions yet. Create one above!</p> :
+          {vendorPromos.length === 0 ? <p className="text-center py-8 text-xs text-slate-400">No promotions yet</p> : (
             <div className="divide-y divide-slate-100 dark:divide-slate-800">
               {[...vendorPromos].sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()).map((p, i) => (
                 <div key={p.id || i} className="p-3 flex items-center gap-3">
-                  <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs",
-                    p.type === "flashdeal" ? "bg-orange-500" : p.type === "bogo" ? "bg-purple-500" : "bg-blue-500")}>{p.type === "bogo" ? "🎁" : p.type === "flashdeal" ? "⚡" : "🏷️"}</div>
+                  <div className={"w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs " + (p.type === "flashdeal" ? "bg-orange-500" : p.type === "bogo" ? "bg-purple-500" : "bg-blue-500")}>{p.type === "bogo" ? "🎁" : p.type === "flashdeal" ? "⚡" : "🏷️"}</div>
                   <div className="flex-1 min-w-0">
                     <div className="text-[10px] font-semibold truncate text-slate-800 dark:text-slate-200">{p.productName}</div>
                     <div className="text-[8px] text-slate-400">-{p.discountPercent}% · Original: {formatPrice(p.originalPrice)}</div>
                   </div>
-                  <span className={cn("text-[9px] px-2 py-0.5 rounded font-semibold",
-                    p.status === "approved" ? "bg-emerald-100 text-emerald-700" : p.status === "rejected" ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-700")}>{p.status}</span>
+                  <span className={"text-[9px] px-2 py-0.5 rounded font-semibold " + (p.status === "approved" ? "bg-emerald-100 text-emerald-700" : p.status === "rejected" ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-700")}>{p.status}</span>
                 </div>
               ))}
             </div>
-          }
+          )}
         </div>
       )}
 
       {tab === "slots" && (
         <div className="space-y-3">
-          <p className="text-[10px] text-slate-500">Purchase featured promotion slots for extra visibility across the marketplace.</p>
-          {slots.filter(s => s.active).map(slot => (
-            <div key={slot.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center"><DollarSign size={18} className="text-purple-600" /></div>
-                  <div><h4 className="text-xs font-bold text-slate-900 dark:text-white">{slot.name}</h4><p className="text-[9px] text-slate-400">{slot.duration}</p></div>
-                </div>
-                <div className="text-right flex items-center gap-2">
-                  <div className="text-lg font-bold text-emerald-600">Br {slot.price.toLocaleString()}</div>
-                  <button className="px-3 py-1.5 bg-gradient-to-r from-purple-500 to-violet-600 text-white rounded-lg text-[9px] font-bold hover:shadow-md"
-                    onClick={() => buySlot(slot)}>Purchase</button>
-                </div>
-              </div>
-            </div>
-          ))}
-          {slots.filter(s => s.active).length === 0 && <p className="text-center py-6 text-xs text-slate-400">No slots available right now</p>}
-        </div>
-      )}
-      {/* Promotion Request Modal */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setShowModal(false)}>
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 w-full max-w-sm mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">
-              {reqType === 'discount' ? '🏷️ Discount Sale' : reqType === 'flashdeal' ? '⚡ Flash Deal' : '🎁 BOGO'} — Select Product
-            </h3>
-            <div className="space-y-3">
-              <div>
-                <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Product</label>
-                <select className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200" value={selProduct} onChange={e => setSelProduct(e.target.value)}>
-                  <option value="">Select a product...</option>
-                  {vendorProducts.map(p => (
-                    <option key={p.id} value={String(p.id)}>{p.nameEn} — {formatPrice(p.price)}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Discount %</label>
-                <input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200" min={1} max={100} value={selDiscount} onChange={e => setSelDiscount(e.target.value)} />
-              </div>
-              {selProduct && (() => {
-                const prod = vendorProducts.find(p => String(p.id) === selProduct);
-                if (!prod) return null;
-                const salePrice = Math.round(prod.price * (1 - Number(selDiscount) / 100));
-                const commission = Math.round(prod.price * 0.1);
-                return (
-                  <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 space-y-1">
-                    <div className="flex justify-between text-[9px]"><span className="text-slate-500">Original price</span><span className="font-semibold text-slate-700 dark:text-slate-300">{formatPrice(prod.price)}</span></div>
-                    <div className="flex justify-between text-[9px]"><span className="text-slate-500">Sale price</span><span className="font-semibold text-emerald-600">{formatPrice(salePrice)}</span></div>
-                    <div className="flex justify-between text-[9px]"><span className="text-slate-500">Your commission (10% of original)</span><span className="font-semibold text-blue-600">{formatPrice(commission)}</span></div>
+          <p className="text-[10px] text-slate-500">Purchase featured promotion slots for extra visibility.</p>
+          {slots.filter(s => s.active).length === 0 ? <p className="text-center py-6 text-xs text-slate-400">No slots available</p> :
+            slots.filter(s => s.active).map(slot => (
+              <div key={slot.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center"><DollarSign size={18} className="text-purple-600" /></div>
+                    <div><h4 className="text-xs font-bold text-slate-900 dark:text-white">{slot.name}</h4><p className="text-[9px] text-slate-400">{slot.duration}</p></div>
                   </div>
-                );
-              })()}
-            </div>
-            <div className="flex gap-2 mt-4">
-              <button className="flex-1 py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold hover:shadow-lg disabled:opacity-50" onClick={submitRequest} disabled={!selProduct || !selDiscount}>Submit Request</button>
-              <button className="px-4 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-500 hover:bg-slate-50" onClick={() => setShowModal(false)}>Cancel</button>
-            </div>
-          </div>
+                  <div className="text-right flex items-center gap-2">
+                    <div className="text-lg font-bold text-emerald-600">Br {slot.price.toLocaleString()}</div>
+                    <button className="px-3 py-1.5 bg-gradient-to-r from-purple-500 to-violet-600 text-white rounded-lg text-[9px] font-bold hover:shadow-md" onClick={() => buySlot(slot)}>Purchase</button>
+                  </div>
+                </div>
+              </div>
+            ))
+          }
         </div>
       )}
     </div>
   );
 }
+
 function VendorSettingsView({ vendorName }: { vendorName: string }) {
-  const [name, setName] = useState(vendorName);
-  const [email, setEmail] = useState('vendor@mystore.com');
-  const [phone, setPhone] = useState('+251-911-XXXXXX');
-  const [bio, setBio] = useState('');
-  const [notifications, setNotifications] = useState(true);
-  const [autoRestock, setAutoRestock] = useState(false);
+  const saved = (() => { try { return JSON.parse(localStorage.getItem('ss_vendor_settings') || '{}'); } catch { return {}; } })();
+  const [name, setName] = useState(saved.name || vendorName);
+  const [email, setEmail] = useState(saved.email || 'vendor@mystore.com');
+  const [phone, setPhone] = useState(saved.phone || '+251-911-XXXXXX');
+  const [bio, setBio] = useState(saved.bio || '');
+  const [notifications, setNotifications] = useState(saved.notifications !== undefined ? saved.notifications : true);
+  const [autoRestock, setAutoRestock] = useState(saved.autoRestock || false);
 
   return (
     <div className="animate-fadeUp space-y-4">
