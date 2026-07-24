@@ -143,16 +143,42 @@ export default function Checkout() {
  addOrder(order);
 
  if (paymentMethod === 'bank') {
- // ALWAYS send depositorName as receiptNumber, receiptText separately
- addManualPayment({
- orderNumber: orderNum, customerName: name, customerPhone: phone,
- amount: grandTotal, bankName: selectedBank,
- receiptNumber: depositorName || 'Not provided',
- paidAmount: paidAmount || String(grandTotal), note: customerNote,
- receiptImage: receiptImage || undefined,
- receiptText: useTextReceipt ? receiptText : undefined,
- });
- // addManualPayment sends Telegram notification
+  // ALWAYS send depositorName as receiptNumber, receiptText separately
+  addManualPayment({
+  orderNumber: orderNum, customerName: name, customerPhone: phone,
+  amount: grandTotal, bankName: selectedBank,
+  receiptNumber: depositorName || 'Not provided',
+  paidAmount: paidAmount || String(grandTotal), note: customerNote,
+  receiptImage: receiptImage || undefined,
+  receiptText: useTextReceipt ? receiptText : undefined,
+  });
+  // addManualPayment sends Telegram notification
+ }
+
+ if (paymentMethod === 'chapa') {
+  // Initiate Chapa payment — redirect to their checkout page
+  const txRef = 'SS-' + orderNum;
+  try {
+    const chapaRes = await fetch('/api/payment/initiate-chapa', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        amount: grandTotal, email: 'customer@email.com',
+        firstName: name.split(' ')[0], lastName: name.split(' ').slice(1).join(' '),
+        phone, txRef, orderNumber: orderNum,
+      }),
+    });
+    const chapaData = await chapaRes.json();
+    if (chapaData.success && chapaData.checkout_url) {
+      // Redirect to Chapa checkout
+      window.location.href = chapaData.checkout_url;
+      return;
+    } else {
+      toast('Payment initiation failed: ' + (chapaData.error || 'Unknown error'), 'error');
+    }
+  } catch (e: any) {
+    toast('Payment error: ' + e.message, 'error');
+  }
  }
 
  clearCart();

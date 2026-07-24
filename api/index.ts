@@ -572,40 +572,60 @@ export default async function handler(req: any, res: any) {
       return res.json({ globalCommission: s.vendorCommission || 10, categoryCommission: s.categoryCommission || {}, vendorCommissionOverride: s.vendorCommissionOverride || {} });
     }
 
-    // ===== PAYMENT - Initiate Chapa Payment =====
+    // ===== PAYMENT - Initiate Chapa Payment (LIVE) =====
     if (path === '/api/payment/initiate-chapa' && method === 'POST') {
       const { amount, email, firstName, lastName, phone, txRef, orderNumber } = req.body || {};
       if (!amount || !email || !phone) return res.status(400).json({ error: 'amount, email, and phone required' });
       
-      // In production, this would call Chapa API:
-      // const chapaRes = await fetch('https://api.chapa.co/v1/transaction/initialize', {
-      //   method: 'POST',
-      //   headers: { 'Authorization': 'Bearer ' + CHAPA_SECRET_KEY, 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ amount, currency: 'ETB', email, first_name: firstName, last_name: lastName, phone, tx_ref: txRef, callback_url: 'https://smartshop-steel.vercel.app/api/payment/verify', return_url: 'https://smartshop-steel.vercel.app/confirmation/' + orderNumber })
-      // });
+      const CHAPA_SECRET_KEY = process.env.CHAPA_SECRET_KEY || 'CHASECK_TEST-d0d6e765a19a5b19f4478b09a89ffd4cb42b5363';
+      const BASE_URL = process.env.VERCEL_URL ? 'https://' + process.env.VERCEL_URL : 'https://smartshop-steel.vercel.app';
       
-      return res.json({
-        success: true,
-        checkout_url: 'https://checkout.chapa.co/payment/' + txRef,
-        tx_ref: txRef,
-        message: 'Payment initiated. Redirect customer to checkout URL.',
-      });
+      try {
+        const chapaRes = await fetch('https://api.chapa.co/v1/transaction/initialize', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + CHAPA_SECRET_KEY, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: String(amount), currency: 'ETB', email,
+            first_name: firstName || 'Customer', last_name: lastName || '',
+            phone, tx_ref: txRef,
+            callback_url: BASE_URL + '/api/payment/verify',
+            return_url: BASE_URL + '/confirmation/' + orderNumber,
+            customization: { title: 'Smart Shop Order #' + orderNumber, description: 'Payment for order ' + orderNumber },
+          }),
+        });
+        const chapaData = await chapaRes.json();
+        
+        if (chapaData.status === 'success' && chapaData.data?.checkout_url) {
+          return res.json({ success: true, checkout_url: chapaData.data.checkout_url, tx_ref: txRef });
+        } else {
+          return res.json({ success: false, error: chapaData.message || 'Chapa initialization failed' });
+        }
+      } catch (e: any) {
+        return res.json({ success: false, error: e.message });
+      }
     }
 
-    // ===== PAYMENT - Verify Chapa Payment =====
+    // ===== PAYMENT - Verify Chapa Payment (LIVE) =====
     if (path === '/api/payment/verify' && method === 'POST') {
       const { tx_ref } = req.body || {};
       if (!tx_ref) return res.status(400).json({ error: 'tx_ref required' });
       
-      // In production, verify with Chapa:
-      // const res = await fetch('https://api.chapa.co/v1/transaction/verify/' + tx_ref, { headers: { 'Authorization': 'Bearer ' + CHAPA_SECRET_KEY } });
+      const CHAPA_SECRET_KEY = process.env.CHAPA_SECRET_KEY || 'CHASECK_TEST-d0d6e765a19a5b19f4478b09a89ffd4cb42b5363';
       
-      return res.json({
-        status: 'completed',
-        amount: req.body.amount || 0,
-        reference: 'CHAPA-' + Date.now().toString(36).toUpperCase(),
-        verified: true,
-      });
+      try {
+        const verifyRes = await fetch('https://api.chapa.co/v1/transaction/verify/' + tx_ref, {
+          headers: { 'Authorization': 'Bearer ' + CHAPA_SECRET_KEY },
+        });
+        const verifyData = await verifyRes.json();
+        
+        if (verifyData.status === 'success' && verifyData.data?.status === 'success') {
+          return res.json({ status: 'completed', amount: verifyData.data.amount, reference: verifyData.data.reference || tx_ref, verified: true });
+        } else {
+          return res.json({ status: 'failed', error: verifyData.message || 'Payment not completed', verified: false });
+        }
+      } catch (e: any) {
+        return res.json({ status: 'failed', error: e.message, verified: false });
+      }
     }
 
     // ===== PAYMENT - Initiate Telebirr =====
