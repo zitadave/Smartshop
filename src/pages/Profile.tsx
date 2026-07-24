@@ -44,11 +44,15 @@ export default function Profile() {
   // Check API for approved status via sync
   useEffect(function() {
     var tid = profile.telegramId || '';
-    if (tid) {
+    var phone = profile.phone || localStorage.getItem('ss_user_phone') || '';
+    var payload: any = {};
+    if (tid) payload.telegram_id = tid;
+    if (phone) payload.phone = phone;
+    if (tid || phone) {
       fetch('/api/user/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ telegram_id: tid })
+        body: JSON.stringify(payload)
       }).then(function(r) { return r.json(); }).then(function(d) {
         if (d && d.vendor_status) {
           localStorage.setItem('ss_vendor_status', d.vendor_status);

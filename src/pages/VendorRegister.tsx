@@ -6,7 +6,7 @@ import { ArrowLeft, Store, Save } from 'lucide-react';
 export default function VendorRegister() {
   const nav = useNavigate();
   const [storeName, setStoreName] = useState('');
-  const [storePhone, setStorePhone] = useState('');
+  const [storePhone, setStorePhone] = useState((function(){try{return JSON.parse(localStorage.getItem('ss_profile')||'{}').phone||''}catch(e){return ''}})());
   const [storeEmail, setStoreEmail] = useState('');
   const [storeDesc, setStoreDesc] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -34,7 +34,9 @@ export default function VendorRegister() {
       var res = await fetch('/api/vendors/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: storeName.trim(), phone: storePhone.trim(), email: storeEmail.trim(), description: storeDesc.trim(), status: 'pending', appliedAt: new Date().toISOString(), telegram_id: '' })
+        var profData = {};
+        try { profData = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
+        body: JSON.stringify({ name: storeName.trim(), phone: storePhone.trim(), email: storeEmail.trim(), description: storeDesc.trim(), status: 'pending', appliedAt: new Date().toISOString(), telegram_id: profData.telegramId || '' })
       });
       var d = await res.json();
       if (d && d.vendor && d.vendor.id) {
@@ -71,8 +73,8 @@ export default function VendorRegister() {
             </div>
             <div>
               <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Phone Number *</label>
-              <input className="w-full mt-1 p-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30" 
-                placeholder="+251-911-XXXXXX" value={storePhone} onChange={e => setStorePhone(e.target.value)} />
+              <input className="w-full mt-1 p-3 border border-slate-200 rounded-xl text-sm bg-slate-50 text-slate-500" 
+                value={storePhone} readOnly />
             </div>
             <div>
               <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Email (optional)</label>

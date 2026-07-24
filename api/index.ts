@@ -255,21 +255,20 @@ export default async function handler(req: any, res: any) {
         if (userRecord?.phone) result.phone = userRecord.phone;
       } catch(se) { console.log('User sync error:', se.message); }
       
-      // Check vendor status
+      // Check vendor status by telegram_id or phone
       try {
-        var { data: vendorRecord } = await supabase.from('vendors').select('*').eq('telegram_id', parseInt(tid)).single();
+        var vendorRecord = null;
+        if (tid) {
+          var { data: v1 } = await supabase.from('vendors').select('*').eq('telegram_id', parseInt(tid));
+          if (v1 && v1.length > 0) vendorRecord = v1[0];
+        }
+        if (!vendorRecord && b.phone) {
+          var { data: v2 } = await supabase.from('vendors').select('*').eq('phone', b.phone);
+          if (v2 && v2.length > 0) vendorRecord = v2[0];
+        }
         if (vendorRecord) {
           result.vendor_status = vendorRecord.status || 'pending';
           result.vendor_id = vendorRecord.id;
-        } else {
-          // Also check by phone
-          if (b.phone) {
-            var { data: vendorByPhone } = await supabase.from('vendors').select('*').eq('phone', b.phone).single();
-            if (vendorByPhone) {
-              result.vendor_status = vendorByPhone.status || 'pending';
-              result.vendor_id = vendorByPhone.id;
-            }
-          }
         }
       } catch(e) {}
       
@@ -558,6 +557,16 @@ export default async function handler(req: any, res: any) {
         for (var i=0; i<vendorApplications.length; i++) {
           if (vendorApplications[i].id === appId) vendorApplications[i].status = 'approved';
         }
+        // Also update the user's synced status if found
+        try {
+          var { data: v } = await supabase.from('vendors').select('telegram_id,phone').eq('id', appId);
+          if (v && v.length > 0) {
+            var tgId = v[0].telegram_id;
+            if (tgId) {
+              await supabase.from('users').update({ vendor_status: 'approved' }).eq('telegram_id', tgId);
+            }
+          }
+        } catch(e) {}
         // Notify admin
         try {
           var bc = adminChatId || '336997351';
