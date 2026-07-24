@@ -4,7 +4,7 @@ import './index.css';
 
 // ===== CACHE BUSTER — Force reload if old code is cached =====
 (function() {
-  var VERSION = 'v8';
+  var VERSION = 'v9';
   try {
     var cached = localStorage.getItem('ss_app_version');
     if (cached && cached !== VERSION) {
@@ -20,13 +20,17 @@ import './index.css';
 (function() {
   var resetKey = 'ss_reset_v2';
   if (localStorage.getItem(resetKey) !== 'done') {
-    // Clear old profile and vendor data so users re-register
-    localStorage.removeItem('ss_profile');
-    localStorage.removeItem('ss_vendor_status');
-    localStorage.removeItem('ss_vendor_applications');
-    localStorage.removeItem('ss_telegram_auth');
-    localStorage.removeItem('ss_orders');
-    localStorage.removeItem('ss_cart');
+    // CLEAR ALL USER DATA - fresh start
+    var keys = [];
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (k) keys.push(k);
+    }
+    for (var j = 0; j < keys.length; j++) {
+      if (keys[j] !== resetKey && keys[j] !== 'ss_app_version') {
+        localStorage.removeItem(keys[j]);
+      }
+    }
     localStorage.setItem(resetKey, 'done');
     window.location.reload(true);
   }
