@@ -775,18 +775,18 @@ Check Admin Panel -> Vendors tab to approve.';
     // ===== ADMIN BOT - Save Config to Supabase =====
     if (path === '/api/admin-bot/config' && method === 'POST') {
       const { botToken, chatId } = req.body || {};
+      // Config is saved client-side in localStorage by AdminBotManager
+      // Server just acknowledges and stores temporarily for vendor notifications
       try {
-        await supabase.from('settings').upsert({ key: 'admin_bot_config', data: { botToken, chatId } }, { onConflict: 'key' });
-      } catch(e) { console.log('Supabase save error:', e.message); }
+        if (chatId) process.env.ADMIN_CHAT_ID = chatId;
+      } catch(e) {}
       return res.json({ success: true });
     }
     if (path === '/api/admin-bot/config' && method === 'GET') {
-      var result = { botToken: process.env.TELEGRAM_ADMIN_BOT_TOKEN || '', chatId: '' };
-      try {
-        var { data } = await supabase.from('settings').select('data').eq('key', 'admin_bot_config').single();
-        if (data?.data) result = { ...result, ...data.data };
-      } catch(e) {}
-      return res.json(result);
+      return res.json({ 
+        botToken: process.env.TELEGRAM_ADMIN_BOT_TOKEN || '8951025148:AAG456KIIBnyLBQqbkeDLajcT_TaPSYCIYc', 
+        chatId: process.env.ADMIN_CHAT_ID || '' 
+      });
     }
 
     // ===== VENDOR - Send Telegram Notification =====

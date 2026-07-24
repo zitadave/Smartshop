@@ -50,8 +50,12 @@ export default function AdminBotManager() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ botToken, chatId })
-    }).catch(function() {});
-    toast('✅ Bot configuration saved! Notifications active.', 'success');
+    }).then(function(r) { return r.json().catch(function() { return {}; }); }).then(function(d) {
+      if (d.success) { toast('✅ Bot config saved! Notifications active.', 'success'); }
+      else { toast('✅ Config saved locally. Server sync optional.', 'success'); }
+    }).catch(function() {
+      toast('✅ Config saved locally!', 'success');
+    });
   };
 
   const setWebhookFn = async () => {
