@@ -436,6 +436,7 @@ export default async function handler(req: any, res: any) {
     // ===== VENDORS =====
     if (path.startsWith('/api/vendors')) {
       if (method === 'GET' && (path === '/api/vendors' || path === '/api/')) { const { data } = await supabase.from('vendors').select('*'); return res.json({ vendors: data || [] }); }
+      if (method === 'GET' && path === '/api/vendors/register') { const { data } = await supabase.from('vendors').select('*').eq('status', 'pending'); return res.json({ applications: data || [] }); }
       if (method === 'POST' && path === '/api/vendors/register') { const vendor = { ...req.body, status: 'pending', joined_at: new Date().toISOString() }; const { data } = await supabase.from('vendors').insert(vendor).select().single(); return res.json({ success: true, vendor: data }); }
       if (method === 'PUT') { const id = parseInt(path.split('/').pop() || '0'); await supabase.from('vendors').update(req.body).eq('id', id); return res.json({ success: true }); }
     }

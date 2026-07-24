@@ -29,6 +29,14 @@ export default function VendorRegister() {
     });
     localStorage.setItem('ss_vendor_applications', JSON.stringify(apps));
     localStorage.setItem('ss_vendor_status', 'pending');
+    // Send to API so admin can see it
+    try {
+      fetch('/api/vendors/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: storeName.trim(), phone: storePhone.trim(), email: storeEmail.trim(), description: storeDesc.trim(), status: 'pending', appliedAt: new Date().toISOString() })
+      }).catch(function() {});
+    } catch(e) {}
     toast('Application submitted! Admin will review.', 'success');
     setTimeout(function() { nav('/profile'); }, 1500);
   };

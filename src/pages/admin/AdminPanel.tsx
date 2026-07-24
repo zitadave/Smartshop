@@ -638,7 +638,27 @@ function AdminVendors() {
   // Vendor applications from profile page
   var apps = [];
   try { apps = JSON.parse(localStorage.getItem('ss_vendor_applications') || '[]'); } catch(e) {}
+  // Also fetch from API for cross-device visibility
+  var [apiApps, setApiApps] = useState<any[]>([]);
+  useEffect(function() {
+    fetch('/api/vendors/register').then(function(r) { return r.json(); }).then(function(d) {
+      if (d && d.applications) { setApiApps(d.applications); }
+    }).catch(function() {});
+  }, []);
   var pendingApps = apps.filter(function(a) { return a.status === 'pending'; });
+  // Merge API apps into apps for display
+  if (apiApps.length > 0) {
+    for (var ai = 0; ai < apiApps.length; ai++) {
+      var exists = false;
+      for (var bi = 0; bi < apps.length; bi++) {
+        if (apps[bi].id === apiApps[ai].id || (apps[bi].phone === apiApps[ai].phone && apps[bi].name === apiApps[ai].name)) {
+          exists = true; break;
+        }
+      }
+      if (!exists) apps.push(apiApps[ai]);
+    }
+    pendingApps = apps.filter(function(a) { return a.status === 'pending'; });
+  }
   const approveVendorApp = function(id) {
     var updated = apps.slice();
     for (var i = 0; i < updated.length; i++) {
