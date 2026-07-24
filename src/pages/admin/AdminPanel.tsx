@@ -66,34 +66,35 @@ export default function AdminLayout() {
   const store = useStore();
   const globalDarkMode = store.darkMode;
 
-  // NUCLEAR OPTION: Directly apply inline styles to admin-panel based on darkMode
-  // This bypasses ALL CSS specificity wars, parse errors, and !important issues
+  // NUCLEAR OPTION: Inject a <style> tag into admin panel that overrides
+  // card backgrounds using !important. This applies to ALL cards (current + future).
   useEffect(() => {
-    const panel = document.getElementById('admin-panel');
-    if (!panel) return;
+    // Remove any old injected style
+    const old = document.getElementById('ap-card-style');
+    if (old) old.remove();
+    // Create fresh style tag
+    const style = document.createElement('style');
+    style.id = 'ap-card-style';
     if (globalDarkMode) {
-      panel.style.setProperty('background', 'linear-gradient(135deg, #0a0e17, #0f172a)', 'important');
-      panel.style.setProperty('color', '#e2e8f0', 'important');
+      style.textContent = `
+        [data-admin-card] { background-color: #1e293b !important; border-color: #334155 !important; }
+        [data-admin-card] .text-slate-400, [data-admin-card] .text-slate-500, [data-admin-card] .text-slate-600 { color: #94a3b8 !important; }
+        [data-admin-card] .text-slate-700, [data-admin-card] .text-slate-800, [data-admin-card] .text-slate-900 { color: #e2e8f0 !important; }
+        [data-admin-card] .font-bold, [data-admin-card] .font-semibold, [data-admin-card] .font-medium { color: #e2e8f0 !important; }
+        [data-admin-card] input, [data-admin-card] select, [data-admin-card] textarea { background-color: #0f172a !important; border-color: #475569 !important; color: #e2e8f0 !important; }
+      `;
     } else {
-      panel.style.setProperty('background', 'linear-gradient(135deg, #f8fafc, #f1f5f9)', 'important');
-      panel.style.setProperty('color', '#0b0f19', 'important');
+      style.textContent = `
+        [data-admin-card] { background-color: #ffffff !important; border-color: #e2e8f0 !important; }
+        [data-admin-card] .text-slate-400, [data-admin-card] .text-slate-500, [data-admin-card] .text-slate-600 { color: #64748b !important; }
+        [data-admin-card] .text-slate-700, [data-admin-card] .text-slate-800, [data-admin-card] .text-slate-900 { color: #0f172a !important; }
+        [data-admin-card] .font-bold, [data-admin-card] .font-semibold, [data-admin-card] .font-medium { color: #0f172a !important; }
+        [data-admin-card] input, [data-admin-card] select, [data-admin-card] textarea { background-color: #ffffff !important; border-color: #e2e8f0 !important; color: #0f172a !important; }
+      `;
     }
-  }, [globalDarkMode]);
-
-  // Also apply inline styles to ALL data-admin-card elements
-  useEffect(() => {
-    const cards = document.querySelectorAll('[data-admin-card]');
-    cards.forEach(card => {
-      if (card instanceof HTMLElement) {
-        if (globalDarkMode) {
-          card.style.setProperty('background-color', '#131a2a', 'important');
-          card.style.setProperty('border-color', '#1e293b', 'important');
-        } else {
-          card.style.setProperty('background-color', '#ffffff', 'important');
-          card.style.setProperty('border-color', '#e2e8f0', 'important');
-        }
-      }
-    });
+    document.head.appendChild(style);
+    // Cleanup on unmount
+    return () => { const s = document.getElementById('ap-card-style'); if (s) s.remove(); };
   }, [globalDarkMode]);
 
   const handleCmdNavigate = (t: string) => {
