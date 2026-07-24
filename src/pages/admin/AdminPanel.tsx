@@ -635,18 +635,32 @@ function AdminOrders() {
 // 4. VENDORS
 // =============================================
 function AdminVendors() {
-  // Vendor applications from profile page
-  var apps = [];
-  try { apps = JSON.parse(localStorage.getItem('ss_vendor_applications') || '[]'); } catch(e) {}
-  // Also fetch from API for cross-device visibility
-  var [apiApps, setApiApps] = useState<any[]>([]);
+  // React hooks MUST be at the top (Rule of Hooks)
+  const [apiApps, setApiApps] = useState<any[]>([]);
+  const [vendors, setVendors] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [selectedVendor, setSelectedVendor] = useState<any>(null);
+  const [commission, setCommission] = useState(10);
+  const [approved, setApproved] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [vendorView, setVendorView] = useState<'vendors' | 'payouts'>('vendors');
+  const [storeName, setStoreName] = useState('');
+  const [vendorPhone, setVendorPhone] = useState('');
+  const [vendorEmail, setVendorEmail] = useState('');
+
+  // Fetch API data
   useEffect(function() {
     fetch('/api/vendors/register').then(function(r) { return r.json(); }).then(function(d) {
       if (d && d.applications) { setApiApps(d.applications); }
     }).catch(function() {});
+    vendorsApi.list().then(d => { setVendors(d?.vendors || []); setLoading(false); }).catch(() => setLoading(false));
+    productsApi.list().then(d => setProducts(d?.products || [])).catch(() => {});
   }, []);
-  var pendingApps = apps.filter(function(a) { return a.status === 'pending'; });
-  // Merge API apps into apps for display
+
+  // Vendor applications from localStorage
+  var apps = [];
+  try { apps = JSON.parse(localStorage.getItem('ss_vendor_applications') || '[]'); } catch(e) {}
+  // Merge API apps
   if (apiApps.length > 0) {
     for (var ai = 0; ai < apiApps.length; ai++) {
       var exists = false;
@@ -657,8 +671,8 @@ function AdminVendors() {
       }
       if (!exists) apps.push(apiApps[ai]);
     }
-    pendingApps = apps.filter(function(a) { return a.status === 'pending'; });
   }
+  var pendingApps = apps.filter(function(a) { return a.status === 'pending'; });
   const approveVendorApp = function(id) {
     var updated = apps.slice();
     for (var i = 0; i < updated.length; i++) {
@@ -700,21 +714,7 @@ function AdminVendors() {
     window.location.reload();
   };
 
-  const [vendors, setVendors] = useState<any[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
-  const [selectedVendor, setSelectedVendor] = useState<any>(null);
-  const [commission, setCommission] = useState(10);
-  const [approved, setApproved] = useState(true);
-  const [loading, setLoading] = useState(true);
-  const [vendorView, setVendorView] = useState<'vendors' | 'payouts'>('vendors');
-  const [storeName, setStoreName] = useState('');
-  const [vendorPhone, setVendorPhone] = useState('');
-  const [vendorEmail, setVendorEmail] = useState('');
 
-  useEffect(() => {
-    vendorsApi.list().then(d => { setVendors(d?.vendors || []); setLoading(false); }).catch(() => setLoading(false));
-    productsApi.list().then(d => setProducts(d?.products || [])).catch(() => {});
-  }, []);
 
   const updateVendor = async (id: number) => {
     await vendorsApi.update(id, { commission, approved, name: storeName, phone: vendorPhone, email: vendorEmail });
