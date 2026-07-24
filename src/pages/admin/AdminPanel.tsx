@@ -61,25 +61,43 @@ export default function AdminLayout() {
       if (el instanceof HTMLElement) el.removeAttribute('style');
     });
     // Inject CSS for proper dark mode text visibility
+    // Create or update the admin-dark-mode style tag
     let darkStyle = document.getElementById('admin-dark-mode');
     if (!darkStyle) {
       darkStyle = document.createElement('style');
       darkStyle.id = 'admin-dark-mode';
       document.head.appendChild(darkStyle);
     }
-    darkStyle.innerHTML = [
-      '.dark [data-admin-root], .dark [data-admin-root] * { color-scheme: dark; }',
+    darkStyle.textContent = [
+      '.dark [data-admin-root], .dark [data-admin-card], .dark [data-admin-sidebar], .dark [data-admin-header] { color-scheme: dark; }',
       '.dark [data-admin-card] .text-slate-400, .dark [data-admin-card] .text-slate-500, .dark [data-admin-card] .text-slate-600 { color: #94a3b8 !important; }',
-      '.dark [data-admin-card] .text-slate-700, .dark [data-admin-card] .text-slate-800, .dark [data-admin-card] .text-slate-900 { color: #e2e8f0 !important; }',
+      '.dark [data-admin-card] .text-slate-700, .dark [data-admin-card] .text-slate-800, .dark [data-admin-card] .text-slate-900 { color: #f1f5f9 !important; }',
+      '.dark [data-admin-card] .text-xs, .dark [data-admin-card] .text-sm, .dark [data-admin-card] .text-lg, .dark [data-admin-card] .text-xl, .dark [data-admin-card] .text-base { color: #f1f5f9 !important; }',
+      '.dark [data-admin-card] .font-bold, .dark [data-admin-card] .font-semibold, .dark [data-admin-card] .font-medium { color: #f1f5f9 !important; }',
+      '.dark [data-admin-card] .text-indigo-600, .dark [data-admin-card] .text-indigo-700, .dark [data-admin-card] .text-indigo-500 { color: #818cf8 !important; }',
+      '.dark [data-admin-card] .text-emerald-600, .dark [data-admin-card] .text-green-600 { color: #34d399 !important; }',
+      '.dark [data-admin-card] .text-amber-600, .dark [data-admin-card] .text-orange-600 { color: #fbbf24 !important; }',
+      '.dark [data-admin-card] .text-red-500, .dark [data-admin-card] .text-red-600 { color: #f87171 !important; }',
+      '.dark [data-admin-card] .text-blue-500, .dark [data-admin-card] .text-blue-600 { color: #60a5fa !important; }',
+      '.dark [data-admin-card] .text-purple-600 { color: #a78bfa !important; }',
+      '.dark [data-admin-card] .text-pink-500 { color: #f472b6 !important; }',
+      '.dark [data-admin-card] .bg-white { background-color: #1e293b !important; }',
+      '.dark [data-admin-card] h1, .dark [data-admin-card] h2, .dark [data-admin-card] h3 { color: #f1f5f9 !important; }',
+      '.dark [data-admin-card] p, .dark [data-admin-card] span, .dark [data-admin-card] div { color: inherit; }',
       '.dark [data-admin-sidebar] .text-slate-400, .dark [data-admin-sidebar] .text-slate-500 { color: #94a3b8 !important; }',
-      '.dark [data-admin-sidebar] .hover\\:text-slate-900:hover { color: #e2e8f0 !important; }',
+      '.dark [data-admin-sidebar] .hover\\:text-slate-900:hover { color: #f1f5f9 !important; }',
       '.dark .text-muted-foreground { color: #94a3b8 !important; }',
-      '.dark .text-foreground { color: #e2e8f0 !important; }',
+      '.dark .text-foreground { color: #f1f5f9 !important; }',
       '.dark label { color: #cbd5e1 !important; }',
-      '.dark input, .dark select, .dark textarea { color: #e2e8f0 !important; background-color: #1e293b !important; border-color: #334155 !important; }',
-      '.dark input::placeholder, .dark textarea::placeholder { color: #64748b !important; }',
+      '.dark [data-admin-card] input, .dark [data-admin-card] select, .dark [data-admin-card] textarea { color: #f1f5f9 !important; background-color: #0f172a !important; border-color: #334155 !important; }',
+      '.dark [data-admin-card] input::placeholder, .dark [data-admin-card] textarea::placeholder { color: #64748b !important; }',
+      '.dark [data-admin-card] .bg-slate-50 { background-color: #0f172a !important; }',
+      '.dark [data-admin-card] .bg-indigo-50 { background-color: #1e1b4b !important; }',
+      '.dark [data-admin-card] .bg-emerald-50 { background-color: #022c22 !important; }',
+      '.dark [data-admin-card] .bg-amber-50 { background-color: #451a03 !important; }',
+      '.dark [data-admin-card] .bg-red-50 { background-color: #450a0a !important; }',
+      '.dark [data-admin-sidebar] .bg-gradient-to-r.from-indigo-50 { background: #1e1b4b !important; }',
     ].join('\n');
-    return () => { if (darkStyle) darkStyle.remove(); };
   }, []);
   const navigate = useNavigate();
 
@@ -1149,8 +1167,8 @@ function AdminThemes() {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div><h2 className="text-lg font-bold">🎨 Store Theme Studio</h2><p className="text-[10px] text-slate-500">Customize colors for the CUSTOMER-FACING storefront. (Admin panel colors are in "Admin Theme" tab.)</p></div>
         <div className="flex gap-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl p-0.5">
-          <button className={cn('px-3 py-1.5 rounded-lg text-[10px] font-semibold flex items-center gap-1', !darkMode ? 'bg-white dark:bg-slate-700 shadow-sm' : 'text-slate-500')} onClick={() => setDarkMode(false)}><Sun size={12} /> Light</button>
-          <button className={cn('px-3 py-1.5 rounded-lg text-[10px] font-semibold flex items-center gap-1', darkMode ? 'bg-white dark:bg-slate-700 shadow-sm' : 'text-slate-500')} onClick={() => setDarkMode(true)}><Moon size={12} /> Dark</button>
+          <button className={cn('px-3 py-1.5 rounded-lg text-[10px] font-semibold flex items-center gap-1', !darkMode ? 'bg-white dark:bg-slate-700 shadow-sm' : 'text-slate-500')} onClick={() => { localStorage.setItem('ss_dark', 'false'); document.documentElement.classList.remove('dark'); }}><Sun size={12} /> Light</button>
+          <button className={cn('px-3 py-1.5 rounded-lg text-[10px] font-semibold flex items-center gap-1', darkMode ? 'bg-white dark:bg-slate-700 shadow-sm' : 'text-slate-500')} onClick={() => { localStorage.setItem('ss_dark', 'true'); document.documentElement.classList.add('dark'); }}><Moon size={12} /> Dark</button>
         </div>
       </div>
 
