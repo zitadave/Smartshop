@@ -52,6 +52,16 @@ export default function AdminLayout() {
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const navigate = useNavigate();
 
+  // CRITICAL: Clean up old injected CSS from AdminThemeManager (no longer used)
+  // This style tag was injected WITHOUT .dark prefix, so it overrode light mode
+  useEffect(() => {
+    const oldStyles = document.getElementById('admin-theme-styles');
+    if (oldStyles) oldStyles.remove();
+    const oldDarkMode = document.getElementById('admin-dark-mode');
+    if (oldDarkMode) oldDarkMode.remove();
+    document.documentElement.removeAttribute('data-admin-theme');
+  }, []);
+
   const handleCmdNavigate = (t: string) => {
     setTab(t as Tab);
     setCmdOpen(false);
