@@ -272,12 +272,25 @@ export default async function handler(req: any, res: any) {
             contact_shared: true
           }, { onConflict: 'telegram_id' });
         } catch(se) { console.log('Save contact error:', se.message); }
-        // Remove keyboard, show only the web app button
-        await sSend('✅ Phone number saved! Tap below to enter:', {
-          remove_keyboard: true
+        // Remove keyboard
+        await sSend('Remove keyboard', { remove_keyboard: true });
+        // Set chat menu button to open the Mini App
+        await fetch('https://api.telegram.org/bot' + sBotToken + '/setChatMenuButton', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: sc, menu_button: { type: 'web_app', text: '🛍️ Open Smart Shop', web_app: { url: 'https://smartshop-steel.vercel.app' } } })
         });
-        await sSend('🚀 *Ready!*\n\nOpen Smart Shop:', {
+        // Send final message with inline button
+        await sSend('✅ *Phone number saved!*\n\nTap the button below or use the 🛍️ button near the input field:', {
           inline_keyboard: [[{ text: '🚀 Open Smart Shop', web_app: { url: 'https://smartshop-steel.vercel.app' } }]]
+        });
+      }
+      // If user sends any text BUT hasn't shared contact, show contact request
+      if (sc && !userContact && st !== '/start') {
+        await sSend('⚠️ Please share your contact first:', {
+          keyboard: [[{ text: '📱 Share Contact', request_contact: true }]],
+          resize_keyboard: true,
+          one_time_keyboard: true
         });
       }
       return res.json({ ok: true });
