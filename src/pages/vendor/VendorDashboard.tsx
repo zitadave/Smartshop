@@ -350,7 +350,48 @@ function VendorProductsView({ products, onOpenStudio }: { products: any[]; onOpe
 
 // ===== STOREFRONT =====
 function VendorStorefrontView(_props) {
-  try {
+  
+  // File upload handlers
+  function setupFileUploads() {
+    var logoInput = document.getElementById('logo-upload');
+    if (logoInput && !logoInput._listener) {
+      logoInput._listener = true;
+      logoInput.addEventListener('change', function(e) {
+        var f = e.target.files ? e.target.files[0] : null;
+        if (!f) return;
+        var r = new FileReader();
+        r.onload = function(ev) {
+          try {
+            var sd2 = JSON.parse(localStorage.getItem('ss_vendor_store') || '{}');
+            sd2.logo = ev.target.result;
+            localStorage.setItem('ss_vendor_store', JSON.stringify(sd2));
+            window.location.reload();
+          } catch(ex) { alert('Error saving logo: ' + ex.message); }
+        };
+        r.readAsDataURL(f);
+      });
+    }
+    var bannerInput = document.getElementById('banner-upload');
+    if (bannerInput && !bannerInput._listener) {
+      bannerInput._listener = true;
+      bannerInput.addEventListener('change', function(e) {
+        var f = e.target.files ? e.target.files[0] : null;
+        if (!f) return;
+        var r = new FileReader();
+        r.onload = function(ev) {
+          try {
+            var sd2 = JSON.parse(localStorage.getItem('ss_vendor_store') || '{}');
+            sd2.banner = ev.target.result;
+            localStorage.setItem('ss_vendor_store', JSON.stringify(sd2));
+            window.location.reload();
+          } catch(ex) { alert('Error saving banner: ' + ex.message); }
+        };
+        r.readAsDataURL(f);
+      });
+    }
+  }
+  setTimeout(setupFileUploads, 100);
+try {
     var el = document.getElementById('ap-theme-style');
     if (el) el.remove();
     el = document.getElementById('admin-theme-styles');
@@ -382,7 +423,7 @@ function VendorStorefrontView(_props) {
       ),
       React.createElement('div', { className: 'p-4', id: 'store-form' },
         React.createElement('div', { className: 'flex items-center gap-4 -mt-12' },
-          React.createElement('div', { className: 'w-16 h-16 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center text-2xl shadow-lg border-2 border-white dark:border-slate-800 flex-shrink-0' }, '\ud83c\udfaa'),
+          React.createElement('div', { className: 'relative w-16 h-16 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center text-2xl shadow-lg border-2 border-white dark:border-slate-800 flex-shrink-0 overflow-hidden' }, sd.logo ? React.createElement('img', { src: sd.logo, className: 'w-full h-full object-cover' }) : React.createElement('span', null, '\ud83c\udfaa'), React.createElement('input', { type: 'file', accept: 'image/*', id: 'logo-upload', style: { display: 'none' } }), React.createElement('button', { onClick: function() { var el = document.getElementById('logo-upload'); if (el) el.click(); }, className: 'absolute bottom-0 right-0 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center text-white text-[8px] border-2 border-white hover:bg-emerald-400 transition-colors' }, '+')),
           React.createElement('div', { className: 'pt-8' },
             React.createElement('h3', { className: 'text-sm font-bold text-slate-900 dark:text-white' }, nm),
             React.createElement('p', { className: 'text-[9px] text-slate-400' }, tg)
