@@ -31,12 +31,12 @@ export default function VendorRegister() {
     localStorage.setItem('ss_vendor_status', 'pending');
     // Send to API and wait for response
     try {
+      var profData2 = {};
+      try { profData2 = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
       var res = await fetch('/api/vendors/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        var profData = {};
-        try { profData = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
-        body: JSON.stringify({ name: storeName.trim(), phone: storePhone.trim(), email: storeEmail.trim(), description: storeDesc.trim(), status: 'pending', appliedAt: new Date().toISOString(), telegram_id: profData.telegramId || '' })
+        body: JSON.stringify({ name: storeName.trim(), phone: storePhone.trim(), email: storeEmail.trim(), description: storeDesc.trim(), status: 'pending', appliedAt: new Date().toISOString(), telegram_id: profData2.telegramId || '' })
       });
       var d = await res.json();
       if (d && d.vendor && d.vendor.id) {
