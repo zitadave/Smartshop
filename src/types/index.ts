@@ -184,6 +184,8 @@ export interface Profile {
   registered: boolean;
   joinedAt: string;
   avatar?: string;
+  telegramId?: string;
+  telegramUsername?: string;
 }
 
 export interface GiftCard {
