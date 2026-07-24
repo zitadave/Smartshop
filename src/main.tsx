@@ -16,6 +16,22 @@ import './index.css';
   } catch(e) {}
 })();
 
+// ===== CLEAR OLD USER DATA — Force re-registration =====
+(function() {
+  var resetKey = 'ss_reset_v2';
+  if (localStorage.getItem(resetKey) !== 'done') {
+    // Clear old profile and vendor data so users re-register
+    localStorage.removeItem('ss_profile');
+    localStorage.removeItem('ss_vendor_status');
+    localStorage.removeItem('ss_vendor_applications');
+    localStorage.removeItem('ss_telegram_auth');
+    localStorage.removeItem('ss_orders');
+    localStorage.removeItem('ss_cart');
+    localStorage.setItem(resetKey, 'done');
+    window.location.reload(true);
+  }
+})();
+
 // ===== TELEGRAM INIT — Must run before React renders =====
 // This ensures Telegram knows we're ready immediately
 (function initTelegram() {

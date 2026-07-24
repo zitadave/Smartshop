@@ -46,7 +46,7 @@ export default function Profile() {
     localStorage.setItem('ss_vendor_status', 'pending');
     var apps = [];
     try { apps = JSON.parse(localStorage.getItem('ss_vendor_applications') || '[]'); } catch(e) {}
-    apps.push({ id: Date.now(), name: (window as any).profileName || '', phone: (window as any).profilePhone || '', telegramId: '', appliedAt: new Date().toISOString(), status: 'pending' });
+    apps.push({ id: Date.now(), name: profile.name || '', phone: profile.phone || '', telegramId: telegramId || '', appliedAt: new Date().toISOString(), status: 'pending' });
     localStorage.setItem('ss_vendor_applications', JSON.stringify(apps));
     toast('Application submitted! Admin will review.', 'success');
     window.location.reload();
