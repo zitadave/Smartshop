@@ -2,40 +2,6 @@ import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 
-// ===== CACHE BUSTER — Force reload if old code is cached =====
-(function() {
-  var VERSION = 'v9';
-  try {
-    var cached = localStorage.getItem('ss_app_version');
-    if (cached && cached !== VERSION) {
-      localStorage.setItem('ss_app_version', VERSION);
-      window.location.reload(true);
-      return;
-    }
-    localStorage.setItem('ss_app_version', VERSION);
-  } catch(e) {}
-})();
-
-// ===== CLEAR OLD USER DATA — Force re-registration =====
-(function() {
-  var resetKey = 'ss_reset_v2';
-  if (localStorage.getItem(resetKey) !== 'done') {
-    // CLEAR ALL USER DATA - fresh start
-    var keys = [];
-    for (var i = 0; i < localStorage.length; i++) {
-      var k = localStorage.key(i);
-      if (k) keys.push(k);
-    }
-    for (var j = 0; j < keys.length; j++) {
-      if (keys[j] !== resetKey && keys[j] !== 'ss_app_version') {
-        localStorage.removeItem(keys[j]);
-      }
-    }
-    localStorage.setItem(resetKey, 'done');
-    window.location.reload(true);
-  }
-})();
-
 // ===== TELEGRAM INIT — Must run before React renders =====
 // This ensures Telegram knows we're ready immediately
 (function initTelegram() {
@@ -62,20 +28,21 @@ import './index.css';
       link.href = window.location.origin;
       document.head.appendChild(link);
       
-      // Request contact sharing for new users
+      // Request contact sharing for new users - no reload
       if (tg.initDataUnsafe?.user?.id && !localStorage.getItem('ss_contact_shared')) {
-        tg.MainButton.text = '📱 Share Contact';
-        tg.MainButton.show();
-        var origClick = tg.MainButton.onClick;
-        tg.MainButton.onClick = function() {
-          tg.requestContact(function(contact) {
-            if (contact && contact.phone_number) {
-              localStorage.setItem('ss_contact_shared', 'true');
-              tg.MainButton.hide();
-              window.location.reload();
-            }
-          }, function() {});
-        };
+        try {
+          tg.MainButton.text = '📱 Share Contact';
+          tg.MainButton.show();
+          tg.MainButton.onClick = function() {
+            tg.requestContact(function(contact) {
+              if (contact && contact.phone_number) {
+                localStorage.setItem('ss_contact_shared', 'true');
+                localStorage.setItem('ss_user_phone', contact.phone_number);
+                tg.MainButton.hide();
+              }
+            }, function() {});
+          };
+        } catch(ex) {}
       }
     }
   } catch {}

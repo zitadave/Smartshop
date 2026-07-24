@@ -26,52 +26,7 @@
     <!-- Preconnect to API (relative — same domain) -->
 
     <!-- Vite injects CSS/JS automatically -->
-
-    <!-- NUCLEAR CACHE BUSTER - clears all data, forces fresh load -->
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-    <meta http-equiv="Pragma" content="no-cache" />
-    <meta http-equiv="Expires" content="0" />
-    <script>
-      (function() {
-        var expected = 'v10';
-        var current = '';
-        try { current = localStorage.getItem('ss_app_version'); } catch(e) {}
-        if (current !== expected) {
-          try {
-            var keys = [];
-            for (var i = 0; i < localStorage.length; i++) {
-              var k = localStorage.key(i);
-              if (k) keys.push(k);
-            }
-            for (var j = 0; j < keys.length; j++) {
-              if (keys[j] !== 'ss_app_version' && keys[j] !== 'ss_lang') {
-                try { localStorage.removeItem(keys[j]); } catch(e) {}
-              }
-            }
-            localStorage.setItem('ss_app_version', expected);
-          } catch(e) {}
-          window.location.reload(true);
-          return;
-        }
-      })();
-    </script>
-
-    <!-- CRITICAL: Remove old injected CSS -->
-    <script>
-      (function() {
-        var s = document.getElementById('admin-theme-styles');
-        if (s) s.remove();
-        s = document.getElementById('admin-dark-mode');
-        if (s) s.remove();
-        document.documentElement.removeAttribute('data-admin-theme');
-        try {
-          var dark = JSON.parse(localStorage.getItem('ss_dark') || 'false');
-          if (dark) document.documentElement.classList.add('dark');
-          else document.documentElement.classList.remove('dark');
-        } catch(e) {}
-      })();
-    </script>
-    <script type="module" crossorigin src="/assets/index-Ctd5JLia.js"></script>
+    <script type="module" crossorigin src="/assets/index-BWwupIi-.js"></script>
     <link rel="modulepreload" crossorigin href="/assets/jsx-runtime-n5LQ9ujS.js">
     <link rel="modulepreload" crossorigin href="/assets/createLucideIcon-DN0J77WO.js">
     <link rel="stylesheet" crossorigin href="/assets/index-b4fh5D3D.css">
