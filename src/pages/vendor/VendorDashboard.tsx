@@ -16,7 +16,7 @@ import {
 import { toast } from '@/components/Toast';
 import ProductStudio from '@/components/admin/ProductStudio';
 
-type VendorTab = 'dashboard' | 'products' | 'storefront' | 'analytics' | 'orders' | 'reviews' | 'inventory' | 'payouts' | 'promotions' | 'settings';
+type VendorTab = 'dashboard' | 'products' | 'storefront' | 'analytics' | 'orders' | 'reviews' | 'inventory' | 'payouts' | 'promotions' ;
 
 export default function VendorDashboard() {
   const [tab, setTab] = useState<VendorTab>('dashboard');
@@ -98,14 +98,14 @@ export default function VendorDashboard() {
           {([
             { id: 'dashboard' as VendorTab, icon: Activity, label: 'Dashboard', badge: stats.pendingOrders },
             { id: 'products' as VendorTab, icon: Package, label: 'Products', badge: stats.outOfStock.length },
-            { id: 'storefront' as VendorTab, icon: Store, label: 'Storefront' },
+            { id: 'storefront' as VendorTab, icon: Store, label: 'My Store' },
             { id: 'analytics' as VendorTab, icon: TrendingUp, label: 'Analytics' },
             { id: 'orders' as VendorTab, icon: ShoppingCart, label: 'Orders', badge: stats.pendingOrders },
             { id: 'reviews' as VendorTab, icon: Star, label: 'Reviews', badge: stats.totalReviews },
             { id: 'inventory' as VendorTab, icon: Box, label: 'Inventory', badge: stats.lowStock.length },
             { id: 'promotions' as VendorTab, icon: Gift, label: 'Promotions' },
             { id: 'payouts' as VendorTab, icon: Wallet, label: 'Payouts' },
-            { id: 'settings' as VendorTab, icon: Settings, label: 'Settings' },
+            
           ] as const).map(item => {
             const Icon = item.icon;
             const isActive = tab === item.id;
@@ -145,7 +145,7 @@ export default function VendorDashboard() {
           {tab === 'inventory' && <VendorInventoryView products={vendorProducts} />}
           {tab === 'promotions' && <VendorPromotionsView />}
           {tab === 'payouts' && <VendorPayoutsView stats={stats} />}
-          {tab === 'settings' && <VendorSettingsView vendorName={vendorName} />}
+          
         </div>
       </main>
     </div>
@@ -401,9 +401,37 @@ function VendorStorefrontView({ vendorName }: { vendorName: string }) {
           <button className="mt-4 px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold hover:shadow-lg transition-all" onClick={save}><Save size={13} className="inline mr-1" /> Save Storefront</button>
         </div>
       </div>
+      {/* === Store Settings === */}
+      <div className="grid lg:grid-cols-2 gap-4 mt-6">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden">
+          <h3 className="text-sm font-bold mb-3 text-slate-900 dark:text-white">Profile & Notifications</h3>
+          <div className="space-y-3">
+            <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Email</label><input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200" value={data.email} onChange={e => setData(s => ({...s, email: e.target.value}))} /></div>
+            <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Phone</label><input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200" value={data.phone} onChange={e => setData(s => ({...s, phone: e.target.value}))} /></div>
+            <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Bio</label><textarea className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent resize-none h-16 text-slate-800 dark:text-slate-200" value={data.description} onChange={e => setData(s => ({...s, description: e.target.value}))} placeholder="Tell customers about your store" /></div>
+            <h4 className="text-xs font-semibold text-slate-500 mt-2 mb-2">Notifications</h4>
+            <label className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300"><input type="checkbox" defaultChecked className="rounded" /> Email for new orders</label>
+            <label className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300"><input type="checkbox" defaultChecked className="rounded" /> Low stock alerts</label>
+          </div>
+        </div>
+        <div className="space-y-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden">
+            <h3 className="text-sm font-bold mb-3 flex items-center gap-2 text-slate-900 dark:text-white"><Percent size={14} className="text-emerald-500" /> Commission</h3>
+            <div className="flex items-center justify-between"><span className="text-xs text-slate-500">Platform fee per sale</span><span className="text-lg font-bold text-emerald-600">10%</span></div>
+            <div className="mt-2 bg-emerald-50 dark:bg-emerald-950/20 rounded-lg p-2.5 text-[9px] text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5"><CheckCircle size={10} /> Your store is active</div>
+          </div>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-red-200 dark:border-red-900/30 p-4 overflow-x-hidden">
+            <h3 className="text-sm font-bold mb-2 flex items-center gap-2 text-red-600"><AlertTriangle size={14} /> Danger Zone</h3>
+            <p className="text-[9px] text-slate-500 mb-3">Temporarily disable your store from appearing in search results</p>
+            <button className="px-4 py-2 border border-red-300 text-red-600 rounded-xl text-[10px] font-semibold hover:bg-red-50 transition-colors" onClick={() => toast('Store visibility toggled', 'info')}><EyeOff size={12} className="inline mr-1" /> Pause Storefront</button>
+          </div>
+        </div>
+      </div>
+
     </div>
   );
 }
+
 
 // ===== ANALYTICS =====
 function VendorAnalyticsView({ products, stats, revenueHistory }: { products: any[]; stats: any; revenueHistory: any[] }) {
@@ -924,136 +952,5 @@ function VendorPromotionsView() {
         </div>
       )}
     </div>
-  );
-}
-function VendorSettingsView(_props) {
-  try {
-    var el = document.getElementById('ap-theme-style');
-    if (el) el.remove();
-    el = document.getElementById('admin-theme-styles');
-    if (el) el.remove();
-    document.documentElement.classList.remove('dark');
-  } catch(e) {}
-  var sd = {};
-  try { sd = JSON.parse(localStorage.getItem('ss_vendor_settings') || '{}'); } catch(e) {}
-  function saveForm() {
-    var form = document.getElementById('vendor-settings-form');
-    if (!form) return;
-    var data = {
-      name: form.storeName ? form.storeName.value : (sd.name || 'My Store'),
-      email: form.storeEmail ? form.storeEmail.value : (sd.email || ''),
-      phone: form.storePhone ? form.storePhone.value : (sd.phone || ''),
-      bio: form.storeBio ? form.storeBio.value : (sd.bio || ''),
-      notifications: form.notifEmail ? form.notifEmail.checked : true,
-      autoRestock: form.autoRestock ? form.autoRestock.checked : false,
-    };
-    localStorage.setItem('ss_vendor_settings', JSON.stringify(data));
-    try { toast('\u2705 Settings saved!', 'success'); } catch(e) { alert('Saved!'); }
-  }
-  return React.createElement('div', { className: 'animate-fadeUp space-y-4', style: { padding: '4px' } },
-    React.createElement('div', null,
-      React.createElement('h2', { className: 'text-lg font-bold text-slate-900 dark:text-white' }, '\u2699\uFE0F Settings'),
-      React.createElement('p', { className: 'text-[10px] text-slate-500' }, 'Manage your account and preferences')
-    ),
-    React.createElement('div', { className: 'grid lg:grid-cols-2 gap-4' },
-      // Store Profile Card
-      React.createElement('div', { className: 'bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden' },
-        React.createElement('h3', { className: 'text-sm font-bold mb-3 text-slate-900 dark:text-white' }, 'Store Profile'),
-        React.createElement('form', { id: 'vendor-settings-form' },
-          React.createElement('div', { className: 'space-y-3' },
-            React.createElement('div', null,
-              React.createElement('label', { className: 'text-[9px] font-semibold text-slate-400 uppercase tracking-wider' }, 'Store Name'),
-              React.createElement('input', { name: 'storeName', defaultValue: sd.name || _props.vendorName || 'My Store', className: 'w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200' })
-            ),
-            React.createElement('div', null,
-              React.createElement('label', { className: 'text-[9px] font-semibold text-slate-400 uppercase tracking-wider' }, 'Email'),
-              React.createElement('input', { name: 'storeEmail', defaultValue: sd.email || 'vendor@mystore.com', className: 'w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200' })
-            ),
-            React.createElement('div', null,
-              React.createElement('label', { className: 'text-[9px] font-semibold text-slate-400 uppercase tracking-wider' }, 'Phone'),
-              React.createElement('input', { name: 'storePhone', defaultValue: sd.phone || '+251-911-XXXXXX', className: 'w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200' })
-            ),
-            React.createElement('div', null,
-              React.createElement('label', { className: 'text-[9px] font-semibold text-slate-400 uppercase tracking-wider' }, 'Bio'),
-              React.createElement('textarea', { name: 'storeBio', defaultValue: sd.bio || '', placeholder: 'Tell customers about your store', className: 'w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent resize-none h-16 text-slate-800 dark:text-slate-200' })
-            ),
-            React.createElement('button', { type: 'button', onClick: saveForm, className: 'w-full py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold hover:shadow-lg transition-all' },
-              React.createElement('svg', { width: '12', height: '12', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2', style: { display: 'inline', marginRight: '4px' } },
-                React.createElement('path', { d: 'M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z' }),
-                React.createElement('polyline', { points: '17 21 17 13 7 13 7 21' }),
-                React.createElement('polyline', { points: '7 3 7 8 15 8' })
-              ),
-              ' Save Changes'
-            )
-          )
-        )
-      ),
-      // Right Column
-      React.createElement('div', { className: 'space-y-4' },
-        // Notifications
-        React.createElement('div', { className: 'bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden' },
-          React.createElement('h3', { className: 'text-sm font-bold mb-3 flex items-center gap-2 text-slate-900 dark:text-white' },
-            React.createElement('svg', { width: '14', height: '14', viewBox: '0 0 24 24', fill: 'none', stroke: '#3b82f6', strokeWidth: '2' },
-              React.createElement('path', { d: 'M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9' }),
-              React.createElement('path', { d: 'M13.73 21a2 2 0 0 1-3.46 0' })
-            ),
-            ' Notifications'
-          ),
-          React.createElement('label', { className: 'flex items-center gap-2 text-xs mb-2 text-slate-700 dark:text-slate-300' },
-            React.createElement('input', { name: 'notifEmail', type: 'checkbox', defaultChecked: sd.notifications !== false, className: 'rounded' }),
-            ' Email for new orders'
-          ),
-          React.createElement('label', { className: 'flex items-center gap-2 text-xs mb-2 text-slate-700 dark:text-slate-300' },
-            React.createElement('input', { name: 'autoRestock', type: 'checkbox', defaultChecked: sd.autoRestock || false, className: 'rounded' }),
-            ' Auto-restock alerts'
-          ),
-          React.createElement('label', { className: 'flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300' },
-            React.createElement('input', { type: 'checkbox', defaultChecked: true, className: 'rounded' }),
-            ' Low stock warnings'
-          )
-        ),
-        // Commission
-        React.createElement('div', { className: 'bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden' },
-          React.createElement('h3', { className: 'text-sm font-bold mb-3 flex items-center gap-2 text-slate-900 dark:text-white' },
-            React.createElement('svg', { width: '14', height: '14', viewBox: '0 0 24 24', fill: 'none', stroke: '#10b981', strokeWidth: '2' },
-              React.createElement('line', { x1: '19', y1: '5', x2: '5', y2: '19' }),
-              React.createElement('circle', { cx: '6.5', cy: '6.5', r: '2.5' }),
-              React.createElement('circle', { cx: '17.5', cy: '17.5', r: '2.5' })
-            ),
-            ' Commission'
-          ),
-          React.createElement('div', { className: 'flex items-center justify-between' },
-            React.createElement('span', { className: 'text-xs text-slate-500' }, 'Platform fee per sale'),
-            React.createElement('span', { className: 'text-lg font-bold text-emerald-600' }, '10%')
-          ),
-          React.createElement('div', { className: 'mt-2 bg-emerald-50 dark:bg-emerald-950/20 rounded-lg p-2.5 text-[9px] text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5' },
-            React.createElement('svg', { width: '10', height: '10', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2' },
-              React.createElement('polyline', { points: '20 6 9 17 4 12' })
-            ),
-            ' Your store is active and visible'
-          )
-        ),
-        // Danger Zone
-        React.createElement('div', { className: 'bg-white dark:bg-slate-900 rounded-2xl border border-red-200 dark:border-red-900/30 p-4 overflow-x-hidden' },
-          React.createElement('h3', { className: 'text-sm font-bold mb-2 flex items-center gap-2 text-red-600' },
-            React.createElement('svg', { width: '14', height: '14', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2' },
-              React.createElement('path', { d: 'M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z' }),
-              React.createElement('line', { x1: '12', y1: '9', x2: '12', y2: '13' }),
-              React.createElement('line', { x1: '12', y1: '17', x2: '12.01', y2: '17' })
-            ),
-            ' Danger Zone'
-          ),
-          React.createElement('p', { className: 'text-[9px] text-slate-500 mb-3' }, 'Temporarily disable your store from appearing in search results'),
-          React.createElement('button', { onClick: function() { try { toast('Store visibility toggled', 'warning'); } catch(e) { alert('Toggled'); } }, className: 'px-4 py-2 border border-red-300 text-red-600 rounded-xl text-[10px] font-semibold hover:bg-red-50 transition-colors' },
-            React.createElement('svg', { width: '12', height: '12', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2', style: { display: 'inline', marginRight: '4px' } },
-              React.createElement('path', { d: 'M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94' }),
-              React.createElement('path', { d: 'M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19' }),
-              React.createElement('line', { x1: '1', y1: '1', x2: '23', y2: '23' })
-            ),
-            ' Pause Storefront'
-          )
-        )
-      )
-    )
   );
 }
