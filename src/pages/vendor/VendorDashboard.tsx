@@ -347,91 +347,80 @@ function VendorProductsView({ products, onOpenStudio }: { products: any[]; onOpe
 }
 
 // ===== STOREFRONT =====
-function VendorStorefrontView({ vendorName }: { vendorName: string }) {
-  const [data, setData] = useState({
-    name: vendorName, tagline: 'Quality Products, Best Prices',
-    description: 'Welcome to our store! We offer quality products at affordable prices with fast delivery across Ethiopia.',
-    email: 'vendor@mystore.com', phone: '+251-911-XXXXXX',
-    address: 'Addis Ababa, Ethiopia', website: '',
-    facebook: '', instagram: '', twitter: '', youtube: '',
-    banner: '', logo: '',
-  });
-  const save = () => { localStorage.setItem('ss_vendor_store', JSON.stringify(data)); toast('✅ Storefront saved!', 'success'); };
-
-  return (
-    <div className="space-y-4">
-      <h2 className="text-lg font-bold text-slate-900 dark:text-white">🏪 Storefront</h2>
-      <p className="text-[10px] text-slate-500">Customize how your store appears to customers</p>
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-        <div className={cn('h-32 bg-gradient-to-r from-emerald-500 to-green-600 flex items-center justify-center', data.banner && 'bg-none')}
-          style={data.banner ? { backgroundImage: 'url(' + data.banner + ')', backgroundSize: 'cover', backgroundPosition: 'center' } : {}}>
-          {!data.banner && <Camera size={24} className="text-white/50" />}
-        </div>
-        <div className="p-4">
-          <div className="flex items-center gap-4 -mt-12">
-            <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center text-2xl shadow-lg border-2 border-white dark:border-slate-800 flex-shrink-0">
-              {data.logo ? <img src={data.logo} className="w-full h-full rounded-xl object-cover" /> : '🏪'}
-            </div>
-            <div className="pt-8">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">{data.name}</h3>
-              <p className="text-[9px] text-slate-400">{data.tagline}</p>
-            </div>
-          </div>
-          <div className="grid sm:grid-cols-2 gap-3 mt-4">
-            <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Store Name</label><input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200" value={data.name} onChange={e => setData(s => ({ ...s, name: e.target.value }))} /></div>
-            <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Tagline</label><input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200" value={data.tagline} onChange={e => setData(s => ({ ...s, tagline: e.target.value }))} /></div>
-            <div className="sm:col-span-2"><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Description</label><textarea className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent resize-none h-16 text-slate-800 dark:text-slate-200" value={data.description} onChange={e => setData(s => ({ ...s, description: e.target.value }))} /></div>
-            <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider"><Mail size={10} className="inline" /> Email</label><input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200" value={data.email} onChange={e => setData(s => ({ ...s, email: e.target.value }))} /></div>
-            <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider"><Phone size={10} className="inline" /> Phone</label><input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200" value={data.phone} onChange={e => setData(s => ({ ...s, phone: e.target.value }))} /></div>
-            <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider"><MapPin size={10} className="inline" /> Address</label><input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200" value={data.address} onChange={e => setData(s => ({ ...s, address: e.target.value }))} /></div>
-            <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider"><Globe size={10} className="inline" /> Website</label><input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200" value={data.website} onChange={e => setData(s => ({ ...s, website: e.target.value }))} /></div>
-          </div>
-          <h4 className="text-xs font-semibold text-slate-500 mt-4 mb-2 flex items-center gap-2"><Share2 size={12} /> Social Links</h4>
-          <div className="grid sm:grid-cols-2 gap-3">
-            {[{ icon: Globe, label: "facebook", color: "text-blue-600", placeholder: "Facebook URL" }, { icon: Camera, label: "instagram", color: "text-pink-600", placeholder: "Instagram URL" }, { icon: MessageCircle, label: "twitter", color: "text-sky-500", placeholder: "Twitter URL" }, { icon: Video, label: "youtube", color: "text-red-600", placeholder: "YouTube URL" }].map(s => {
-              const Icon = s.icon;
-              return (
-                <div key={s.label} className="flex items-center gap-2">
-                  <Icon size={14} className={s.color} />
-                  <input className="flex-1 p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] bg-transparent text-slate-800 dark:text-slate-200" placeholder={s.placeholder} value={(data as any)[s.label]} onChange={e => setData(d => ({ ...d, [s.label]: e.target.value }))} />
-                </div>
-              );
-            })}
-          </div>
-          <button className="mt-4 px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold hover:shadow-lg transition-all" onClick={save}><Save size={13} className="inline mr-1" /> Save Storefront</button>
-        </div>
-      </div>
-      {/* === Store Settings === */}
-      <div className="grid lg:grid-cols-2 gap-4 mt-6">
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden">
-          <h3 className="text-sm font-bold mb-3 text-slate-900 dark:text-white">Profile & Notifications</h3>
-          <div className="space-y-3">
-            <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Email</label><input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200" value={data.email} onChange={e => setData(s => ({...s, email: e.target.value}))} /></div>
-            <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Phone</label><input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200" value={data.phone} onChange={e => setData(s => ({...s, phone: e.target.value}))} /></div>
-            <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Bio</label><textarea className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent resize-none h-16 text-slate-800 dark:text-slate-200" value={data.description} onChange={e => setData(s => ({...s, description: e.target.value}))} placeholder="Tell customers about your store" /></div>
-            <h4 className="text-xs font-semibold text-slate-500 mt-2 mb-2">Notifications</h4>
-            <label className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300"><input type="checkbox" defaultChecked className="rounded" /> Email for new orders</label>
-            <label className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300"><input type="checkbox" defaultChecked className="rounded" /> Low stock alerts</label>
-          </div>
-        </div>
-        <div className="space-y-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden">
-            <h3 className="text-sm font-bold mb-3 flex items-center gap-2 text-slate-900 dark:text-white"><Percent size={14} className="text-emerald-500" /> Commission</h3>
-            <div className="flex items-center justify-between"><span className="text-xs text-slate-500">Platform fee per sale</span><span className="text-lg font-bold text-emerald-600">10%</span></div>
-            <div className="mt-2 bg-emerald-50 dark:bg-emerald-950/20 rounded-lg p-2.5 text-[9px] text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5"><CheckCircle size={10} /> Your store is active</div>
-          </div>
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-red-200 dark:border-red-900/30 p-4 overflow-x-hidden">
-            <h3 className="text-sm font-bold mb-2 flex items-center gap-2 text-red-600"><AlertTriangle size={14} /> Danger Zone</h3>
-            <p className="text-[9px] text-slate-500 mb-3">Temporarily disable your store from appearing in search results</p>
-            <button className="px-4 py-2 border border-red-300 text-red-600 rounded-xl text-[10px] font-semibold hover:bg-red-50 transition-colors" onClick={() => toast('Store visibility toggled', 'info')}><EyeOff size={12} className="inline mr-1" /> Pause Storefront</button>
-          </div>
-        </div>
-      </div>
-
-    </div>
+function VendorStorefrontView(_props) {
+  try {
+    var el = document.getElementById('ap-theme-style');
+    if (el) el.remove();
+    el = document.getElementById('admin-theme-styles');
+    if (el) el.remove();
+    document.documentElement.classList.remove('dark');
+  } catch(e) {}
+  var sd = {};
+  try { sd = JSON.parse(localStorage.getItem('ss_vendor_store') || '{}'); } catch(e) {}
+  var settingsData = {};
+  try { settingsData = JSON.parse(localStorage.getItem('ss_vendor_settings') || '{}'); } catch(e) {}
+  var nm = sd.name || (_props.vendorName || 'My Store');
+  var tg = sd.tagline || 'Quality Products, Best Prices';
+  var desc = sd.description || 'Welcome to our store!';
+  var em = sd.email || settingsData.email || 'vendor@mystore.com';
+  var ph = sd.phone || settingsData.phone || '+251-911-XXXXXX';
+  var ad = sd.address || 'Addis Ababa, Ethiopia';
+  var site = sd.website || '';
+  var fb = sd.facebook || '';
+  var ig = sd.instagram || '';
+  var tw = sd.twitter || '';
+  var yt = sd.youtube || '';
+  return React.createElement('div', { className: 'space-y-4 animate-fadeUp' },
+    React.createElement('h2', { className: 'text-lg font-bold text-slate-900 dark:text-white' }, '\ud83c\udfaa My Store'),
+    React.createElement('p', { className: 'text-[10px] text-slate-500' }, 'Manage your storefront and preferences'),
+    // Storefront Card
+    React.createElement('div', { className: 'bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden' },
+      React.createElement('div', { className: 'h-32 bg-gradient-to-r from-emerald-500 to-green-600 flex items-center justify-center' },
+        React.createElement('span', { className: 'text-white/50 text-2xl' }, '\ud83d\udcf7')
+      ),
+      React.createElement('div', { className: 'p-4', id: 'store-form' },
+        React.createElement('div', { className: 'flex items-center gap-4 -mt-12' },
+          React.createElement('div', { className: 'w-16 h-16 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center text-2xl shadow-lg border-2 border-white dark:border-slate-800 flex-shrink-0' }, '\ud83c\udfaa'),
+          React.createElement('div', { className: 'pt-8' },
+            React.createElement('h3', { className: 'text-sm font-bold text-slate-900 dark:text-white' }, nm),
+            React.createElement('p', { className: 'text-[9px] text-slate-400' }, tg)
+          )
+        ),
+        React.createElement('div', { className: 'grid sm:grid-cols-2 gap-3 mt-4' },
+          React.createElement('div', null, React.createElement('label', { className: 'text-[9px] font-semibold text-slate-400 uppercase tracking-wider' }, 'Store Name'), React.createElement('input', { id: 'inp-name', defaultValue: nm, className: 'w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200' })),
+          React.createElement('div', null, React.createElement('label', { className: 'text-[9px] font-semibold text-slate-400 uppercase tracking-wider' }, 'Tagline'), React.createElement('input', { id: 'inp-tagline', defaultValue: tg, className: 'w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200' })),
+          React.createElement('div', { className: 'sm:col-span-2' }, React.createElement('label', { className: 'text-[9px] font-semibold text-slate-400 uppercase tracking-wider' }, 'Description'), React.createElement('textarea', { id: 'inp-desc', defaultValue: desc, className: 'w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent resize-none h-16 text-slate-800 dark:text-slate-200' })),
+          React.createElement('div', null, React.createElement('label', { className: 'text-[9px] font-semibold text-slate-400 uppercase tracking-wider' }, 'Email'), React.createElement('input', { id: 'inp-email', defaultValue: em, className: 'w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200' })),
+          React.createElement('div', null, React.createElement('label', { className: 'text-[9px] font-semibold text-slate-400 uppercase tracking-wider' }, 'Phone'), React.createElement('input', { id: 'inp-phone', defaultValue: ph, className: 'w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200' })),
+          React.createElement('div', null, React.createElement('label', { className: 'text-[9px] font-semibold text-slate-400 uppercase tracking-wider' }, 'Address'), React.createElement('input', { id: 'inp-address', defaultValue: ad, className: 'w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200' })),
+          React.createElement('div', null, React.createElement('label', { className: 'text-[9px] font-semibold text-slate-400 uppercase tracking-wider' }, 'Website'), React.createElement('input', { id: 'inp-website', defaultValue: site, className: 'w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200' }))
+        ),
+        React.createElement('button', { onClick: function() { var f = document.getElementById('store-form'); if (!f) return; var d = {name: document.getElementById('inp-name').value, tagline: document.getElementById('inp-tagline').value, description: document.getElementById('inp-desc').value, email: document.getElementById('inp-email').value, phone: document.getElementById('inp-phone').value, address: document.getElementById('inp-address').value, website: document.getElementById('inp-website').value, facebook: document.getElementById('inp-fb').value, instagram: document.getElementById('inp-ig').value, twitter: document.getElementById('inp-tw').value, youtube: document.getElementById('inp-yt').value, banner: '', logo: '' }; localStorage.setItem('ss_vendor_store', JSON.stringify(d)); try { toast('Storefront saved!', 'success'); } catch(e) { alert('Saved!'); } }, className: 'w-full mt-4 py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold hover:shadow-lg' }, 'Save Storefront')
+      )
+    ),
+    // Settings Section
+    React.createElement('div', { className: 'grid lg:grid-cols-2 gap-4 mt-4' },
+      React.createElement('div', { className: 'bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4' },
+        React.createElement('h3', { className: 'text-sm font-bold mb-3 text-slate-900 dark:text-white' }, 'Profile & Notifications'),
+        React.createElement('label', { className: 'flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 mb-2' }, React.createElement('input', { id: 'notif-email', type: 'checkbox', defaultChecked: settingsData.notifications !== false, className: 'rounded' }), ' Email for new orders'),
+        React.createElement('label', { className: 'flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 mb-2' }, React.createElement('input', { id: 'notif-stock', type: 'checkbox', defaultChecked: true, className: 'rounded' }), ' Low stock alerts'),
+        React.createElement('button', { onClick: function() { var d = {name: document.getElementById('inp-name').value, email: document.getElementById('inp-email').value, phone: document.getElementById('inp-phone').value, bio: document.getElementById('inp-desc').value, notifications: document.getElementById('notif-email').checked, autoRestock: document.getElementById('notif-stock').checked}; localStorage.setItem('ss_vendor_settings', JSON.stringify(d)); try { toast('Settings saved!', 'success'); } catch(e) { alert('Saved!'); } }, className: 'mt-3 px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-[10px] font-bold' }, 'Save Settings')
+      ),
+      React.createElement('div', { className: 'space-y-4' },
+        React.createElement('div', { className: 'bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4' },
+          React.createElement('h3', { className: 'text-sm font-bold mb-3 text-slate-900 dark:text-white' }, 'Commission'),
+          React.createElement('div', { className: 'flex items-center justify-between' }, React.createElement('span', { className: 'text-xs text-slate-500' }, 'Platform fee'), React.createElement('span', { className: 'text-lg font-bold text-emerald-600' }, '10%')),
+          React.createElement('div', { className: 'mt-2 bg-emerald-50 dark:bg-emerald-950/20 rounded-lg p-2.5 text-[9px] text-emerald-700 dark:text-emerald-400' }, 'Your store is active')
+        ),
+        React.createElement('div', { className: 'bg-white dark:bg-slate-900 rounded-2xl border border-red-200 dark:border-red-900/30 p-4' },
+          React.createElement('h3', { className: 'text-sm font-bold mb-2 text-red-600' }, 'Danger Zone'),
+          React.createElement('p', { className: 'text-[9px] text-slate-500 mb-3' }, 'Disable your store from search results'),
+          React.createElement('button', { onClick: function() { try { toast('Store visibility toggled', 'info'); } catch(e) { alert('Toggled'); } }, className: 'px-4 py-2 border border-red-300 text-red-600 rounded-xl text-[10px] font-semibold' }, 'Pause Storefront')
+        )
+      )
+    )
   );
 }
-
 
 // ===== ANALYTICS =====
 function VendorAnalyticsView({ products, stats, revenueHistory }: { products: any[]; stats: any; revenueHistory: any[] }) {
