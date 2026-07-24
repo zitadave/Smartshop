@@ -8,6 +8,7 @@ const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const ADMIN_BOT_TOKEN = process.env.TELEGRAM_ADMIN_BOT_TOKEN || '';
 var adminBotToken = process.env.TELEGRAM_ADMIN_BOT_TOKEN || '';
 var adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID || '336997351';
+var vendorApplications : any[] = [];
 const VENDOR_BOT_TOKEN = process.env.VENDOR_BOT_TOKEN || '7761374287:AAHreFF93x92F4tMqRoA1swcNiJoDv5M-Rk';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false } });
