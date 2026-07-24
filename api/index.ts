@@ -716,6 +716,35 @@ export default async function handler(req: any, res: any) {
       });
     }
 
+    // ===== VENDOR - Send Telegram Notification =====
+    if (path === '/api/vendor/notify' && method === 'POST') {
+      const { telegramId, type, message } = req.body || {};
+      if (!telegramId || !message) return res.status(400).json({ success: false, error: 'telegramId and message required' });
+      
+      const botToken = process.env.TELEGRAM_ADMIN_BOT_TOKEN || '8951025148:AAG456KIIBnyLBQqbkeDLajcT_TaPSYCIYc';
+      const emoji = type === 'payout' ? '💰' : type === 'order' ? '📦' : type === 'promo' ? '🎉' : type === 'test' ? '🔔' : '📢';
+      
+      try {
+        const tgRes = await fetch('https://api.telegram.org/bot' + botToken + '/sendMessage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: telegramId,
+            text: emoji + ' *Smart Shop Notification*\n\n' + message,
+            parse_mode: 'Markdown',
+          }),
+        });
+        const tgData = await tgRes.json();
+        if (tgData.ok) {
+          return res.json({ success: true });
+        } else {
+          return res.json({ success: false, error: tgData.description || 'Telegram error' });
+        }
+      } catch (e: any) {
+        return res.json({ success: false, error: e.message });
+      }
+    }
+
     // ===== FALLBACK =====
     return res.status(404).json({ error: 'Not found', path, method });
 

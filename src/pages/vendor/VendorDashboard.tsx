@@ -391,6 +391,24 @@ function VendorStorefrontView(_props) {
     }
   }
   setTimeout(setupFileUploads, 100);
+  function testTelegram() {
+    var tgId = document.getElementById('tg-id');
+    if (!tgId || !tgId.value.trim()) { alert('Please enter your Telegram ID first'); return; }
+    var btn = document.getElementById('tg-test-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Sending...'; }
+    fetch('/api/vendor/notify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegramId: tgId.value.trim(), type: 'test', message: 'Test notification from Smart Shop! Your Telegram ID is connected correctly.' })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      if (d.success) { alert('Test message sent! Check your Telegram.'); } else { alert('Failed: ' + (d.error || 'Unknown error')); }
+      if (btn) { btn.disabled = false; btn.textContent = 'Test'; }
+    }).catch(function(err) {
+      alert('Error: ' + err.message);
+      if (btn) { btn.disabled = false; btn.textContent = 'Test'; }
+    });
+  }
+
 try {
     var el = document.getElementById('ap-theme-style');
     if (el) el.remove();
@@ -447,7 +465,15 @@ try {
         React.createElement('h3', { className: 'text-sm font-bold mb-3 text-slate-900 dark:text-white' }, 'Profile & Notifications'),
         React.createElement('label', { className: 'flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 mb-2' }, React.createElement('input', { id: 'notif-email', type: 'checkbox', defaultChecked: settingsData.notifications !== false, className: 'rounded' }), ' Email for new orders'),
         React.createElement('label', { className: 'flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 mb-2' }, React.createElement('input', { id: 'notif-stock', type: 'checkbox', defaultChecked: true, className: 'rounded' }), ' Low stock alerts'),
-        React.createElement('button', { onClick: function() { var d = {name: document.getElementById('inp-name').value, email: document.getElementById('inp-email').value, phone: document.getElementById('inp-phone').value, bio: document.getElementById('inp-desc').value, notifications: document.getElementById('notif-email').checked, autoRestock: document.getElementById('notif-stock').checked}; localStorage.setItem('ss_vendor_settings', JSON.stringify(d)); try { toast('Settings saved!', 'success'); } catch(e) { alert('Saved!'); } }, className: 'mt-3 px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-[10px] font-bold' }, 'Save Settings')
+        React.createElement('div', { className: 'border-t border-slate-200 dark:border-slate-700 pt-3 mt-3' },
+          React.createElement('label', { className: 'text-[9px] font-semibold text-slate-400 uppercase tracking-wider' }, 'Telegram ID'),
+          React.createElement('div', { className: 'flex gap-2 mt-1' },
+            React.createElement('input', { id: 'tg-id', defaultValue: settingsData.telegramId || '', placeholder: 'e.g. 123456789', className: 'flex-1 p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] bg-transparent text-slate-800 dark:text-slate-200' }),
+            React.createElement('button', { id: 'tg-test-btn', onClick: function() { testTelegram(); }, className: 'px-3 py-2 bg-blue-500 text-white rounded-lg text-[9px] font-bold hover:bg-blue-600 transition-colors' }, 'Test')
+          ),
+          React.createElement('p', { className: 'text-[8px] text-slate-400 mt-1.5 leading-relaxed' }, 'Get your Telegram ID by messaging ', React.createElement('a', { href: 'https://t.me/userinfobot', target: '_blank', className: 'text-blue-500 underline' }, '@userinfobot'), ' on Telegram. Type /start and it will reply with your numeric ID. Save after entering your ID, then tap Test to verify.')
+        ),
+        React.createElement('button', { onClick: function() { var d = {name: document.getElementById('inp-name').value, email: document.getElementById('inp-email').value, phone: document.getElementById('inp-phone').value, bio: document.getElementById('inp-desc').value, notifications: document.getElementById('notif-email').checked, autoRestock: document.getElementById('notif-stock').checked}; d.telegramId = document.getElementById('tg-id') ? document.getElementById('tg-id').value : ''; localStorage.setItem('ss_vendor_settings', JSON.stringify(d)); try { toast('Settings saved!', 'success'); } catch(e) { alert('Saved!'); } }, className: 'mt-3 px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-[10px] font-bold' }, 'Save Settings')
       ),
       React.createElement('div', { className: 'space-y-4' },
         React.createElement('div', { className: 'bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4' },
