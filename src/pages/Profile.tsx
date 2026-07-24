@@ -37,6 +37,21 @@ export default function Profile() {
     { name: 'Bronze', icon: '🥉', next: { need: 200 - pts, label: 'Silver' }, color: 'from-amber-700 to-amber-800' };
   const tier = getTier(loyaltyPoints);
 
+  var vendorStatus = 'none';
+  try { vendorStatus = localStorage.getItem('ss_vendor_status') || 'none'; } catch(e) {}
+  
+  const applyAsVendor = function() {
+    if (vendorStatus === 'pending') { toast('Already applied! Admin will review.', 'info'); return; }
+    if (vendorStatus === 'approved') { toast('You are already a vendor!', 'info'); return; }
+    localStorage.setItem('ss_vendor_status', 'pending');
+    var apps = [];
+    try { apps = JSON.parse(localStorage.getItem('ss_vendor_applications') || '[]'); } catch(e) {}
+    apps.push({ id: Date.now(), name: (window as any).profileName || '', phone: (window as any).profilePhone || '', telegramId: '', appliedAt: new Date().toISOString(), status: 'pending' });
+    localStorage.setItem('ss_vendor_applications', JSON.stringify(apps));
+    toast('Application submitted! Admin will review.', 'success');
+    window.location.reload();
+  };
+  
   const saveProfile = () => {
     if (editName.trim()) store.updateProfileName(editName.trim());
     if (editPhone.trim()) store.updateProfilePhone(editPhone.trim());
@@ -66,7 +81,9 @@ export default function Profile() {
       title: 'Engagement',
       items: [
         { icon: '🏆', label: 'Loyalty & Rewards', onClick: () => navigate('/loyalty') },
-        ...(settings.marketplaceMode !== false ? [{ icon: '🏪', label: 'Vendor Dashboard', onClick: () => navigate('/vendor') }] : []),
+        ...(vendorStatus === 'approved' && settings.marketplaceMode !== false ? [{ icon: '🏪', label: 'Vendor Dashboard', onClick: () => navigate('/vendor') }] : []),
+        ...(vendorStatus === 'none' ? [{ icon: '📝', label: 'Become a Vendor', onClick: applyAsVendor }] : []),
+        ...(vendorStatus === 'pending' ? [{ icon: '⏳', label: 'Application Pending', onClick: function() { toast('Your application is being reviewed.', 'info'); } }] : []),
         { icon: '📉', label: 'Price Alerts', badge: store.priceAlerts.length, onClick: () => navigate('/price-alerts') },
         { icon: '🔔', label: 'Notifications', badge: notifications.length, onClick: () => navigate('/notifications') },
         { icon: '❓', label: 'Help & Support', onClick: () => navigate('/help') },

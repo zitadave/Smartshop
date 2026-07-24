@@ -41,8 +41,34 @@ import './index.css';
       link.rel = 'preconnect';
       link.href = window.location.origin;
       document.head.appendChild(link);
+      
+      // Request contact sharing for new users
+      if (tg.initDataUnsafe?.user?.id && !localStorage.getItem('ss_contact_shared')) {
+        tg.requestContact = true; // This enables the "Share Contact" button
+      }
     }
   } catch {}
+})();
+
+// Check if user just shared their contact - save it
+(function checkContact() {
+  try {
+    var tg = (window as any).Telegram?.WebApp;
+    if (tg && tg.initDataUnsafe?.user?.id) {
+      var userId = tg.initDataUnsafe.user.id;
+      var profile = localStorage.getItem('ss_profile');
+      if (profile) {
+        var p = JSON.parse(profile);
+        if (!p.telegramId) {
+          p.telegramId = userId;
+          p.registered = true;
+          p.joinedAt = new Date().toISOString();
+          localStorage.setItem('ss_profile', JSON.stringify(p));
+          localStorage.setItem('ss_contact_shared', 'true');
+        }
+      }
+    }
+  } catch(e) {}
 })();
 
 // Register Service Worker for PWA

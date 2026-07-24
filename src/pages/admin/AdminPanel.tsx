@@ -635,6 +635,35 @@ function AdminOrders() {
 // 4. VENDORS
 // =============================================
 function AdminVendors() {
+  // Vendor applications from profile page
+  var apps = [];
+  try { apps = JSON.parse(localStorage.getItem('ss_vendor_applications') || '[]'); } catch(e) {}
+  var pendingApps = apps.filter(function(a) { return a.status === 'pending'; });
+  const approveVendorApp = function(id) {
+    var updated = apps.map(function(a) {
+      if (a.id === id) a.status = 'approved';
+      return a;
+    });
+    localStorage.setItem('ss_vendor_applications', JSON.stringify(updated));
+    // Also create a vendor record
+    var app = apps.find(function(a) { return a.id === id; });
+    if (app) {
+      vendorsApi.create({ name: app.name, phone: app.phone, telegramId: app.telegramId, approved: true, commission: 10 }).then(function() {
+        toast('Vendor approved! They can now access their dashboard.', 'success');
+      }).catch(function() { toast('Vendor approved!', 'success'); });
+    }
+    window.location.reload();
+  };
+  const rejectVendorApp = function(id) {
+    var updated = apps.map(function(a) {
+      if (a.id === id) a.status = 'rejected';
+      return a;
+    });
+    localStorage.setItem('ss_vendor_applications', JSON.stringify(updated));
+    toast('Application rejected.', 'info');
+    window.location.reload();
+  };
+
   const [vendors, setVendors] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [selectedVendor, setSelectedVendor] = useState<any>(null);
@@ -673,6 +702,32 @@ function AdminVendors() {
       {vendorView === 'payouts' ? <PayoutSystem /> : (
         <>
           {/* Stats */}
+{pendingApps.length > 0 && (
+        <div className="bg-amber-50 dark:bg-amber-950/20 rounded-2xl border border-amber-200 dark:border-amber-800/30 p-4 mb-4">
+          <h3 className="text-sm font-bold text-amber-800 dark:text-amber-400 flex items-center gap-2 mb-3">
+            <AlertTriangle size={15} /> Pending Vendor Applications ({pendingApps.length})
+          </h3>
+          {pendingApps.map(function(a) {
+            return (
+              <div key={a.id} className="flex items-center justify-between bg-white/50 dark:bg-slate-900/50 rounded-xl p-3 mb-2">
+                <div>
+                  <div className="text-xs font-semibold text-amber-800 dark:text-amber-300">{a.name || 'Unknown'}</div>
+                  <div className="text-[9px] text-amber-600">Phone: {a.phone || 'N/A'} · Telegram: {a.telegramId || 'N/A'}</div>
+                  <div className="text-[8px] text-amber-500">Applied: {new Date(a.appliedAt).toLocaleDateString()}</div>
+                </div>
+                <div className="flex gap-2 flex-shrink-0">
+                  <button className="px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-[9px] font-bold hover:shadow-md transition-all" onClick={function() { approveVendorApp(a.id); }}>
+                    <CheckCircle size={12} className="inline mr-1" /> Approve
+                  </button>
+                  <button className="px-3 py-1.5 bg-red-500 text-white rounded-lg text-[9px] font-bold hover:shadow-md transition-all" onClick={function() { rejectVendorApp(a.id); }}>
+                    <XCircle size={12} className="inline mr-1" /> Reject
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 text-center"><div className="text-lg font-bold text-indigo-600">{vendors.length}</div><div className="text-[9px] text-slate-500">Total Vendors</div></div>
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 text-center"><div className="text-lg font-bold text-green-600">{vendors.filter(v => v.approved !== false).length}</div><div className="text-[9px] text-slate-500">Approved</div></div>
