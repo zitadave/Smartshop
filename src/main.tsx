@@ -1,7 +1,6 @@
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
-import { registerSW } from '@/lib/sw';
 
 // ===== TELEGRAM INIT — Must run before React renders =====
 // This ensures Telegram knows we're ready immediately
@@ -33,6 +32,7 @@ import { registerSW } from '@/lib/sw';
 })();
 
 // Register Service Worker for PWA
-registerSW();
+// SERVICE WORKER REMOVED — Vercel handles caching natively
+// No stale cache issues, instant updates on every deploy
 
 createRoot(document.getElementById('root')!).render(<App />);

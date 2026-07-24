@@ -4,7 +4,6 @@ import { useStore } from '@/stores/AppStore';
 import { productsApi, settingsApi } from '@/lib/api';
 import { initSentry } from '@/lib/sentry';
 import { initAnalytics, trackEvent } from '@/lib/analytics';
-import { registerSW } from '@/lib/sw';
 import { getSampleBroadcasts, getSampleFlashDeals } from '@/lib/seed';
 import { isRunningInTelegram } from '@/lib/telegram';
 import Layout from '@/components/Layout';
@@ -104,7 +103,7 @@ function applySavedTheme() {
 export default function App() {
   const { darkMode, setProducts, setSettings, settings, products } = useStore();
 
-  useEffect(() => { initSentry(); initAnalytics(); registerSW(); }, []);
+  useEffect(() => { initSentry(); initAnalytics(); }, []);
   useEffect(() => { applySavedTheme(); }, []);
   useEffect(() => {
     if (darkMode) document.documentElement.classList.add('dark');
