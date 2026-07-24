@@ -927,13 +927,14 @@ function VendorPromotionsView() {
   );
 }
 function VendorSettingsView({ vendorName }: { vendorName: string }) {
-  const saved = (function() { try { return JSON.parse(localStorage.getItem('ss_vendor_settings') || '{}'); } catch { return {}; } })();
-  const [name, setName] = useState(saved.name || vendorName);
-  const [email, setEmail] = useState(saved.email || 'vendor@mystore.com');
-  const [phone, setPhone] = useState(saved.phone || '+251-911-XXXXXX');
-  const [bio, setBio] = useState(saved.bio || '');
-  const [notifications, setNotifications] = useState(saved.notifications !== undefined ? saved.notifications : true);
-  const [autoRestock, setAutoRestock] = useState(saved.autoRestock || false);
+  var savedData = {};
+  try { savedData = JSON.parse(localStorage.getItem('ss_vendor_settings') || '{}'); } catch (e) {}
+  const [name, setName] = useState(savedData.name || vendorName);
+  const [email, setEmail] = useState(savedData.email || 'vendor@mystore.com');
+  const [phone, setPhone] = useState(savedData.phone || '+251-911-XXXXXX');
+  const [bio, setBio] = useState(savedData.bio || '');
+  const [notifications, setNotifications] = useState(savedData.notifications !== undefined ? savedData.notifications : true);
+  const [autoRestock, setAutoRestock] = useState(savedData.autoRestock || false);
 
   return (
     <div className="animate-fadeUp space-y-4">
