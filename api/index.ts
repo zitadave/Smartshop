@@ -245,16 +245,35 @@ export default async function handler(req: any, res: any) {
         });
       };
       if (!sc) return res.json({ ok: true });
-      if (st === '/start') {
-        await sSend('Welcome to Smart Shop! 🎉\n\nPlease share your contact to get started.', {
+      var userContact = sb.message?.contact;
+      // Check if user already shared contact (stored in our system)
+      var hasPhone = userContact || (st !== '/start' && st !== '/menu');
+      
+      if (st === '/start' || !hasPhone) {
+        await sSend('⚠️ *Contact Required*\n\nYou must share your phone number to use Smart Shop.\n\nTap the button below to continue:', {
           keyboard: [[{ text: '📱 Share Contact', request_contact: true }]],
           resize_keyboard: true,
           one_time_keyboard: true
         });
-      } else if (sb.message?.contact) {
+        if (st === '/start' && !userContact) return res.json({ ok: true });
+      }
+      
+      if (userContact) {
         var contact = sb.message.contact;
-        await sSend('✅ Thank you! Now open the app:', {
-          inline_keyboard: [[{ text: '🚀 Open Smart Shop', url: 'https://smartshop-steel.vercel.app' }]]
+        var phoneNum = contact.phone_number || '';
+        var firstName = contact.first_name || '';
+        // Save contact info so Mini App can fetch it
+        try {
+          await supabase.from('users').upsert({ 
+            telegram_id: contact.user_id || sc, 
+            phone: phoneNum,
+            name: firstName,
+            joined_at: new Date().toISOString(),
+            contact_shared: true
+          }, { onConflict: 'telegram_id' });
+        } catch(se) { console.log('Save contact error:', se.message); }
+        await sSend('✅ Phone number saved! You can now use the app.', {
+          inline_keyboard: [[{ text: '🚀 Open Smart Shop', web_app: { url: 'https://smartshop-steel.vercel.app' } }]]
         });
       }
       return res.json({ ok: true });
@@ -851,6 +870,18 @@ export default async function handler(req: any, res: any) {
         botToken: process.env.TELEGRAM_ADMIN_BOT_TOKEN || '8951025148:AAG456KIIBnyLBQqbkeDLajcT_TaPSYCIYc', 
         chatId: process.env.ADMIN_CHAT_ID || '' 
       });
+    }
+
+    // ===== SHOP - Get User Contact by Telegram ID =====
+    if (path === '/api/user/contact' && method === 'GET') {
+      var qs = req.url?.split('?')[1] || '';
+      var tid = new URLSearchParams(qs).get('telegram_id') || '';
+      if (!tid) return res.json({ phone: '' });
+      try {
+        var { data } = await supabase.from('users').select('phone,contact_shared').eq('telegram_id', parseInt(tid)).single();
+        if (data && data.contact_shared) return res.json({ phone: data.phone || '' });
+      } catch(e) {}
+      return res.json({ phone: '' });
     }
 
     // ===== ADMIN BOT - Save Config (in-memory, persists per instance) =====
