@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/stores/AppStore';
 import { t } from '@/i18n/translations';
@@ -14,13 +14,13 @@ import { toast } from '@/components/Toast';
 export default function Profile() {
   var navigate = useNavigate();
   var store = useStore();
-  var { profile, language, setLanguage, darkMode, setDarkMode, orders, wishlist, cart, savedPayments, preOrders, notifications, savedAddresses, walletBalance, settings } = store;
+  var { profile, language, setLanguage, darkMode, setDarkMode, orders, wishlist, cart, savedPayments, preOrders, notifications, savedAddresses, walletBalance, settings, addNotification } = store;
   
   var [showEdit, setShowEdit] = useState(false);
   var [showWallet, setShowWallet] = useState(false);
   var [showLogout, setShowLogout] = useState(false);
 
-  // Read from localStorage (set by index.html script from URL params or Telegram.WebApp)
+  // Read from localStorage
   var ls = {};
   try { ls = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
   var lsPhone = localStorage.getItem('ss_user_phone') || '';
@@ -34,6 +34,92 @@ export default function Profile() {
   var initials = displayName.substring(0, 2).toUpperCase() || '?';
   var ordCount = orders.length + preOrders.length;
   var cartCount = cart.reduce(function(s, i) { return s + i.qty; }, 0);
+
+  // ===== VENDOR STATUS =====
+  var initVS = 'none';
+  try { initVS = localStorage.getItem('ss_vendor_status') || 'none'; } catch(e) {}
+  var [vendorStatus, setVendorStatus] = useState(initVS);
+
+  // Poll API for vendor status
+  useEffect(function() {
+    function checkStatus() {
+      var tid = tgId || '';
+      var phone = displayPhone || '';
+      var payload = {};
+      if (tid) payload.telegram_id = tid;
+      if (phone) payload.phone = phone;
+      
+      if (tid || phone) {
+        fetch('/api/user/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }).then(function(r) { return r.json(); }).then(function(d) {
+          if (d && d.vendor_status) {
+            if (d.vendor_status === 'approved' && localStorage.getItem('ss_vendor_status') !== 'approved') {
+              localStorage.setItem('ss_vendor_status', 'approved');
+              addNotification('✅', 'Your vendor application was approved! You can now access your Vendor Dashboard.');
+              toast('✅ Vendor approved! Dashboard is now available.', 'success');
+              setVendorStatus('approved');
+              return;
+            }
+            localStorage.setItem('ss_vendor_status', d.vendor_status);
+            setVendorStatus(d.vendor_status);
+            if (d.vendor_id) localStorage.setItem('ss_vendor_app_id', String(d.vendor_id));
+          }
+        }).catch(function() {});
+      }
+
+      // Also check applications endpoint
+      var appId = localStorage.getItem('ss_vendor_app_id') || '';
+      if (appId && appId !== 'undefined' && appId !== 'null') {
+        fetch('/api/vendors/applications').then(function(r) { return r.json(); }).then(function(d) {
+          if (d && d.applications) {
+            for (var i = 0; i < d.applications.length; i++) {
+              if (String(d.applications[i].id) === appId) {
+                var status = d.applications[i].status;
+                if (status === 'approved' && localStorage.getItem('ss_vendor_status') !== 'approved') {
+                  localStorage.setItem('ss_vendor_status', 'approved');
+                  addNotification('✅', 'Your vendor application was approved!');
+                  toast('✅ Vendor approved!', 'success');
+                  setVendorStatus('approved');
+                  return;
+                }
+                localStorage.setItem('ss_vendor_status', status);
+                setVendorStatus(status);
+              }
+            }
+          }
+        }).catch(function() {});
+      }
+    }
+
+    checkStatus();
+    // Re-check every 15 seconds
+    var interval = setInterval(checkStatus, 15000);
+    return function() { clearInterval(interval); };
+  }, [tgId, displayPhone]);
+
+  // ===== MENU SECTIONS =====
+  var engagementItems = [
+    { icon: '🏆', label: 'Loyalty & Rewards', onClick: function() { navigate('/loyalty'); } },
+  ];
+
+  // Vendor item based on status
+  if (vendorStatus === 'approved') {
+    engagementItems.push({ icon: '🏪', label: 'Vendor Dashboard', onClick: function() { navigate('/vendor'); } });
+  } else if (vendorStatus === 'pending') {
+    engagementItems.push({ icon: '⏳', label: 'Application Pending', onClick: function() { toast('Your application is being reviewed. We will notify you once approved.', 'info'); } });
+  } else {
+    // 'none' - show become a vendor
+    engagementItems.push({ icon: '📝', label: 'Become a Vendor', onClick: function() { navigate('/vendor-register'); } });
+  }
+
+  engagementItems.push(
+    { icon: '📉', label: 'Price Alerts', badge: store.priceAlerts.length, onClick: function() { navigate('/price-alerts'); } },
+    { icon: '🔔', label: 'Notifications', badge: notifications.length, onClick: function() { navigate('/notifications'); } },
+    { icon: '❓', label: 'Help & Support', onClick: function() { navigate('/help'); } },
+  );
 
   var sections = [
     {
@@ -55,13 +141,7 @@ export default function Profile() {
     },
     {
       title: 'Engagement',
-      items: [
-        { icon: '🏆', label: 'Loyalty & Rewards', onClick: function() { navigate('/loyalty'); } },
-        { icon: '📝', label: 'Become a Vendor', onClick: function() { navigate('/vendor-register'); } },
-        { icon: '📉', label: 'Price Alerts', badge: store.priceAlerts.length, onClick: function() { navigate('/price-alerts'); } },
-        { icon: '🔔', label: 'Notifications', badge: notifications.length, onClick: function() { navigate('/notifications'); } },
-        { icon: '❓', label: 'Help & Support', onClick: function() { navigate('/help'); } },
-      ]
+      items: engagementItems,
     },
   ];
 
@@ -77,6 +157,7 @@ export default function Profile() {
           {displayPhone && <p className="text-[10px] text-muted-foreground">📞 {displayPhone}</p>}
           {tgUser && <p className="text-[10px] text-muted-foreground">@ {tgUser}</p>}
           {tgId && <p className="text-[8px] text-muted-foreground/50 font-mono">ID: {tgId}</p>}
+          {vendorStatus === 'approved' && <span className="mt-1 px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-full text-[8px] font-semibold">🏪 Vendor</span>}
         </div>
         <p className="text-[10px] text-muted-foreground mt-1">📅 Joined {displayJoined ? new Date(displayJoined).toLocaleDateString() : 'Today'}</p>
       </div>
@@ -118,7 +199,8 @@ export default function Profile() {
             <div className="space-y-1">
               {section.items.map(function(item, i) {
                 return (
-                  <div key={i} className="flex items-center gap-3 px-3 py-2.5 bg-card rounded-lg border border-border cursor-pointer hover:border-primary hover:shadow-sm transition-all" onClick={item.onClick}>
+                  <div key={i} className={cn('flex items-center gap-3 px-3 py-2.5 bg-card rounded-lg border border-border cursor-pointer hover:border-primary hover:shadow-sm transition-all',
+                    item.label === 'Application Pending' && 'opacity-70')} onClick={item.onClick}>
                     <span className="text-base w-6 text-center">{item.icon}</span>
                     <span className="text-xs font-medium flex-1">{item.label}</span>
                     {item.badge !== undefined && item.badge > 0 && (
@@ -162,7 +244,7 @@ export default function Profile() {
         </div>
       </div>
 
-      <p className="text-center text-[9px] text-muted-foreground pb-4">🏪 Smart Shop</p>
+      <p className="text-center text-[9px] text-muted-foreground pb-4">🏪 Smart Shop v28</p>
 
       {/* Modals */}
       {showWallet && (
@@ -186,7 +268,7 @@ export default function Profile() {
               <h3 className="text-sm font-bold">Logout</h3>
             </div>
             <div className="flex gap-2">
-              <button className="flex-1 py-3 bg-destructive text-white rounded-xl text-xs font-bold" onClick={function() { store.setProfile({ name: '', phone: '', email: '', registered: false, joinedAt: '' }); localStorage.clear(); setShowLogout(false); }}>Yes</button>
+              <button className="flex-1 py-3 bg-destructive text-white rounded-xl text-xs font-bold" onClick={function() { store.setProfile({ name: '', phone: '', email: '', registered: false, joinedAt: '' }); setShowLogout(false); }}>Yes</button>
               <button className="flex-1 py-3 border border-border rounded-xl text-xs" onClick={function() { setShowLogout(false); }}>Cancel</button>
             </div>
           </div>

@@ -659,6 +659,34 @@ export default async function handler(req, res) {
             });
           } catch(e) {}
 
+          // Notify the VENDOR via shop bot
+          try {
+            var approvedVendor = null;
+            var updatedVendors = await getVendors();
+            for (var vi = 0; vi < updatedVendors.length; vi++) {
+              if (updatedVendors[vi].id == appId || updatedVendors[vi].id === String(appId)) {
+                approvedVendor = updatedVendors[vi];
+                break;
+              }
+            }
+            if (approvedVendor && approvedVendor.telegram_id) {
+              var vendorNotifyMsg = '✅ *Congratulations!* 🎉\n\nYour vendor application has been approved! You can now access your Vendor Dashboard and start selling products.\n\nTap the button below to open the shop:';
+              var vendorUrl = 'https://smartshop-steel.vercel.app';
+              await fetch('https://api.telegram.org/bot' + VENDOR_BOT_TOKEN + '/sendMessage', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  chat_id: approvedVendor.telegram_id,
+                  text: vendorNotifyMsg,
+                  parse_mode: 'Markdown',
+                  reply_markup: JSON.stringify({
+                    inline_keyboard: [[{ text: '🚀 Open Smart Shop', web_app: { url: vendorUrl } }]]
+                  })
+                })
+              });
+            }
+          } catch(e) { console.log('Vendor notify error:', e.message); }
+
           return res.json({ success: true, status: 'approved' });
         } catch(e) { return res.status(500).json({ error: e.message }); }
       }
