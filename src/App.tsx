@@ -126,6 +126,43 @@ export default function App() {
     } catch(e) {}
   }, []);
 
+  // Fetch phone from API and update store (main.tsx can't update the zustand store)
+  useEffect(function() {
+    // Wait a tick for the IIFE to save telegramId
+    var timeoutId = setTimeout(function() {
+      try {
+        var stored = localStorage.getItem('ss_profile');
+        if (!stored) return;
+        var parsed = JSON.parse(stored);
+        var tgId = parsed.telegramId || '';
+        var existingPhone = parsed.phone || localStorage.getItem('ss_user_phone') || '';
+        
+        if (tgId && !existingPhone) {
+          // Fetch phone from API
+          fetch('/api/user/contact?telegram_id=' + tgId)
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+              if (d && d.phone) {
+                // Update localStorage
+                parsed.phone = d.phone;
+                localStorage.setItem('ss_profile', JSON.stringify(parsed));
+                localStorage.setItem('ss_user_phone', d.phone);
+                // Update zustand store - this triggers re-render!
+                setProfile(parsed);
+              }
+            })
+            .catch(function() {});
+        } else if (existingPhone && !parsed.phone) {
+          // Phone exists in ss_user_phone but not in profile
+          parsed.phone = existingPhone;
+          localStorage.setItem('ss_profile', JSON.stringify(parsed));
+          setProfile(parsed);
+        }
+      } catch(e) {}
+    }, 100);
+    return function() { clearTimeout(timeoutId); };
+  }, []);
+
   useEffect(() => {
     productsApi.list().then(d => {
       if (d?.products) { setProducts(d.products); trackEvent('page_view', { page: 'home', products: d.products.length }); }

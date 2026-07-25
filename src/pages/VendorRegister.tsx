@@ -8,16 +8,22 @@ export default function VendorRegister() {
   const [storeName, setStoreName] = useState('');
   const [storePhone, setStorePhone] = useState('');
 
-  // Auto-fill phone on mount
+  // Auto-fill phone on mount - retry up to 5 times (handles async phone fetch)
   useEffect(function() {
-    try {
-      var p = JSON.parse(localStorage.getItem('ss_profile') || '{}');
-      var phone = p.phone || localStorage.getItem('ss_user_phone') || '';
-      if (phone) {
-        setStorePhone(phone);
-        return;
-      }
-    } catch(e) {}
+    var attempts = 0;
+    function tryFill() {
+      try {
+        var p = JSON.parse(localStorage.getItem('ss_profile') || '{}');
+        var phone = p.phone || localStorage.getItem('ss_user_phone') || '';
+        if (phone) {
+          setStorePhone(phone);
+          return;
+        }
+        attempts++;
+        if (attempts < 5) setTimeout(tryFill, 1000);
+      } catch(e) {}
+    }
+    tryFill();
   }, []);
   const [storeEmail, setStoreEmail] = useState('');
   const [storeDesc, setStoreDesc] = useState('');
