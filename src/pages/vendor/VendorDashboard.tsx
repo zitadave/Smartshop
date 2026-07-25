@@ -65,7 +65,6 @@ export default function VendorDashboard() {
   }, []);
 
   // Use global shop theme
-  var vendorDark = store.darkMode;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
@@ -423,7 +422,7 @@ try {
     if (el) el.remove();
     el = document.getElementById('admin-theme-styles');
     if (el) el.remove();
-    document.documentElement.classList.remove('dark');
+    
   } catch(e) {}
   var sd = {};
   try { sd = JSON.parse(localStorage.getItem('ss_vendor_store') || '{}'); } catch(e) {}

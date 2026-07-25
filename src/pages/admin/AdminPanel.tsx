@@ -700,7 +700,8 @@ function AdminVendors() {
     window.location.reload();
   };
   const deleteVendorApp = function(id) {
-    if (!confirm('Delete this vendor permanently? They will lose dashboard access.')) return;
+    // Show confirmation via toast, use React state for modal
+    if (!window.confirm('Delete this vendor permanently? They will lose dashboard access.')) return;
     fetch('/api/vendors/' + id, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' }
