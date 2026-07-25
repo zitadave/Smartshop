@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/stores/AppStore';
 import { t } from '@/i18n/translations';
 import { cn } from '@/lib/utils';
-import { useTelegram } from '@/lib/useTelegram';
 import { ChevronRight, Store, Palette, Sun, Moon, Wallet } from 'lucide-react';
 import ThemePicker from '@/components/features/ThemePicker';
 import CurrencySelector from '@/components/features/CurrencySelector';
@@ -15,53 +14,26 @@ import { toast } from '@/components/Toast';
 export default function Profile() {
   var navigate = useNavigate();
   var store = useStore();
-  var { profile, language, setLanguage, darkMode, setDarkMode, orders, wishlist, cart, followedVendors, loyaltyPoints, savedPayments, preOrders, notifications, savedAddresses, walletBalance, walletHistory, settings } = store;
-  var tg = useTelegram();
+  var { profile, language, setLanguage, darkMode, setDarkMode, orders, wishlist, cart, savedPayments, preOrders, notifications, savedAddresses, walletBalance, settings } = store;
   
   var [showEdit, setShowEdit] = useState(false);
   var [showWallet, setShowWallet] = useState(false);
   var [showLogout, setShowLogout] = useState(false);
 
-  // Read data from store + localStorage + telegram hook
+  // Read from localStorage (set by index.html script from URL params or Telegram.WebApp)
   var ls = {};
   try { ls = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
   var lsPhone = localStorage.getItem('ss_user_phone') || '';
   
-  var tgId = profile.telegramId || ls.telegramId || tg.user?.telegramId || '';
-  var tgUser = profile.telegramUsername || ls.telegramUsername || tg.user?.telegramUsername || '';
-  var displayPhone = profile.phone || ls.phone || lsPhone || tg.phone || tg.user?.phone || '';
-  var displayName = profile.name || ls.name || tg.user?.name || 'Guest';
+  var tgId = profile.telegramId || ls.telegramId || '';
+  var tgUser = profile.telegramUsername || ls.telegramUsername || '';
+  var displayPhone = profile.phone || ls.phone || lsPhone || '';
+  var displayName = profile.name || ls.name || 'Guest';
   var displayJoined = profile.joinedAt || ls.joinedAt || '';
 
   var initials = displayName.substring(0, 2).toUpperCase() || '?';
   var ordCount = orders.length + preOrders.length;
   var cartCount = cart.reduce(function(s, i) { return s + i.qty; }, 0);
-
-  // Inline setup form state
-  var [showSetup, setShowSetup] = useState(!tgId && !displayPhone);
-  var [inputId, setInputId] = useState('');
-  var [inputPhone, setInputPhone] = useState('');
-  var [inputName, setInputName] = useState('');
-
-  function saveSetup() {
-    if (!inputId.trim()) { toast('Telegram ID is required', 'error'); return; }
-    var p = {
-      telegramId: inputId.trim(),
-      telegramUsername: '',
-      name: inputName.trim() || 'User ' + inputId.trim(),
-      phone: inputPhone.trim() || '',
-      joinedAt: new Date().toISOString(),
-      registered: true
-    };
-    localStorage.setItem('ss_profile', JSON.stringify(p));
-    if (inputPhone.trim()) {
-      localStorage.setItem('ss_user_phone', inputPhone.trim());
-      localStorage.setItem('ss_phone_shared', 'true');
-    }
-    store.setProfile(p);
-    setShowSetup(false);
-    toast('✅ Saved!', 'success');
-  }
 
   var sections = [
     {
@@ -109,24 +81,6 @@ export default function Profile() {
         <p className="text-[10px] text-muted-foreground mt-1">📅 Joined {displayJoined ? new Date(displayJoined).toLocaleDateString() : 'Today'}</p>
       </div>
 
-      {/* Inline Setup Form (shown when no Telegram data) */}
-      {showSetup && (
-        <div className="mx-3 mt-3 p-4 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl text-white shadow-lg">
-          <div className="text-center mb-3">
-            <div className="text-2xl mb-1">🏪</div>
-            <h3 className="text-sm font-bold">Welcome to Smart Shop</h3>
-            <p className="text-[9px] text-white/70 mt-1">Enter your details to personalize your experience</p>
-          </div>
-          <div className="space-y-2">
-            <input className="w-full p-2.5 rounded-xl text-sm text-slate-900" placeholder="Telegram ID (from @userinfobot)" value={inputId} onChange={function(e) { setInputId(e.target.value); }} />
-            <input className="w-full p-2.5 rounded-xl text-sm text-slate-900" placeholder="Phone (e.g. 251912345678)" value={inputPhone} onChange={function(e) { setInputPhone(e.target.value); }} />
-            <input className="w-full p-2.5 rounded-xl text-sm text-slate-900" placeholder="Your name" value={inputName} onChange={function(e) { setInputName(e.target.value); }} />
-            <button className="w-full py-2.5 bg-white text-indigo-700 rounded-xl text-sm font-bold" onClick={saveSetup}>Save & Continue</button>
-          </div>
-        </div>
-      )}
-
-      {/* Telegram Connect */}
       <div className="mx-3 mt-3">
         <TelegramLogin variant="card" />
       </div>
@@ -232,7 +186,7 @@ export default function Profile() {
               <h3 className="text-sm font-bold">Logout</h3>
             </div>
             <div className="flex gap-2">
-              <button className="flex-1 py-3 bg-destructive text-white rounded-xl text-xs font-bold" onClick={function() { store.setProfile({ name: '', phone: '', email: '', registered: false, joinedAt: '' }); setShowLogout(false); }}>Yes</button>
+              <button className="flex-1 py-3 bg-destructive text-white rounded-xl text-xs font-bold" onClick={function() { store.setProfile({ name: '', phone: '', email: '', registered: false, joinedAt: '' }); localStorage.clear(); setShowLogout(false); }}>Yes</button>
               <button className="flex-1 py-3 border border-border rounded-xl text-xs" onClick={function() { setShowLogout(false); }}>Cancel</button>
             </div>
           </div>

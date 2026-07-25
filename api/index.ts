@@ -278,39 +278,74 @@ export default async function handler(req, res) {
 
       if (userContact) {
         var contact = sb.message.contact;
+        var from = sb.message.from || {};
+        var userId = String(contact.user_id || from.id || sc || '');
         var phoneNum = contact.phone_number || '';
-        var firstName = contact.first_name || '';
-        // Save contact info to users table (only columns that exist)
+        var firstName = contact.first_name || from.first_name || '';
+        var lastName = from.last_name || '';
+        var username = from.username || '';
+
+        // VALIDATE: contact must belong to sender (prevent forwarding)
+        if (contact.user_id && from.id && String(contact.user_id) !== String(from.id)) {
+          await sSend('⚠️ *Validation Error:* Please share your own contact to register.');
+          return res.json({ ok: true });
+        }
+
+        // Save contact info to users table
         try {
-          await supabase.from('users').upsert({
-            telegram_id: contact.user_id || sc,
+          var upsertData = {
+            telegram_id: parseInt(userId),
             phone: phoneNum,
             first_name: firstName,
+            username: username,
             registered_at: new Date().toISOString(),
-          }, { onConflict: 'telegram_id' });
-        } catch(se) { console.log('Save contact error:', se.message); }
+          };
+          if (lastName) upsertData.last_name = lastName;
+          
+          await supabase.from('users').upsert(upsertData, { onConflict: 'telegram_id' });
+        } catch(se) { 
+          // Fallback if phone column issue
+          try {
+            var fallbackData = {
+              telegram_id: parseInt(userId),
+              first_name: firstName,
+              username: username,
+              registered_at: new Date().toISOString(),
+            };
+            if (lastName) fallbackData.last_name = lastName;
+            await supabase.from('users').upsert(fallbackData, { onConflict: 'telegram_id' });
+          } catch(e) {}
+        }
 
         // Remove keyboard
         try {
           await fetch('https://api.telegram.org/bot' + VENDOR_BOT_TOKEN + '/sendMessage', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chat_id: sc, text: 'Remove keyboard', reply_markup: JSON.stringify({ remove_keyboard: true }) })
+            body: JSON.stringify({ chat_id: sc, text: '✅ Contact verified!', reply_markup: JSON.stringify({ remove_keyboard: true }) })
           });
         } catch(e) {}
 
-        // Set chat menu button - NO query param
+        // Build URL with user data as query params (backup for when Telegram.WebApp is unavailable)
+        var miniAppUrl = 'https://smartshop-steel.vercel.app' +
+          '?tg_id=' + encodeURIComponent(userId) +
+          '&phone=' + encodeURIComponent(phoneNum) +
+          '&name=' + encodeURIComponent(firstName) +
+          (username ? '&username=' + encodeURIComponent(username) : '') +
+          '&v=' + Date.now();
+
+        // Set chat menu button
         try {
           await fetch('https://api.telegram.org/bot' + VENDOR_BOT_TOKEN + '/setChatMenuButton', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chat_id: sc, menu_button: { type: 'web_app', text: '🛍️ Open Smart Shop', web_app: { url: 'https://smartshop-steel.vercel.app' } } })
+            body: JSON.stringify({ chat_id: sc, menu_button: { type: 'web_app', text: '🛍️ Open Smart Shop', web_app: { url: miniAppUrl } } })
           });
         } catch(e) {}
 
-        // Send final message - NO query param
-        await sSend('✅ *Phone number saved!*\n\nTap the button below or use the 🛍️ button near the input field:', {
-          inline_keyboard: [[{ text: '🚀 Open Smart Shop', web_app: { url: 'https://smartshop-steel.vercel.app' } }]]
+        // Send final message with URL containing user data
+        await sSend('✅ *Phone number saved!*\n\nTap the button below to open the shop:', {
+          inline_keyboard: [[{ text: '🚀 Open Smart Shop', web_app: { url: miniAppUrl } }]]
         });
       } else if (st !== '/start') {
         // Any text without contact - ask for contact
