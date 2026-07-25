@@ -321,7 +321,7 @@ export default function Profile() {
         </div>
       </div>
 
-      <p className="text-center text-[9px] text-muted-foreground pb-4">🏪 Smart Shop v3.0</p>
+      <p className="text-center text-[9px] text-muted-foreground pb-4">🏪 Smart Shop v3.1</p>
 
       {/* Edit Profile Modal */}
       {showEditProfile && (
