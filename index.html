@@ -23,20 +23,71 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/icons/icon-192x192.svg" />
 
-    <!-- Preconnect to API (relative — same domain) -->
-
-    <!-- Vite injects CSS/JS automatically -->
-
-    <!-- CLEAR ALL DATA + BUMP VERSION -->
+    <!-- CLEAR ALL DATA + BUMP VERSION - RUNS FIRST -->
     <script>
-      try {
-        var v = 'v20';
-        var cur = localStorage.getItem('ss_app_version');
-        if (cur !== v) {
-          localStorage.clear();
-          localStorage.setItem('ss_app_version', v);
+      (function() {
+        try {
+          var v = 'v21';
+          var cur = localStorage.getItem('ss_app_version');
+          if (cur !== v) {
+            localStorage.clear();
+            localStorage.setItem('ss_app_version', v);
+          }
+        } catch(e) {}
+
+        // ===== TELEGRAM DETECTION - RUNS IMMEDIATELY =====
+        try {
+          var tg = window.Telegram;
+          var webapp = tg && tg.WebApp;
+          if (webapp) {
+            webapp.ready();
+            webapp.expand();
+            
+            var user = webapp.initDataUnsafe && webapp.initDataUnsafe.user;
+            if (user) {
+              var profile = {};
+              try { profile = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
+              
+              profile.telegramId = String(user.id || '');
+              if (user.username) profile.telegramUsername = user.username;
+              if (user.first_name) profile.name = profile.name || user.first_name;
+              if (user.last_name && profile.name === user.first_name) profile.name = user.first_name + ' ' + user.last_name;
+              if (!profile.joinedAt) profile.joinedAt = new Date().toISOString();
+              profile.registered = true;
+              
+              localStorage.setItem('ss_profile', JSON.stringify(profile));
+              
+              // Mark that Telegram was detected
+              localStorage.setItem('ss_tg_detected', 'true');
+              
+              // Fetch phone async
+              var xhr = new XMLHttpRequest();
+              xhr.open('GET', '/api/user/contact?telegram_id=' + profile.telegramId, true);
+              xhr.onload = function() {
+                try {
+                  var d = JSON.parse(xhr.responseText);
+                  if (d && d.phone) {
+                    var p = JSON.parse(localStorage.getItem('ss_profile') || '{}');
+                    p.phone = d.phone;
+                    localStorage.setItem('ss_profile', JSON.stringify(p));
+                    localStorage.setItem('ss_user_phone', d.phone);
+                    localStorage.setItem('ss_phone_shared', 'true');
+                  }
+                } catch(e) {}
+              };
+              xhr.send();
+              
+              // Also sync
+              var xhr2 = new XMLHttpRequest();
+              xhr2.open('POST', '/api/user/sync', true);
+              xhr2.setRequestHeader('Content-Type', 'application/json');
+              xhr2.send(JSON.stringify({ telegram_id: profile.telegramId, username: user.username || '', first_name: user.first_name || '' }));
+            }
+          }
+        } catch(e) {
+          console.error('Telegram init error:', e);
         }
-      } catch(e) {}
+      })();
     </script>
   </head>
   <body>

@@ -8,7 +8,6 @@ import { getSampleBroadcasts, getSampleFlashDeals } from '@/lib/seed';
 import { isRunningInTelegram } from '@/lib/telegram';
 import Layout from '@/components/Layout';
 import ToastContainer from '@/components/Toast';
-import TelegramSetup from '@/components/TelegramSetup';
 
 const Home = lazy(() => import('@/pages/Home'));
 const Shop = lazy(() => import('@/pages/Shop'));
@@ -103,14 +102,7 @@ function applySavedTheme() {
 }
 
 export default function App() {
-  const { darkMode, setProducts, setSettings, settings, products, setProfile, profile } = useStore();
-  const [setupDone, setSetupDone] = useState(function() {
-    // Check immediately if we already have data
-    try {
-      var p = JSON.parse(localStorage.getItem('ss_profile') || '{}');
-      return !!p.telegramId;
-    } catch(e) { return false; }
-  }());
+  const { darkMode, setProducts, setSettings, settings, products, setProfile } = useStore();
 
   useEffect(() => { initSentry(); initAnalytics(); }, []);
   useEffect(() => { applySavedTheme(); }, []);
@@ -119,7 +111,7 @@ export default function App() {
     else document.documentElement.classList.remove('dark');
   }, [darkMode]);
 
-  // Re-read profile from localStorage after main.tsx IIFE runs
+  // Re-read profile from localStorage (index.html script sets it BEFORE React loads)
   useEffect(function() {
     try {
       var stored = localStorage.getItem('ss_profile');
@@ -127,16 +119,10 @@ export default function App() {
         var parsed = JSON.parse(stored);
         if (parsed.telegramId) {
           setProfile(parsed);
-          setSetupDone(true);
         }
       }
     } catch(e) {}
   }, []);
-
-  // Watch for changes to profile.telegramId (set by TelegramSetup)
-  useEffect(function() {
-    if (profile.telegramId) setSetupDone(true);
-  }, [profile.telegramId]);
 
   // Fetch phone from API and update store (main.tsx can't update the zustand store)
   useEffect(function() {
@@ -196,13 +182,9 @@ export default function App() {
   }, [products.length]);
 
   return (
-    <>
-      <ToastContainer />
-      {!setupDone ? (
-        <TelegramSetup />
-      ) : (
     <BrowserRouter>
       {TG && <TelegramBackButton />}
+      <ToastContainer />
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<Suspense fallback={<PageLoader />}><Home /></Suspense>} />
@@ -234,7 +216,5 @@ export default function App() {
         <Route path="/vendor/*" element={<Suspense fallback={<PageLoader />}><VendorDashboard /></Suspense>} />
       </Routes>
     </BrowserRouter>
-      )}
-    </>
   );
 }
