@@ -196,52 +196,7 @@ export default function Profile() {
 
   return (
     <div className="pb-4">
-      {/* Telegram NOT available - show big notice */}
-      {typeof window !== 'undefined' && !window.Telegram?.WebApp && !displayTelegramId && !displayPhone && (
-        <div className="mx-3 mt-2 p-4 bg-amber-50 dark:bg-amber-950/20 border-2 border-amber-300 dark:border-amber-700 rounded-2xl text-center">
-          <div className="text-3xl mb-2">📱</div>
-          <h3 className="text-sm font-bold text-amber-800 dark:text-amber-400 mb-1">Open from Telegram Bot</h3>
-          <p className="text-[10px] text-amber-600 dark:text-amber-500 mb-3">
-            This app works inside Telegram Messenger. Open it via @smart_shopping_et_bot.
-          </p>
-          <a href="https://t.me/smart_shopping_et_bot" target="_blank" rel="noopener noreferrer"
-             className="inline-block px-4 py-2 bg-amber-500 text-white rounded-xl text-xs font-bold">
-            Open @smart_shopping_et_bot
-          </a>
-          <div className="mt-3 pt-3 border-t border-amber-200 dark:border-amber-800">
-            <p className="text-[9px] text-amber-500 mb-2">Or enter your details manually (for testing):</p>
-            <div className="flex gap-2">
-              <input id="manual-tg-id" placeholder="Telegram ID" 
-                className="flex-1 p-2 border border-amber-300 rounded-lg text-[10px] bg-white dark:bg-slate-800" />
-              <input id="manual-phone" placeholder="Phone" 
-                className="flex-1 p-2 border border-amber-300 rounded-lg text-[10px] bg-white dark:bg-slate-800" />
-              <button className="px-3 py-2 bg-amber-500 text-white rounded-lg text-[10px] font-bold"
-                onClick={function() {
-                  var id = document.getElementById('manual-tg-id');
-                  var ph = document.getElementById('manual-phone');
-                  if (id && ph && id.value) {
-                    var p = { telegramId: id.value, phone: ph.value || '', name: 'User ' + id.value, joinedAt: new Date().toISOString(), registered: true };
-                    localStorage.setItem('ss_profile', JSON.stringify(p));
-                    if (ph.value) localStorage.setItem('ss_user_phone', ph.value);
-                    window.location.reload();
-                  }
-                }}>Save</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* DEBUG: Show what data is available */}
-      <div className="mx-3 mt-2 p-2 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-xl text-[8px] font-mono leading-relaxed text-yellow-800 dark:text-yellow-400">
-        <div>📊 Debug - Build: v19</div>
-        <div>store.profile.telegramId: {profile.telegramId || 'EMPTY'}</div>
-        <div>liveTgId (from LS): {liveTgId || 'EMPTY'}</div>
-        <div>store.profile.phone: {profile.phone || 'EMPTY'}</div>
-        <div>livePhone (from LS): {livePhone || 'EMPTY'}</div>
-        <div>ss_user_phone: {localStorage.getItem('ss_user_phone') || 'EMPTY'}</div>
-        <div>ss_phone_shared: {localStorage.getItem('ss_phone_shared') || 'EMPTY'}</div>
-        <div>Telegram.WebApp: {typeof window !== 'undefined' && window.Telegram?.WebApp ? 'YES' : 'NO'}</div>
-      </div>
+      <p className="text-center text-[9px] text-muted-foreground pb-4">🏪 Smart Shop v3.1</p>
 
       {/* Avatar */}
       <div className="text-center py-6 bg-card border-b border-border">
@@ -438,7 +393,6 @@ export default function Profile() {
         </div>
       )}
 
-        <p className="text-center text-[9px] text-muted-foreground pb-4">🏪 Smart Shop v3.1 | Build: v18</p>
 
       {/* Edit Profile Modal */}
       {showEditProfile && (
