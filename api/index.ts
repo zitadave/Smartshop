@@ -304,13 +304,13 @@ export default async function handler(req, res) {
           await fetch('https://api.telegram.org/bot' + VENDOR_BOT_TOKEN + '/setChatMenuButton', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chat_id: sc, menu_button: { type: 'web_app', text: '🛍️ Open Smart Shop', web_app: { url: 'https://smartshop-steel.vercel.app?v=23' } } })
+            body: JSON.stringify({ chat_id: sc, menu_button: { type: 'web_app', text: '🛍️ Open Smart Shop', web_app: { url: 'https://smartshop-steel.vercel.app' } } })
           });
         } catch(e) {}
 
         // Send final message - NO query param
         await sSend('✅ *Phone number saved!*\n\nTap the button below or use the 🛍️ button near the input field:', {
-          inline_keyboard: [[{ text: '🚀 Open Smart Shop', web_app: { url: 'https://smartshop-steel.vercel.app?v=23' } }]]
+          inline_keyboard: [[{ text: '🚀 Open Smart Shop', web_app: { url: 'https://smartshop-steel.vercel.app' } }]]
         });
       } else if (st !== '/start') {
         // Any text without contact - ask for contact

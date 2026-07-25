@@ -28,44 +28,16 @@ export default function Profile() {
     try { var p = JSON.parse(localStorage.getItem('ss_profile') || '{}'); return p.phone || localStorage.getItem('ss_user_phone') || ''; } catch(e) { return ''; }
   }());
 
-  // LIVE data from localStorage - re-reads on every render via state
-  const [liveTgId, setLiveTgId] = useState('');
-  const [liveTgUser, setLiveTgUser] = useState('');
-  const [livePhone, setLivePhone] = useState('');
-  const [liveName, setLiveName] = useState('');
-  const [liveJoined, setLiveJoined] = useState('');
-
-  // Poll localStorage every 500ms for 10 seconds to catch the async phone fetch
-  useEffect(function() {
-    function readFromLS() {
-      try {
-        var p = JSON.parse(localStorage.getItem('ss_profile') || '{}');
-        var phone = localStorage.getItem('ss_user_phone') || '';
-        setLiveTgId(p.telegramId || '');
-        setLiveTgUser(p.telegramUsername || '');
-        setLivePhone(phone || p.phone || '');
-        setLiveName(p.name || 'Guest');
-        setLiveJoined(p.joinedAt || '');
-      } catch(e) {}
-    }
-    // Read immediately
-    readFromLS();
-    // Then poll 5 times
-    var count = 0;
-    var interval = setInterval(function() {
-      count++;
-      readFromLS();
-      if (count >= 10) clearInterval(interval); // stop after ~5s
-    }, 500);
-    return function() { clearInterval(interval); };
-  }, []);
-
-  // Use the live state - fallback to store, then to empty
-  var displayTelegramId = liveTgId || profile.telegramId || '';
-  var displayTelegramUsername = liveTgUser || profile.telegramUsername || '';
-  var displayPhone = livePhone || profile.phone || '';
-  var displayName = liveName || profile.name || 'Guest';
-  var displayJoinedAt = liveJoined || profile.joinedAt || '';
+  // Read from localStorage directly (reliable source)
+  var lsProfile = { name: '', phone: '', email: '', registered: false, joinedAt: '' };
+  try { lsProfile = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
+  var lsPhone = localStorage.getItem('ss_user_phone') || '';
+  
+  var displayTelegramId = profile.telegramId || lsProfile.telegramId || '';
+  var displayTelegramUsername = profile.telegramUsername || lsProfile.telegramUsername || '';
+  var displayPhone = profile.phone || lsProfile.phone || lsPhone || '';
+  var displayName = profile.name || lsProfile.name || 'Guest';
+  var displayJoinedAt = profile.joinedAt || lsProfile.joinedAt || '';
 
   const initials = displayName.substring(0, 2).toUpperCase() || '?';
   const ordCount = orders.length + preOrders.length;
