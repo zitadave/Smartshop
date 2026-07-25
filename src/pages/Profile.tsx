@@ -7,7 +7,6 @@ import { ChevronRight, Palette, Sun, Moon, Wallet, User, Phone, AtSign, Calendar
 import ThemePicker from '@/components/features/ThemePicker';
 import CurrencySelector from '@/components/features/CurrencySelector';
 import LanguageSelector from '@/components/features/LanguageSelector';
-import TelegramLogin from '@/components/auth/TelegramLogin';
 import { toast } from '@/components/Toast';
 
 export default function Profile() {
@@ -157,10 +156,7 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* Telegram Connect */}
-      <div className="mx-3 mt-3">
-        <TelegramLogin variant="card" />
-      </div>
+
 
       {/* Stats Row */}
       <div className="mx-3 mt-3 grid grid-cols-3 gap-2">

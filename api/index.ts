@@ -774,6 +774,40 @@ export default async function handler(req, res) {
         return res.json({ success: true, vendor: v });
       }
 
+      // DELETE vendor - remove from list and notify vendor
+      if (method === 'DELETE') {
+        var vendorId = parseInt(path.split('/').pop() || '0');
+        try {
+          var vendors = await getVendors();
+          var deletedVendor = null;
+          var filtered = [];
+          for (var i = 0; i < vendors.length; i++) {
+            if (vendors[i].id == vendorId || vendors[i].id === String(vendorId)) {
+              deletedVendor = vendors[i];
+            } else {
+              filtered.push(vendors[i]);
+            }
+          }
+          await saveVendors(filtered);
+
+          // Notify vendor that they were removed
+          if (deletedVendor && deletedVendor.telegram_id) {
+            var removeMsg = '⚠️ <b>Vendor Access Revoked</b>\n\n' +
+              '━━━━━━━━━━━━━━━\n' +
+              '🏪 <b>Store:</b> ' + (deletedVendor.name || 'Your store') + '\n' +
+              '━━━━━━━━━━━━━━━\n\n' +
+              'Your vendor access has been revoked by the admin. ' +
+              'You can re-apply to become a vendor at any time.';
+            await fetch('https://api.telegram.org/bot' + VENDOR_BOT_TOKEN + '/sendMessage', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ chat_id: deletedVendor.telegram_id, text: removeMsg, parse_mode: 'HTML' })
+            });
+          }
+          return res.json({ success: true, deleted: true });
+        } catch(e) { return res.status(500).json({ error: e.message }); }
+      }
+
       // Update vendor (PUT)
       if (method === 'PUT') {
         var vendorId = parseInt(path.split('/').pop() || '0');

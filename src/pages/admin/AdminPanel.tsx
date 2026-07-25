@@ -700,14 +700,16 @@ function AdminVendors() {
     window.location.reload();
   };
   const deleteVendorApp = function(id) {
-    if (!confirm('Delete this vendor permanently?')) return;
-    var updated = [];
-    for (var di = 0; di < apps.length; di++) {
-      if (apps[di].id !== id) { updated.push(apps[di]); }
-    }
-    localStorage.setItem('ss_vendor_applications', JSON.stringify(updated));
-    toast('Vendor deleted.', 'info');
-    window.location.reload();
+    if (!confirm('Delete this vendor permanently? They will lose dashboard access.')) return;
+    fetch('/api/vendors/' + id, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' }
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      if (d && d.success) {
+        toast('Vendor deleted and notified via Telegram.', 'success');
+        window.location.reload();
+      } else { toast('Error: ' + (d.error || 'unknown'), 'error'); }
+    }).catch(function(e) { toast('Error: ' + e.message, 'error'); });
   };
   const toggleVendorStatus = function(id) {
     var updated = apps.slice();

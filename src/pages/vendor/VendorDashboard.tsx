@@ -11,7 +11,7 @@ import {
   CheckCircle, Clock, Image, Trash2, Bell, ChevronRight, Activity,
   Globe, MapPin, Phone, Mail, Upload, Printer, FileText, Shield,
   Layers, Sparkles, Target, Zap, Gift, Percent, Box, RotateCcw,
-  Heart, Share2, ChevronDown, MessageCircle, Video, ExternalLink, Sun, Moon
+  Heart, Share2, ChevronDown, MessageCircle, Video, ExternalLink
 } from 'lucide-react';
 import { toast } from '@/components/Toast';
 import ProductStudio from '@/components/admin/ProductStudio';
@@ -64,16 +64,8 @@ export default function VendorDashboard() {
     if (s) { s.remove(); }
   }, []);
 
-  // Independent dark mode for vendor dashboard
-  var [vendorDark, setVendorDark] = useState(function() {
-    try { return JSON.parse(localStorage.getItem('ss_vendor_dark') || 'false'); } catch(e) { return false; }
-  }());
-
-  useEffect(function() {
-    if (vendorDark) document.documentElement.classList.add('dark');
-    else document.documentElement.classList.remove('dark');
-    localStorage.setItem('ss_vendor_dark', JSON.stringify(vendorDark));
-  }, [vendorDark]);
+  // Use global shop theme
+  var vendorDark = store.darkMode;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
@@ -97,11 +89,7 @@ export default function VendorDashboard() {
             </span>
             <button className="hidden sm:flex px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-lg text-[10px] font-bold items-center gap-1 hover:shadow-lg transition-all"
               onClick={() => openStudio()}><Plus size={12} /> Add Product</button>
-            <button className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" 
-              onClick={function() { setVendorDark(!vendorDark); }}
-              title={vendorDark ? 'Light mode' : 'Dark mode'}>
-              {vendorDark ? <Sun size={15} className="text-amber-500" /> : <Moon size={15} className="text-slate-500" />}
-            </button>
+
             <button className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => navigate('/profile')}>
               <LogOut size={15} className="text-slate-500" />
             </button>
