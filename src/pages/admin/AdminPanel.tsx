@@ -648,31 +648,15 @@ function AdminVendors() {
   const [vendorPhone, setVendorPhone] = useState('');
   const [vendorEmail, setVendorEmail] = useState('');
 
-  // Fetch API data
+  // Fetch API data - ONLY source of truth, no localStorage merge
   useEffect(function() {
     fetch('/api/vendors/applications').then(function(r) { return r.json(); }).then(function(d) {
-      if (d && d.applications) { setApiApps(d.applications); }
-    }).catch(function() {});
-    vendorsApi.list().then(d => { setVendors(d?.vendors || []); setLoading(false); }).catch(() => setLoading(false));
+      if (d && d.applications) { setApiApps(d.applications); setVendors(d.applications); setLoading(false); }
+    }).catch(function() { setLoading(false); });
     productsApi.list().then(d => setProducts(d?.products || [])).catch(() => {});
   }, []);
 
-  // Vendor applications from localStorage
-  var apps = [];
-  try { apps = JSON.parse(localStorage.getItem('ss_vendor_applications') || '[]'); } catch(e) {}
-  // Merge API apps
-  if (apiApps.length > 0) {
-    for (var ai = 0; ai < apiApps.length; ai++) {
-      var exists = false;
-      for (var bi = 0; bi < apps.length; bi++) {
-        if (apps[bi].id === apiApps[ai].id || (apps[bi].phone === apiApps[ai].phone && apps[bi].name === apiApps[ai].name)) {
-          exists = true; break;
-        }
-      }
-      if (!exists) apps.push(apiApps[ai]);
-    }
-  }
-  var pendingApps = apps.filter(function(a) { return a.status === 'pending'; });
+  var pendingApps = apiApps.filter(function(a) { return a.status === 'pending'; });
   var [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const approveVendorApp = function(id, name) {
     fetch('/api/vendors/approve', {
@@ -820,13 +804,13 @@ function AdminVendors() {
           {vendors.length === 0 && <p className="text-xs text-slate-400 text-center py-8">No vendors registered yet</p>}
 
           {/* All Vendor Applications */}
-          {apps.length > 0 && (
+          {apiApps.length > 0 && (
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-x-hidden">
               <div className="p-4 border-b border-slate-100 dark:border-slate-800">
                 <h3 className="text-sm font-bold">All Vendor Applications ({apps.length})</h3>
               </div>
               <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                {apps.sort(function(a,b) { return new Date(b.appliedAt) - new Date(a.appliedAt); }).map(function(a) {
+                {apiApps.sort(function(a,b) { return new Date(b.appliedAt) - new Date(a.appliedAt); }).map(function(a) {
                   var badgeColor = a.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : a.status === 'paused' ? 'bg-amber-100 text-amber-700' : a.status === 'rejected' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700';
                   var badgeText = a.status === 'paused' ? 'Paused' : a.status.charAt(0).toUpperCase() + a.status.slice(1);
                   return (
