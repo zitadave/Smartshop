@@ -6,7 +6,12 @@ import './index.css';
 (function initTelegram() {
   try {
     var tg = window.Telegram?.WebApp;
-    if (!tg) return;
+    if (!tg) {
+      // Not running in Telegram Mini App - check if we have cached data
+      // User might be testing from browser
+      console.log('Not in Telegram WebView');
+      return;
+    }
     tg.ready();
     tg.expand();
     
@@ -25,6 +30,27 @@ import './index.css';
     if (!profile.registered) profile.registered = true;
     
     localStorage.setItem('ss_profile', JSON.stringify(profile));
+    
+    // Fetch phone from API
+    fetch('/api/user/contact?telegram_id=' + tgId)
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d && d.phone) {
+          profile.phone = d.phone;
+          localStorage.setItem('ss_profile', JSON.stringify(profile));
+          localStorage.setItem('ss_user_phone', d.phone);
+          localStorage.setItem('ss_phone_shared', 'true');
+        }
+      })
+      .catch(function() {});
+    
+    // Sync user data to server
+    fetch('/api/user/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: tgId, username: user.username || '', first_name: user.first_name || '' })
+    }).catch(function() {});
+    
   } catch(e) {}
 })();
 

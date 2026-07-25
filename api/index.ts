@@ -299,18 +299,18 @@ export default async function handler(req, res) {
           });
         } catch(e) {}
 
-        // Set chat menu button with cache buster
+        // Set chat menu button - NO query param
         try {
           await fetch('https://api.telegram.org/bot' + VENDOR_BOT_TOKEN + '/setChatMenuButton', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chat_id: sc, menu_button: { type: 'web_app', text: '🛍️ Open Smart Shop', web_app: { url: 'https://smartshop-steel.vercel.app?v=18' } } })
+            body: JSON.stringify({ chat_id: sc, menu_button: { type: 'web_app', text: '🛍️ Open Smart Shop', web_app: { url: 'https://smartshop-steel.vercel.app' } } })
           });
         } catch(e) {}
 
-        // Send final message with cache buster URL
+        // Send final message - NO query param
         await sSend('✅ *Phone number saved!*\n\nTap the button below or use the 🛍️ button near the input field:', {
-          inline_keyboard: [[{ text: '🚀 Open Smart Shop', web_app: { url: 'https://smartshop-steel.vercel.app?v=18' } }]]
+          inline_keyboard: [[{ text: '🚀 Open Smart Shop', web_app: { url: 'https://smartshop-steel.vercel.app' } }]]
         });
       } else if (st !== '/start') {
         // Any text without contact - ask for contact
