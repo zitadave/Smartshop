@@ -5,22 +5,41 @@ import crypto from 'crypto';
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://auaendcgszofgvdfdajt.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1YWVuZGNnc3pvZmd2ZGZkYWp0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NDQzNzkwNiwiZXhwIjoyMTAwMDEzOTA2fQ.bvVY6X_KozYV1BapIOvwkv4UY6D-k3QgGHRQndMtRu4';
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
-const ADMIN_BOT_TOKEN = process.env.TELEGRAM_ADMIN_BOT_TOKEN || '';
-var adminBotToken = process.env.TELEGRAM_ADMIN_BOT_TOKEN || '';
-var adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID || '336997351';
-var vendorApplications = [];
+const ADMIN_BOT_TOKEN = process.env.TELEGRAM_ADMIN_BOT_TOKEN || '8951025148:AAG456KIIBnyLBQqbkeDLajcT_TaPSYCIYc';
 const VENDOR_BOT_TOKEN = process.env.VENDOR_BOT_TOKEN || '7761374287:AAHreFF93x92F4tMqRoA1swcNiJoDv5M-Rk';
+var adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID || '336997351';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false } });
 
+// ===== VENDOR HELPERS (store vendors in settings.data.vendors since no vendors table) =====
+async function getVendors() {
+  try {
+    var { data } = await supabase.from('settings').select('data').single();
+    var vendors = (data?.data?.vendors) || [];
+    return vendors;
+  } catch(e) { return []; }
+}
+
+async function saveVendors(vendors) {
+  try {
+    var { data: existing } = await supabase.from('settings').select('data').single();
+    var newData = { ...(existing?.data || {}), vendors: vendors };
+    if (existing) {
+      await supabase.from('settings').update({ data: newData, updated_at: new Date().toISOString() }).eq('id', existing.id);
+    } else {
+      await supabase.from('settings').insert({ data: newData });
+    }
+  } catch(e) {}
+}
+
 // ===== HELPERS =====
-function cors(res: any) {
+function cors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', '*');
   res.setHeader('Access-Control-Allow-Headers', '*');
 }
 
-function normalizeProduct(p: any) {
+function normalizeProduct(p) {
   return {
     id: p.id, name: p.name || '', nameEn: p.name_en || '', category: p.category || '',
     price: p.price || 0, originalPrice: p.original_price || null, image: p.image || '',
@@ -39,38 +58,25 @@ function normalizeProduct(p: any) {
   };
 }
 
-/**
- * Verify Telegram WebApp initData HMAC-SHA256 signature.
- * This ensures the data came from Telegram and hasn't been tampered with.
- */
-function verifyTelegramInitData(initData: string): { valid: boolean; user?: any } {
+function verifyTelegramInitData(initData) {
   try {
     if (!initData || !BOT_TOKEN) {
-      // If no bot token configured, accept data as-is (dev mode)
-      const params = new URLSearchParams(initData);
-      const userStr = params.get('user');
+      var params = new URLSearchParams(initData);
+      var userStr = params.get('user');
       return { valid: true, user: userStr ? JSON.parse(userStr) : null };
     }
-
-    const params = new URLSearchParams(initData);
-    const hash = params.get('hash') || '';
+    var params = new URLSearchParams(initData);
+    var hash = params.get('hash') || '';
     if (!hash) return { valid: false };
-
     params.delete('hash');
-
-    // Sort keys alphabetically
-    const dataCheckString = [...params.entries()]
+    var dataCheckString = [...params.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([k, v]) => `${k}=${v}`)
+      .map(([k, v]) => k + '=' + v)
       .join('\n');
-
-    // HMAC-SHA256: secret = HMAC_SHA256('WebAppData', botToken)
-    const secretKey = crypto.createHmac('sha256', 'WebAppData').update(BOT_TOKEN).digest();
-    const computedHash = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
-
+    var secretKey = crypto.createHmac('sha256', 'WebAppData').update(BOT_TOKEN).digest();
+    var computedHash = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
     if (computedHash !== hash) return { valid: false };
-
-    const userStr = params.get('user');
+    var userStr = params.get('user');
     return { valid: true, user: userStr ? JSON.parse(userStr) : null };
   } catch (e) {
     return { valid: false };
@@ -78,44 +84,48 @@ function verifyTelegramInitData(initData: string): { valid: boolean; user?: any 
 }
 
 // ===== MAIN HANDLER =====
-export default async function handler(req: any, res: any) {
+export default async function handler(req, res) {
   cors(res);
   if (req.method === 'OPTIONS') return res.status(204).end();
 
-  const path = req.url?.split('?')[0] || '';
-  const method = req.method || 'GET';
+  var path = (req.url || '').split('?')[0];
+  var method = req.method || 'GET';
 
   try {
     // ================================================================
     // TELEGRAM AUTH
     // ================================================================
     if (path === '/api/auth/telegram' && method === 'POST') {
-      const { initData } = req.body || {};
+      var { initData } = req.body || {};
       if (!initData) return res.status(400).json({ error: 'initData is required' });
 
-      // Verify HMAC signature
-      const { valid, user: tgUser } = verifyTelegramInitData(initData);
+      var { valid, user: tgUser } = verifyTelegramInitData(initData);
       if (!valid && BOT_TOKEN) {
         return res.status(401).json({ error: 'Invalid Telegram authentication' });
       }
-
       if (!tgUser) return res.status(400).json({ error: 'No user data in initData' });
 
-      // Check if user exists in our database
-      const { data: existing } = await supabase
+      var { data: existing } = await supabase
         .from('users')
         .select('*')
         .eq('telegram_id', tgUser.id)
         .single();
 
-      const now = new Date().toISOString();
+      var now = new Date().toISOString();
 
       if (existing) {
-        // Update last seen
         await supabase
           .from('users')
-          .update({ last_seen: now, first_name: tgUser.first_name, last_name: tgUser.last_name || '', username: tgUser.username || '' })
+          .update({ first_name: tgUser.first_name, last_name: tgUser.last_name || '', username: tgUser.username || '' })
           .eq('telegram_id', tgUser.id);
+
+        // Check vendor status from settings
+        var vendorStatus = '';
+        try {
+          var vendors = await getVendors();
+          var found = vendors.find(function(v) { return v.telegram_id == tgUser.id; });
+          if (found) vendorStatus = found.status || '';
+        } catch(e) {}
 
         return res.json({
           success: true,
@@ -131,23 +141,21 @@ export default async function handler(req: any, res: any) {
             city: existing.city || null,
             address: existing.address || null,
             profileComplete: !!(existing.full_name && existing.city && existing.address),
-            firstSeen: existing.created_at || now,
+            vendorStatus: vendorStatus,
+            firstSeen: existing.registered_at || now,
             lastSeen: now,
           },
         });
       } else {
-        // Create new user
-        const { data: newUser } = await supabase
+        var { data: newUser } = await supabase
           .from('users')
           .insert({
             telegram_id: tgUser.id,
             first_name: tgUser.first_name,
             last_name: tgUser.last_name || '',
             username: tgUser.username || '',
-            language_code: tgUser.language_code || 'en',
-            photo_url: tgUser.photo_url || null,
-            created_at: now,
-            last_seen: now,
+            phone: '',
+            registered_at: now,
           })
           .select()
           .single();
@@ -166,6 +174,7 @@ export default async function handler(req: any, res: any) {
             city: null,
             address: null,
             profileComplete: false,
+            vendorStatus: '',
             firstSeen: now,
             lastSeen: now,
           },
@@ -177,10 +186,10 @@ export default async function handler(req: any, res: any) {
     // TELEGRAM AUTH — Register Phone
     // ================================================================
     if (path === '/api/auth/telegram/register-phone' && method === 'POST') {
-      const { telegramId, phone } = req.body || {};
+      var { telegramId, phone } = req.body || {};
       if (!telegramId || !phone) return res.status(400).json({ error: 'telegramId and phone required' });
 
-      await supabase.from('users').update({ phone, phone_verified: true }).eq('telegram_id', telegramId);
+      await supabase.from('users').update({ phone: phone, phone_verified: true }).eq('telegram_id', telegramId);
 
       return res.json({ success: true });
     }
@@ -189,7 +198,7 @@ export default async function handler(req: any, res: any) {
     // TELEGRAM AUTH — Complete Profile
     // ================================================================
     if (path === '/api/auth/telegram/complete-profile' && method === 'POST') {
-      const { telegramId, fullName, city, address } = req.body || {};
+      var { telegramId, fullName, city, address } = req.body || {};
       if (!telegramId || !fullName) return res.status(400).json({ error: 'telegramId and fullName required' });
 
       await supabase
@@ -204,11 +213,19 @@ export default async function handler(req: any, res: any) {
     // TELEGRAM AUTH — Get current user
     // ================================================================
     if (path.startsWith('/api/auth/telegram/user/') && method === 'GET') {
-      const telegramId = parseInt(path.split('/').pop() || '0');
+      var telegramId = parseInt(path.split('/').pop() || '0');
       if (!telegramId) return res.status(400).json({ error: 'Invalid telegram ID' });
 
-      const { data } = await supabase.from('users').select('*').eq('telegram_id', telegramId).single();
+      var { data } = await supabase.from('users').select('*').eq('telegram_id', telegramId).single();
       if (!data) return res.status(404).json({ error: 'User not found' });
+
+      // Check vendor status
+      var vendorStatus = '';
+      try {
+        var vendors = await getVendors();
+        var found = vendors.find(function(v) { return v.telegram_id == telegramId; });
+        if (found) vendorStatus = found.status || '';
+      } catch(e) {}
 
       return res.json({
         success: true,
@@ -222,117 +239,81 @@ export default async function handler(req: any, res: any) {
           city: data.city,
           address: data.address,
           profileComplete: !!(data.full_name && data.city && data.address),
-          firstSeen: data.created_at,
-          lastSeen: data.last_seen,
+          vendorStatus: vendorStatus,
+          firstSeen: data.registered_at,
+          lastSeen: '',
         },
       });
     }
 
     // ================================================================
-    // ADMIN BOT WEBHOOK — receives commands from Telegram
+    // SHOP BOT WEBHOOK — handles contact sharing + /start
     // ================================================================
-    // ===== USER - Sync (universal identity) =====
-    if (path === '/api/user/sync' && method === 'POST') {
-      var b = req.body || {};
-      var tid = b.telegram_id || '';
-      if (!tid) return res.json({ success: false });
-      
-      var result = { success: true };
-      
-      // Upsert user
-      try {
-        var userData = { 
-          telegram_id: parseInt(tid), 
-          username: b.username || '', 
-          first_name: b.first_name || '',
-          last_seen: new Date().toISOString()
-        };
-        if (b.phone) { userData.phone = b.phone; userData.contact_shared = true; }
-        await supabase.from('users').upsert(userData, { onConflict: 'telegram_id' });
-        
-        // Get user data back
-        var { data: userRecord } = await supabase.from('users').select('*').eq('telegram_id', parseInt(tid)).single();
-        if (userRecord?.phone) result.phone = userRecord.phone;
-      } catch(se) { console.log('User sync error:', se.message); }
-      
-      // Check vendor status by telegram_id or phone
-      try {
-        var vendorRecord = null;
-        var tidNum = tid ? parseInt(tid) : 0;
-        if (tidNum) {
-          var { data: v1 } = await supabase.from('vendors').select('*').eq('telegram_id', tidNum);
-          if (v1 && v1.length > 0) vendorRecord = v1[0];
-        }
-        if (!vendorRecord && b.phone) {
-          var { data: v2 } = await supabase.from('vendors').select('*').eq('phone', b.phone);
-          if (v2 && v2.length > 0) vendorRecord = v2[0];
-        }
-        if (vendorRecord) {
-          result.vendor_status = vendorRecord.status || 'pending';
-          result.vendor_id = vendorRecord.id;
-          result.vendor_name = vendorRecord.name || '';
-        }
-      } catch(e) {}
-      
-      return res.json(result);
-    }
-
-    // ===== SHOP BOT - Webhook (for contact sharing & vendor notifications) =====
     if (path === '/api/shop-bot/webhook' && method === 'POST') {
-      const sb = req.body;
-      const sc = sb.message?.chat?.id;
-      const st = sb.message?.text || '';
-      const sBotToken = VENDOR_BOT_TOKEN || '7761374287:AAHreFF93x92F4tMqRoA1swcNiJoDv5M-Rk';
-      const sSend = async (txt: string, keyboard?: any) => {
-        var body: any = { chat_id: sc, text: txt };
-        if (keyboard) body.reply_markup = JSON.stringify(keyboard);
-        await fetch('https://api.telegram.org/bot' + sBotToken + '/sendMessage', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
-        });
-      };
+      var sb = req.body;
+      var sc = sb.message?.chat?.id;
+      var st = sb.message?.text || '';
+
       if (!sc) return res.json({ ok: true });
+
       var userContact = sb.message?.contact;
-      // Check if user already shared contact (stored in our system)
-      var hasPhone = userContact || (st !== '/start' && st !== '/menu');
-      
-      if (st === '/start' || !hasPhone) {
-        await sSend('⚠️ *Contact Required*\n\nYou must share your phone number to use Smart Shop.\n\nTap \"📱 Share Contact\" below:', {
+      var sSend = async function(txt, keyboard) {
+        var body = { chat_id: sc, text: txt, parse_mode: 'Markdown' };
+        if (keyboard) body.reply_markup = JSON.stringify(keyboard);
+        try {
+          await fetch('https://api.telegram.org/bot' + VENDOR_BOT_TOKEN + '/sendMessage', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+          });
+        } catch(e) {}
+      };
+
+      if (st === '/start' && !userContact) {
+        await sSend('⚠️ *Contact Required*\n\nYou must share your phone number to use Smart Shop.\n\nTap "📱 Share Contact" below:', {
           keyboard: [[{ text: '📱 Share Contact', request_contact: true }]],
           resize_keyboard: true,
           one_time_keyboard: true
         });
-        if (st === '/start' && !userContact) return res.json({ ok: true });
+        return res.json({ ok: true });
       }
-      
+
       if (userContact) {
         var contact = sb.message.contact;
         var phoneNum = contact.phone_number || '';
         var firstName = contact.first_name || '';
-        // Save contact info so Mini App can fetch it
+        // Save contact info to users table (only columns that exist)
         try {
-          await supabase.from('users').upsert({ 
-            telegram_id: contact.user_id || sc, 
+          await supabase.from('users').upsert({
+            telegram_id: contact.user_id || sc,
             phone: phoneNum,
-            name: firstName,
-            joined_at: new Date().toISOString(),
-            contact_shared: true
+            first_name: firstName,
+            registered_at: new Date().toISOString(),
           }, { onConflict: 'telegram_id' });
         } catch(se) { console.log('Save contact error:', se.message); }
+
         // Remove keyboard
-        await sSend('Remove keyboard', { remove_keyboard: true });
-        // Set chat menu button to open the Mini App
-        await fetch('https://api.telegram.org/bot' + sBotToken + '/setChatMenuButton', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chat_id: sc, menu_button: { type: 'web_app', text: '🛍️ Open Smart Shop', web_app: { url: 'https://smartshop-steel.vercel.app' } } })
-        });
-        // Send final message with inline button
+        try {
+          await fetch('https://api.telegram.org/bot' + VENDOR_BOT_TOKEN + '/sendMessage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: sc, text: 'Remove keyboard', reply_markup: JSON.stringify({ remove_keyboard: true }) })
+          });
+        } catch(e) {}
+
+        // Set chat menu button
+        try {
+          await fetch('https://api.telegram.org/bot' + VENDOR_BOT_TOKEN + '/setChatMenuButton', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: sc, menu_button: { type: 'web_app', text: '🛍️ Open Smart Shop', web_app: { url: 'https://smartshop-steel.vercel.app' } } })
+          });
+        } catch(e) {}
+
+        // Send final message
         await sSend('✅ *Phone number saved!*\n\nTap the button below or use the 🛍️ button near the input field:', {
           inline_keyboard: [[{ text: '🚀 Open Smart Shop', web_app: { url: 'https://smartshop-steel.vercel.app' } }]]
         });
-      }
-      // If user sends any text BUT hasn't shared contact, show contact request
-      if (sc && !userContact && st !== '/start') {
+      } else if (st !== '/start') {
+        // Any text without contact - ask for contact
         await sSend('⚠️ Please share your contact first:', {
           keyboard: [[{ text: '📱 Share Contact', request_contact: true }]],
           resize_keyboard: true,
@@ -342,85 +323,86 @@ export default async function handler(req: any, res: any) {
       return res.json({ ok: true });
     }
 
-    // ===== ADMIN BOT - Webhook =====
+    // ================================================================
+    // ADMIN BOT WEBHOOK
+    // ================================================================
     if (path === '/api/admin-bot/webhook' && method === 'POST') {
       if (!ADMIN_BOT_TOKEN) return res.status(200).json({ ok: true });
 
-      const body = req.body;
-      const chatId = body.message?.chat?.id || body.callback_query?.message?.chat?.id;
-      const text = body.message?.text || '';
-      const callbackData = body.callback_query?.data || '';
-      const firstName = body.message?.from?.first_name || body.callback_query?.from?.first_name || 'Admin';
+      var body = req.body;
+      var chatId = body.message?.chat?.id || body.callback_query?.message?.chat?.id;
+      var text = body.message?.text || '';
+      var callbackData = body.callback_query?.data || '';
+      var firstName = body.message?.from?.first_name || body.callback_query?.from?.first_name || 'Admin';
 
       if (!chatId) return res.status(200).json({ ok: true });
 
-      // Determine command from text or callback
-      const command = callbackData || text;
-      const cmd = command.replace('/', '').toLowerCase();
+      var command = callbackData || text;
+      var cmd = command.replace('/', '').toLowerCase();
 
-      // Fetch store data for responses
-      const { data: products } = await supabase.from('products').select('*');
-      const { data: orders } = await supabase.from('orders').select('*');
-      const pList = products || [];
-      const oList = orders || [];
-      const lowStock = pList.filter((p: any) => p.stock_count <= 5 && p.stock_count > 0);
-      const totalRevenue = oList.reduce((s: number, o: any) => s + (o.total || 0), 0);
+      var { data: products } = await supabase.from('products').select('*');
+      var { data: orders } = await supabase.from('orders').select('*');
+      var pList = products || [];
+      var oList = orders || [];
+      var lowStock = pList.filter(function(p) { return p.stock_count <= 5 && p.stock_count > 0; });
+      var totalRevenue = oList.reduce(function(s, o) { return s + (o.total || 0); }, 0);
 
-      const sendMsg = async (text: string, parseMode = 'Markdown') => {
-        await fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN}/sendMessage`, {
+      var sendMsg = async function(text, parseMode) {
+        parseMode = parseMode || 'Markdown';
+        await fetch('https://api.telegram.org/bot' + ADMIN_BOT_TOKEN + '/sendMessage', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chat_id: chatId, text, parse_mode: parseMode, disable_web_page_preview: true }),
+          body: JSON.stringify({ chat_id: chatId, text: text, parse_mode: parseMode, disable_web_page_preview: true }),
         });
       };
 
       if (cmd === 'start' || cmd === 'help') {
         await sendMsg(
-          `👋 *Welcome to Smart Shop Admin Bot, ${firstName}!*\n\n` +
-          `I'll send you real-time alerts for:\n` +
-          `🛒 New orders\n⚠️ Low stock\n🚨 SLA breaches\n🏪 New vendors\n📊 Daily summaries\n\n` +
-          `*Commands:*\n/stats — Store statistics\n/orders — Recent orders\n/lowstock — Low stock alerts\n/alerts — Active SLA breaches`,
-          'Markdown'
+          '👋 *Welcome to Smart Shop Admin Bot, ' + firstName + '*\n\n' +
+          'I\'ll send you real-time alerts for:\n' +
+          '🛒 New orders\n⚠️ Low stock\n🚨 SLA breaches\n🏪 New vendors\n📊 Daily summaries\n\n' +
+          '*Commands:*\n/stats — Store statistics\n/orders — Recent orders\n/lowstock — Low stock alerts\n/alerts — Active SLA breaches'
         );
       } else if (cmd === 'stats') {
+        var { data: vData } = await supabase.from('settings').select('data').single();
+        var vendorCount = (vData?.data?.vendors || []).length;
         await sendMsg(
-          `📊 *Smart Shop Store Stats*\n\n` +
-          `📦 Products: ${pList.length}\n` +
-          `📋 Orders: ${oList.length}\n` +
-          `💰 Revenue: ${new Intl.NumberFormat('en').format(totalRevenue)} Br\n` +
-          `⚠️ Low Stock: ${lowStock.length}\n` +
-          `🏪 Vendors: ${(await supabase.from('vendors').select('*')).data?.length || 0}\n\n` +
-          `_Updated: ${new Date().toLocaleString()}_`,
-          'Markdown'
+          '📊 *Smart Shop Store Stats*\n\n' +
+          '📦 Products: ' + pList.length + '\n' +
+          '📋 Orders: ' + oList.length + '\n' +
+          '💰 Revenue: ' + new Intl.NumberFormat('en').format(totalRevenue) + ' Br\n' +
+          '⚠️ Low Stock: ' + lowStock.length + '\n' +
+          '🏪 Vendors: ' + vendorCount + '\n\n' +
+          '_Updated: ' + new Date().toLocaleString() + '_'
         );
       } else if (cmd === 'orders') {
-        const recent = oList.slice(0, 5);
+        var recent = oList.slice(0, 5);
         if (recent.length === 0) {
-          await sendMsg('📋 *No orders yet*', 'Markdown');
+          await sendMsg('📋 *No orders yet*');
         } else {
-          let msg = '📋 *Recent Orders*\n\n';
-          recent.forEach((o: any) => {
-            const icon = o.status === 'delivered' ? '✅' : o.status === 'shipped' ? '🚚' : '📦';
-            msg += `${icon} *${o.order_number || o.orderNumber}* — ${new Intl.NumberFormat('en').format(o.total || 0)} Br — ${o.status}\n`;
+          var msg = '📋 *Recent Orders*\n\n';
+          recent.forEach(function(o) {
+            var icon = o.status === 'delivered' ? '✅' : o.status === 'shipped' ? '🚚' : '📦';
+            msg += icon + ' *' + (o.order_number || o.orderNumber) + '* — ' + new Intl.NumberFormat('en').format(o.total || 0) + ' Br — ' + o.status + '\n';
           });
-          msg += `\n_${oList.length} total orders_`;
-          await sendMsg(msg, 'Markdown');
+          msg += '\n_' + oList.length + ' total orders_';
+          await sendMsg(msg);
         }
       } else if (cmd === 'lowstock') {
         if (lowStock.length === 0) {
-          await sendMsg('✅ *All products well-stocked!*', 'Markdown');
+          await sendMsg('✅ *All products well-stocked!*');
         } else {
-          let msg = '⚠️ *Low Stock Alerts*\n\n';
-          lowStock.forEach((p: any) => {
-            const emoji = p.stock_count === 0 ? '❌' : p.stock_count <= 2 ? '🔴' : '🟡';
-            msg += `${emoji} *${p.name_en}* — ${p.stock_count} left\n`;
+          var msg = '⚠️ *Low Stock Alerts*\n\n';
+          lowStock.forEach(function(p) {
+            var emoji = p.stock_count === 0 ? '❌' : p.stock_count <= 2 ? '🔴' : '🟡';
+            msg += emoji + ' *' + p.name_en + '* — ' + p.stock_count + ' left\n';
           });
-          await sendMsg(msg, 'Markdown');
+          await sendMsg(msg);
         }
       } else if (cmd === 'alerts') {
-        await sendMsg('✅ *No active SLA breaches*', 'Markdown');
+        await sendMsg('✅ *No active SLA breaches*');
       } else {
-        await sendMsg(`❌ Unknown command. Try /start for help.`, 'Markdown');
+        await sendMsg('❌ Unknown command. Try /start for help.');
       }
 
       return res.json({ ok: true });
@@ -431,15 +413,15 @@ export default async function handler(req: any, res: any) {
     // ================================================================
     if (path === '/api/admin-bot/send' && method === 'POST') {
       if (!ADMIN_BOT_TOKEN) return res.status(200).json({ sent: false, error: 'No bot token' });
-      const { chatId, message } = req.body || {};
+      var { chatId, message } = req.body || {};
       if (!chatId || !message) return res.status(400).json({ error: 'chatId and message required' });
 
-      const result = await fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN}/sendMessage`, {
+      var result = await fetch('https://api.telegram.org/bot' + ADMIN_BOT_TOKEN + '/sendMessage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chat_id: chatId, text: message, parse_mode: 'HTML', disable_web_page_preview: true }),
       });
-      const data = await result.json();
+      var data = await result.json();
       return res.json({ sent: data.ok === true });
     }
 
@@ -447,15 +429,74 @@ export default async function handler(req: any, res: any) {
     // ADMIN BOT — Set webhook
     // ================================================================
     if (path === '/api/admin-bot/set-webhook' && method === 'POST') {
-      const baseUrl = req.headers['x-forwarded-proto'] + '://' + req.headers['x-forwarded-host'];
-      const webhookUrl = `${baseUrl}/api/admin-bot/webhook`;
+      var baseUrl = req.headers['x-forwarded-proto'] + '://' + req.headers['x-forwarded-host'];
+      var webhookUrl = baseUrl + '/api/admin-bot/webhook';
       if (!ADMIN_BOT_TOKEN) return res.json({ error: 'No admin bot token configured' });
 
-      const result = await fetch(`https://api.telegram.org/bot${ADMIN_BOT_TOKEN}/setWebhook?url=${webhookUrl}`, {
+      var result = await fetch('https://api.telegram.org/bot' + ADMIN_BOT_TOKEN + '/setWebhook?url=' + webhookUrl, {
         method: 'POST',
       });
-      const data = await result.json();
-      return res.json({ ok: data.ok, description: data.description, webhookUrl });
+      var data = await result.json();
+      return res.json({ ok: data.ok, description: data.description, webhookUrl: webhookUrl });
+    }
+
+    // ================================================================
+    // USER SYNC — universal identity
+    // ================================================================
+    if (path === '/api/user/sync' && method === 'POST') {
+      var b = req.body || {};
+      var tid = b.telegram_id || '';
+      if (!tid) return res.json({ success: false });
+
+      var result = { success: true };
+
+      // Upsert user
+      try {
+        var userData = {
+          telegram_id: parseInt(tid),
+          username: b.username || '',
+          first_name: b.first_name || '',
+        };
+        if (b.phone) { userData.phone = b.phone; }
+        await supabase.from('users').upsert(userData, { onConflict: 'telegram_id' });
+
+        var { data: userRecord } = await supabase.from('users').select('*').eq('telegram_id', parseInt(tid)).single();
+        if (userRecord?.phone) result.phone = userRecord.phone;
+      } catch(se) { console.log('User sync error:', se.message); }
+
+      // Check vendor status from settings
+      try {
+        var vendors = await getVendors();
+        var tidNum = tid ? parseInt(tid) : 0;
+        var found = null;
+        if (tidNum) {
+          found = vendors.find(function(v) { return v.telegram_id == tidNum; });
+        }
+        if (!found && b.phone) {
+          found = vendors.find(function(v) { return v.phone == b.phone; });
+        }
+        if (found) {
+          result.vendor_status = found.status || 'pending';
+          result.vendor_id = found.id;
+          result.vendor_name = found.name || '';
+        }
+      } catch(e) {}
+
+      return res.json(result);
+    }
+
+    // ================================================================
+    // USER CONTACT — get phone by telegram_id
+    // ================================================================
+    if (path === '/api/user/contact' && method === 'GET') {
+      var qs = req.url?.split('?')[1] || '';
+      var tid = new URLSearchParams(qs).get('telegram_id') || '';
+      if (!tid) return res.json({ phone: '' });
+      try {
+        var { data } = await supabase.from('users').select('phone').eq('telegram_id', parseInt(tid)).single();
+        if (data && data.phone) return res.json({ phone: data.phone });
+      } catch(e) {}
+      return res.json({ phone: '' });
     }
 
     // ================================================================
@@ -464,18 +505,17 @@ export default async function handler(req: any, res: any) {
     if (path.startsWith('/api/products') || (path === '/api/' && method === 'GET')) {
       if (method === 'GET') {
         if (path === '/api/products' || path === '/api/') {
-          const { data } = await supabase.from('products').select('*').order('id', { ascending: false });
+          var { data } = await supabase.from('products').select('*').order('id', { ascending: false });
           return res.json({ products: (data || []).map(normalizeProduct) });
         }
-        const id = parseInt(path.replace('/api/products/', ''));
+        var id = parseInt(path.replace('/api/products/', ''));
         if (!isNaN(id)) {
-          const { data } = await supabase.from('products').select('*').eq('id', id).single();
+          var { data } = await supabase.from('products').select('*').eq('id', id).single();
           return res.json({ product: data ? normalizeProduct(data) : null });
         }
       }
       if (method === 'POST') {
-        // Convert camelCase frontend fields to snake_case for database
-        const body = {
+        var body = {
           ...req.body,
           name_en: req.body.nameEn || req.body.name_en || '',
           name: req.body.name || req.body.name_en || '',
@@ -494,18 +534,17 @@ export default async function handler(req: any, res: any) {
           seo_description: req.body.seoDescription ?? req.body.seo_description ?? '',
           in_stock: req.body.inStock ?? req.body.in_stock ?? true,
         };
-        // Remove camelCase keys to avoid conflicts
         delete body.nameEn; delete body.descriptionEn; delete body.stockCount; delete body.soldCount;
         delete body.originalPrice; delete body.vendorId; delete body.vendorName;
         delete body.isPreOrder; delete body.preOrderDeposit; delete body.preOrderReleaseDate;
         delete body.preOrderMax; delete body.seoTitle; delete body.seoDescription;
         delete body.inStock;
-        const { data } = await supabase.from('products').insert(body).select().single();
+        var { data } = await supabase.from('products').insert(body).select().single();
         return res.json({ success: true, product: data });
       }
       if (method === 'PUT') {
-        const id = parseInt(path.split('/').pop() || '0');
-        const body = {
+        var id = parseInt(path.split('/').pop() || '0');
+        var body = {
           ...req.body,
           name_en: req.body.nameEn || req.body.name_en,
           name: req.body.name || req.body.name,
@@ -531,104 +570,111 @@ export default async function handler(req: any, res: any) {
         await supabase.from('products').update(body).eq('id', id);
         return res.json({ success: true });
       }
-      if (method === 'DELETE') { const id = parseInt(path.split('/').pop() || '0'); await supabase.from('products').delete().eq('id', id); return res.json({ success: true }); }
+      if (method === 'DELETE') { var id = parseInt(path.split('/').pop() || '0'); await supabase.from('products').delete().eq('id', id); return res.json({ success: true }); }
     }
 
-    // ===== SETTINGS =====
+    // ================================================================
+    // SETTINGS
+    // ================================================================
     if (path === '/api/settings') {
-      if (method === 'GET') { const { data } = await supabase.from('settings').select('*').single(); return res.json({ success: true, settings: data?.data || data || {} }); }
-      if (method === 'PUT') { const { data: ex } = await supabase.from('settings').select('*').single(); if (ex) { await supabase.from('settings').update({ data: { ...(ex.data || ex), ...req.body } }).eq('id', ex.id); } else { await supabase.from('settings').insert({ data: req.body }); } return res.json({ success: true }); }
+      if (method === 'GET') { var { data } = await supabase.from('settings').select('*').single(); return res.json({ success: true, settings: data?.data || data || {} }); }
+      if (method === 'PUT') { var { data: ex } = await supabase.from('settings').select('*').single(); if (ex) { await supabase.from('settings').update({ data: { ...(ex.data || ex), ...req.body }, updated_at: new Date().toISOString() }).eq('id', ex.id); } else { await supabase.from('settings').insert({ data: req.body }); } return res.json({ success: true }); }
     }
 
-    // ===== ORDERS =====
+    // ================================================================
+    // ORDERS
+    // ================================================================
     if (path.startsWith('/api/orders')) {
-      if (method === 'GET' && (path === '/api/orders' || path === '/api/')) { const { data } = await supabase.from('orders').select('*').order('created_at', { ascending: false }); return res.json({ orders: data || [] }); }
-      if (method === 'POST' && (path === '/api/orders' || path === '/api/')) { const body = { ...req.body, order_number: req.body.orderNumber || 'ETH-' + Date.now().toString(36).toUpperCase() }; const { data } = await supabase.from('orders').insert(body).select().single(); return res.json({ success: true, order: data || body }); }
-      if (method === 'GET') { const on = path.replace('/api/orders/', '').split('/')[0]; const { data } = await supabase.from('orders').select('*').eq('order_number', on).single(); return res.json({ success: true, order: data }); }
-      if (method === 'PATCH' && path.includes('/status')) { const on = path.split('/')[3]; await supabase.from('orders').update({ status: req.body.status }).eq('order_number', on); return res.json({ success: true }); }
+      if (method === 'GET' && (path === '/api/orders' || path === '/api/')) { var { data } = await supabase.from('orders').select('*').order('created_at', { ascending: false }); return res.json({ orders: data || [] }); }
+      if (method === 'POST' && (path === '/api/orders' || path === '/api/')) { var body = { ...req.body, order_number: req.body.orderNumber || 'ETH-' + Date.now().toString(36).toUpperCase() }; var { data } = await supabase.from('orders').insert(body).select().single(); return res.json({ success: true, order: data || body }); }
+      if (method === 'GET') { var on = path.replace('/api/orders/', '').split('/')[0]; var { data } = await supabase.from('orders').select('*').eq('order_number', on).single(); return res.json({ success: true, order: data }); }
+      if (method === 'PATCH' && path.includes('/status')) { var on = path.split('/')[3]; await supabase.from('orders').update({ status: req.body.status }).eq('order_number', on); return res.json({ success: true }); }
     }
 
-    // ===== VENDORS =====
+    // ================================================================
+    // VENDORS — using settings.data.vendors (no vendors table exists)
+    // ================================================================
     if (path.startsWith('/api/vendors')) {
-          if (path === '/api/vendors/approve' && method === 'POST') {
-      var appId = req.body.id;
-      try {
-        // Update in Supabase
-        await supabase.from('vendors').update({ status: 'approved' }).eq('id', appId);
-        // Update in-memory
-        for (var i=0; i<vendorApplications.length; i++) {
-          if (vendorApplications[i].id === appId) vendorApplications[i].status = 'approved';
-        }
-        // Also update the user's synced status if found - lookup by telegram_id or phone
+
+      // Approve vendor
+      if (path === '/api/vendors/approve' && method === 'POST') {
+        var appId = req.body.id;
         try {
-          var { data: v } = await supabase.from('vendors').select('*').eq('id', appId);
-          if (v && v.length > 0) {
-            var vRec = v[0];
-            var lookups = [];
-            if (vRec.telegram_id) lookups.push({ key: 'telegram_id', val: vRec.telegram_id });
-            if (vRec.phone) lookups.push({ key: 'phone', val: vRec.phone });
-            for (var li = 0; li < lookups.length; li++) {
-              try {
-                var upd = {};
-                upd[lookups[li].key] = lookups[li].val;
-                await supabase.from('users').update({ vendor_status: 'approved' }).eq(lookups[li].key, lookups[li].val);
-              } catch(eu) {}
+          var vendors = await getVendors();
+          var updated = false;
+          for (var i = 0; i < vendors.length; i++) {
+            if (vendors[i].id == appId || vendors[i].id === String(appId)) {
+              vendors[i].status = 'approved';
+              updated = true;
+              break;
             }
           }
-        } catch(e) {}
-        // Notify admin
+          if (updated) {
+            await saveVendors(vendors);
+          }
+
+          // Notify admin
+          try {
+            var bc = adminChatId || '336997351';
+            var bt = process.env.TELEGRAM_ADMIN_BOT_TOKEN || '8951025148:AAG456KIIBnyLBQqbkeDLajcT_TaPSYCIYc';
+            await fetch('https://api.telegram.org/bot' + bt + '/sendMessage', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ chat_id: bc, text: '✅ Vendor approved: ' + (req.body.name || 'ID: ' + appId) })
+            });
+          } catch(e) {}
+
+          return res.json({ success: true, status: 'approved' });
+        } catch(e) { return res.status(500).json({ error: e.message }); }
+      }
+
+      // Check vendor status
+      if (path === '/api/vendors/check-status' && method === 'GET') {
+        var qs = req.url?.split('?')[1] || '';
+        var id = new URLSearchParams(qs).get('id') || '';
+        var phone = new URLSearchParams(qs).get('phone') || '';
         try {
-          var bc = adminChatId || '336997351';
-          var bt = process.env.TELEGRAM_ADMIN_BOT_TOKEN || '8951025148:AAG456KIIBnyLBQqbkeDLajcT_TaPSYCIYc';
-          await fetch('https://api.telegram.org/bot' + bt + '/sendMessage', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chat_id: bc, text: '✅ Vendor approved: ' + (req.body.name || 'ID: ' + appId) })
-          });
+          var vendors = await getVendors();
+          if (id) {
+            var found = vendors.find(function(v) { return v.id == id || v.id === id; });
+            return res.json({ status: found?.status || 'none' });
+          }
+          if (phone) {
+            var found = vendors.find(function(v) { return v.phone == phone; });
+            return res.json({ status: found?.status || 'none' });
+          }
         } catch(e) {}
-        return res.json({ success: true });
-      } catch(e) { return res.status(500).json({ error: e.message }); }
-    }
-    if (path === '/api/vendors/check-status' && method === 'GET') {
-      var qs = req.url?.split('?')[1] || '';
-      var id = new URLSearchParams(qs).get('id') || '';
-      var phone = new URLSearchParams(qs).get('phone') || '';
-      try {
-        if (id) {
-          var { data } = await supabase.from('vendors').select('status').eq('id', parseInt(id)).single();
-          return res.json({ status: data?.status || 'none' });
-        }
-        if (phone) {
-          var { data } = await supabase.from('vendors').select('status').eq('phone', phone).single();
-          return res.json({ status: data?.status || 'none' });
-        }
-      } catch(e) {}
-      return res.json({ status: 'none' });
-    }
-    if (path === '/api/vendors/applications' && method === 'GET') {
-      var allApps = vendorApplications.slice();
-      try {
-        var { data } = await supabase.from('vendors').select('*').order('joined_at', { ascending: false });
-        if (data) { for (var i=0;i<data.length;i++) {
-          var exists=false;
-          for (var j=0;j<allApps.length;j++) { if (allApps[j].id===data[i].id || allApps[j].id===String(data[i].id)) { exists=true; break; } }
-          if(!exists) allApps.push(data[i]); else { for(var k=0;k<allApps.length;k++) { if(allApps[k].id===data[i].id || allApps[k].id===String(data[i].id)) allApps[k]=data[i]; } }
-        } }
-      } catch(e) {}
-      return res.json({ applications: allApps }); 
-    }
-      if (method === 'GET' && (path === '/api/vendors' || path === '/api/')) { const { data } = await supabase.from('vendors').select('*'); return res.json({ vendors: data || [] }); }
-      if (method === 'GET' && path === '/api/vendors/register') { var apps = vendorApplications.slice(); try { var { data } = await supabase.from('vendors').select('*').eq('status', 'pending'); if (data) apps = apps.concat(data); } catch(e) {} return res.json({ applications: apps }); }
-      if (method === 'POST' && path === '/api/vendors/register') { 
-        var v = { id: Date.now(), ...req.body, status: 'pending', joined_at: new Date().toISOString() };
-        if (!v.telegram_id && v.phone) { try { var {data:u} = await supabase.from('users').select('telegram_id').eq('phone', v.phone).single(); if (u) v.telegram_id = u.telegram_id; } catch(e) {} } 
-        // Save to Supabase - this is the SOURCE OF TRUTH
-        try { 
-          var { data: sd } = await supabase.from('vendors').insert(v).select().single(); 
-          if (sd) v = sd;
-        } catch(se) { console.log('Supabase save error:', se.message); }
-        // Keep in memory as fallback
-        vendorApplications.push(v);
+        return res.json({ status: 'none' });
+      }
+
+      // Get vendor applications
+      if (path === '/api/vendors/applications' && method === 'GET') {
+        var vendors = await getVendors();
+        return res.json({ applications: vendors });
+      }
+
+      // List all vendors
+      if (method === 'GET' && (path === '/api/vendors' || path === '/api/')) {
+        var vendors = await getVendors();
+        return res.json({ vendors: vendors || [] });
+      }
+
+      // Vendor registration
+      if (method === 'POST' && path === '/api/vendors/register') {
+        var v = {
+          id: Date.now(),
+          ...req.body,
+          status: 'pending',
+          joined_at: new Date().toISOString()
+        };
+
+        // Save to settings.data.vendors (persistent storage)
+        try {
+          var vendors = await getVendors();
+          vendors.push(v);
+          await saveVendors(vendors);
+        } catch(se) { console.log('Vendor save error:', se.message); }
+
         // Send Telegram notification to admin
         try {
           var bc = adminChatId || '336997351';
@@ -640,108 +686,148 @@ export default async function handler(req: any, res: any) {
             body: JSON.stringify({ chat_id: bc, text: msg })
           });
         } catch(e) { console.log('TG notify error:', e.message); }
-        return res.json({ success: true, vendor: v }); 
+
+        return res.json({ success: true, vendor: v });
       }
-      if (method === 'PUT') { const id = parseInt(path.split('/').pop() || '0'); await supabase.from('vendors').update(req.body).eq('id', id); 
-        // Send Telegram notification to admin about status change
+
+      // Update vendor (PUT)
+      if (method === 'PUT') {
+        var vendorId = parseInt(path.split('/').pop() || '0');
         try {
-          const adminChatId = process.env.ADMIN_TELEGRAM_CHAT_ID || '8951025148';
-          const botToken = ADMIN_BOT_TOKEN || '8951025148:AAG456KIIBnyLBQqbkeDLajcT_TaPSYCIYc';
-          const statusEmoji = req.body.status === 'approved' ? '✅' : req.body.status === 'rejected' ? '❌' : '⏸️';
-          const msg = statusEmoji + ' *Vendor Status Updated*\n\nVendor ID: ' + id + '\nNew Status: ' + (req.body.status || 'updated') + '\nCommission: ' + (req.body.commission || '10') + '%';
-          await fetch('https://api.telegram.org/bot' + botToken + '/sendMessage', {
+          var vendors = await getVendors();
+          for (var i = 0; i < vendors.length; i++) {
+            if (vendors[i].id == vendorId) {
+              vendors[i] = { ...vendors[i], ...req.body };
+              break;
+            }
+          }
+          await saveVendors(vendors);
+        } catch(e) {}
+
+        // Send notification to admin about status change
+        try {
+          var bc = adminChatId || '336997351';
+          var bt = process.env.TELEGRAM_ADMIN_BOT_TOKEN || '8951025148:AAG456KIIBnyLBQqbkeDLajcT_TaPSYCIYc';
+          var statusEmoji = req.body.status === 'approved' ? '✅' : req.body.status === 'rejected' ? '❌' : '⏸️';
+          var msg = statusEmoji + ' *Vendor Status Updated*\n\nVendor ID: ' + vendorId + '\nNew Status: ' + (req.body.status || 'updated') + '\nCommission: ' + (req.body.commission || '10') + '%';
+          await fetch('https://api.telegram.org/bot' + bt + '/sendMessage', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chat_id: adminChatId, text: msg, parse_mode: 'Markdown' })
+            body: JSON.stringify({ chat_id: bc, text: msg, parse_mode: 'Markdown' })
           });
         } catch(e) {}
-        return res.json({ success: true }); 
+
+        return res.json({ success: true });
       }
     }
 
-    // ===== ANALYTICS =====
+    // ================================================================
+    // ANALYTICS
+    // ================================================================
     if (path === '/api/analytics') {
-      const { data: products } = await supabase.from('products').select('*');
-      const { data: orders } = await supabase.from('orders').select('*');
-      const tp = products?.length || 0; const ts = products?.reduce((s: any, p: any) => s + (p.sold_count || 0), 0) || 0;
-      const tor = orders?.length || 0; const tr = orders?.reduce((s: any, o: any) => s + (o.total || 0), 0) || 0;
-      const po = orders?.filter((o: any) => o.status === 'pending').length || 0;
-      const so = orders?.filter((o: any) => o.status === 'shipped').length || 0;
-      const top = [...(products || [])].sort((a: any, b: any) => (b.sold_count || 0) - (a.sold_count || 0)).slice(0, 5).map((p: any) => ({ name: p.name_en, sold: p.sold_count || 0, revenue: (p.sold_count || 0) * (p.price || 0) }));
+      var { data: products } = await supabase.from('products').select('*');
+      var { data: orders } = await supabase.from('orders').select('*');
+      var tp = products?.length || 0;
+      var ts = products?.reduce(function(s, p) { return s + (p.sold_count || 0); }, 0) || 0;
+      var tor = orders?.length || 0;
+      var tr = orders?.reduce(function(s, o) { return s + (o.total || 0); }, 0) || 0;
+      var po = orders?.filter(function(o) { return o.status === 'pending'; }).length || 0;
+      var so = orders?.filter(function(o) { return o.status === 'shipped'; }).length || 0;
+      var top = [...(products || [])].sort(function(a, b) { return (b.sold_count || 0) - (a.sold_count || 0); }).slice(0, 5).map(function(p) { return { name: p.name_en, sold: p.sold_count || 0, revenue: (p.sold_count || 0) * (p.price || 0) }; });
       return res.json({ analytics: { totalProducts: tp, totalSold: ts, totalRevenue: tr, totalOrders: tor, pendingOrders: po, shippedOrders: so, topProducts: top } });
     }
 
-    // ===== USERS =====
-    if (path === '/api/users' && method === 'GET') { const { data } = await supabase.from('users').select('*'); return res.json({ success: true, users: data || [] }); }
-    if (path === '/api/users/register' && method === 'POST') { const { data } = await supabase.from('users').insert(req.body).select().single(); return res.json({ success: true, user: data || req.body }); }
+    // ================================================================
+    // USERS
+    // ================================================================
+    if (path === '/api/users' && method === 'GET') { var { data } = await supabase.from('users').select('*'); return res.json({ success: true, users: data || [] }); }
+    if (path === '/api/users/register' && method === 'POST') { var { data } = await supabase.from('users').insert(req.body).select().single(); return res.json({ success: true, user: data || req.body }); }
 
-    // ===== AFFILIATES =====
-    if (path === '/api/affiliates' && method === 'GET') { const { data } = await supabase.from('products').select('*').eq('visible', true); return res.json({ products: (data || []).map(normalizeProduct) }); }
-    if (path === '/api/affiliates/with-products' && method === 'GET') { const { data } = await supabase.from('products').select('*').eq('visible', true).gte('rating', 4); return res.json({ products: (data || []).map(normalizeProduct) }); }
+    // ================================================================
+    // AFFILIATES
+    // ================================================================
+    if (path === '/api/affiliates' && method === 'GET') { var { data } = await supabase.from('products').select('*').eq('visible', true); return res.json({ products: (data || []).map(normalizeProduct) }); }
+    if (path === '/api/affiliates/with-products' && method === 'GET') { var { data } = await supabase.from('products').select('*').eq('visible', true).gte('rating', 4); return res.json({ products: (data || []).map(normalizeProduct) }); }
 
-    // ===== REVIEWS =====
+    // ================================================================
+    // REVIEWS
+    // ================================================================
     if (path.startsWith('/api/reviews')) {
-      if (method === 'GET') { const pid = (req.url?.split('?')[1] || '').split('&').find((s: string) => s.startsWith('productId='))?.split('=')[1]; let q: any = supabase.from('reviews').select('*'); if (pid) q = q.eq('product_id', parseInt(pid)); const { data } = await q.order('created_at', { ascending: false }); return res.json({ reviews: data || [] }); }
-      if (method === 'POST') { const { data } = await supabase.from('reviews').insert(req.body).select().single(); return res.json({ success: true, review: data }); }
+      if (method === 'GET') { var pid = (req.url?.split('?')[1] || '').split('&').find(function(s) { return s.startsWith('productId='); })?.split('=')[1]; var q = supabase.from('reviews').select('*'); if (pid) q = q.eq('product_id', parseInt(pid)); var { data } = await q.order('created_at', { ascending: false }); return res.json({ reviews: data || [] }); }
+      if (method === 'POST') { var { data } = await supabase.from('reviews').insert(req.body).select().single(); return res.json({ success: true, review: data }); }
     }
 
-    // ===== BROADCAST =====
+    // ================================================================
+    // BROADCAST
+    // ================================================================
     if (path === '/api/broadcast' && method === 'POST') { return res.json({ success: true, sent: 1, total: 1 }); }
 
-    // ===== PRE-ORDERS =====
+    // ================================================================
+    // PRE-ORDERS
+    // ================================================================
     if (path.startsWith('/api/pre-orders')) {
-      if (method === 'GET') { const { data } = await supabase.from('pre_orders').select('*'); return res.json({ preOrders: data || [] }); }
-      if (method === 'POST') { const { data } = await supabase.from('pre_orders').insert(req.body).select().single(); return res.json({ success: true, preOrder: data }); }
+      if (method === 'GET') { var { data } = await supabase.from('pre_orders').select('*'); return res.json({ preOrders: data || [] }); }
+      if (method === 'POST') { var { data } = await supabase.from('pre_orders').insert(req.body).select().single(); return res.json({ success: true, preOrder: data }); }
     }
 
-    // ===== CURRENCY =====
+    // ================================================================
+    // CURRENCY
+    // ================================================================
     if (path === '/api/currency/rates' && method === 'GET') { return res.json({ rates: { ETB: 1, USD: 0.019, EUR: 0.017, GBP: 0.015, KES: 2.45 }, base: 'ETB' }); }
 
-    // ===== RECEIPTS =====
-    if (path.startsWith('/api/receipts/') && method === 'GET') { const on = path.replace('/api/receipts/', ''); return res.json({ success: true, receipt: { orderNumber: on, generatedAt: new Date().toISOString() } }); }
+    // ================================================================
+    // RECEIPTS
+    // ================================================================
+    if (path.startsWith('/api/receipts/') && method === 'GET') { var on = path.replace('/api/receipts/', ''); return res.json({ success: true, receipt: { orderNumber: on, generatedAt: new Date().toISOString() } }); }
 
-    // ===== FLASH DEALS =====
-    if (path === '/api/flash-deals' && method === 'GET') { const { data } = await supabase.from('settings').select('*').single(); const fs = data?.data?.flashSales || {}; return res.json({ deals: Object.entries(fs).map(([pid, d]: any) => ({ id: parseInt(pid), productId: parseInt(pid), ...d })) }); }
+    // ================================================================
+    // FLASH DEALS
+    // ================================================================
+    if (path === '/api/flash-deals' && method === 'GET') { var { data } = await supabase.from('settings').select('*').single(); var fs = data?.data?.flashSales || {}; return res.json({ deals: Object.entries(fs).map(function(e) { return { id: parseInt(e[0]), productId: parseInt(e[0]), ...e[1] }; }) }); }
 
-    // ===== TRACKING =====
+    // ================================================================
+    // TRACKING
+    // ================================================================
     if (path.startsWith('/api/tracking/')) {
-      const on = path.replace('/api/tracking/', '');
-      if (method === 'GET') { const { data } = await supabase.from('orders').select('*').eq('order_number', on).single(); return res.json({ success: true, tracking: data?.tracking || null }); }
+      var on = path.replace('/api/tracking/', '');
+      if (method === 'GET') { var { data } = await supabase.from('orders').select('*').eq('order_number', on).single(); return res.json({ success: true, tracking: data?.tracking || null }); }
       if (method === 'PUT') { await supabase.from('orders').update({ tracking: req.body }).eq('order_number', on); return res.json({ success: true }); }
     }
 
-    // ===== UPLOAD =====
+    // ================================================================
+    // UPLOAD
+    // ================================================================
     if (path === '/api/upload' && method === 'POST') {
-      // For now, return the uploaded file as a data URL or use placeholder
-      // In production, this would upload to Supabase Storage
       return res.json({ url: 'https://placehold.co/400x400/e2e8f0/94a3b8?text=Image+Uploaded' });
     }
 
-    // ===== SEED / HEALTH =====
+    // ================================================================
+    // SEED / HEALTH
+    // ================================================================
     if (path === '/api/seed' && method === 'GET') {
-      const { count } = await supabase.from('products').select('*', { count: 'exact', head: true });
-      const { data: telegramUsers } = await supabase.from('users').select('*');
-      return res.json({ products: count || 0, telegramUsers: telegramUsers?.length || 0, message: 'Smart Shop API running on Vercel!' });
+      var { count } = await supabase.from('products').select('*', { count: 'exact', head: true });
+      var { data: telegramUsers } = await supabase.from('users').select('*');
+      var vendors = await getVendors();
+      return res.json({ products: count || 0, telegramUsers: telegramUsers?.length || 0, vendors: vendors.length, message: 'Smart Shop API running on Vercel!' });
     }
 
-
-    // ===== ADMIN BOT - Send file to Telegram =====
+    // ================================================================
+    // ADMIN BOT — Send file to Telegram
+    // ================================================================
     if (path === '/api/admin-bot/send-file' && method === 'POST') {
       if (!ADMIN_BOT_TOKEN) return res.status(200).json({ sent: false, error: 'No bot token' });
-      const { chatId, filename, content, contentType, caption } = req.body || {};
+      var { chatId, filename, content, contentType, caption } = req.body || {};
       if (!chatId || !content) return res.status(400).json({ error: 'chatId and content required' });
       try {
-        // Handle base64 data URLs - decode to Buffer for proper binary transfer
-        let fileBuffer;
-        let actualContentType = contentType || 'text/plain';
-        let actualFilename = filename || 'file.txt';
-        
+        var fileBuffer;
+        var actualContentType = contentType || 'text/plain';
+        var actualFilename = filename || 'file.txt';
+
         if (typeof content === 'string' && content.startsWith('data:')) {
-          // data:image/jpeg;base64,XXXXX...
-          const metaParts = content.split(';base64,');
+          var metaParts = content.split(';base64,');
           if (metaParts.length === 2) {
             actualContentType = metaParts[0].replace('data:', '');
-            const ext = actualContentType.includes('jpeg') ? 'jpg' : actualContentType.includes('png') ? 'png' : 'csv';
+            var ext = actualContentType.includes('jpeg') ? 'jpg' : actualContentType.includes('png') ? 'png' : 'csv';
             actualFilename = 'receipt-' + Date.now().toString(36) + '.' + ext;
             fileBuffer = Buffer.from(metaParts[1], 'base64');
           } else {
@@ -751,57 +837,62 @@ export default async function handler(req: any, res: any) {
           fileBuffer = Buffer.from(typeof content === 'string' ? content : JSON.stringify(content));
         }
 
-        // Use FormData + Blob for proper multipart binary upload
-        const formData = new FormData();
+        var formData = new FormData();
         formData.append('chat_id', String(chatId));
         formData.append('document', new Blob([fileBuffer], { type: actualContentType }), actualFilename);
         if (caption) formData.append('caption', caption);
-        
-        const result = await fetch('https://api.telegram.org/bot' + ADMIN_BOT_TOKEN + '/sendDocument', {
+
+        var result = await fetch('https://api.telegram.org/bot' + ADMIN_BOT_TOKEN + '/sendDocument', {
           method: 'POST',
           body: formData,
         });
-        const data = await result.json();
+        var data = await result.json();
         return res.json({ sent: data.ok === true, description: data.description });
-      } catch (e: any) {
+      } catch (e) {
         return res.json({ sent: false, error: e.message });
       }
     }
 
-    // ===== COMMISSION - Calculate =====
+    // ================================================================
+    // COMMISSION - Calculate
+    // ================================================================
     if (path === '/api/commission/calculate' && method === 'POST') {
-      const { productId, price, vendorId, category } = req.body || {};
-      const { data: settingsData } = await supabase.from('settings').select('*').single();
-      const s = settingsData?.data || {};
-      const globalCommission = s.vendorCommission || 10;
-      const categoryCommissions = s.categoryCommission || {};
-      const vendorCommissions = s.vendorCommissionOverride || {};
-      let commissionRate = globalCommission;
-      let source = 'global';
+      var { productId, price, vendorId, category } = req.body || {};
+      var { data: settingsData } = await supabase.from('settings').select('*').single();
+      var s = settingsData?.data || {};
+      var globalCommission = s.vendorCommission || 10;
+      var categoryCommissions = s.categoryCommission || {};
+      var vendorCommissions = s.vendorCommissionOverride || {};
+      var commissionRate = globalCommission;
+      var source = 'global';
       if (vendorId && vendorCommissions[vendorId]) { commissionRate = vendorCommissions[vendorId]; source = 'vendor_' + vendorId; }
       else if (category && categoryCommissions[category]) { commissionRate = categoryCommissions[category]; source = 'category_' + category; }
-      const commissionAmount = Math.round((price || 0) * commissionRate / 100);
-      const vendorPayout = (price || 0) - commissionAmount;
+      var commissionAmount = Math.round((price || 0) * commissionRate / 100);
+      var vendorPayout = (price || 0) - commissionAmount;
       return res.json({ commissionRate, commissionAmount, vendorPayout, source, productPrice: price || 0 });
     }
 
-    // ===== COMMISSION - Settings =====
+    // ================================================================
+    // COMMISSION - Settings
+    // ================================================================
     if (path === '/api/commission/settings' && method === 'GET') {
-      const { data: settingsData } = await supabase.from('settings').select('*').single();
-      const s = settingsData?.data || {};
+      var { data: settingsData } = await supabase.from('settings').select('*').single();
+      var s = settingsData?.data || {};
       return res.json({ globalCommission: s.vendorCommission || 10, categoryCommission: s.categoryCommission || {}, vendorCommissionOverride: s.vendorCommissionOverride || {} });
     }
 
-    // ===== PAYMENT - Initiate Chapa Payment (LIVE) =====
+    // ================================================================
+    // PAYMENT - Initiate Chapa Payment
+    // ================================================================
     if (path === '/api/payment/initiate-chapa' && method === 'POST') {
-      const { amount, email, firstName, lastName, phone, txRef, orderNumber } = req.body || {};
+      var { amount, email, firstName, lastName, phone, txRef, orderNumber } = req.body || {};
       if (!amount || !email || !phone) return res.status(400).json({ error: 'amount, email, and phone required' });
-      
-      const CHAPA_SECRET_KEY = process.env.CHAPA_SECRET_KEY || 'CHASECK_TEST-d0d6e765a19a5b19f4478b09a89ffd4cb42b5363';
-      const BASE_URL = process.env.VERCEL_URL ? 'https://' + process.env.VERCEL_URL : 'https://smartshop-steel.vercel.app';
-      
+
+      var CHAPA_SECRET_KEY = process.env.CHAPA_SECRET_KEY || 'CHASECK_TEST-d0d6e765a19a5b19f4478b09a89ffd4cb42b5363';
+      var BASE_URL = process.env.VERCEL_URL ? 'https://' + process.env.VERCEL_URL : 'https://smartshop-steel.vercel.app';
+
       try {
-        const chapaRes = await fetch('https://api.chapa.co/v1/transaction/initialize', {
+        var chapaRes = await fetch('https://api.chapa.co/v1/transaction/initialize', {
           method: 'POST',
           headers: { 'Authorization': 'Bearer ' + CHAPA_SECRET_KEY, 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -813,46 +904,50 @@ export default async function handler(req: any, res: any) {
             customization: { title: 'Smart Shop Order #' + orderNumber, description: 'Payment for order ' + orderNumber },
           }),
         });
-        const chapaData = await chapaRes.json();
-        
+        var chapaData = await chapaRes.json();
+
         if (chapaData.status === 'success' && chapaData.data?.checkout_url) {
           return res.json({ success: true, checkout_url: chapaData.data.checkout_url, tx_ref: txRef });
         } else {
           return res.json({ success: false, error: chapaData.message || 'Chapa initialization failed' });
         }
-      } catch (e: any) {
+      } catch (e) {
         return res.json({ success: false, error: e.message });
       }
     }
 
-    // ===== PAYMENT - Verify Chapa Payment (LIVE) =====
+    // ================================================================
+    // PAYMENT - Verify Chapa Payment
+    // ================================================================
     if (path === '/api/payment/verify' && method === 'POST') {
-      const { tx_ref } = req.body || {};
+      var { tx_ref } = req.body || {};
       if (!tx_ref) return res.status(400).json({ error: 'tx_ref required' });
-      
-      const CHAPA_SECRET_KEY = process.env.CHAPA_SECRET_KEY || 'CHASECK_TEST-d0d6e765a19a5b19f4478b09a89ffd4cb42b5363';
-      
+
+      var CHAPA_SECRET_KEY = process.env.CHAPA_SECRET_KEY || 'CHASECK_TEST-d0d6e765a19a5b19f4478b09a89ffd4cb42b5363';
+
       try {
-        const verifyRes = await fetch('https://api.chapa.co/v1/transaction/verify/' + tx_ref, {
+        var verifyRes = await fetch('https://api.chapa.co/v1/transaction/verify/' + tx_ref, {
           headers: { 'Authorization': 'Bearer ' + CHAPA_SECRET_KEY },
         });
-        const verifyData = await verifyRes.json();
-        
+        var verifyData = await verifyRes.json();
+
         if (verifyData.status === 'success' && verifyData.data?.status === 'success') {
           return res.json({ status: 'completed', amount: verifyData.data.amount, reference: verifyData.data.reference || tx_ref, verified: true });
         } else {
           return res.json({ status: 'failed', error: verifyData.message || 'Payment not completed', verified: false });
         }
-      } catch (e: any) {
+      } catch (e) {
         return res.json({ status: 'failed', error: e.message, verified: false });
       }
     }
 
-    // ===== PAYMENT - Initiate Telebirr =====
+    // ================================================================
+    // PAYMENT - Initiate Telebirr
+    // ================================================================
     if (path === '/api/payment/initiate-telebirr' && method === 'POST') {
-      const { amount, phone, orderNumber } = req.body || {};
+      var { amount, phone, orderNumber } = req.body || {};
       if (!amount || !phone) return res.status(400).json({ error: 'amount and phone required' });
-      
+
       return res.json({
         success: true,
         deepLink: 'telebirr://pay?amount=' + amount + '&order=' + orderNumber,
@@ -861,34 +956,40 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    // ===== PAYMENT - Transaction History =====
+    // ================================================================
+    // PAYMENT - Transaction History
+    // ================================================================
     if (path === '/api/payment/transactions' && method === 'GET') {
-      const { data: orders } = await supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(100);
-      const txList = (orders || []).map((o: any) => ({
-        id: o.id,
-        orderNumber: o.order_number,
-        amount: o.total || 0,
-        paymentMethod: o.payment_method || 'telebirr',
-        status: o.status || 'pending',
-        customerName: o.customer?.name || 'Unknown',
-        date: o.created_at || o.date,
-      }));
+      var { data: orders } = await supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(100);
+      var txList = (orders || []).map(function(o) {
+        return {
+          id: o.id,
+          orderNumber: o.order_number,
+          amount: o.total || 0,
+          paymentMethod: o.payment_method || 'telebirr',
+          status: o.status || 'pending',
+          customerName: o.customer?.name || 'Unknown',
+          date: o.created_at || o.date,
+        };
+      });
       return res.json({ transactions: txList });
     }
 
-    // ===== TAX - Calculate Tax Breakdown =====
+    // ================================================================
+    // TAX - Calculate Tax Breakdown
+    // ================================================================
     if (path === '/api/tax/calculate' && method === 'POST') {
-      const { productPrice, deliveryFee, commissionRate } = req.body || {};
-      const rate = (commissionRate || 15) / 100;
-      const basePrice = productPrice || 0;
-      const fee = deliveryFee || 0;
-      const commissionAmount = Math.round(basePrice * rate);
-      const gatewayFee = Math.round(basePrice * 0.025);
-      const vatOnCommission = Math.round(commissionAmount * 0.15);
-      const withholdingTax = Math.round(basePrice * 0.02);
-      const vendorPayout = basePrice - commissionAmount - gatewayFee - withholdingTax;
-      const totalPaid = basePrice + fee + vatOnCommission;
-      
+      var { productPrice, deliveryFee, commissionRate } = req.body || {};
+      var rate = (commissionRate || 15) / 100;
+      var basePrice = productPrice || 0;
+      var fee = deliveryFee || 0;
+      var commissionAmount = Math.round(basePrice * rate);
+      var gatewayFee = Math.round(basePrice * 0.025);
+      var vatOnCommission = Math.round(commissionAmount * 0.15);
+      var withholdingTax = Math.round(basePrice * 0.02);
+      var vendorPayout = basePrice - commissionAmount - gatewayFee - withholdingTax;
+      var totalPaid = basePrice + fee + vatOnCommission;
+
       return res.json({
         basePrice, deliveryFee: fee, commissionRate: rate, commissionAmount,
         gatewayFee, vatOnCommission, withholdingTax, vendorPayout, totalPaid,
@@ -898,14 +999,16 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    // ===== TAX - Generate Receipt =====
+    // ================================================================
+    // TAX - Generate Receipt
+    // ================================================================
     if (path === '/api/tax/receipt' && method === 'POST') {
-      const { orderNumber } = req.body || {};
+      var { orderNumber } = req.body || {};
       if (!orderNumber) return res.status(400).json({ error: 'orderNumber required' });
-      
-      const { data: order } = await supabase.from('orders').select('*').eq('order_number', orderNumber).single();
+
+      var { data: order } = await supabase.from('orders').select('*').eq('order_number', orderNumber).single();
       if (!order) return res.status(404).json({ error: 'Order not found' });
-      
+
       return res.json({
         success: true,
         receiptNumber: 'SS-' + new Date().getFullYear() + '-' + Math.floor(Math.random() * 90000 + 10000),
@@ -915,15 +1018,17 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    // ===== TAX - Generate Report =====
+    // ================================================================
+    // TAX - Monthly Report
+    // ================================================================
     if (path === '/api/tax/monthly-report' && method === 'GET') {
-      const { data: orders } = await supabase.from('orders').select('*');
-      const total = (orders || []).reduce((s: number, o: any) => s + (o.total || 0), 0);
-      const count = (orders || []).length;
-      const commission = Math.round(total * 0.1);
-      const vat = Math.round(commission * 0.15);
-      const wht = Math.round(total * 0.02);
-      
+      var { data: orders } = await supabase.from('orders').select('*');
+      var total = (orders || []).reduce(function(s, o) { return s + (o.total || 0); }, 0);
+      var count = (orders || []).length;
+      var commission = Math.round(total * 0.1);
+      var vat = Math.round(commission * 0.15);
+      var wht = Math.round(total * 0.02);
+
       return res.json({
         period: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
         totalSales: total,
@@ -936,57 +1041,17 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    // ===== ADMIN BOT - Save Config to Supabase =====
-    if (path === '/api/admin-bot/config' && method === 'POST') {
-      const { botToken, chatId } = req.body || {};
-      // Config is saved client-side in localStorage by AdminBotManager
-      // Server just acknowledges and stores temporarily for vendor notifications
-      try {
-        if (chatId) process.env.ADMIN_CHAT_ID = chatId;
-      } catch(e) {}
-      return res.json({ success: true });
-    }
-    if (path === '/api/admin-bot/config' && method === 'GET') {
-      return res.json({ 
-        botToken: process.env.TELEGRAM_ADMIN_BOT_TOKEN || '8951025148:AAG456KIIBnyLBQqbkeDLajcT_TaPSYCIYc', 
-        chatId: process.env.ADMIN_CHAT_ID || '' 
-      });
-    }
-
-    // ===== SHOP - Get User Contact by Telegram ID =====
-    if (path === '/api/user/contact' && method === 'GET') {
-      var qs = req.url?.split('?')[1] || '';
-      var tid = new URLSearchParams(qs).get('telegram_id') || '';
-      if (!tid) return res.json({ phone: '' });
-      try {
-        var { data } = await supabase.from('users').select('phone,contact_shared').eq('telegram_id', parseInt(tid)).single();
-        if (data && data.contact_shared) return res.json({ phone: data.phone || '' });
-      } catch(e) {}
-      return res.json({ phone: '' });
-    }
-
-    // ===== ADMIN BOT - Save Config (in-memory, persists per instance) =====
-    if (path === '/api/admin-bot/config' && method === 'POST') {
-      var cfg = req.body || {};
-      if (cfg.chatId) { adminChatId = cfg.chatId; try { process.env.TELEGRAM_ADMIN_CHAT_ID = cfg.chatId; } catch(e) {} }
-      if (cfg.botToken) { adminBotToken = cfg.botToken; try { process.env.TELEGRAM_ADMIN_BOT_TOKEN = cfg.botToken; } catch(e) {} }
-      console.log('Admin config saved, chatId:', adminChatId);
-      return res.json({ success: true, chatId: adminChatId });
-    }
-    if (path === '/api/admin-bot/config' && method === 'GET') {
-      return res.json({ botToken: adminBotToken || process.env.TELEGRAM_ADMIN_BOT_TOKEN || '8951025148:AAG456KIIBnyLBQqbkeDLajcT_TaPSYCIYc', chatId: adminChatId || '336997351' });
-    }
-
-    // ===== VENDOR - Send Telegram Notification =====
+    // ================================================================
+    // VENDOR - Send Telegram Notification
+    // ================================================================
     if (path === '/api/vendor/notify' && method === 'POST') {
-      const { telegramId, type, message } = req.body || {};
+      var { telegramId, type, message } = req.body || {};
       if (!telegramId || !message) return res.status(400).json({ success: false, error: 'telegramId and message required' });
-      
-      const botToken = process.env.VENDOR_BOT_TOKEN || VENDOR_BOT_TOKEN;
-      const emoji = type === 'payout' ? '💰' : type === 'order' ? '📦' : type === 'promo' ? '🎉' : type === 'test' ? '🔔' : '📢';
-      
+
+      var emoji = type === 'payout' ? '💰' : type === 'order' ? '📦' : type === 'promo' ? '🎉' : type === 'test' ? '🔔' : '📢';
+
       try {
-        const tgRes = await fetch('https://api.telegram.org/bot' + botToken + '/sendMessage', {
+        var tgRes = await fetch('https://api.telegram.org/bot' + VENDOR_BOT_TOKEN + '/sendMessage', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -995,21 +1060,23 @@ export default async function handler(req: any, res: any) {
             parse_mode: 'Markdown',
           }),
         });
-        const tgData = await tgRes.json();
+        var tgData = await tgRes.json();
         if (tgData.ok) {
           return res.json({ success: true });
         } else {
           return res.json({ success: false, error: tgData.description || 'Telegram error' });
         }
-      } catch (e: any) {
+      } catch (e) {
         return res.json({ success: false, error: e.message });
       }
     }
 
-    // ===== FALLBACK =====
-    return res.status(404).json({ error: 'Not found', path, method });
+    // ================================================================
+    // FALLBACK
+    // ================================================================
+    return res.status(404).json({ error: 'Not found', path: path, method: method });
 
-  } catch (e: any) {
+  } catch (e) {
     return res.status(500).json({ error: e.message });
   }
 }
