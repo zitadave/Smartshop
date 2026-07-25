@@ -514,8 +514,14 @@ export default async function handler(req, res) {
           result.vendor_status = found.status || 'pending';
           result.vendor_id = found.id;
           result.vendor_name = found.name || '';
+        } else {
+          // CRITICAL: Explicitly set vendor_status to 'none' when no vendor found
+          // so the frontend knows to show "Become a Vendor" instead of stale status
+          result.vendor_status = 'none';
         }
-      } catch(e) {}
+      } catch(e) {
+        result.vendor_status = 'none';
+      }
 
       return res.json(result);
     }

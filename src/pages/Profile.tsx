@@ -54,6 +54,13 @@ export default function Profile() {
           body: JSON.stringify(payload)
         }).then(function(r) { return r.json(); }).then(function(d) {
           if (d && d.vendor_status) {
+            if (d.vendor_status === 'none' && localStorage.getItem('ss_vendor_status') === 'approved') {
+              // Vendor was deleted - revoke access silently
+              localStorage.setItem('ss_vendor_status', 'none');
+              localStorage.removeItem('ss_vendor_app_id');
+              setVendorStatus('none');
+              return;
+            }
             if (d.vendor_status === 'approved' && localStorage.getItem('ss_vendor_status') !== 'approved') {
               localStorage.setItem('ss_vendor_status', 'approved');
               toast('✅ Vendor approved! Dashboard is now available.', 'success');
