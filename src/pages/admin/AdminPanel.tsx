@@ -807,7 +807,7 @@ function AdminVendors() {
           {apiApps.length > 0 && (
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-x-hidden">
               <div className="p-4 border-b border-slate-100 dark:border-slate-800">
-                <h3 className="text-sm font-bold">All Vendor Applications ({apps.length})</h3>
+                <h3 className="text-sm font-bold">All Vendor Applications ({apiApps.length})</h3>
               </div>
               <div className="divide-y divide-slate-100 dark:divide-slate-800">
                 {apiApps.sort(function(a,b) { return new Date(b.joined_at || b.appliedAt) - new Date(a.joined_at || a.appliedAt); }).map(function(a) {
