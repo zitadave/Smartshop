@@ -23,11 +23,11 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/icons/icon-192x192.svg" />
 
-    <!-- CLEAR ALL DATA + BUMP VERSION - RUNS FIRST -->
+    <!-- CLEAR ALL DATA + BUMP VERSION + DETECT TELEGRAM - RUNS FIRST -->
     <script>
       (function() {
         try {
-          var v = 'v21';
+          var v = 'v22';
           var cur = localStorage.getItem('ss_app_version');
           if (cur !== v) {
             localStorage.clear();
@@ -35,16 +35,16 @@
           }
         } catch(e) {}
 
-        // ===== TELEGRAM DETECTION - RUNS IMMEDIATELY =====
-        try {
-          var tg = window.Telegram;
-          var webapp = tg && tg.WebApp;
-          if (webapp) {
-            webapp.ready();
-            webapp.expand();
-            
-            var user = webapp.initDataUnsafe && webapp.initDataUnsafe.user;
-            if (user) {
+        // ===== TELEGRAM DETECTION - immediate + retries =====
+        function detectTelegram() {
+          try {
+            var tg = window.Telegram;
+            var webapp = tg && tg.WebApp;
+            if (webapp && webapp.initDataUnsafe && webapp.initDataUnsafe.user) {
+              webapp.ready();
+              webapp.expand();
+              
+              var user = webapp.initDataUnsafe.user;
               var profile = {};
               try { profile = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
               
@@ -56,11 +56,9 @@
               profile.registered = true;
               
               localStorage.setItem('ss_profile', JSON.stringify(profile));
-              
-              // Mark that Telegram was detected
               localStorage.setItem('ss_tg_detected', 'true');
               
-              // Fetch phone async
+              // Fetch phone from API
               var xhr = new XMLHttpRequest();
               xhr.open('GET', '/api/user/contact?telegram_id=' + profile.telegramId, true);
               xhr.onload = function() {
@@ -77,15 +75,17 @@
               };
               xhr.send();
               
-              // Also sync
-              var xhr2 = new XMLHttpRequest();
-              xhr2.open('POST', '/api/user/sync', true);
-              xhr2.setRequestHeader('Content-Type', 'application/json');
-              xhr2.send(JSON.stringify({ telegram_id: profile.telegramId, username: user.username || '', first_name: user.first_name || '' }));
+              return true;
             }
-          }
-        } catch(e) {
-          console.error('Telegram init error:', e);
+          } catch(e) {}
+          return false;
+        }
+        
+        // Try immediately
+        if (!detectTelegram()) {
+          // Try again after a short delay (for slower Telegram injections)
+          setTimeout(detectTelegram, 100);
+          setTimeout(detectTelegram, 300);
         }
       })();
     </script>
