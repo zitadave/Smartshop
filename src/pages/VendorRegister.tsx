@@ -94,7 +94,7 @@ export default function VendorRegister() {
             <div>
               <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Phone Number</label>
               <input className="w-full mt-1 p-3 border border-slate-200 rounded-xl text-sm bg-slate-50 text-slate-500" 
-                value={storePhone} readOnly />
+                value={storePhone} onChange={function(e) { setStorePhone(e.target.value); }} placeholder="Auto-filled from Telegram" />
             </div>
             <div>
               <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Email (optional)</label>

@@ -20,10 +20,26 @@ export default function Profile() {
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showWallet, setShowWallet] = useState(false);
   const [showLogout, setShowLogout] = useState(false);
-  const [editName, setEditName] = useState(profile.name);
-  const [editPhone, setEditPhone] = useState(profile.phone);
+  // Read initial values from localStorage directly (avoid hoisting issues)
+  const [editName, setEditName] = useState(function() {
+    try { var p = JSON.parse(localStorage.getItem('ss_profile') || '{}'); return p.name || ''; } catch(e) { return ''; }
+  }());
+  const [editPhone, setEditPhone] = useState(function() {
+    try { var p = JSON.parse(localStorage.getItem('ss_profile') || '{}'); return p.phone || localStorage.getItem('ss_user_phone') || ''; } catch(e) { return ''; }
+  }());
 
-  const initials = profile.name ? profile.name.substring(0, 2).toUpperCase() : '?';
+  // Ensure we have fresh telegram info from localStorage (not just stale store)
+  var localProfile = { name: '', phone: '', email: '', registered: false, joinedAt: '' };
+  try { localProfile = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
+  
+  // Use localProfile values for telegram-specific fields, profile from store for everything else
+  var displayTelegramId = profile.telegramId || localProfile.telegramId || '';
+  var displayTelegramUsername = profile.telegramUsername || localProfile.telegramUsername || '';
+  var displayPhone = profile.phone || localProfile.phone || localStorage.getItem('ss_user_phone') || '';
+  var displayName = profile.name || localProfile.name || 'Guest';
+  var displayJoinedAt = profile.joinedAt || localProfile.joinedAt || '';
+
+  const initials = displayName.substring(0, 2).toUpperCase() || '?';
   const ordCount = orders.length + preOrders.length;
   const cartCount = cart.reduce((s, i) => s + i.qty, 0);
 
@@ -157,13 +173,13 @@ export default function Profile() {
         <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-blue-700 text-white flex items-center justify-center text-xl font-bold mx-auto shadow-md cursor-pointer" onClick={() => setShowEditProfile(true)}>
           {initials}
         </div>
-        <h2 className="text-base font-bold mt-2">{profile.name || 'Guest'}</h2>
+        <h2 className="text-base font-bold mt-2">{displayName}</h2>
         <div className="flex flex-col items-center gap-0.5 mt-1">
-          {profile.phone && <p className="text-[10px] text-muted-foreground">📞 {profile.phone}</p>}
-          {profile.telegramUsername && <p className="text-[10px] text-muted-foreground">@ {profile.telegramUsername}</p>}
-          {profile.telegramId && <p className="text-[8px] text-muted-foreground/50 font-mono">ID: {profile.telegramId}</p>}
+          {displayPhone && <p className="text-[10px] text-muted-foreground">📞 {displayPhone}</p>}
+          {displayTelegramUsername && <p className="text-[10px] text-muted-foreground">@ {displayTelegramUsername}</p>}
+          {displayTelegramId && <p className="text-[8px] text-muted-foreground/50 font-mono">ID: {displayTelegramId}</p>}
         </div>
-        <p className="text-[10px] text-muted-foreground mt-1">📅 Joined {profile.joinedAt ? new Date(profile.joinedAt).toLocaleDateString() : 'Today'}</p>
+        <p className="text-[10px] text-muted-foreground mt-1">📅 Joined {displayJoinedAt ? new Date(displayJoinedAt).toLocaleDateString() : 'Today'}</p>
       </div>
 
       {/* Telegram Connect */}
@@ -360,9 +376,9 @@ export default function Profile() {
             <div className="space-y-3">
               <div><label className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Name</label><input className="w-full p-3 border border-input rounded-xl text-sm bg-card mt-1" value={editName} onChange={e => setEditName(e.target.value)} placeholder="Your name" /></div>
               <div><label className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Phone</label><input className="w-full p-3 border border-input rounded-xl text-sm bg-card mt-1" value={editPhone} onChange={e => setEditPhone(e.target.value)} placeholder="09XXXXXXXX" /></div>
-              {profile.telegramId && <div className="bg-muted/30 rounded-xl p-2.5 text-[9px] text-muted-foreground">
+              {displayTelegramId && <div className="bg-muted/30 rounded-xl p-2.5 text-[9px] text-muted-foreground">
                 <div className="flex items-center justify-between"><span>Telegram ID</span><span className="font-mono font-semibold">{profile.telegramId}</span></div>
-                {profile.telegramUsername && <div className="flex items-center justify-between mt-1"><span>Username</span><span className="font-semibold">@{profile.telegramUsername}</span></div>}
+                {displayTelegramUsername && <div className="flex items-center justify-between mt-1"><span>Username</span><span className="font-semibold">@{displayTelegramUsername}</span></div>}
               </div>}
             </div>
             <div className="flex gap-2 mt-4">
