@@ -28,16 +28,44 @@ export default function Profile() {
     try { var p = JSON.parse(localStorage.getItem('ss_profile') || '{}'); return p.phone || localStorage.getItem('ss_user_phone') || ''; } catch(e) { return ''; }
   }());
 
-  // Ensure we have fresh telegram info from localStorage (not just stale store)
-  var localProfile = { name: '', phone: '', email: '', registered: false, joinedAt: '' };
-  try { localProfile = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
-  
-  // Use localProfile values for telegram-specific fields, profile from store for everything else
-  var displayTelegramId = profile.telegramId || localProfile.telegramId || '';
-  var displayTelegramUsername = profile.telegramUsername || localProfile.telegramUsername || '';
-  var displayPhone = profile.phone || localProfile.phone || localStorage.getItem('ss_user_phone') || '';
-  var displayName = profile.name || localProfile.name || 'Guest';
-  var displayJoinedAt = profile.joinedAt || localProfile.joinedAt || '';
+  // LIVE data from localStorage - re-reads on every render via state
+  const [liveTgId, setLiveTgId] = useState('');
+  const [liveTgUser, setLiveTgUser] = useState('');
+  const [livePhone, setLivePhone] = useState('');
+  const [liveName, setLiveName] = useState('');
+  const [liveJoined, setLiveJoined] = useState('');
+
+  // Poll localStorage every 500ms for 10 seconds to catch the async phone fetch
+  useEffect(function() {
+    function readFromLS() {
+      try {
+        var p = JSON.parse(localStorage.getItem('ss_profile') || '{}');
+        var phone = localStorage.getItem('ss_user_phone') || '';
+        setLiveTgId(p.telegramId || '');
+        setLiveTgUser(p.telegramUsername || '');
+        setLivePhone(phone || p.phone || '');
+        setLiveName(p.name || 'Guest');
+        setLiveJoined(p.joinedAt || '');
+      } catch(e) {}
+    }
+    // Read immediately
+    readFromLS();
+    // Then poll 5 times
+    var count = 0;
+    var interval = setInterval(function() {
+      count++;
+      readFromLS();
+      if (count >= 10) clearInterval(interval); // stop after ~5s
+    }, 500);
+    return function() { clearInterval(interval); };
+  }, []);
+
+  // Use the live state - fallback to store, then to empty
+  var displayTelegramId = liveTgId || profile.telegramId || '';
+  var displayTelegramUsername = liveTgUser || profile.telegramUsername || '';
+  var displayPhone = livePhone || profile.phone || '';
+  var displayName = liveName || profile.name || 'Guest';
+  var displayJoinedAt = liveJoined || profile.joinedAt || '';
 
   const initials = displayName.substring(0, 2).toUpperCase() || '?';
   const ordCount = orders.length + preOrders.length;
@@ -168,6 +196,18 @@ export default function Profile() {
 
   return (
     <div className="pb-4">
+      {/* DEBUG: Show what data is available */}
+      <div className="mx-3 mt-2 p-2 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-xl text-[8px] font-mono leading-relaxed text-yellow-800 dark:text-yellow-400">
+        <div>📊 Debug - Build: v18</div>
+        <div>store.profile.telegramId: {profile.telegramId || 'EMPTY'}</div>
+        <div>liveTgId (from LS): {liveTgId || 'EMPTY'}</div>
+        <div>store.profile.phone: {profile.phone || 'EMPTY'}</div>
+        <div>livePhone (from LS): {livePhone || 'EMPTY'}</div>
+        <div>ss_user_phone: {localStorage.getItem('ss_user_phone') || 'EMPTY'}</div>
+        <div>ss_phone_shared: {localStorage.getItem('ss_phone_shared') || 'EMPTY'}</div>
+        <div>Telegram.WebApp: {typeof window !== 'undefined' && window.Telegram?.WebApp ? 'YES' : 'NO'}</div>
+      </div>
+
       {/* Avatar */}
       <div className="text-center py-6 bg-card border-b border-border">
         <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-blue-700 text-white flex items-center justify-center text-xl font-bold mx-auto shadow-md cursor-pointer" onClick={() => setShowEditProfile(true)}>
