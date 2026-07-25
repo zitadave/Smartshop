@@ -3,89 +3,90 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-
-    <!-- Primary Meta -->
     <title>Smart Shop Ethiopia — Premium Marketplace</title>
     <meta name="title" content="Smart Shop Ethiopia — Premium Marketplace" />
     <meta name="description" content="Ethiopia's premier e-commerce marketplace. Discover curated products at exceptional prices with complimentary delivery." />
     <meta name="theme-color" content="#1a365d" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-
-    <!-- Open Graph -->
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Smart Shop Ethiopia" />
     <meta property="og:description" content="Discover curated products at exceptional prices." />
     <meta property="og:image" content="/icons/icon-512x512.svg" />
-
-    <!-- PWA -->
     <link rel="manifest" href="/manifest.json" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/icons/icon-192x192.svg" />
 
-    <!-- CLEAR ALL DATA + BUMP VERSION + DETECT TELEGRAM - RUNS FIRST -->
+    <!-- ===== CRITICAL: Telegram detection - BLOCKING sync loop ===== -->
     <script>
+      // Step 1: Update version without clearing all data
       (function() {
         try {
-          var v = 'v22';
+          var ver = 'v23';
           var cur = localStorage.getItem('ss_app_version');
-          if (cur !== v) {
-            localStorage.clear();
-            localStorage.setItem('ss_app_version', v);
+          if (cur !== ver) {
+            // Don't clear all data - just update version
+            localStorage.setItem('ss_app_version', ver);
+            // Clear cached Telegram detection flag
+            localStorage.removeItem('ss_tg_detected');
           }
         } catch(e) {}
+      })();
 
-        // ===== TELEGRAM DETECTION - immediate + retries =====
-        function detectTelegram() {
+      // Step 2: BLOCKING Telegram detection - waits up to 2 seconds
+      (function() {
+        var detected = false;
+        var profile = null;
+        var startTime = Date.now();
+        
+        // Try to detect Telegram WebApp - BLOCKING loop
+        while (Date.now() - startTime < 2000) {
           try {
             var tg = window.Telegram;
-            var webapp = tg && tg.WebApp;
-            if (webapp && webapp.initDataUnsafe && webapp.initDataUnsafe.user) {
-              webapp.ready();
-              webapp.expand();
-              
+            if (tg && tg.WebApp && tg.WebApp.initDataUnsafe) {
+              var webapp = tg.WebApp;
               var user = webapp.initDataUnsafe.user;
-              var profile = {};
-              try { profile = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
-              
-              profile.telegramId = String(user.id || '');
-              if (user.username) profile.telegramUsername = user.username;
-              if (user.first_name) profile.name = profile.name || user.first_name;
-              if (user.last_name && profile.name === user.first_name) profile.name = user.first_name + ' ' + user.last_name;
-              if (!profile.joinedAt) profile.joinedAt = new Date().toISOString();
-              profile.registered = true;
-              
-              localStorage.setItem('ss_profile', JSON.stringify(profile));
-              localStorage.setItem('ss_tg_detected', 'true');
-              
-              // Fetch phone from API
-              var xhr = new XMLHttpRequest();
-              xhr.open('GET', '/api/user/contact?telegram_id=' + profile.telegramId, true);
-              xhr.onload = function() {
-                try {
-                  var d = JSON.parse(xhr.responseText);
-                  if (d && d.phone) {
-                    var p = JSON.parse(localStorage.getItem('ss_profile') || '{}');
-                    p.phone = d.phone;
-                    localStorage.setItem('ss_profile', JSON.stringify(p));
-                    localStorage.setItem('ss_user_phone', d.phone);
-                    localStorage.setItem('ss_phone_shared', 'true');
-                  }
-                } catch(e) {}
-              };
-              xhr.send();
-              
-              return true;
+              if (user) {
+                webapp.ready();
+                webapp.expand();
+                
+                profile = {};
+                try { profile = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
+                
+                profile.telegramId = String(user.id || '');
+                if (user.username) profile.telegramUsername = user.username;
+                if (user.first_name && !profile.name) profile.name = user.first_name;
+                if (user.last_name && profile.name === user.first_name) profile.name = user.first_name + ' ' + user.last_name;
+                if (!profile.joinedAt) profile.joinedAt = new Date().toISOString();
+                profile.registered = true;
+                
+                localStorage.setItem('ss_profile', JSON.stringify(profile));
+                localStorage.setItem('ss_tg_detected', 'true');
+                
+                detected = true;
+                break;
+              }
             }
           } catch(e) {}
-          return false;
         }
-        
-        // Try immediately
-        if (!detectTelegram()) {
-          // Try again after a short delay (for slower Telegram injections)
-          setTimeout(detectTelegram, 100);
-          setTimeout(detectTelegram, 300);
+
+        // Step 3: If detected, fetch phone asynchronously (doesn't block)
+        if (detected && profile && profile.telegramId) {
+          var xhr = new XMLHttpRequest();
+          xhr.open('GET', '/api/user/contact?telegram_id=' + profile.telegramId, true);
+          xhr.onload = function() {
+            try {
+              var d = JSON.parse(xhr.responseText);
+              if (d && d.phone) {
+                var p = JSON.parse(localStorage.getItem('ss_profile') || '{}');
+                p.phone = d.phone;
+                localStorage.setItem('ss_profile', JSON.stringify(p));
+                localStorage.setItem('ss_user_phone', d.phone);
+                localStorage.setItem('ss_phone_shared', 'true');
+              }
+            } catch(e) {}
+          };
+          xhr.send();
         }
       })();
     </script>
