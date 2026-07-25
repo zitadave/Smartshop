@@ -648,14 +648,26 @@ export default async function handler(req, res) {
             await saveVendors(vendors);
           }
 
-          // Notify admin
+          // Notify admin with beautiful card
           try {
             var bc = adminChatId || '336997351';
             var bt = process.env.TELEGRAM_ADMIN_BOT_TOKEN || '8951025148:AAG456KIIBnyLBQqbkeDLajcT_TaPSYCIYc';
+            var approvedVendorName = req.body.name || 'ID: ' + appId;
             await fetch('https://api.telegram.org/bot' + bt + '/sendMessage', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ chat_id: bc, text: '✅ Vendor approved: ' + (req.body.name || 'ID: ' + appId) })
+              body: JSON.stringify({ 
+                chat_id: bc, 
+                text: '✅ <b>Vendor Approved</b>\n\n' +
+                  '━━━━━━━━━━━━━━━\n' +
+                  '🏪 <b>Store:</b> ' + approvedVendorName + '\n' +
+                  '🆔 <b>ID:</b> <code>' + appId + '</code>\n' +
+                  '📅 <b>Date:</b> ' + new Date().toLocaleDateString() + '\n' +
+                  '━━━━━━━━━━━━━━━\n\n' +
+                  'The vendor can now access their dashboard and start selling products.',
+                parse_mode: 'HTML', 
+                disable_web_page_preview: true 
+              })
             });
           } catch(e) {}
 
@@ -670,7 +682,16 @@ export default async function handler(req, res) {
               }
             }
             if (approvedVendor && approvedVendor.telegram_id) {
-              var vendorNotifyMsg = '✅ *Congratulations!* 🎉\n\nYour vendor application has been approved! You can now access your Vendor Dashboard and start selling products.\n\nTap the button below to open the shop:';
+              var vendorName = approvedVendor.name || 'your store';
+              var vendorNotifyMsg = '🎉 <b>Congratulations ' + vendorName + '!</b>\n\n' +
+                '━━━━━━━━━━━━━━━\n' +
+                '✅ <b>Your vendor application has been approved!</b>\n' +
+                '━━━━━━━━━━━━━━━\n\n' +
+                'You can now:\n' +
+                '📦 <b>Add products</b> to your store\n' +
+                '📊 <b>Manage orders</b> from your dashboard\n' +
+                '💰 <b>Track earnings</b> and payouts\n\n' +
+                'Tap the button below to start selling! 🚀';
               var vendorUrl = 'https://smartshop-steel.vercel.app';
               await fetch('https://api.telegram.org/bot' + VENDOR_BOT_TOKEN + '/sendMessage', {
                 method: 'POST',
@@ -678,9 +699,9 @@ export default async function handler(req, res) {
                 body: JSON.stringify({
                   chat_id: approvedVendor.telegram_id,
                   text: vendorNotifyMsg,
-                  parse_mode: 'Markdown',
+                  parse_mode: 'HTML',
                   reply_markup: JSON.stringify({
-                    inline_keyboard: [[{ text: '🚀 Open Smart Shop', web_app: { url: vendorUrl } }]]
+                    inline_keyboard: [[{ text: '🚀 Open Vendor Dashboard', web_app: { url: vendorUrl } }]]
                   })
                 })
               });
