@@ -729,8 +729,8 @@ function AdminVendors() {
               <div key={a.id} className="flex items-center justify-between bg-white/50 dark:bg-slate-900/50 rounded-xl p-3 mb-2">
                 <div>
                   <div className="text-xs font-semibold text-amber-800 dark:text-amber-300">{a.name || 'Unknown'}</div>
-                  <div className="text-[9px] text-amber-600">Phone: {a.phone || 'N/A'} · Telegram: {a.telegramId || 'N/A'}</div>
-                  <div className="text-[8px] text-amber-500">Applied: {new Date(a.appliedAt).toLocaleDateString()}</div>
+                  <div className="text-[9px] text-amber-600">Phone: {a.phone || 'N/A'} · Telegram: {a.telegram_id || a.telegramId || 'N/A'}</div>
+                  <div className="text-[8px] text-amber-500">Applied: {new Date(a.joined_at || a.appliedAt).toLocaleDateString()}</div>
                 </div>
                 <div className="flex gap-2 flex-shrink-0">
                   <button className="px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-[9px] font-bold hover:shadow-md transition-all" onClick={function() { approveVendorApp(a.id, a.name); }}>
@@ -810,7 +810,7 @@ function AdminVendors() {
                 <h3 className="text-sm font-bold">All Vendor Applications ({apps.length})</h3>
               </div>
               <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                {apiApps.sort(function(a,b) { return new Date(b.appliedAt) - new Date(a.appliedAt); }).map(function(a) {
+                {apiApps.sort(function(a,b) { return new Date(b.joined_at || b.appliedAt) - new Date(a.joined_at || a.appliedAt); }).map(function(a) {
                   var badgeColor = a.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : a.status === 'paused' ? 'bg-amber-100 text-amber-700' : a.status === 'rejected' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700';
                   var badgeText = a.status === 'paused' ? 'Paused' : a.status.charAt(0).toUpperCase() + a.status.slice(1);
                   return (
@@ -821,7 +821,7 @@ function AdminVendors() {
                         </div>
                         <div>
                           <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">{a.name || 'Unknown'}</div>
-                          <div className="text-[9px] text-slate-400">Phone: {a.phone || 'N/A'} · {new Date(a.appliedAt).toLocaleDateString()}</div>
+                          <div className="text-[9px] text-slate-400">Phone: {a.phone || 'N/A'} · {new Date(a.joined_at || a.appliedAt).toLocaleDateString()}</div>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
