@@ -102,7 +102,7 @@ function applySavedTheme() {
 }
 
 export default function App() {
-  const { darkMode, setProducts, setSettings, settings, products } = useStore();
+  const { darkMode, setProducts, setSettings, settings, products, setProfile } = useStore();
 
   useEffect(() => { initSentry(); initAnalytics(); }, []);
   useEffect(() => { applySavedTheme(); }, []);
@@ -110,6 +110,21 @@ export default function App() {
     if (darkMode) document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
   }, [darkMode]);
+
+  // CRITICAL: main.tsx IIFE runs AFTER module init, so the zustand store's
+  // initial ss_profile load (from module init time) is stale. Re-read here.
+  useEffect(function() {
+    try {
+      var stored = localStorage.getItem('ss_profile');
+      if (stored) {
+        var parsed = JSON.parse(stored);
+        // Only update if main.tsx saved telegramId (meaning it ran)
+        if (parsed.telegramId) {
+          setProfile(parsed);
+        }
+      }
+    } catch(e) {}
+  }, []);
 
   useEffect(() => {
     productsApi.list().then(d => {

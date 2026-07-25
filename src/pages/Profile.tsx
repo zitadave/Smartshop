@@ -19,6 +19,7 @@ export default function Profile() {
   const { profile, language, setLanguage, darkMode, setDarkMode, orders, wishlist, cart, followedVendors, loyaltyPoints, savedPayments, preOrders, notifications, savedAddresses, walletBalance, walletHistory, isTelegramVerified, telegramId, settings } = store;
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showWallet, setShowWallet] = useState(false);
+  const [showLogout, setShowLogout] = useState(false);
   const [editName, setEditName] = useState(profile.name);
   const [editPhone, setEditPhone] = useState(profile.phone);
 
@@ -52,11 +53,15 @@ export default function Profile() {
   try { initialVS = localStorage.getItem('ss_vendor_status') || 'none'; } catch(e) {}
   const [vendorStatus, setVendorStatus] = useState(initialVS);
   
-  // Check API for approved status via sync
+  // Check API for approved status via sync - also re-read from localStorage
+  // because main.tsx IIFE may have updated it after the store initialized
   useEffect(function() {
-    var tid = profile.telegramId || '';
-    var phone = profile.phone || localStorage.getItem('ss_user_phone') || '';
-    var payload: any = {};
+    // Re-read profile from localStorage to ensure we have latest data
+    var localProfile = {};
+    try { localProfile = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
+    var tid = localProfile.telegramId || profile.telegramId || '';
+    var phone = localProfile.phone || profile.phone || localStorage.getItem('ss_user_phone') || '';
+    var payload = {};
     if (tid) payload.telegram_id = tid;
     if (phone) payload.phone = phone;
     if (tid || phone) {
@@ -92,7 +97,7 @@ export default function Profile() {
         }
       }).catch(function() {});
     }
-  }, []);
+  }, [profile.telegramId, profile.phone]);
   
   const applyAsVendor = function() {
     if (vendorStatus === 'pending') { toast('Already applied! Admin will review.', 'info'); return; }
@@ -315,11 +320,32 @@ export default function Profile() {
 
       {/* Logout */}
       <div className="mx-3 mt-3 mb-6">
-        <div className="flex items-center gap-3 px-3 py-2.5 bg-card rounded-lg border border-border cursor-pointer hover:border-destructive/50 transition-colors" onClick={() => { if (confirm('Logout?')) { store.setProfile({ name: '', phone: '', email: '', registered: false, joinedAt: '' }); } }}>
+        <div className="flex items-center gap-3 px-3 py-2.5 bg-card rounded-lg border border-border cursor-pointer hover:border-destructive/50 transition-colors" onClick={() => setShowLogout(true)}>
           <span className="text-base w-6 text-center text-destructive">🚪</span>
           <span className="text-xs font-medium flex-1 text-destructive">{t('logout', language)}</span>
         </div>
       </div>
+
+      {/* Logout Confirmation Modal */}
+      {showLogout && (
+        <div className="fixed inset-0 bg-black/60 z-[200] flex items-center justify-center p-4" onClick={function() { setShowLogout(false); }}>
+          <div className="bg-card rounded-3xl w-full max-w-sm p-5 shadow-2xl animate-bounce-in" onClick={function(e) { e.stopPropagation(); }}>
+            <div className="text-center mb-4">
+              <div className="text-4xl mb-2">🚪</div>
+              <h3 className="text-sm font-bold">Logout</h3>
+              <p className="text-[10px] text-muted-foreground mt-1">Are you sure you want to logout?</p>
+            </div>
+            <div className="flex gap-2">
+              <button className="flex-1 py-3 bg-destructive text-white rounded-xl text-xs font-bold" onClick={function() { store.setProfile({ name: '', phone: '', email: '', registered: false, joinedAt: '' }); setShowLogout(false); }}>
+                Yes, Logout
+              </button>
+              <button className="flex-1 py-3 border border-border rounded-xl text-xs" onClick={function() { setShowLogout(false); }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <p className="text-center text-[9px] text-muted-foreground pb-4">🏪 Smart Shop v3.1</p>
 

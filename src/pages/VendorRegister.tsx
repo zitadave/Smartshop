@@ -25,18 +25,18 @@ export default function VendorRegister() {
 
   const submit = async function() {
     if (!storeName.trim()) { toast('Store name is required', 'error'); return; }
+    
+    // Re-read fresh profile from localStorage to get telegramId etc.
+    var freshProfile = {};
+    try { freshProfile = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
+    var freshPhone = localStorage.getItem('ss_user_phone') || '';
+    
     if (!storePhone.trim()) {
-      try {
-        var pp = JSON.parse(localStorage.getItem('ss_profile') || '{}');
-        var uu = localStorage.getItem('ss_user_phone') || '';
-        var pp2 = pp.phone || uu || '';
-        if (pp2) { setStorePhone(pp2); }
-      } catch(e) {}
+      var pp2 = freshProfile.phone || freshPhone || '';
+      if (pp2) { setStorePhone(pp2); }
     }
     setSubmitting(true);
-    var profData2 = {};
-    try { profData2 = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
-    var finalPhone = storePhone || profData2.phone || localStorage.getItem('ss_user_phone') || '';
+    var finalPhone = storePhone || freshProfile.phone || freshPhone || '';
     var apps = [];
     try { apps = JSON.parse(localStorage.getItem('ss_vendor_applications') || '[]'); } catch(e) {}
     apps.push({
@@ -56,7 +56,7 @@ export default function VendorRegister() {
       var res = await fetch('/api/vendors/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: storeName.trim(), phone: finalPhone, email: storeEmail.trim(), description: storeDesc.trim(), status: 'pending', appliedAt: new Date().toISOString(), telegram_id: profData2.telegramId || '' })
+        body: JSON.stringify({ name: storeName.trim(), phone: finalPhone, email: storeEmail.trim(), description: storeDesc.trim(), status: 'pending', appliedAt: new Date().toISOString(), telegram_id: freshProfile.telegramId || '' })
       });
       var d = await res.json();
       if (d && d.vendor && d.vendor.id) {
