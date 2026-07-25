@@ -710,7 +710,7 @@ function AdminVendors() {
   return (
     <div className="animate-fadeUp space-y-4 max-w-full overflow-x-hidden">
       <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
-        <div><h2 className="text-lg font-bold">🏪 Vendor Management ({vendors.length})</h2><p className="text-[10px] text-slate-500">Manage vendor registrations, commissions, payouts and storefronts</p></div>
+        <div><h2 className="text-lg font-bold">🏪 Vendor Management ({apiApps.length})</h2><p className="text-[10px] text-slate-500">Manage vendor registrations, commissions, payouts and storefronts</p></div>
         <div className="flex gap-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl p-0.5">
           <button className={cn('px-3 py-1.5 rounded-lg text-[9px] font-semibold transition-all', vendorView === 'vendors' ? 'bg-white dark:bg-slate-700 shadow-sm' : 'text-slate-500')} onClick={() => setVendorView('vendors')}>Vendors</button>
           <button className={cn('px-3 py-1.5 rounded-lg text-[9px] font-semibold transition-all', vendorView === 'payouts' ? 'bg-white dark:bg-slate-700 shadow-sm' : 'text-slate-500')} onClick={() => setVendorView('payouts')}><DollarSign size={11} className="inline" /> Payouts</button>
@@ -746,9 +746,9 @@ function AdminVendors() {
         </div>
       )}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 text-center"><div className="text-lg font-bold text-indigo-600">{vendors.length}</div><div className="text-[9px] text-slate-500">Total Vendors</div></div>
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 text-center"><div className="text-lg font-bold text-green-600">{vendors.filter(v => v.approved !== false).length}</div><div className="text-[9px] text-slate-500">Approved</div></div>
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 text-center"><div className="text-lg font-bold text-amber-600">{vendors.filter(v => !v.approved).length}</div><div className="text-[9px] text-slate-500">Pending</div></div>
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 text-center"><div className="text-lg font-bold text-indigo-600">{apiApps.length}</div><div className="text-[9px] text-slate-500">Total Vendors</div></div>
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 text-center"><div className="text-lg font-bold text-green-600">{apiApps.filter(function(v) { return v.status === "approved"; }).length}</div><div className="text-[9px] text-slate-500">Approved</div></div>
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 text-center"><div className="text-lg font-bold text-amber-600">{apiApps.filter(function(v) { return v.status !== "approved"; }).length}</div><div className="text-[9px] text-slate-500">Pending</div></div>
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 text-center"><div className="text-lg font-bold text-purple-600">{products.filter(p => p.vendorId).length}</div><div className="text-[9px] text-slate-500">Vendor Products</div></div>
           </div>
 
@@ -770,7 +770,7 @@ function AdminVendors() {
           )}
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {vendors.map(v => {
+            {apiApps.map(function(v) {
               const vendorProds = products.filter(p => p.vendorId === v.id || p.vendorName === v.name);
               return (
                 <div key={v.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 hover:shadow-lg transition-all overflow-x-hidden">
@@ -780,7 +780,7 @@ function AdminVendors() {
                       <div className="text-sm font-semibold truncate">{v.name || v.storeName || 'Vendor'}</div>
                       <div className="text-[9px] text-slate-400 truncate">{v.email || v.phone || 'No contact'}</div>
                     </div>
-                    <span className={cn('px-2 py-0.5 rounded-lg text-[9px] font-semibold flex-shrink-0', v.approved ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700')}>{v.approved ? 'Approved' : 'Pending'}</span>
+                    <span className={cn('px-2 py-0.5 rounded-lg text-[9px] font-semibold flex-shrink-0', v.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700')}>{v.status === 'approved' ? 'Approved' : 'Pending'}</span>
                   </div>
                   <div className="flex items-center gap-2 text-[9px] text-slate-500 mb-2">
                     <span>📦 {vendorProds.length} products</span>
@@ -788,7 +788,7 @@ function AdminVendors() {
                     <span>💰 {v.commission || 10}% commission</span>
                   </div>
                   <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
-                    <button className="text-indigo-600 text-[9px] font-semibold hover:underline flex items-center gap-1" onClick={() => { setSelectedVendor(v); setCommission(v.commission || 10); setApproved(v.approved !== false); setStoreName(v.name || ''); setVendorEmail(v.email || ''); setVendorPhone(v.phone || ''); }}>
+                    <button className="text-indigo-600 text-[9px] font-semibold hover:underline flex items-center gap-1" onClick={() => { setSelectedVendor(v); setCommission(v.commission || 10); setApproved(v.status === 'approved'); setStoreName(v.name || ''); setVendorEmail(v.email || ''); setVendorPhone(v.phone || ''); }}>
                       <Edit3 size={11} /> Edit
                     </button>
                     {vendorProds.length > 0 && (
@@ -801,7 +801,7 @@ function AdminVendors() {
               );
             })}
           </div>
-          {vendors.length === 0 && <p className="text-xs text-slate-400 text-center py-8">No vendors registered yet</p>}
+          {apiApps.length === 0 && <p className="text-xs text-slate-400 text-center py-8">No vendors registered yet</p>}
 
           {/* All Vendor Applications */}
           {apiApps.length > 0 && (
