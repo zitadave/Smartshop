@@ -14,22 +14,22 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSessi
 // ===== VENDOR HELPERS (store vendors in settings.data.vendors since no vendors table) =====
 async function getVendors() {
   try {
-    var { data } = await supabase.from('settings').select('data').single();
-    var vendors = (data?.data?.vendors) || [];
+    var { data: row } = await supabase.from('settings').select('*').single();
+    var vendors = (row?.data?.vendors) || [];
     return vendors;
   } catch(e) { return []; }
 }
 
 async function saveVendors(vendors) {
   try {
-    var { data: existing } = await supabase.from('settings').select('data').single();
-    var newData = { ...(existing?.data || {}), vendors: vendors };
-    if (existing) {
-      await supabase.from('settings').update({ data: newData, updated_at: new Date().toISOString() }).eq('id', existing.id);
+    var { data: row } = await supabase.from('settings').select('*').single();
+    var newData = { ...(row?.data || {}), vendors: vendors };
+    if (row) {
+      await supabase.from('settings').update({ data: newData, updated_at: new Date().toISOString() }).eq('id', row.id);
     } else {
       await supabase.from('settings').insert({ data: newData });
     }
-  } catch(e) {}
+  } catch(e) { console.log('saveVendors error:', e?.message || e); }
 }
 
 // ===== HELPERS =====
@@ -364,8 +364,8 @@ export default async function handler(req, res) {
           '*Commands:*\n/stats — Store statistics\n/orders — Recent orders\n/lowstock — Low stock alerts\n/alerts — Active SLA breaches'
         );
       } else if (cmd === 'stats') {
-        var { data: vData } = await supabase.from('settings').select('data').single();
-        var vendorCount = (vData?.data?.vendors || []).length;
+        var { data: vRow } = await supabase.from('settings').select('*').single();
+        var vendorCount = (vRow?.data?.vendors || []).length;
         await sendMsg(
           '📊 *Smart Shop Store Stats*\n\n' +
           '📦 Products: ' + pList.length + '\n' +
@@ -577,8 +577,8 @@ export default async function handler(req, res) {
     // SETTINGS
     // ================================================================
     if (path === '/api/settings') {
-      if (method === 'GET') { var { data } = await supabase.from('settings').select('*').single(); return res.json({ success: true, settings: data?.data || data || {} }); }
-      if (method === 'PUT') { var { data: ex } = await supabase.from('settings').select('*').single(); if (ex) { await supabase.from('settings').update({ data: { ...(ex.data || ex), ...req.body }, updated_at: new Date().toISOString() }).eq('id', ex.id); } else { await supabase.from('settings').insert({ data: req.body }); } return res.json({ success: true }); }
+      if (method === 'GET') { var { data: row } = await supabase.from('settings').select('*').single(); return res.json({ success: true, settings: row?.data || row || {} }); }
+      if (method === 'PUT') { var { data: exRow } = await supabase.from('settings').select('*').single(); if (exRow) { await supabase.from('settings').update({ data: { ...(exRow.data || exRow), ...req.body }, updated_at: new Date().toISOString() }).eq('id', exRow.id); } else { await supabase.from('settings').insert({ data: req.body }); } return res.json({ success: true }); }
     }
 
     // ================================================================
@@ -783,7 +783,7 @@ export default async function handler(req, res) {
     // ================================================================
     // FLASH DEALS
     // ================================================================
-    if (path === '/api/flash-deals' && method === 'GET') { var { data } = await supabase.from('settings').select('*').single(); var fs = data?.data?.flashSales || {}; return res.json({ deals: Object.entries(fs).map(function(e) { return { id: parseInt(e[0]), productId: parseInt(e[0]), ...e[1] }; }) }); }
+    if (path === '/api/flash-deals' && method === 'GET') { var { data: flashRow } = await supabase.from('settings').select('*').single(); var fs = flashRow?.data?.flashSales || {}; return res.json({ deals: Object.entries(fs).map(function(e) { return { id: parseInt(e[0]), productId: parseInt(e[0]), ...e[1] }; }) }); }
 
     // ================================================================
     // TRACKING
