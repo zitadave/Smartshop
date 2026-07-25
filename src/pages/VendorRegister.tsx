@@ -82,11 +82,8 @@ export default function VendorRegister() {
               <label className={'text-[10px] font-bold uppercase tracking-wider ' + (darkMode ? 'text-slate-400' : 'text-slate-500')}>
                 <Smartphone size={12} className="inline mr-1" />Phone Number *
               </label>
-              <div className={'w-full mt-1.5 p-3 border rounded-xl text-sm flex items-center gap-2 ' + (darkMode ? 'bg-slate-700/50 border-slate-600 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-500')}>
-                <Smartphone size={14} className="text-emerald-500" />
-                <span>{storePhone || 'Auto-filled from Telegram'}</span>
-                <span className="ml-auto text-[8px] text-emerald-500 font-semibold bg-emerald-500/10 px-1.5 py-0.5 rounded-full">✓ Telegram</span>
-              </div>
+              <input className={'w-full mt-1.5 p-3 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 transition-all ' + (darkMode ? 'bg-slate-700 border-slate-600 text-white placeholder:text-slate-400' : 'bg-white border-slate-200 text-slate-900')}
+                placeholder="e.g. 251912345678" value={storePhone} onChange={function(e) { setStorePhone(e.target.value); }} />
             </div>
 
             <div>

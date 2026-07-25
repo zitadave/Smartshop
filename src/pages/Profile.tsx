@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/stores/AppStore';
 import { t } from '@/i18n/translations';
 import { cn } from '@/lib/utils';
-import { ChevronRight, Palette, Sun, Moon, Wallet, User, Phone, AtSign, Calendar, MapPin, CreditCard, Package, Heart, ShoppingCart, Gift, LogOut, HelpCircle, Bell, TrendingDown, Store, Trophy } from 'lucide-react';
+import { ChevronRight, Palette, Sun, Moon, Wallet, Phone, AtSign, Calendar, Store, LogOut, HelpCircle, Bell, TrendingDown, Trophy } from 'lucide-react';
 import ThemePicker from '@/components/features/ThemePicker';
 import CurrencySelector from '@/components/features/CurrencySelector';
 import LanguageSelector from '@/components/features/LanguageSelector';
@@ -12,7 +12,7 @@ import { toast } from '@/components/Toast';
 export default function Profile() {
   var navigate = useNavigate();
   var store = useStore();
-  var { profile, language, setLanguage, darkMode, setDarkMode, orders, wishlist, cart, savedPayments, preOrders, notifications, savedAddresses, walletBalance, settings } = store;
+  var { profile, language, setLanguage, darkMode, setDarkMode, orders, wishlist, cart, savedPayments, preOrders, notifications, savedAddresses, walletBalance } = store;
   
   var [showEdit, setShowEdit] = useState(false);
   var [showWallet, setShowWallet] = useState(false);
@@ -20,6 +20,7 @@ export default function Profile() {
   var [editName, setEditName] = useState('');
   var [editPhone, setEditPhone] = useState('');
 
+  // Read localStorage data
   var ls = {};
   try { ls = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
   var lsPhone = localStorage.getItem('ss_user_phone') || '';
@@ -29,55 +30,68 @@ export default function Profile() {
   var displayPhone = profile.phone || ls.phone || lsPhone || '';
   var displayName = profile.name || ls.name || 'Guest';
   var displayJoined = profile.joinedAt || ls.joinedAt || '';
-
   var initials = displayName.substring(0, 2).toUpperCase() || '?';
   var ordCount = orders.length + preOrders.length;
   var cartCount = cart.reduce(function(s, i) { return s + i.qty; }, 0);
 
-  // Vendor status
-  var initVS = 'none';
-  try { initVS = localStorage.getItem('ss_vendor_status') || 'none'; } catch(e) {}
-  var [vendorStatus, setVendorStatus] = useState(initVS);
+  // ===== VENDOR STATUS =====
+  var [vendorStatus, setVendorStatus] = useState('loading');
 
+  // Check vendor status on mount and every 5 seconds
   useEffect(function() {
-    function checkStatus() {
-      var tid = tgId || '';
-      var phone = displayPhone || '';
-      var payload = {};
-      if (tid) payload.telegram_id = tid;
-      if (phone) payload.phone = phone;
+    var cancelled = false;
+    
+    function check() {
+      if (cancelled) return;
       
-      if (tid || phone) {
-        fetch('/api/user/sync', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        }).then(function(r) { return r.json(); }).then(function(d) {
-          if (d && d.vendor_status) {
-            if (d.vendor_status === 'none' && localStorage.getItem('ss_vendor_status') === 'approved') {
-              // Vendor was deleted - revoke access silently
-              localStorage.setItem('ss_vendor_status', 'none');
-              localStorage.removeItem('ss_vendor_app_id');
-              setVendorStatus('none');
-              return;
-            }
-            if (d.vendor_status === 'approved' && localStorage.getItem('ss_vendor_status') !== 'approved') {
-              localStorage.setItem('ss_vendor_status', 'approved');
-              toast('✅ Vendor approved! Dashboard is now available.', 'success');
-              setVendorStatus('approved');
-              return;
-            }
-            localStorage.setItem('ss_vendor_status', d.vendor_status);
-            setVendorStatus(d.vendor_status);
-            if (d.vendor_id) localStorage.setItem('ss_vendor_app_id', String(d.vendor_id));
-          }
-        }).catch(function() {});
+      // Read latest from localStorage
+      var storedTgId = profile.telegramId || '';
+      try { var p = JSON.parse(localStorage.getItem('ss_profile') || '{}'); if (p.telegramId) storedTgId = p.telegramId; } catch(e) {}
+      var storedPhone = profile.phone || '';
+      try { storedPhone = localStorage.getItem('ss_user_phone') || ''; } catch(e) {}
+      
+      if (!storedTgId) {
+        // No Telegram ID yet - set to 'none'
+        if (!cancelled) setVendorStatus('none');
+        return;
       }
+      
+      fetch('/api/user/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telegram_id: storedTgId, phone: storedPhone || '' })
+      }).then(function(r) { return r.json(); }).then(function(d) {
+        if (cancelled) return;
+        if (d && d.vendor_status) {
+          var newStatus = d.vendor_status;
+          var oldStatus = 'none';
+          try { oldStatus = localStorage.getItem('ss_vendor_status') || 'none'; } catch(e) {}
+          
+          localStorage.setItem('ss_vendor_status', newStatus);
+          if (d.vendor_id) localStorage.setItem('ss_vendor_app_id', String(d.vendor_id));
+          
+          if (newStatus === 'approved' && oldStatus !== 'approved') {
+            toast('✅ Vendor approved! Dashboard is now available.', 'success');
+          }
+          if (newStatus === 'none' && oldStatus === 'approved') {
+            localStorage.removeItem('ss_vendor_app_id');
+          }
+          
+          if (!cancelled) setVendorStatus(newStatus);
+        } else {
+          if (!cancelled) setVendorStatus('none');
+        }
+      }).catch(function() {
+        if (!cancelled) setVendorStatus('none');
+      });
     }
-    checkStatus();
-    var interval = setInterval(checkStatus, 15000);
-    return function() { clearInterval(interval); };
-  }, [tgId, displayPhone]);
+    
+    // Initial check immediately
+    check();
+    // Then check every 5 seconds
+    var interval = setInterval(check, 5000);
+    return function() { cancelled = true; clearInterval(interval); };
+  }, [profile.telegramId]);
 
   function openEdit() {
     setEditName(displayName === 'Guest' ? '' : displayName);
@@ -95,8 +109,7 @@ export default function Profile() {
       localStorage.setItem('ss_profile', JSON.stringify(lsP));
     }
     if (editPhone.trim()) {
-      var newProfile2 = { ...profile, phone: editPhone.trim() };
-      store.setProfile(newProfile2);
+      store.setProfile({ ...profile, phone: editPhone.trim() });
       localStorage.setItem('ss_user_phone', editPhone.trim());
       var lsP2 = {};
       try { lsP2 = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
@@ -111,7 +124,10 @@ export default function Profile() {
     { icon: '🏆', label: 'Loyalty & Rewards', desc: 'Earn points & rewards', onClick: function() { navigate('/loyalty'); } },
   ];
 
-  if (vendorStatus === 'approved') {
+  if (vendorStatus === 'loading') {
+    // Still checking - show nothing special
+    engagementItems.push({ icon: '📝', label: 'Become a Vendor', desc: 'Start selling products', onClick: function() { navigate('/vendor-register'); } });
+  } else if (vendorStatus === 'approved') {
     engagementItems.push({ icon: '🏪', label: 'Vendor Dashboard', desc: 'Manage your store', onClick: function() { navigate('/vendor'); } });
   } else if (vendorStatus === 'pending') {
     engagementItems.push({ icon: '⏳', label: 'Application Pending', desc: 'Under review by admin', onClick: function() { toast('Your application is being reviewed.', 'info'); } });
@@ -120,8 +136,8 @@ export default function Profile() {
   }
 
   engagementItems.push(
-    { icon: '📉', label: 'Price Alerts', desc: notifications.length + ' active alerts', badge: store.priceAlerts.length, onClick: function() { navigate('/price-alerts'); } },
-    { icon: '🔔', label: 'Notifications', desc: notifications.length + ' unread', badge: notifications.length, onClick: function() { navigate('/notifications'); } },
+    { icon: '📉', label: 'Price Alerts', badge: store.priceAlerts.length, desc: 'Track price drops', onClick: function() { navigate('/price-alerts'); } },
+    { icon: '🔔', label: 'Notifications', badge: notifications.length, desc: notifications.length + ' unread', onClick: function() { navigate('/notifications'); } },
     { icon: '❓', label: 'Help & Support', desc: 'Get assistance', onClick: function() { navigate('/help'); } },
   );
 
@@ -142,6 +158,7 @@ export default function Profile() {
                 {displayPhone && <span className="flex items-center gap-1 bg-white/10 px-2 py-0.5 rounded-full"><Phone size={10} /> {displayPhone}</span>}
                 {tgUser && <span className="flex items-center gap-1 bg-white/10 px-2 py-0.5 rounded-full"><AtSign size={10} /> @{tgUser}</span>}
                 {tgId && <span className="font-mono text-[8px] text-white/50 bg-white/5 px-2 py-0.5 rounded-full">ID: {tgId}</span>}
+                {vendorStatus === 'approved' && <span className="bg-emerald-400/30 px-2 py-0.5 rounded-full text-[9px]">🏪 Vendor</span>}
               </div>
               <p className="text-[9px] text-white/60 mt-1.5 flex items-center gap-1">
                 <Calendar size={9} /> Joined {displayJoined ? new Date(displayJoined).toLocaleDateString() : 'Today'}
@@ -160,10 +177,14 @@ export default function Profile() {
               </button>
             </div>
           )}
+          {vendorStatus === 'pending' && (
+            <div className="mt-3 bg-amber-400/20 backdrop-blur-sm rounded-xl p-2.5 flex items-center gap-2 border border-amber-400/20">
+              <span className="text-[10px]">⏳</span>
+              <span className="text-[10px] font-medium">Application pending - admin will review shortly</span>
+            </div>
+          )}
         </div>
       </div>
-
-
 
       {/* Stats Row */}
       <div className="mx-3 mt-3 grid grid-cols-3 gap-2">
@@ -249,7 +270,7 @@ export default function Profile() {
 
       <p className="text-center text-[9px] text-muted-foreground pb-4">🏪 Smart Shop</p>
 
-      {/* Edit Profile Modal */}
+      {/* Edit Modal */}
       {showEdit && (
         <div className="fixed inset-0 bg-black/60 z-[200] flex items-center justify-center p-4" onClick={function() { setShowEdit(false); }}>
           <div className="bg-card rounded-3xl w-full max-w-sm p-6 shadow-2xl animate-bounce-in" onClick={function(e) { e.stopPropagation(); }}>
@@ -258,28 +279,14 @@ export default function Profile() {
               <h3 className="text-base font-bold mt-2">Edit Profile</h3>
             </div>
             <div className="space-y-4">
-              <div>
-                <label className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Full Name</label>
-                <input className="w-full mt-1 p-3 border border-input rounded-xl text-sm bg-card focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  value={editName} onChange={function(e) { setEditName(e.target.value); }} placeholder="Your name" />
-              </div>
-              <div>
-                <label className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Phone Number</label>
-                <input className="w-full mt-1 p-3 border border-input rounded-xl text-sm bg-card focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  value={editPhone} onChange={function(e) { setEditPhone(e.target.value); }} placeholder="09XXXXXXXX" />
-              </div>
-              {tgId && (
-                <div className="bg-muted/30 rounded-xl p-3 space-y-1.5">
-                  <div className="flex items-center justify-between text-[10px]">
-                    <span className="text-muted-foreground">Telegram ID</span>
-                    <span className="font-mono font-semibold">{tgId}</span>
-                  </div>
-                  {tgUser && <div className="flex items-center justify-between text-[10px]">
-                    <span className="text-muted-foreground">Username</span>
-                    <span className="font-semibold">@{tgUser}</span>
-                  </div>}
-                </div>
-              )}
+              <div><label className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Full Name</label>
+                <input className="w-full mt-1 p-3 border border-input rounded-xl text-sm bg-card focus:outline-none focus:ring-2 focus:ring-primary/30" value={editName} onChange={function(e) { setEditName(e.target.value); }} placeholder="Your name" /></div>
+              <div><label className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Phone Number</label>
+                <input className="w-full mt-1 p-3 border border-input rounded-xl text-sm bg-card focus:outline-none focus:ring-2 focus:ring-primary/30" value={editPhone} onChange={function(e) { setEditPhone(e.target.value); }} placeholder="09XXXXXXXX" /></div>
+              {tgId && <div className="bg-muted/30 rounded-xl p-3 space-y-1.5">
+                <div className="flex items-center justify-between text-[10px]"><span className="text-muted-foreground">Telegram ID</span><span className="font-mono font-semibold">{tgId}</span></div>
+                {tgUser && <div className="flex items-center justify-between text-[10px]"><span className="text-muted-foreground">Username</span><span className="font-semibold">@{tgUser}</span></div>}
+              </div>}
             </div>
             <div className="flex gap-2 mt-5">
               <button className="flex-1 py-3 bg-primary text-white rounded-xl text-xs font-bold" onClick={saveEdit}>💾 Save</button>
@@ -313,10 +320,9 @@ export default function Profile() {
             <div className="text-center mb-4">
               <div className="text-4xl mb-2">🚪</div>
               <h3 className="text-sm font-bold">Logout</h3>
-              <p className="text-[10px] text-muted-foreground mt-1">Are you sure you want to logout?</p>
             </div>
             <div className="flex gap-2">
-              <button className="flex-1 py-3 bg-destructive text-white rounded-xl text-xs font-bold" onClick={function() { store.setProfile({ name: '', phone: '', email: '', registered: false, joinedAt: '' }); setShowLogout(false); }}>Yes, Logout</button>
+              <button className="flex-1 py-3 bg-destructive text-white rounded-xl text-xs font-bold" onClick={function() { store.setProfile({ name: '', phone: '', email: '', registered: false, joinedAt: '' }); setShowLogout(false); }}>Yes</button>
               <button className="flex-1 py-3 border border-border rounded-xl text-xs" onClick={function() { setShowLogout(false); }}>Cancel</button>
             </div>
           </div>

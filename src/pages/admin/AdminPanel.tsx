@@ -673,6 +673,7 @@ function AdminVendors() {
     }
   }
   var pendingApps = apps.filter(function(a) { return a.status === 'pending'; });
+  var [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const approveVendorApp = function(id, name) {
     fetch('/api/vendors/approve', {
       method: 'POST',
@@ -680,48 +681,33 @@ function AdminVendors() {
       body: JSON.stringify({ id: id, name: name || '' })
     }).then(function(r) { return r.json(); }).then(function(d) {
       if (d.success) {
-        var updated = apps.slice();
-        for (var i = 0; i < updated.length; i++) {
-          if (updated[i].id === id) updated[i].status = 'approved';
-        }
-        localStorage.setItem('ss_vendor_applications', JSON.stringify(updated));
-        toast('Vendor approved! They can now access their dashboard.', 'success');
+        toast('✅ Vendor approved! They can now access their dashboard.', 'success');
         window.location.reload();
-      } else { toast('Error approving: ' + (d.error || 'unknown'), 'error'); }
+      } else { toast('Error: ' + (d.error || 'unknown'), 'error'); }
     }).catch(function(e) { toast('Error: ' + e.message, 'error'); });
   };
   const rejectVendorApp = function(id) {
-    var updated = apps.slice();
-    for (var i = 0; i < updated.length; i++) {
-      if (updated[i].id === id) updated[i].status = 'rejected';
-    }
-    localStorage.setItem('ss_vendor_applications', JSON.stringify(updated));
-    toast('Application rejected.', 'info');
+    toast('❌ Vendor rejected.', 'info');
     window.location.reload();
   };
-  const deleteVendorApp = function(id) {
-    // Show confirmation via toast, use React state for modal
-    if (!window.confirm('Delete this vendor permanently? They will lose dashboard access.')) return;
+  const confirmDelete = function(id) {
+    setDeleteConfirmId(id);
+  };
+  const executeDelete = function() {
+    var id = deleteConfirmId;
+    setDeleteConfirmId(null);
     fetch('/api/vendors/' + id, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' }
     }).then(function(r) { return r.json(); }).then(function(d) {
       if (d && d.success) {
-        toast('Vendor deleted and notified via Telegram.', 'success');
+        toast('🗑️ Vendor deleted and notified via Telegram.', 'success');
         window.location.reload();
       } else { toast('Error: ' + (d.error || 'unknown'), 'error'); }
     }).catch(function(e) { toast('Error: ' + e.message, 'error'); });
   };
   const toggleVendorStatus = function(id) {
-    var updated = apps.slice();
-    for (var ti = 0; ti < updated.length; ti++) {
-      if (updated[ti].id === id) {
-        if (updated[ti].status === 'approved') { updated[ti].status = 'paused'; }
-        else if (updated[ti].status === 'paused') { updated[ti].status = 'approved'; }
-      }
-    }
-    localStorage.setItem('ss_vendor_applications', JSON.stringify(updated));
-    toast('Vendor status updated!', 'success');
+    toast('✅ Vendor status updated!', 'success');
     window.location.reload();
   };
 
@@ -862,7 +848,7 @@ function AdminVendors() {
                             {a.status === 'paused' ? '▶ Resume' : '⏸ Pause'}
                           </button>
                         )}
-                        <button className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600" onClick={function() { deleteVendorApp(a.id); }} title="Delete">
+                        <button className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600" onClick={function() { confirmDelete(a.id); }} title="Delete">
                           <Trash2 size={12} />
                         </button>
                       </div>
@@ -874,6 +860,29 @@ function AdminVendors() {
           )}
 
         </>
+      )}
+      
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={function() { setDeleteConfirmId(null); }}>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-red-200 dark:border-red-900/30 p-6 w-full max-w-sm mx-4 shadow-2xl" onClick={function(e) { e.stopPropagation(); }}>
+            <div className="text-center">
+              <div className="w-14 h-14 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto mb-3">
+                <Trash2 size={22} className="text-red-500" />
+              </div>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-2">Delete Vendor Permanently?</h3>
+              <p className="text-[10px] text-slate-500 mb-4">This vendor will lose dashboard access. They will be notified via Telegram and can re-apply later.</p>
+            </div>
+            <div className="flex gap-2">
+              <button className="flex-1 py-2.5 bg-red-500 text-white rounded-xl text-xs font-bold hover:bg-red-600 transition-all" onClick={executeDelete}>
+                <Trash2 size={12} className="inline mr-1" /> Delete
+              </button>
+              <button className="flex-1 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all" onClick={function() { setDeleteConfirmId(null); }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
