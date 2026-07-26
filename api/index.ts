@@ -277,7 +277,30 @@ export default async function handler(req, res) {
     // ================================================================
 
     // ── Price Comparison ────────────────────────────────────────────
-    if (path.match(/^\/api\/products\/\d+\/compare$/) && method === 'GET') {
+    if (path === '/api/products/compare' && method === 'GET') {
+      var q = req.url?.split('?')[1] || '';
+      var params = new URLSearchParams(q);
+      var query = params.get('q') || '';
+      var cat = params.get('category') || '';
+      if (!query && !cat) return ok({ options: [] });
+      var dbq = supabase.from('products').select('*');
+      if (cat) dbq = dbq.eq('category', cat);
+      if (query) dbq = dbq.or('name_en.ilike.%' + query + '%,name.ilike.%' + query + '%');
+      var { data: products } = await dbq.limit(20).order('price', { ascending: true });
+      var options = (products || []).map(function(p) { return {
+        vendorId: p.vendor_id, vendorName: p.vendor_name || 'Main Store',
+        vendorRating: p.rating || 4, vendorSales: p.sold_count || 0,
+        price: p.price || 0, originalPrice: p.original_price || null,
+        deliveryFee: p.price > 2000 ? 0 : 25,
+        totalPrice: p.price + (p.price > 2000 ? 0 : 25),
+        stockCount: p.stock_count || 0, inStock: p.in_stock !== false,
+        badge: p.badge || '',
+      }; });
+      return ok({ productName: products?.[0]?.name_en || query, productImage: products?.[0]?.image || '', options: options });
+    }
+
+    // Product-specific price comparison
+     {
       var pid = parseInt(path.split('/')[3]);
       var { data: products } = await supabase.from('products').select('*').eq('id', pid);
       var product = products && products[0];
@@ -409,7 +432,7 @@ export default async function handler(req, res) {
       var item = items[b.item_index];
       var newPurchased = Math.min(item.purchased + (b.quantity || 1), item.quantity);
       await supabase.from('registry_items').update({ purchased: newPurchased }).eq('id', item.id);
-      await supabase.from('registry_contributors').insert({
+      await supabase.from('registry_purchases').insert({
         registry_item_id: item.id, contributor_name: b.contributor_name || '',
         contributor_telegram_id: b.contributor_telegram_id, quantity: b.quantity || 1,
       });
@@ -448,9 +471,9 @@ export default async function handler(req, res) {
     // ── Reseller Stats ─────────────────────────────────────────────
     if (path.match(/^\/api\/reseller\/stats\/\d+$/) && method === 'GET') {
       var tid2 = parseInt(path.split('/').pop() || '0');
-      var { count: refClicks } = await supabase.from('referral_clicks').select('*', { count: 'exact', head: true }).eq('referral_code', 'SS' + (tid2 * 16807 % 2147483647).toString(36).toUpperCase().substring(0, 5));
+      var { count: refClicks } = await supabase.from('referral_logs').select('*', { count: 'exact', head: true }).eq('referral_code', 'SS' + (tid2 * 16807 % 2147483647).toString(36).toUpperCase().substring(0, 5));
       // Count converted clicks (sales)
-      var { count: sales } = await supabase.from('referral_clicks').select('*', { count: 'exact', head: true }).eq('referral_code', 'SS' + (tid2 * 16807 % 2147483647).toString(36).toUpperCase().substring(0, 5)).eq('converted', true);
+      var { count: sales } = await supabase.from('referral_logs').select('*', { count: 'exact', head: true }).eq('referral_code', 'SS' + (tid2 * 16807 % 2147483647).toString(36).toUpperCase().substring(0, 5)).eq('converted', true);
       var totalClicks = refClicks || 0;
       var totalSales = sales || 0;
       // Commission calculation
@@ -464,7 +487,7 @@ export default async function handler(req, res) {
     if (path === '/api/ref/track' && method === 'POST') {
       var b = req.body || {};
       if (!b.ref) return ok({ success: true });
-      await supabase.from('referral_clicks').insert({
+      await supabase.from('referral_logs').insert({
         referral_code: b.ref, product_id: b.product_id || null,
         visitor_telegram_id: b.visitor_telegram_id || null,
       }).catch(function() {});

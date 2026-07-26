@@ -38,7 +38,7 @@ export async function createRegistry(params: {
   telegramId: number;
   productIds: number[];
 }): Promise<GiftRegistry> {
-  const res = await fetch('/api/registry', {
+  const res = await fetch('/api/registries', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
@@ -50,7 +50,7 @@ export async function createRegistry(params: {
 
 // ── Get registry by share token ──────────────────────────────
 export async function getRegistryByToken(token: string): Promise<GiftRegistry | null> {
-  const res = await fetch(`/api/registry/${token}`);
+  const res = await fetch(`/api/registries/${token}`);
   const data = await res.json();
   return data.registry || null;
 }
@@ -64,7 +64,7 @@ export async function purchaseRegistryItem(params: {
   buyerTelegramId: number;
   message?: string;
 }): Promise<{ success: boolean }> {
-  const res = await fetch('/api/registry/purchase', {
+  const res = await fetch('/api/registries/contribute', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
