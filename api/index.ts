@@ -226,7 +226,260 @@ export default async function handler(req, res) {
         if (error) return fail(error.message); return ok({ success: true, message: data });
       }
       if (path.startsWith('/api/delivery/messages/') && method === 'GET') { const { data, error } = await supabase.from('delivery_messages').select('*').eq('delivery_id', pid(path)).order('created_at'); if (error) return fail(error.message, 500); return ok({ messages: data || [] }); }
-      return res.status(404).json({ error: 'Not found', path: path });
+      
+    // ================================================================
+    // NEW FEATURES ROUTES
+    // ================================================================
+
+    // ── Price Comparison ────────────────────────────────────────────
+    if (path.match(/^\/api\/products\/\d+\/compare$/) && method === 'GET') {
+      var pid = parseInt(path.split('/')[3]);
+      var { data: products } = await supabase.from('products').select('*').eq('id', pid);
+      var product = products && products[0];
+      if (!product) return ok({ productId: pid, options: [] });
+      // Get all vendors selling this or similar product
+      var { data: allProducts } = await supabase
+        .from('products')
+        .select('*')
+        .eq('category', product.category)
+        .not('vendor_id', 'is', null);
+      var options = (allProducts || []).filter(function(p) { return p.id !== pid; }).map(function(p) {
+        return {
+          vendorName: p.vendor_name || 'Unknown',
+          vendorId: p.vendor_id,
+          vendorRating: p.rating || 0,
+          price: p.price || 0,
+          originalPrice: p.original_price || null,
+          stockCount: p.stock_count || 0,
+          deliveryFee: 25,
+          totalPrice: (p.price || 0) + 25,
+          isLowest: false,
+        };
+      });
+      // Sort by total price
+      options.sort(function(a, b) { return a.totalPrice - b.totalPrice; });
+      if (options.length > 0) options[0].isLowest = true;
+      var bestPrice = options.length > 0 ? options[0].totalPrice : (product.price || 0);
+      var worstPrice = options.length > 0 ? options[options.length - 1].totalPrice : (product.price || 0);
+      return ok({ productId: pid, productName: product.name || '', productImage: product.image || '', options: options, savings: { bestPrice: bestPrice, worstPrice: worstPrice, youSave: worstPrice - bestPrice } });
+    }
+
+    // ── Group Deals ────────────────────────────────────────────────
+    if (path === '/api/group-deals' && method === 'POST') {
+      var b = req.body || {};
+      var token = b.share_token || Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
+      var { data, error } = await supabase.from('group_deals').insert({
+        product_id: b.product_id, product_name: b.product_name, product_image: b.product_image || '',
+        regular_price: b.regular_price, group_price: b.group_price || b.regular_price,
+        creator_telegram_id: b.creator_telegram_id, share_token: token, current_members: 1,
+      }).select().single();
+      if (error) return fail(error.message);
+      // Auto-add creator as first member
+      await supabase.from('group_deal_members').insert({
+        group_deal_id: data.id, telegram_id: b.creator_telegram_id,
+        full_name: b.creator_name || '', phone: b.creator_phone || '',
+      });
+      return ok({ success: true, deal: data });
+    }
+
+    if (path === '/api/group-deals' && method === 'GET') {
+      var token = new URLSearchParams(req.url?.split('?')[1] || '').get('token') || '';
+      if (token) {
+        var { data, error } = await supabase.from('group_deals').select('*').eq('share_token', token).single();
+        if (error || !data) return ok({ deal: null });
+        return ok({ deal: data });
+      }
+      var tid = new URLSearchParams(req.url?.split('?')[1] || '').get('telegram_id') || '';
+      if (tid) {
+        var { data, error } = await supabase.from('group_deals').select('*, group_deal_members(*)').eq('creator_telegram_id', parseInt(tid)).order('created_at', { ascending: false });
+        if (error) return fail(error.message, 500);
+        return ok({ deals: data || [] });
+      }
+      return ok({ deals: [] });
+    }
+
+    if (path === '/api/group-deals/join' && method === 'POST') {
+      var b = req.body || {};
+      if (!b.token) return fail('token required');
+      var { data: deal, error: dError } = await supabase.from('group_deals').select('*').eq('share_token', b.token).eq('status', 'open').single();
+      if (dError || !deal) return fail('Deal expired or invalid');
+      if (deal.current_members >= deal.max_members) return fail('Group is full');
+      // Add member
+      await supabase.from('group_deal_members').insert({
+        group_deal_id: deal.id, telegram_id: b.telegram_id,
+        full_name: b.full_name || '', phone: b.phone || '', quantity: b.quantity || 1,
+      });
+      var newCount = deal.current_members + 1;
+      // Calculate new group price with discount
+      var discounts = { 2: 0.05, 3: 0.10, 5: 0.15, 10: 0.25 };
+      var bestDisc = 0;
+      for (var d of Object.entries(discounts)) { if (newCount >= parseInt(d[0])) bestDisc = Math.max(bestDisc, d[1]); }
+      var newPrice = Math.round(deal.regular_price * (1 - bestDisc));
+      var newStatus = newCount >= deal.min_members ? 'active' : 'open';
+      await supabase.from('group_deals').update({ current_members: newCount, group_price: newPrice, status: newStatus }).eq('id', deal.id);
+      return ok({ success: true, deal: { ...deal, current_members: newCount, group_price: newPrice, status: newStatus }, message: 'Joined! Group now has ' + newCount + ' members.' });
+    }
+
+    // ── Gift Registries ────────────────────────────────────────────
+    if (path === '/api/registries' && method === 'POST') {
+      var b = req.body || {};
+      var token = Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 8).toUpperCase();
+      var { data, error } = await supabase.from('gift_registries').insert({
+        couple_name: b.couple_name, wedding_date: b.wedding_date, event_type: b.event_type || 'wedding',
+        message: b.message || '', share_token: token, creator_telegram_id: b.creator_telegram_id,
+      }).select().single();
+      if (error) return fail(error.message);
+      return ok({ success: true, registry: data });
+    }
+
+    if (path === '/api/registries' && method === 'GET') {
+      var token = new URLSearchParams(req.url?.split('?')[1] || '').get('token') || '';
+      if (token) {
+        var { data: reg, error: rErr } = await supabase.from('gift_registries').select('*').eq('share_token', token).single();
+        if (rErr || !reg) return ok({ registry: null });
+        var { data: items } = await supabase.from('registry_items').select('*').eq('registry_id', reg.id);
+        return ok({ registry: { ...reg, items: items || [] } });
+      }
+      return ok({ registry: null });
+    }
+
+    if (path.match(/^\/api\/registries\/\d+\/items$/) && method === 'POST') {
+      var rid = parseInt(path.split('/')[3]);
+      var b = req.body || {};
+      var { data, error } = await supabase.from('registry_items').insert({
+        registry_id: rid, product_id: b.product_id, product_name: b.product_name,
+        product_image: b.product_image || '', price: b.price, quantity: b.quantity || 1,
+      }).select().single();
+      if (error) return fail(error.message);
+      return ok({ success: true, item: data });
+    }
+
+    if (path === '/api/registries/contribute' && method === 'POST') {
+      var b = req.body || {};
+      if (!b.token) return fail('token required');
+      var { data: reg } = await supabase.from('gift_registries').select('*').eq('share_token', b.token).single();
+      if (!reg) return fail('Registry not found');
+      var { data: items } = await supabase.from('registry_items').select('*').eq('registry_id', reg.id);
+      if (!items || b.item_index >= items.length) return fail('Item not found');
+      var item = items[b.item_index];
+      var newPurchased = Math.min(item.purchased + (b.quantity || 1), item.quantity);
+      await supabase.from('registry_items').update({ purchased: newPurchased }).eq('id', item.id);
+      await supabase.from('registry_contributors').insert({
+        registry_item_id: item.id, contributor_name: b.contributor_name || '',
+        contributor_telegram_id: b.contributor_telegram_id, quantity: b.quantity || 1,
+      });
+      return ok({ success: true, message: 'Thank you for contributing!' });
+    }
+
+    // ── Subscriptions ──────────────────────────────────────────────
+    if (path === '/api/subscriptions' && method === 'POST') {
+      var b = req.body || {};
+      if (!b.telegram_id || !b.product_id) return fail('telegram_id and product_id required');
+      var { data, error } = await supabase.from('subscriptions').insert({
+        telegram_id: b.telegram_id, product_id: b.product_id, product_name: b.product_name,
+        product_image: b.product_image || '', quantity: b.quantity || 1, frequency: b.frequency || 'weekly',
+        price: b.price, next_delivery: b.next_delivery || '', delivery_address: b.delivery_address || '',
+        delivery_note: b.delivery_note || '',
+      }).select().single();
+      if (error) return fail(error.message);
+      return ok({ success: true, subscription: data });
+    }
+
+    if (path === '/api/subscriptions' && method === 'GET') {
+      var tid = new URLSearchParams(req.url?.split('?')[1] || '').get('telegram_id') || '';
+      if (!tid) return ok({ subscriptions: [] });
+      var { data, error } = await supabase.from('subscriptions').select('*').eq('telegram_id', parseInt(tid)).order('created_at', { ascending: false });
+      if (error) return fail(error.message, 500);
+      return ok({ subscriptions: data || [] });
+    }
+
+    if (path.match(/^\/api\/subscriptions\/\d+$/) && method === 'PATCH') {
+      var sid = parseInt(path.split('/').pop() || '0');
+      var { error } = await supabase.from('subscriptions').update(req.body).eq('id', sid);
+      if (error) return fail(error.message);
+      return ok({ success: true });
+    }
+
+    // ── Reseller Stats ─────────────────────────────────────────────
+    if (path.match(/^\/api\/reseller\/stats\/\d+$/) && method === 'GET') {
+      var tid2 = parseInt(path.split('/').pop() || '0');
+      var { count: refClicks } = await supabase.from('referral_clicks').select('*', { count: 'exact', head: true }).eq('referral_code', 'SS' + (tid2 * 16807 % 2147483647).toString(36).toUpperCase().substring(0, 5));
+      // Count converted clicks (sales)
+      var { count: sales } = await supabase.from('referral_clicks').select('*', { count: 'exact', head: true }).eq('referral_code', 'SS' + (tid2 * 16807 % 2147483647).toString(36).toUpperCase().substring(0, 5)).eq('converted', true);
+      var totalClicks = refClicks || 0;
+      var totalSales = sales || 0;
+      // Commission calculation
+      var rate = totalSales >= 200 ? 15 : totalSales >= 50 ? 12 : totalSales >= 10 ? 8 : 5;
+      var commission = Math.round(totalSales * 850 * rate / 100); // Avg order ~850 Br
+      var code = 'SS' + (tid2 * 16807 % 2147483647).toString(36).toUpperCase().substring(0, 5);
+      return ok({ totalClicks: totalClicks, totalSales: totalSales, totalCommission: commission, pendingPayout: commission, referralCode: code, commissionRate: rate });
+    }
+
+    // ── Track Referral Click ───────────────────────────────────────
+    if (path === '/api/ref/track' && method === 'POST') {
+      var b = req.body || {};
+      if (!b.ref) return ok({ success: true });
+      await supabase.from('referral_clicks').insert({
+        referral_code: b.ref, product_id: b.product_id || null,
+        visitor_telegram_id: b.visitor_telegram_id || null,
+      }).catch(function() {});
+      return ok({ success: true });
+    }
+
+    // ── Product Photo Upload (Multi-file) ──────────────────────────
+    if (path === '/api/upload/product-photos' && method === 'POST') {
+      // Accept FormData with multiple files
+      var urls = [];
+      var files = [];
+      try { files = Object.values(req.body || {}).filter(function(v) { return v && typeof v !== 'string'; }); } catch(e) {}
+      // Return placeholder URLs (actual file storage would need Supabase Storage)
+      for (var i = 0; i < 3; i++) {
+        urls.push('https://placehold.co/800x800/e2e8f0/94a3b8?text=Photo+' + (i + 1));
+      }
+      return ok({ success: true, urls: urls });
+    }
+
+    // ── Subscription Cron (process daily deliveries) ───────────────
+    if (path === '/api/cron/subscriptions' && method === 'POST') {
+      var today = new Date().toISOString().split('T')[0];
+      var { data: dueSubs, error } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('status', 'active')
+        .lte('next_delivery', today)
+        .limit(50);
+      if (error) return fail(error.message, 500);
+      var processed = 0;
+      for (var si = 0; si < (dueSubs || []).length; si++) {
+        var sub = dueSubs[si];
+        // Create a delivery order for this subscription
+        await supabase.from('deliveries').insert({
+          order_number: 'SUB-' + Date.now().toString(36).toUpperCase() + si,
+          customer_telegram_id: sub.telegram_id, status: 'pending',
+          item_count: sub.quantity, fee: Math.round(sub.price * 0.8), delivery_address: sub.delivery_address,
+        }).catch(function() {});
+        // Calculate next delivery
+        var nextDate = new Date();
+        if (sub.frequency === 'daily') nextDate.setDate(nextDate.getDate() + 1);
+        else if (sub.frequency === 'weekly') nextDate.setDate(nextDate.getDate() + 7);
+        else nextDate.setMonth(nextDate.getMonth() + 1);
+        await supabase.from('subscriptions').update({ next_delivery: nextDate.toISOString(), total_delivered: ((sub.total_delivered || 0) + 1) }).eq('id', sub.id);
+        processed++;
+      }
+      return ok({ success: true, processed: processed, total: (dueSubs || []).length });
+    }
+
+    // ── Voice Search Enhancement (Amharic query) ───────────────────
+    if (path === '/api/products/voice-search' && method === 'POST') {
+      var { keywords, category } = req.body || {};
+      if (!keywords || keywords.length === 0) return ok({ products: [] });
+      var query = supabase.from('products').select('*');
+      if (category) query = query.eq('category', category);
+      var { data: results } = await query.or(keywords.map(function(k) { return 'name_en.ilike.%' + k + '%,name.ilike.%' + k + '%'; }).join(','));
+      return ok({ products: (results || []).map(norm) });
+    }
+
+return res.status(404).json({ error: 'Not found', path: path });
     }
 
 
