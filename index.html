@@ -25,11 +25,7 @@
     <script>
       (function() {
         try {
-<<<<<<< HEAD
-          var ver = 'v51';
-=======
-          var ver = 'v50';
->>>>>>> 238cf5a383f8b2c8a7fa71ed651b2be5a394910a
+          var ver = 'v54';
           if (localStorage.getItem('ss_app_version') !== ver) {
             localStorage.setItem('ss_app_version', ver);
           }
@@ -116,25 +112,14 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-<<<<<<< HEAD
     <script>
-      // Register Service Worker for PWA support
+      // PWA Service Worker for "Add to Home Screen" installability
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
           navigator.serviceWorker.register('/sw.js').then(function(reg) {
-            console.log('SW registered:', reg.scope);
-          }).catch(function(err) {
-            console.log('SW registration failed:', err);
-=======
-    <!-- PWA Service Worker for "Add to Home Screen" installability -->
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function() {
-          navigator.serviceWorker.register('/sw.js').then(function(reg) {
-            console.log('[PWA] Service Worker registered:', reg.scope);
+            console.log('[PWA] SW registered:', reg.scope);
           }).catch(function(err) {
             console.warn('[PWA] SW registration failed:', err);
->>>>>>> 238cf5a383f8b2c8a7fa71ed651b2be5a394910a
           });
         });
       }
