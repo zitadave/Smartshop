@@ -544,21 +544,147 @@ export default async function handler(req, res) {
 
 
     // ================================================================
-    // SHOP BOT WEBHOOK
+    // SHOP BOT WEBHOOK — With Menu, Driver Registration, All Commands
     // ================================================================
     if (path === '/api/shop-bot/webhook' && method === 'POST') {
-      const sb = req.body, sc = sb.message?.chat?.id, st = sb.message?.text || ''; if (!sc) return ok({ ok: true });
-      const uc = sb.message?.contact; const sd = (txt, kb) => tg(ENV.VENDOR_BOT_TOKEN, sc, txt, 'Markdown', kb ? { reply_markup: JSON.stringify(kb) } : {});
-      if (st === '/start' && !uc) { await sd('⚠️ *Contact Required*', { keyboard: [[{ text: '📱 Share Contact', request_contact: true }]], resize_keyboard: true, one_time_keyboard: true }); return ok({ ok: true }); }
+      const sb = req.body, sc = sb.message?.chat?.id, st = sb.message?.text || '';
+      if (!sc) return ok({ ok: true });
+      const uc = sb.message?.contact;
+      const sd = (txt, kb) => tg(ENV.VENDOR_BOT_TOKEN, sc, txt, 'Markdown', kb ? { reply_markup: JSON.stringify(kb) } : {});
+
+      // Deep links: /driver, /start driver_xxx, /start group_xxx, /start registry_xxx, /start ref_xxx
+      if (st.startsWith('/start ') || st.startsWith('/driver')) {
+        const param = st.includes(' ') ? st.split(' ')[1] : '';
+        // /driver or /driver-register
+        if (st.startsWith('/driver') || param.startsWith('driver')) {
+          const driverUrl = ENV.BASE_URL + '/driver-register?tg_id=' + (sb.message?.from?.id || '') + '&v=' + Date.now();
+          await sd('🚚 *Driver Registration*
+
+You will need:
+📸 Fayda ID (front + back + selfie)
+🏍 Vehicle type & license plate
+👨‍👩‍👧 Emergency contact
+💳 Telebirr or bank account
+
+Ready? Tap below to begin!',
+            { inline_keyboard: [[{ text: '🚀 Register Now', web_app: { url: driverUrl } }]] });
+          return ok({ ok: true });
+        }
+        // /start group_XXXXX
+        if (param.startsWith('group_')) {
+          const token = param.replace('group_', '');
+          await sd('🛍️ *Group Deal Invitation!*
+
+Someone invited you to a group deal. Tap below to join!',
+            { inline_keyboard: [[{ text: '🎉 Join Group Deal', web_app: { url: ENV.BASE_URL + '/group-deal/' + token + '?v=' + Date.now() } }]] });
+          return ok({ ok: true });
+        }
+        // /start registry_XXXXX
+        if (param.startsWith('registry_')) {
+          const token = param.replace('registry_', '');
+          await sd('💍 *Gift Registry Invitation!*
+
+You are invited to view a wedding gift registry!',
+            { inline_keyboard: [[{ text: '🎁 View Registry', web_app: { url: ENV.BASE_URL + '/registry/' + token + '?v=' + Date.now() } }]] });
+          return ok({ ok: true });
+        }
+        // /start ref_XXXXX
+        if (param.startsWith('ref_')) {
+          const refCode = param.replace('ref_', '');
+          await sd('🛍️ *Welcome!*
+
+You were invited by a friend! Tap below to start shopping.',
+            { inline_keyboard: [[{ text: '🛍️ Start Shopping', web_app: { url: ENV.BASE_URL + '/?ref=' + refCode + '&v=' + Date.now() } }]] });
+          return ok({ ok: true });
+        }
+      }
+
+      // /start — Main menu with all options
+      if (st === '/start' && !uc) {
+        const from = sb.message?.from || {};
+        const fn = from.first_name || 'Customer';
+        const base = ENV.BASE_URL;
+        await sd(
+          '👋 *Welcome to Smart Shop!* 🇪🇹
+
+Ethiopia's premier marketplace. Choose an option:',
+          { inline_keyboard: [
+            [{ text: '🛍 Open Shop', web_app: { url: base + '?tg_id=' + (from.id||'') + '&name=' + encodeURIComponent(fn) + '&v=' + Date.now() } },
+             { text: '🚚 Register Driver', web_app: { url: base + '/driver-register?tg_id=' + (from.id||'') + '&v=' + Date.now() } }],
+            [{ text: '🏪 Become Vendor', web_app: { url: base + '/vendor-register?tg_id=' + (from.id||'') + '&v=' + Date.now() } },
+             { text: '❓ Help', callback_data: 'help' }],
+          ]}
+        );
+        return ok({ ok: true });
+      }
+
+      // Callback queries
+      if (sb.callback_query) {
+        const cbd = sb.callback_query.data;
+        if (cbd === 'help') {
+          await sd('❓ *Commands*
+/shop - Open store
+/driver - Driver reg
+/vendor - Seller reg
+/contact - Share phone
+/help - This menu');
+          fetchTO('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/answerCallbackQuery', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ callback_query_id: sb.callback_query.id, text: 'Opened help' }),
+          }).catch(() => {});
+          return ok({ ok: true });
+        }
+      }
+
+      // Contact sharing
       if (uc) {
-        const c = uc, f = sb.message.from || {}; const uid = String(c.user_id || f.id || sc), ph = c.phone_number || '', fn = c.first_name || f.first_name || '', ln = f.last_name || '', un = f.username || '';
+        const c = uc, f = sb.message.from || {};
+        const uid = String(c.user_id || f.id || sc), ph = c.phone_number || '', fn = c.first_name || f.first_name || '', ln = f.last_name || '', un = f.username || '';
         if (c.user_id && f.id && String(c.user_id) !== String(f.id)) { await sd('⚠️ Share your own contact.'); return ok({ ok: true }); }
         try { await supabase.from('users').upsert({ telegram_id: parseInt(uid), phone: ph, first_name: fn, username: un, registered_at: new Date().toISOString(), ...(ln ? { last_name: ln } : {}) }, { onConflict: 'telegram_id' }); } catch { try { await supabase.from('users').upsert({ telegram_id: parseInt(uid), first_name: fn, username: un, registered_at: new Date().toISOString(), ...(ln ? { last_name: ln } : {}) }, { onConflict: 'telegram_id' }); } catch {} }
         tg(ENV.VENDOR_BOT_TOKEN, sc, '✅ Verified!', undefined, { reply_markup: JSON.stringify({ remove_keyboard: true }) }).catch(() => {});
         const url = ENV.BASE_URL + '?tg_id=' + encodeURIComponent(uid) + '&phone=' + encodeURIComponent(ph) + '&name=' + encodeURIComponent(fn) + (un ? '&username=' + encodeURIComponent(un) : '') + '&v=' + Date.now();
-        fetchTO('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/setChatMenuButton', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: sc, menu_button: { type: 'web_app', text: '🛍️ Open Smart Shop', web_app: { url } } }) }).catch(() => {});
+        fetchTO('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/setChatMenuButton', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: sc, menu_button: { type: 'web_app', text: '🛍 Open Smart Shop', web_app: { url } } }) }).catch(() => {});
         await sd('✅ *Phone saved!*', { inline_keyboard: [[{ text: '🚀 Open Smart Shop', web_app: { url } }]] });
-      } else if (st !== '/start') { await sd('⚠️ Share your contact:', { keyboard: [[{ text: '📱 Share Contact', request_contact: true }]], resize_keyboard: true, one_time_keyboard: true }); }
+        return ok({ ok: true });
+      }
+
+      // Text commands
+      if (st === '/shop') {
+        const from = sb.message?.from || {};
+        await sd('🛍 *Smart Shop*
+
+Tap below to start shopping!',
+          { inline_keyboard: [[{ text: '🛍 Open Shop', web_app: { url: ENV.BASE_URL + '?tg_id=' + (from.id||'') + '&v=' + Date.now() } }]] });
+        return ok({ ok: true });
+      }
+      if (st === '/vendor') {
+        const from = sb.message?.from || {};
+        await sd('🏪 *Become a Vendor*
+
+Tap below to register your store!',
+          { inline_keyboard: [[{ text: '🏪 Register', web_app: { url: ENV.BASE_URL + '/vendor-register?tg_id=' + (from.id||'') + '&v=' + Date.now() } }]] });
+        return ok({ ok: true });
+      }
+      if (st === '/help' || st === '/menu') {
+        await sd('🤖 *Commands*
+/start - Menu
+/shop - Open store
+/driver - Driver reg
+/vendor - Seller reg
+/contact - Share phone
+/help - This menu');
+        return ok({ ok: true });
+      }
+      if (st === '/contact') {
+        await sd('📞 *Share Contact*
+
+Tap the button below:', { keyboard: [[{ text: '📱 Share Contact', request_contact: true }]], resize_keyboard: true, one_time_keyboard: true });
+        return ok({ ok: true });
+      }
+
+      // Fallback
+      await sd('👋 Welcome! Use /start to see the menu, or /help for commands.');
       return ok({ ok: true });
     }
 
