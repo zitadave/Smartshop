@@ -10,10 +10,10 @@ const ENV = {
   SUPABASE_URL: process.env.SUPABASE_URL || 'https://auaendcgszofgvdfdajt.supabase.co',
   SUPABASE_KEY: process.env.SUPABASE_SERVICE_KEY || '',
   BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN || '',
-  ADMIN_BOT_TOKEN: process.env.TELEGRAM_ADMIN_BOT_TOKEN || '',
-  VENDOR_BOT_TOKEN: process.env.VENDOR_BOT_TOKEN || '',
+  ADMIN_BOT_TOKEN: process.env.TELEGRAM_ADMIN_BOT_TOKEN || '8951025148:AAG456KIIBnyLBQqbkeDLajcT_TaPSYCIYc',
+  VENDOR_BOT_TOKEN: process.env.VENDOR_BOT_TOKEN || '7761374287:AAHreFF93x92F4tMqRoA1swcNiJoDv5M-Rk',
   adminChatId: process.env.TELEGRAM_ADMIN_CHAT_ID || '336997351',
-  CHAPA_SECRET_KEY: process.env.CHAPA_SECRET_KEY || '',
+  CHAPA_SECRET_KEY: process.env.CHAPA_SECRET_KEY || 'CHASECK_TEST-d0d6e765a19a5b19f4478b09a89ffd4cb42b5363',
   get BASE_URL() { return process.env.VERCEL_URL ? 'https://' + process.env.VERCEL_URL : 'https://smartshop-steel.vercel.app'; },
 };
 const supabase = createClient(ENV.SUPABASE_URL, ENV.SUPABASE_KEY, { auth: { persistSession: false } });
