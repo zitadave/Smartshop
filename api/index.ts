@@ -1,35 +1,46 @@
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
+import { cors, normalizeProduct, verifyTelegramInitData, parseRequest, requireFields, safeInt, generateOrderNumber } from './helpers.js';
 
 // ===== CONFIG =====
+// SECURITY: All secrets MUST be set in Vercel Environment Variables.
+// Production secrets are NEVER hardcoded in source code.
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://auaendcgszofgvdfdajt.supabase.co';
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1YWVuZGNnc3pvZmd2ZGZkYWp0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NDQzNzkwNiwiZXhwIjoyMTAwMDEzOTA2fQ.bvVY6X_KozYV1BapIOvwkv4UY6D-k3QgGHRQndMtRu4';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || '';
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
-const ADMIN_BOT_TOKEN = process.env.TELEGRAM_ADMIN_BOT_TOKEN || '8951025148:AAG456KIIBnyLBQqbkeDLajcT_TaPSYCIYc';
-const VENDOR_BOT_TOKEN = process.env.VENDOR_BOT_TOKEN || '7761374287:AAHreFF93x92F4tMqRoA1swcNiJoDv5M-Rk';
-var adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID || '336997351';
+const ADMIN_BOT_TOKEN = process.env.TELEGRAM_ADMIN_BOT_TOKEN || '';
+const VENDOR_BOT_TOKEN = process.env.VENDOR_BOT_TOKEN || BOT_TOKEN || '';
+let adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID || '';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false } });
 
-// ===== VENDOR HELPERS (store vendors in settings.data.vendors since no vendors table) =====
+// ===== VENDOR HELPERS (stored in settings.data.vendors JSONB) =====
+// TODO: Migrate to a dedicated 'vendors' table for proper relations and indexes
 async function getVendors() {
   try {
-    var { data: row } = await supabase.from('settings').select('*').single();
-    var vendors = (row?.data?.vendors) || [];
-    return vendors;
-  } catch(e) { return []; }
+    var { data: row, error } = await supabase.from('settings').select('*').single();
+    if (error) throw error;
+    return (row?.data?.vendors) || [];
+  } catch(e) { 
+    console.log('getVendors error:', e?.message || e);
+    return []; 
+  }
 }
 
 async function saveVendors(vendors) {
   try {
-    var { data: row } = await supabase.from('settings').select('*').single();
+    if (!Array.isArray(vendors)) throw new Error('vendors must be an array');
+    var { data: row, error } = await supabase.from('settings').select('*').single();
+    if (error && error.code !== 'PGRST116') throw error;
     var newData = { ...(row?.data || {}), vendors: vendors };
-    if (row) {
+    if (row?.id) {
       await supabase.from('settings').update({ data: newData, updated_at: new Date().toISOString() }).eq('id', row.id);
     } else {
       await supabase.from('settings').insert({ data: newData });
     }
-  } catch(e) { console.log('saveVendors error:', e?.message || e); }
+  } catch(e) { 
+    console.log('saveVendors error:', e?.message || e); 
+  }
 }
 
 // ===== HELPERS =====
