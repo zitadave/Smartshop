@@ -76,6 +76,34 @@ async function setIdem(k, s, r) {
 }
 function gON() { return 'ETH-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase(); }
 
+
+// ===== TELEGRAM BOT COMMANDS — set once at startup =====
+(async () => {
+  const tokens = [
+    { token: ENV.VENDOR_BOT_TOKEN, name: 'shop' },
+    { token: ENV.ADMIN_BOT_TOKEN, name: 'admin' },
+  ];
+  const commands = [
+    { command: 'start', description: '🏠 Main menu / ዋና ሜኑ' },
+    { command: 'shop', description: '🛍️ Open store / ሱቅ ይክፈቱ' },
+    { command: 'driver', description: '🚚 Register as driver / ሹፌር ይመዝገቡ' },
+    { command: 'vendor', description: '🏪 Become a seller / ሻጭ ይሁኑ' },
+    { command: 'contact', description: '📞 Share phone / ስልክ ያጋሩ' },
+    { command: 'help', description: '❓ Commands / ትእዛዛት' },
+  ];
+  for (const t of tokens) {
+    if (t.token) {
+      try {
+        await fetchTO('https://api.telegram.org/bot' + t.token + '/setMyCommands', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ commands }),
+        });
+        console.log('✅ Bot commands set for', t.name);
+      } catch(e) { console.log('⚠️ Could not set commands for', t.name); }
+    }
+  }
+})();
+
 // ===== VENDORS =====
 async function getV() { try { const { data: r } = await supabase.from('settings').select('*').single(); return r?.data?.vendors || []; } catch { return []; } }
 async function setV(v) { try { const { data: r } = await supabase.from('settings').select('*').single(); const nd = { ...(r?.data || {}), vendors: v }; if (r) await supabase.from('settings').update({ data: nd, updated_at: new Date().toISOString() }).eq('id', r.id); else await supabase.from('settings').insert({ data: nd }); } catch (e) { console.error('setV:', e?.message || e); } }
@@ -659,10 +687,10 @@ export default async function handler(req, res) {
 
         const shopUrl = ENV.BASE_URL + '?tg_id=' + encodeURIComponent(uid) + '&phone=' + encodeURIComponent(ph) + '&name=' + encodeURIComponent(fn) + (un ? '&username=' + encodeURIComponent(un) : '') + '&v=' + Date.now();
 
-        // Set menu button
+        // Set menu button to show commands list (default)
         fetchTO('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/setChatMenuButton', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chat_id: sc, menu_button: { type: 'web_app', text: '🛍️ Happy Shopping', web_app: { url: shopUrl } } }),
+          body: JSON.stringify({ chat_id: sc, menu_button: { type: 'default' } }),
         }).catch(() => {});
 
         // Show ALL COMMANDS as text list + inline buttons that each trigger the command
