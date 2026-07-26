@@ -629,7 +629,6 @@ export default async function handler(req, res) {
       if (method === 'GET' && (path === '/api/orders' || path === '/api/')) { var { data } = await supabase.from('orders').select('*').order('created_at', { ascending: false }); return res.json({ orders: data || [] }); }
       if (method === 'POST' && (path === '/api/orders' || path === '/api/')) { var body = { ...req.body, order_number: req.body.orderNumber || 'ETH-' + Date.now().toString(36).toUpperCase() }; var { data } = await supabase.from('orders').insert(body).select().single(); return res.json({ success: true, order: data || body }); }
       if (method === 'GET') { var on = path.replace('/api/orders/', '').split('/')[0]; var { data } = await supabase.from('orders').select('*').eq('order_number', on).single(); return res.json({ success: true, order: data }); }
-      if (method === 'POST' && path.includes('/cancel')) { var on = path.split('/')[3]; await supabase.from('orders').update({ status: 'cancelled' }).eq('order_number', on); return res.json({ success: true }); }
       if (method === 'PATCH' && path.includes('/status')) { var on = path.split('/')[3]; await supabase.from('orders').update({ status: req.body.status }).eq('order_number', on); return res.json({ success: true }); }
     }
 
@@ -745,12 +744,6 @@ export default async function handler(req, res) {
       }
 
       // List all vendors
-      if (method === 'GET' && path.startsWith('/api/vendors/') && path !== '/api/vendors/applications' && path !== '/api/vendors/check-status' && path !== '/api/vendors/approve') {
-        var vid = parseInt(path.split('/').pop() || '0');
-        var vendors = await getVendors();
-        var found = vendors.find(function(v) { return v.id == vid || v.id === String(vid); });
-        return res.json({ vendor: found || null });
-      }
       if (method === 'GET' && (path === '/api/vendors' || path === '/api/')) {
         var vendors = await getVendors();
         return res.json({ vendors: vendors || [] });
@@ -878,17 +871,6 @@ export default async function handler(req, res) {
     // AFFILIATES
     // ================================================================
     if (path === '/api/affiliates' && method === 'GET') { var { data } = await supabase.from('products').select('*').eq('visible', true); return res.json({ products: (data || []).map(normalizeProduct) }); }
-    if (path === '/api/affiliates' && method === 'POST') {
-      var { data, error } = await supabase.from('affiliates').insert(req.body).select().single();
-      if (error) return res.status(400).json({ error: error.message });
-      return res.json({ success: true, affiliate: data });
-    }
-    if (path.startsWith('/api/affiliates/') && method === 'PUT') {
-      var aid = parseInt(path.split('/').pop() || '0');
-      var { error } = await supabase.from('affiliates').update(req.body).eq('id', aid);
-      if (error) return res.status(400).json({ error: error.message });
-      return res.json({ success: true });
-    }
     if (path === '/api/affiliates/with-products' && method === 'GET') { var { data } = await supabase.from('products').select('*').eq('visible', true).gte('rating', 4); return res.json({ products: (data || []).map(normalizeProduct) }); }
 
     // ================================================================
@@ -897,7 +879,6 @@ export default async function handler(req, res) {
     if (path.startsWith('/api/reviews')) {
       if (method === 'GET') { var pid = (req.url?.split('?')[1] || '').split('&').find(function(s) { return s.startsWith('productId='); })?.split('=')[1]; var q = supabase.from('reviews').select('*'); if (pid) q = q.eq('product_id', parseInt(pid)); var { data } = await q.order('created_at', { ascending: false }); return res.json({ reviews: data || [] }); }
       if (method === 'POST') { var { data } = await supabase.from('reviews').insert(req.body).select().single(); return res.json({ success: true, review: data }); }
-      if (method === 'DELETE') { var rid = parseInt(path.split('/').pop() || '0'); await supabase.from('reviews').delete().eq('id', rid); return res.json({ success: true }); }
     }
 
     // ================================================================
@@ -908,13 +889,6 @@ export default async function handler(req, res) {
     // ================================================================
     // PRE-ORDERS
     // ================================================================
-    if (path === '/api/pre-orders/cancel' && method === 'POST') {
-      var { id } = req.body || {};
-      if (!id) return res.status(400).json({ error: 'id required' });
-      var { error } = await supabase.from('pre_orders').update({ status: 'cancelled' }).eq('id', id);
-      if (error) return res.status(400).json({ error: error.message });
-      return res.json({ success: true });
-    }
     if (path.startsWith('/api/pre-orders')) {
       if (method === 'GET') { var { data } = await supabase.from('pre_orders').select('*'); return res.json({ preOrders: data || [] }); }
       if (method === 'POST') { var { data } = await supabase.from('pre_orders').insert(req.body).select().single(); return res.json({ success: true, preOrder: data }); }
@@ -928,45 +902,11 @@ export default async function handler(req, res) {
     // ================================================================
     // RECEIPTS
     // ================================================================
-    if (path.startsWith('/api/receipts/') && method === 'POST') {
-      var on = path.replace('/api/receipts/', '');
-      var receiptUrl = 'https://smartshop-steel.vercel.app/receipt/' + on;
-      return res.json({ success: true, receiptUrl: receiptUrl });
-    }
     if (path.startsWith('/api/receipts/') && method === 'GET') { var on = path.replace('/api/receipts/', ''); return res.json({ success: true, receipt: { orderNumber: on, generatedAt: new Date().toISOString() } }); }
 
     // ================================================================
     // FLASH DEALS
     // ================================================================
-    if (path === '/api/flash-deals' && method === 'POST') {
-      var fs = req.body || {};
-      var { data: fRow } = await supabase.from('settings').select('*').single();
-      var curData = fRow?.data || {};
-      var flashSales = { ...(curData.flashSales || {}) };
-      var dealId = Date.now();
-      flashSales[dealId] = { productId: fs.productId, endTime: fs.endTime || Date.now() + 86400000, discount: fs.discount || 0, maxQuantity: fs.maxQuantity || 100 };
-      curData.flashSales = flashSales;
-      await supabase.from('settings').update({ data: curData }).eq('id', fRow.id);
-      return res.json({ success: true, deal: { id: dealId, ...flashSales[dealId] } });
-    }
-    if (path.startsWith('/api/flash-deals/') && method === 'PUT') {
-      var did = parseInt(path.split('/').pop() || '0');
-      var { data: fuRow } = await supabase.from('settings').select('*').single();
-      var fuData = fuRow?.data || {};
-      var fuSales = { ...(fuData.flashSales || {}) };
-      if (fuSales[did]) { fuSales[did] = { ...fuSales[did], ...req.body }; fuData.flashSales = fuSales; await supabase.from('settings').update({ data: fuData }).eq('id', fuRow.id); }
-      return res.json({ success: true });
-    }
-    if (path.startsWith('/api/flash-deals/') && method === 'DELETE') {
-      var ddid = parseInt(path.split('/').pop() || '0');
-      var { data: fdRow } = await supabase.from('settings').select('*').single();
-      var fdData = fdRow?.data || {};
-      var fdSales = { ...(fdData.flashSales || {}) };
-      delete fdSales[ddid];
-      fdData.flashSales = fdSales;
-      await supabase.from('settings').update({ data: fdData }).eq('id', fdRow.id);
-      return res.json({ success: true });
-    }
     if (path === '/api/flash-deals' && method === 'GET') { var { data: flashRow } = await supabase.from('settings').select('*').single(); var fs = flashRow?.data?.flashSales || {}; return res.json({ deals: Object.entries(fs).map(function(e) { return { id: parseInt(e[0]), productId: parseInt(e[0]), ...e[1] }; }) }); }
 
     // ================================================================
@@ -1548,16 +1488,6 @@ export default async function handler(req, res) {
         shopBotToken: s.shop_bot_token || '',
         alerts: s.bot_alerts || {},
       });
-    }
-    if (path === '/api/admin-bot/config' && method === 'POST') {
-      var { data: exRow } = await supabase.from('settings').select('*').single();
-      var newData = { ...(exRow?.data || {}),
-        admin_bot_token: req.body.botToken,
-        admin_chat_id: req.body.chatId,
-      };
-      if (exRow) { await supabase.from('settings').update({ data: newData, updated_at: new Date().toISOString() }).eq('id', exRow.id); }
-      else { await supabase.from('settings').insert({ data: newData }); }
-      return res.json({ success: true });
     }
     if (path === '/api/bot-config' && method === 'PUT') {
       var { data: exRow } = await supabase.from('settings').select('*').single();
