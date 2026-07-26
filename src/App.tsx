@@ -1,3 +1,4 @@
+/* force build */
 import { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { useStore } from '@/stores/AppStore';
