@@ -77,32 +77,35 @@ async function setIdem(k, s, r) {
 function gON() { return 'ETH-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase(); }
 
 
-// ===== TELEGRAM BOT COMMANDS — set once at startup =====
-(async () => {
+// ===== BOT COMMANDS DEFINITION =====
+const BOT_COMMANDS = [
+  { command: 'start', description: '🏠 Main menu / ዋና ሜኑ' },
+  { command: 'shop', description: '🛍️ Open store / ሱቅ ይክፈቱ' },
+  { command: 'driver', description: '🚚 Register as driver / ሹፌር ይመዝገቡ' },
+  { command: 'vendor', description: '🏪 Become a seller / ሻጭ ይሁኑ' },
+  { command: 'contact', description: '📞 Share phone / ስልክ ያጋሩ' },
+  { command: 'help', description: '❓ Commands / ትእዛዛት' },
+];
+
+// Register bot commands at startup (fire & forget)
+async function registerBotCommands() {
   const tokens = [
     { token: ENV.VENDOR_BOT_TOKEN, name: 'shop' },
     { token: ENV.ADMIN_BOT_TOKEN, name: 'admin' },
   ];
-  const commands = [
-    { command: 'start', description: '🏠 Main menu / ዋና ሜኑ' },
-    { command: 'shop', description: '🛍️ Open store / ሱቅ ይክፈቱ' },
-    { command: 'driver', description: '🚚 Register as driver / ሹፌር ይመዝገቡ' },
-    { command: 'vendor', description: '🏪 Become a seller / ሻጭ ይሁኑ' },
-    { command: 'contact', description: '📞 Share phone / ስልክ ያጋሩ' },
-    { command: 'help', description: '❓ Commands / ትእዛዛት' },
-  ];
   for (const t of tokens) {
     if (t.token) {
       try {
-        await fetchTO('https://api.telegram.org/bot' + t.token + '/setMyCommands', {
+        await fetch('https://api.telegram.org/bot' + t.token + '/setMyCommands', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ commands }),
+          body: JSON.stringify({ commands: BOT_COMMANDS }),
         });
-        console.log('✅ Bot commands set for', t.name);
-      } catch(e) { console.log('⚠️ Could not set commands for', t.name); }
+      } catch(e) {}
     }
   }
-})();
+}
+registerBotCommands();
+
 
 // ===== VENDORS =====
 async function getV() { try { const { data: r } = await supabase.from('settings').select('*').single(); return r?.data?.vendors || []; } catch { return []; } }
@@ -688,10 +691,13 @@ export default async function handler(req, res) {
         const shopUrl = ENV.BASE_URL + '?tg_id=' + encodeURIComponent(uid) + '&phone=' + encodeURIComponent(ph) + '&name=' + encodeURIComponent(fn) + (un ? '&username=' + encodeURIComponent(un) : '') + '&v=' + Date.now();
 
         // Set menu button to show commands list (default)
+        // Set menu button to show commands list (default)
         fetchTO('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/setChatMenuButton', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ chat_id: sc, menu_button: { type: 'default' } }),
         }).catch(() => {});
+        
+
 
         // Show ALL COMMANDS as text list + inline buttons that each trigger the command
         await sd(
