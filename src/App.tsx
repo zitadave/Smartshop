@@ -37,6 +37,10 @@ const Loyalty = lazy(() => import('@/pages/Loyalty'));
 const Returns = lazy(() => import('@/pages/Returns'));
 const DriverDashboard = lazy(() => import('@/pages/delivery/DriverDashboard'));
 const DriverRegister = lazy(() => import('@/pages/delivery/DriverRegister'));
+const RegistryView = lazy(() => import('@/pages/RegistryView'));
+const GroupDealView = lazy(() => import('@/pages/GroupDealView'));
+const PhotoStudio = lazy(() => import('@/pages/PhotoStudio'));
+const SubscriptionsPage = lazy(() => import('@/pages/SubscriptionsPage'));
 
 const TG = isRunningInTelegram();
 
@@ -173,6 +177,10 @@ export default function App() {
           <Route path="/returns" element={<Suspense fallback={<PageLoader />}><Returns /></Suspense>} />
           <Route path="/driver" element={<Suspense fallback={<PageLoader />}><DriverDashboard /></Suspense>} />
           <Route path="/driver-register" element={<Suspense fallback={<PageLoader />}><DriverRegister /></Suspense>} />
+          <Route path="/registry/:token" element={<Suspense fallback={<PageLoader />}><RegistryView /></Suspense>} />
+          <Route path="/group-deal/:token" element={<Suspense fallback={<PageLoader />}><GroupDealView /></Suspense>} />
+          <Route path="/photo-studio" element={<Suspense fallback={<PageLoader />}><PhotoStudio /></Suspense>} />
+          <Route path="/subscriptions" element={<Suspense fallback={<PageLoader />}><SubscriptionsPage /></Suspense>} />
         </Route>
         <Route path="/admin" element={<Suspense fallback={<PageLoader />}><AdminRedirect /></Suspense>} />
         <Route path="/admin-panel/*" element={<Suspense fallback={<PageLoader />}><AdminPanel /></Suspense>} />
