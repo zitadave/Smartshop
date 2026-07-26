@@ -40,6 +40,7 @@ const DriverRegister = lazy(() => import('@/pages/delivery/DriverRegister'));
 const GroupDealView = lazy(() => import('@/pages/GroupDealView'));
 const PhotoStudio = lazy(() => import('@/pages/PhotoStudio'));
 const SubscriptionsPage = lazy(() => import('@/pages/SubscriptionsPage'));
+const SubscriptionShop = lazy(() => import('@/pages/SubscriptionShop'));
 
 const TG = isRunningInTelegram();
 
@@ -179,6 +180,7 @@ export default function App() {
           <Route path="/group-deal/:token" element={<Suspense fallback={<PageLoader />}><GroupDealView /></Suspense>} />
           <Route path="/photo-studio" element={<Suspense fallback={<PageLoader />}><PhotoStudio /></Suspense>} />
           <Route path="/subscriptions" element={<Suspense fallback={<PageLoader />}><SubscriptionsPage /></Suspense>} />
+          <Route path="/subscription-shop" element={<Suspense fallback={<PageLoader />}><SubscriptionShop /></Suspense>} />
         </Route>
         <Route path="/admin" element={<Suspense fallback={<PageLoader />}><AdminRedirect /></Suspense>} />
         <Route path="/admin-panel/*" element={<Suspense fallback={<PageLoader />}><AdminPanel /></Suspense>} />

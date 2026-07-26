@@ -129,7 +129,7 @@ export default function Home() {
           {[
             { icon: String.fromCodePoint(128700), label: "Photo Studio", href: "/photo-studio" },
             { icon: String.fromCodePoint(129309), label: "Group Buy", href: "/shop" },
-            { icon: String.fromCodePoint(128230), label: "Subscribe", href: "/subscriptions" },
+            { icon: String.fromCodePoint(128230), label: "Subscribe", href: "/subscription-shop" },
             { icon: String.fromCodePoint(127775), label: "Rewards", href: "/loyalty" },
           ].map((f, i) => (
             <button key={i} onClick={() => navigate(f.href)}

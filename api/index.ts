@@ -330,26 +330,92 @@ export default async function handler(req, res) {
       return ok({ success: true, deal: { ...deal, current_members: newCount, group_price: newPrice, status: newStatus }, message: 'Joined! Group now has ' + newCount + ' members.' });
     }
 
-    // ── Subscriptions ──────────────────────────────────────────────
-    if (path === '/api/subscriptions' && method === 'POST') {
+    // ── Subscription Plans (vendor-created) ─────────────────────
+    if (path === '/api/subscription-plans' && method === 'GET') {
+      var cat = new URLSearchParams(req.url?.split('?')[1] || '').get('category') || '';
+      var active = new URLSearchParams(req.url?.split('?')[1] || '').get('active');
+      var q = supabase.from('subscription_plans').select('*');
+      if (cat) q = q.eq('category', cat);
+      if (active === 'true') q = q.eq('is_active', true);
+      var { data, error } = await q.order('created_at', { ascending: false });
+      if (error) return fail(error.message, 500);
+      return ok({ plans: data || [] });
+    }
+    if (path === '/api/subscription-plans' && method === 'POST') {
       var b = req.body || {};
-      if (!b.telegram_id || !b.product_id) return fail('telegram_id and product_id required');
-      var { data, error } = await supabase.from('subscriptions').insert({
-        telegram_id: b.telegram_id, product_id: b.product_id, product_name: b.product_name,
-        product_image: b.product_image || '', quantity: b.quantity || 1, frequency: b.frequency || 'weekly',
-        price: b.price, next_delivery: b.next_delivery || '', delivery_address: b.delivery_address || '',
-        delivery_note: b.delivery_note || '',
+      var { data, error } = await supabase.from('subscription_plans').insert({
+        name: b.name, name_amharic: b.nameAmharic || b.name_amharic || '',
+        emoji: b.emoji || '📦', description: b.description || '',
+        category: b.category || 'general',
+        unit: b.unit || '1', unit_label: b.unitLabel || b.unit_label || 'pc',
+        daily_price: b.dailyPrice || b.daily_price || 0,
+        weekly_price: b.weeklyPrice || b.weekly_price || 0,
+        monthly_price: b.monthlyPrice || b.monthly_price || 0,
+        vendor_id: b.vendorId || b.vendor_id || null,
+        vendor_name: b.vendorName || b.vendor_name || 'Smart Shop',
+        image: b.image || '', tags: JSON.stringify(b.tags || []),
+        is_active: b.isActive !== false,
+        min_quantity: b.minQuantity || b.min_quantity || 1,
+        max_quantity: b.maxQuantity || b.max_quantity || 10,
       }).select().single();
       if (error) return fail(error.message);
-      return ok({ success: true, subscription: data });
+      return ok({ success: true, plan: data });
+    }
+    if (path.startsWith('/api/subscription-plans/') && method === 'PUT') {
+      var pid = parseInt(path.split('/').pop() || '0');
+      var { error } = await supabase.from('subscription_plans').update(req.body).eq('id', pid);
+      if (error) return fail(error.message);
+      return ok({ success: true });
+    }
+    if (path.startsWith('/api/subscription-plans/') && method === 'DELETE') {
+      var pid = parseInt(path.split('/').pop() || '0');
+      var { error } = await supabase.from('subscription_plans').delete().eq('id', pid);
+      if (error) return fail(error.message);
+      return ok({ success: true });
     }
 
+    // ── Customer Subscriptions ───────────────────────────────────
     if (path === '/api/subscriptions' && method === 'GET') {
       var tid = new URLSearchParams(req.url?.split('?')[1] || '').get('telegram_id') || '';
       if (!tid) return ok({ subscriptions: [] });
-      var { data, error } = await supabase.from('subscriptions').select('*').eq('telegram_id', parseInt(tid)).order('created_at', { ascending: false });
+      var { data, error } = await supabase
+        .from('subscriptions')
+        .select('*, subscription_plans(*)')
+        .eq('telegram_id', parseInt(tid))
+        .order('created_at', { ascending: false });
       if (error) return fail(error.message, 500);
       return ok({ subscriptions: data || [] });
+    }
+
+    if (path === '/api/subscriptions' && method === 'POST') {
+      var b = req.body || {};
+      if (!b.telegram_id || !b.plan_id) return fail('telegram_id and plan_id required');
+      // Get plan details
+      var { data: plan } = await supabase.from('subscription_plans').select('*').eq('id', b.plan_id).single();
+      if (!plan) return fail('Plan not found');
+
+      var freq = b.frequency || 'daily';
+      var price = freq === 'daily' ? plan.daily_price : freq === 'weekly' ? plan.weekly_price : plan.monthly_price;
+      var qty = Math.max(plan.min_quantity || 1, Math.min(b.quantity || 1, plan.max_quantity || 10));
+
+      // Calculate next delivery
+      var nextDel = new Date();
+      if (freq === 'daily') { nextDel.setDate(nextDel.getDate() + 1); nextDel.setHours(7, 0, 0, 0); }
+      else if (freq === 'weekly') { nextDel.setDate(nextDel.getDate() + 7); nextDel.setHours(7, 0, 0, 0); }
+      else { nextDel.setMonth(nextDel.getMonth() + 1); nextDel.setDate(1); nextDel.setHours(7, 0, 0, 0); }
+
+      var { data, error } = await supabase.from('subscriptions').insert({
+        telegram_id: b.telegram_id, plan_id: b.plan_id,
+        product_name: plan.name, product_image: plan.image || plan.emoji || '',
+        quantity: qty, frequency: freq,
+        price: price * qty, next_delivery: nextDel.toISOString(),
+        delivery_address: b.delivery_address || '',
+        delivery_note: b.delivery_note || '',
+        delivery_time: b.delivery_time || '07:00',
+        payment_method: b.payment_method || 'cod',
+      }).select().single();
+      if (error) return fail(error.message);
+      return ok({ success: true, subscription: data });
     }
 
     if (path.match(/^\/api\/subscriptions\/\d+$/) && method === 'PATCH') {
@@ -359,295 +425,87 @@ export default async function handler(req, res) {
       return ok({ success: true });
     }
 
-    // ── Subscription Cron (process daily deliveries) ───────────────
+    if (path.match(/^\/api\/subscriptions\/\d+$/) && method === 'DELETE') {
+      var sid = parseInt(path.split('/').pop() || '0');
+      var { error } = await supabase.from('subscriptions').update({ status: 'cancelled' }).eq('id', sid);
+      if (error) return fail(error.message);
+      return ok({ success: true });
+    }
+
+    // ── Vendor's Subscription Orders ─────────────────────────────
+    if (path === '/api/vendor/subscription-orders' && method === 'GET') {
+      var vid = new URLSearchParams(req.url?.split('?')[1] || '').get('vendor_id') || '';
+      if (!vid) return ok({ orders: [] });
+      var { data: plans } = await supabase.from('subscription_plans').select('id').eq('vendor_id', parseInt(vid));
+      var planIds = (plans || []).map(function(p) { return p.id; });
+      if (planIds.length === 0) return ok({ orders: [] });
+      var { data, error } = await supabase
+        .from('subscriptions')
+        .select('*, subscription_plans(*)')
+        .in('plan_id', planIds)
+        .order('next_delivery', { ascending: true });
+      if (error) return fail(error.message, 500);
+      return ok({ orders: data || [] });
+    }
+
+    // ── Subscription Delivery History ────────────────────────────
+    if (path === '/api/subscriptions/deliveries' && method === 'GET') {
+      var sid = new URLSearchParams(req.url?.split('?')[1] || '').get('subscription_id') || '';
+      if (!sid) return ok({ deliveries: [] });
+      var { data, error } = await supabase
+        .from('subscription_deliveries')
+        .select('*')
+        .eq('subscription_id', parseInt(sid))
+        .order('delivery_date', { ascending: false })
+        .limit(30);
+      if (error) return fail(error.message, 500);
+      return ok({ deliveries: data || [] });
+    }
+
+    // ── Subscription Cron (process daily deliveries) ─────────────
     if (path === '/api/cron/subscriptions' && method === 'POST') {
-      var today = new Date().toISOString().split('T')[0];
+      var today = new Date();
+      today.setHours(0, 0, 0, 0);
       var { data: dueSubs, error } = await supabase
         .from('subscriptions')
-        .select('*')
+        .select('*, subscription_plans(*)')
         .eq('status', 'active')
-        .lte('next_delivery', today)
+        .lte('next_delivery', today.toISOString())
         .limit(50);
       if (error) return fail(error.message, 500);
       var processed = 0;
       for (var si = 0; si < (dueSubs || []).length; si++) {
         var sub = dueSubs[si];
-        // Create a delivery order for this subscription
-        await supabase.from('deliveries').insert({
-          order_number: 'SUB-' + Date.now().toString(36).toUpperCase() + si,
-          customer_telegram_id: sub.telegram_id, status: 'pending',
-          item_count: sub.quantity, fee: Math.round(sub.price * 0.8), delivery_address: sub.delivery_address,
+        // Create delivery record
+        await supabase.from('subscription_deliveries').insert({
+          subscription_id: sub.id, plan_id: sub.plan_id,
+          telegram_id: sub.telegram_id,
+          product_name: sub.product_name, quantity: sub.quantity,
+          price: sub.price, delivery_address: sub.delivery_address,
+          delivery_date: today.toISOString().split('T')[0],
+          status: 'pending',
         }).catch(function() {});
-        // Calculate next delivery
-        var nextDate = new Date();
+        // Update next delivery
+        var nextDate = new Date(today);
         if (sub.frequency === 'daily') nextDate.setDate(nextDate.getDate() + 1);
         else if (sub.frequency === 'weekly') nextDate.setDate(nextDate.getDate() + 7);
         else nextDate.setMonth(nextDate.getMonth() + 1);
-        await supabase.from('subscriptions').update({ next_delivery: nextDate.toISOString(), total_delivered: ((sub.total_delivered || 0) + 1) }).eq('id', sub.id);
+        nextDate.setHours(7, 0, 0, 0);
+        await supabase.from('subscriptions').update({
+          next_delivery: nextDate.toISOString(),
+          last_delivery: today.toISOString(),
+          total_delivered: ((sub.total_delivered || 0) + 1),
+        }).eq('id', sub.id);
+        // Notify user
+        tg(ENV.VENDOR_BOT_TOKEN, sub.telegram_id,
+          '📦 *Your delivery is on the way!*\n\n' +
+          sub.product_name + ' x' + sub.quantity + '\n' +
+          '📍 ' + (sub.delivery_address || 'Your address') + '\n' +
+          '🚚 Arriving soon!');
         processed++;
       }
       return ok({ success: true, processed: processed, total: (dueSubs || []).length });
     }
-
-    // ================================================================
-    // ADMIN FEATURE ROUTES
-    // ================================================================
-    const admTbl = { 'notifications': 'notifications', 'manual-payments': 'manual_payments', 'bank-accounts': 'bank_accounts', 'payouts': 'payouts', 'returns': 'returns', 'fulfillments': 'order_fulfillments', 'abandoned-carts': 'abandoned_carts', 'coupon-analytics': 'coupon_analytics', 'admin-roles': 'admin_roles', 'admin-users': 'admin_users', 'activity-logs': 'activity_logs', 'accounting': 'accounting_entries', 'promotions': 'promotions', 'sla-config': 'sla_config', 'sla-alerts': 'sla_alerts' };
-    for (const [rt, tb] of Object.entries(admTbl)) {
-      if (path === '/api/' + rt && method === 'GET') { const { data, error } = await supabase.from(tb).select('*').order('created_at', { ascending: false }).limit(100); if (error) return fail(error.message, 500); return ok({ [rt.replace('-', '_')]: data || [] }); }
-      if (path === '/api/' + rt && method === 'POST') { const { data, error } = await supabase.from(tb).insert(req.body).select().single(); if (error) return fail(error.message); return ok({ success: true, [rt.replace('-', '_').replace(/_$/, '')]: data }); }
-    }
-    if (path === '/api/admin-users' && method === 'GET') { const { data, error } = await supabase.from('admin_users').select('*, admin_roles(*)').order('id'); if (error) return fail(error.message, 500); return ok({ users: data || [] }); }
-    if (path.startsWith('/api/manual-payments/') && method === 'PATCH') { const { error } = await supabase.from('manual_payments').update({ ...req.body, verified_at: req.body.status === 'verified' ? new Date().toISOString() : undefined }).eq('id', pid(path)); if (error) return fail(error.message); return ok({ success: true }); }
-    if (path.startsWith('/api/payouts/') && method === 'PATCH') { const { error } = await supabase.from('payouts').update({ ...req.body, paid_at: req.body.status === 'paid' ? new Date().toISOString() : undefined }).eq('id', pid(path)); if (error) return fail(error.message); return ok({ success: true }); }
-    if (path.startsWith('/api/returns/') && method === 'PATCH') { const { error } = await supabase.from('returns').update({ ...req.body, approved_at: ['approved','rejected'].includes(req.body.status) ? new Date().toISOString() : undefined }).eq('id', pid(path)); if (error) return fail(error.message); return ok({ success: true }); }
-    if (path.startsWith('/api/fulfillments/') && method === 'PATCH') { const ts = { packed: 'packed_at', shipped: 'shipped_at', delivered: 'delivered_at' }; const up = { ...req.body }; if (ts[req.body.status]) up[ts[req.body.status]] = new Date().toISOString(); const { error } = await supabase.from('order_fulfillments').update(up).eq('id', pid(path)); if (error) return fail(error.message); return ok({ success: true }); }
-    if (path.startsWith('/api/abandoned-carts/') && method === 'PATCH') { const { error } = await supabase.from('abandoned_carts').update(req.body).eq('id', pid(path)); if (error) return fail(error.message); return ok({ success: true }); }
-    if (path.startsWith('/api/notifications/') && method === 'PATCH') { const { error } = await supabase.from('notifications').update(req.body).eq('id', pid(path)); if (error) return fail(error.message); return ok({ success: true }); }
-    if (path.startsWith('/api/sla-alerts/') && method === 'PATCH') { const { error } = await supabase.from('sla_alerts').update(req.body).eq('id', pid(path)); if (error) return fail(error.message); return ok({ success: true }); }
-    if (path.startsWith('/api/admin-users/') && (method === 'PUT' || method === 'PATCH')) { const { error } = await supabase.from('admin_users').update(req.body).eq('id', pid(path)); if (error) return fail(error.message); return ok({ success: true }); }
-    if (path.startsWith('/api/admin-users/') && method === 'DELETE') { const { error } = await supabase.from('admin_users').delete().eq('id', pid(path)); if (error) return fail(error.message); return ok({ success: true }); }
-    if (path.startsWith('/api/admin-roles/') && method === 'DELETE') { const { error } = await supabase.from('admin_roles').delete().eq('id', pid(path)); if (error) return fail(error.message); return ok({ success: true }); }
-    if (path.startsWith('/api/promotions/') && (method === 'PUT' || method === 'PATCH')) { const { error } = await supabase.from('promotions').update(req.body).eq('id', pid(path)); if (error) return fail(error.message); return ok({ success: true }); }
-    if (path.startsWith('/api/promotions/') && method === 'DELETE') { const { error } = await supabase.from('promotions').delete().eq('id', pid(path)); if (error) return fail(error.message); return ok({ success: true }); }
-    if (path === '/api/activity-logs/clear' && method === 'DELETE') { await supabase.from('activity_logs').delete().gt('id', 0); return ok({ success: true }); }
-    if (path === '/api/security/settings') {
-      if (method === 'GET') { const { data: r } = await supabase.from('settings').select('*').single(); const s = r?.data || {}; return ok({ pinEnabled: s.admin_pin_enabled || false, pin: s.admin_pin || '', twoFactor: s.admin_2fa || false, sessionTimeout: s.admin_session_timeout || 15, locked: s.admin_locked || false }); }
-      if (method === 'PUT') { const { data: ex } = await supabase.from('settings').select('*').single(); const nd = { ...(ex?.data || {}), admin_pin_enabled: req.body.pinEnabled, admin_pin: req.body.pin, admin_2fa: req.body.twoFactor, admin_session_timeout: req.body.sessionTimeout, admin_locked: req.body.locked }; if (ex) await supabase.from('settings').update({ data: nd, updated_at: new Date().toISOString() }).eq('id', ex.id); else await supabase.from('settings').insert({ data: nd }); return ok({ success: true }); }
-    }
-    if (path === '/api/bot-config') {
-      if (method === 'GET') { const { data: r } = await supabase.from('settings').select('*').single(); const s = r?.data || {}; return ok({ adminBotToken: s.admin_bot_token || '', adminChatId: s.admin_chat_id || '', shopBotToken: s.shop_bot_token || '', alerts: s.bot_alerts || {} }); }
-      if (method === 'PUT') { const { data: ex } = await supabase.from('settings').select('*').single(); const nd = { ...(ex?.data || {}), admin_bot_token: req.body.adminBotToken, admin_chat_id: req.body.adminChatId, shop_bot_token: req.body.shopBotToken, bot_alerts: req.body.alerts }; if (ex) await supabase.from('settings').update({ data: nd, updated_at: new Date().toISOString() }).eq('id', ex.id); else await supabase.from('settings').insert({ data: nd }); return ok({ success: true }); }
-    }
-    if (path === '/api/admin-bot/config' && method === 'POST') { const { data: ex } = await supabase.from('settings').select('*').single(); const nd = { ...(ex?.data || {}), admin_bot_token: req.body.botToken, admin_chat_id: req.body.chatId }; if (ex) await supabase.from('settings').update({ data: nd }).eq('id', ex.id); else await supabase.from('settings').insert({ data: nd }); return ok({ success: true }); }
-    if (path === '/api/loyalty' && method === 'POST') {
-      const { telegram_id, points } = req.body || {}; if (!telegram_id) return fail('telegram_id required');
-      const { data: u } = await supabase.from('users').select('loyalty_points').eq('telegram_id', telegram_id).single();
-      const np = Math.max(0, (u?.loyalty_points || 0) + (parseInt(points) || 0)); await supabase.from('users').update({ loyalty_points: np }).eq('telegram_id', telegram_id);
-      return ok({ success: true, points: np, change: parseInt(points) || 0 });
-    }
-    if (path === '/api/loyalty' && method === 'GET') { const tid = new URLSearchParams(req.url?.split('?')[1] || '').get('telegram_id'); if (!tid) return ok({ points: 0 }); const { data } = await supabase.from('users').select('loyalty_points').eq('telegram_id', parseInt(tid)).single(); return ok({ points: data?.loyalty_points || 0 }); }
-
-
-    // ================================================================
-    // TELEGRAM AUTH
-    // ================================================================
-    if (path === '/api/auth/telegram' && method === 'POST') {
-      const { initData } = req.body || {}; if (!initData) return fail('initData required');
-      const { valid, user: tgUser } = vrfy(initData); if (!valid && ENV.BOT_TOKEN) return fail('Invalid', 401); if (!tgUser) return fail('No user');
-      const { data: ex } = await supabase.from('users').select('*').eq('telegram_id', tgUser.id).single(); const now = new Date().toISOString();
-      if (ex) {
-        await supabase.from('users').update({ first_name: tgUser.first_name, last_name: tgUser.last_name || '', username: tgUser.username || '' }).eq('telegram_id', tgUser.id);
-        let vs = ''; try { const v = await getV(); const f = v.find(vv => vv.telegram_id == tgUser.id); if (f) vs = f.status || ''; } catch {}
-        return ok({ success: true, user: { telegramId: ex.telegram_id, firstName: ex.first_name || tgUser.first_name, lastName: ex.last_name || tgUser.last_name, username: ex.username || tgUser.username, languageCode: tgUser.language_code || 'en', photoUrl: tgUser.photo_url || null, phone: ex.phone || null, fullName: ex.full_name || null, city: ex.city || null, address: ex.address || null, profileComplete: !!(ex.full_name && ex.city && ex.address), vendorStatus: vs, firstSeen: ex.registered_at || now, lastSeen: now } });
-      } else {
-        const { data: nu } = await supabase.from('users').insert({ telegram_id: tgUser.id, first_name: tgUser.first_name, last_name: tgUser.last_name || '', username: tgUser.username || '', phone: '', registered_at: now }).select().single();
-        return ok({ success: true, user: { telegramId: tgUser.id, firstName: tgUser.first_name, lastName: tgUser.last_name || '', username: tgUser.username || '', languageCode: tgUser.language_code || 'en', photoUrl: tgUser.photo_url || null, phone: null, fullName: null, city: null, address: null, profileComplete: false, vendorStatus: '', firstSeen: now, lastSeen: now } });
-      }
-    }
-    if (path === '/api/auth/telegram/register-phone' && method === 'POST') { const { telegramId, phone } = req.body || {}; if (!telegramId || !phone) return fail('required'); await supabase.from('users').update({ phone, phone_verified: true }).eq('telegram_id', telegramId); return ok({ success: true }); }
-    if (path === '/api/auth/telegram/complete-profile' && method === 'POST') { const { telegramId, fullName, city, address } = req.body || {}; if (!telegramId || !fullName) return fail('required'); await supabase.from('users').update({ full_name: fullName, city: city || '', address: address || '' }).eq('telegram_id', telegramId); return ok({ success: true }); }
-    if (path.startsWith('/api/auth/telegram/user/') && method === 'GET') { const tid = pid(path); if (!tid) return fail('Invalid'); const { data } = await supabase.from('users').select('*').eq('telegram_id', tid).single(); if (!data) return fail('Not found', 404); let vs = ''; try { const v = await getV(); const f = v.find(vv => vv.telegram_id == tid); if (f) vs = f.status || ''; } catch {} return ok({ success: true, user: { telegramId: data.telegram_id, firstName: data.first_name, lastName: data.last_name, username: data.username, phone: data.phone, fullName: data.full_name, city: data.city, address: data.address, profileComplete: !!(data.full_name && data.city && data.address), vendorStatus: vs, firstSeen: data.registered_at, lastSeen: '' } }); }
-
-
-    // ================================================================
-        // ================================================================
-        // ================================================================
-        // ================================================================
-                // SHOP BOT WEBHOOK — Contact First → Command List Text + Inline Buttons
-    // ================================================================
-    if (path === '/api/shop-bot/webhook' && method === 'POST') {
-      const sb = req.body, sc = sb.message?.chat?.id, st = sb.message?.text || '';
-      if (!sc) return ok({ ok: true });
-      const uc = sb.message?.contact;
-      const sd = (txt, kb) => tg(ENV.VENDOR_BOT_TOKEN, sc, txt, 'Markdown', kb ? { reply_markup: JSON.stringify(kb) } : {});
-      const from = sb.message?.from || {};
-      
-      // Always set menu button to commands list for this chat
-      fetchTO('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/setChatMenuButton', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: sc, menu_button: { type: 'default' } }),
-      }).catch(() => {});
-
-      // ── Deep links (before any gate) ───────────────────────────
-      if (st.startsWith('/start ') || st.startsWith('/driver')) {
-        const param = st.includes(' ') ? st.split(' ')[1] : '';
-        if (st.startsWith('/driver') || param.startsWith('driver')) {
-          await sd('🚚 *Driver Registration*\n\n📸 Fayda ID, 🏍 Vehicle, 👨 Emergency, 💳 Payment', { inline_keyboard: [[{ text: '🚀 Register Now', web_app: { url: ENV.BASE_URL + '/driver-register?tg_id=' + (from.id || '') + '&v=' + Date.now() } }]] });
-          return ok({ ok: true });
-        }
-        if (param.startsWith('group_')) { const t = param.replace('group_', ''); await sd('🛍️ Group Deal!', { inline_keyboard: [[{ text: '🎉 Join', web_app: { url: ENV.BASE_URL + '/group-deal/' + t + '?v=' + Date.now() } }]] }); return ok({ ok: true }); }
-
-
-      }
-
-      // ── /start (no contact) → Ask for contact ─────────────────
-      if (st === '/start' && !uc) {
-        await sd('👋 *Welcome to Smart Shop!* 🇪🇹\n\n⚠️ *Please share your contact first*\n\nTap the button below:', {
-          keyboard: [[{ text: '📱 Share Contact', request_contact: true }]],
-          resize_keyboard: true, one_time_keyboard: true,
-        });
-        return ok({ ok: true });
-      }
-
-      // ── COMMANDS — always respond ─────────────────────────────
-      if (st === '/shop' || st === '/shop now') {
-        const u = ENV.BASE_URL + '?tg_id=' + (from.id || '') + '&v=' + Date.now();
-        await sd('🛍️ *Smart Shop*\n\nTap *👇 /shop now* to start shopping!', { inline_keyboard: [[{ text: '🛍️ /shop now — Start Shopping', web_app: { url: u } }]] });
-        return ok({ ok: true });
-      }
-      if (st === '/driver') {
-        await sd('🚚 *Driver Registration*\n\n📸 Fayda ID, 🏍 Vehicle, 👨 Emergency, 💳 Payment', { inline_keyboard: [[{ text: '🚀 /driver — Register Now', web_app: { url: ENV.BASE_URL + '/driver-register?tg_id=' + (from.id || '') + '&v=' + Date.now() } }]] });
-        return ok({ ok: true });
-      }
-      if (st === '/vendor') {
-        await sd('🏪 *Become a Vendor*\n\nTap to register your store and start selling!', { inline_keyboard: [[{ text: '🏪 /vendor — Register Now', web_app: { url: ENV.BASE_URL + '/vendor-register?tg_id=' + (from.id || '') + '&v=' + Date.now() } }]] });
-        return ok({ ok: true });
-      }
-      if (st === '/help' || st === '/menu') {
-        await sd('❓ *All Commands*\n\n🛍️ /shop — Open store\n🚚 /driver — Driver reg\n🏪 /vendor — Seller reg\n📞 /contact — Share phone\n❓ /help — This menu');
-        return ok({ ok: true });
-      }
-      if (st === '/contact') {
-        await sd('📞 *Share your contact*', { keyboard: [[{ text: '📱 Share Contact', request_contact: true }]], resize_keyboard: true, one_time_keyboard: true });
-        return ok({ ok: true });
-      }
-
-      // ── Callback queries ──────────────────────────────────────
-      if (sb.callback_query) {
-        const cbd = sb.callback_query.data;
-        const qid = sb.callback_query.id;
-        if (cbd === 'help') {
-          await sd('❓ *Commands*\n🛍️ /shop\n🚚 /driver\n🏪 /vendor\n📞 /contact\n❓ /help');
-          fetchTO('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/answerCallbackQuery', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ callback_query_id: qid }) }).catch(() => {});
-          return ok({ ok: true });
-        }
-        if (cbd === 'contact') {
-          await sd('📞 *Share contact*', { keyboard: [[{ text: '📱 Share Contact', request_contact: true }]], resize_keyboard: true, one_time_keyboard: true });
-          fetchTO('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/answerCallbackQuery', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ callback_query_id: qid }) }).catch(() => {});
-          return ok({ ok: true });
-        }
-        // Command callbacks — respond with command info then user taps again to open
-        if (cbd === 'shop') {
-          const u = ENV.BASE_URL + '?tg_id=' + (from.id || '') + '&v=' + Date.now();
-          await sd('🛍️ *Tap below to start shopping!*', { inline_keyboard: [[{ text: '🛍️ /shop now — Open Shop', web_app: { url: u } }]] });
-          fetchTO('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/answerCallbackQuery', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ callback_query_id: qid }) }).catch(() => {});
-          return ok({ ok: true });
-        }
-        if (cbd === 'driver') {
-          await sd('🚚 *Tap below to register as driver!*', { inline_keyboard: [[{ text: '🚀 /driver — Register Now', web_app: { url: ENV.BASE_URL + '/driver-register?tg_id=' + (from.id || '') + '&v=' + Date.now() } }]] });
-          fetchTO('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/answerCallbackQuery', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ callback_query_id: qid }) }).catch(() => {});
-          return ok({ ok: true });
-        }
-        if (cbd === 'vendor') {
-          await sd('🏪 *Tap below to become a vendor!*', { inline_keyboard: [[{ text: '🏪 /vendor — Register Now', web_app: { url: ENV.BASE_URL + '/vendor-register?tg_id=' + (from.id || '') + '&v=' + Date.now() } }]] });
-          fetchTO('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/answerCallbackQuery', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ callback_query_id: qid }) }).catch(() => {});
-          return ok({ ok: true });
-        }
-      }
-
-      // ── Contact shared → Save + Show COMMAND LIST ─────────────
-      if (uc) {
-        const c = uc, f = sb.message.from || {};
-        const uid = String(c.user_id || f.id || sc), ph = c.phone_number || '';
-        const fn = c.first_name || f.first_name || '', ln = f.last_name || '', un = f.username || '';
-
-        if (c.user_id && f.id && String(c.user_id) !== String(f.id)) {
-          await sd('⚠️ Please share your *own* contact.');
-          return ok({ ok: true });
-        }
-
-        // Save user
-        try {
-          await supabase.from('users').upsert({
-            telegram_id: parseInt(uid), phone: ph, first_name: fn, username: un,
-            registered_at: new Date().toISOString(), ...(ln ? { last_name: ln } : {}),
-          }, { onConflict: 'telegram_id' });
-        } catch {
-          try { await supabase.from('users').upsert({ telegram_id: parseInt(uid), first_name: fn, username: un, registered_at: new Date().toISOString(), ...(ln ? { last_name: ln } : {}) }, { onConflict: 'telegram_id' }); } catch {}
-        }
-
-        // Remove contact keyboard
-        tg(ENV.VENDOR_BOT_TOKEN, sc, '', undefined, { reply_markup: JSON.stringify({ remove_keyboard: true }) }).catch(() => {});
-
-        const shopUrl = ENV.BASE_URL + '?tg_id=' + encodeURIComponent(uid) + '&phone=' + encodeURIComponent(ph) + '&name=' + encodeURIComponent(fn) + (un ? '&username=' + encodeURIComponent(un) : '') + '&v=' + Date.now();
-
-        // Show ALL COMMANDS as text list + inline buttons that each trigger the command
-        await sd(
-          '✅ *Welcome to Smart Shop!* 🇪🇹\n\n' +
-          '*📋 Available Commands:*\n' +
-          '🛍️ /shop — Open store & start shopping\n' +
-          '🚚 /driver — Register as delivery driver\n' +
-          '🏪 /vendor — Become a seller\n' +
-          '📞 /contact — Share your phone number\n' +
-          '❓ /help — Show all commands\n\n' +
-          '👇 *Tap a command below to use it:*',
-          {
-            inline_keyboard: [
-              [{ text: '🛍️ /shop now', callback_data: 'shop' }],
-              [{ text: '🚚 /driver', callback_data: 'driver' }],
-              [{ text: '🏪 /vendor', callback_data: 'vendor' }],
-              [{ text: '📞 /contact', callback_data: 'contact' }],
-              [{ text: '❓ /help', callback_data: 'help' }],
-            ],
-          }
-        );
-        return ok({ ok: true });
-      }
-
-      // ── Fallback: unknown text without contact → ask ──────────
-      await sd('⚠️ Please share your contact first:', {
-        keyboard: [[{ text: '📱 Share Contact', request_contact: true }]],
-        resize_keyboard: true, one_time_keyboard: true,
-      });
-      return ok({ ok: true });
-    }
-
-// ADMIN BOT WEBHOOK
-    // ================================================================
-    if (path === '/api/admin-bot/webhook' && method === 'POST') {
-      if (!ENV.ADMIN_BOT_TOKEN) return ok({ ok: true });
-      const bd = req.body; const ch = bd.message?.chat?.id || bd.callback_query?.message?.chat?.id;
-      const tx = bd.message?.text || ''; const cb = bd.callback_query?.data || ''; const fn = bd.message?.from?.first_name || bd.callback_query?.from?.first_name || 'Admin';
-      if (!ch) return ok({ ok: true }); const cmd = (cb || tx).replace('/', '').toLowerCase();
-      const [pr, or] = await Promise.all([supabase.from('products').select('*'), supabase.from('orders').select('*')]);
-      const pl = pr.data || [], ol = or.data || [], ls = pl.filter(p => p.stock_count <= 5 && p.stock_count > 0);
-      if (cmd === 'start' || cmd === 'help') await tg(ENV.ADMIN_BOT_TOKEN, ch, '👋 *Welcome ' + fn + '*\n/stats\n/orders\n/lowstock');
-      else if (cmd === 'stats') { const { data: vr } = await supabase.from('settings').select('*').single(); await tg(ENV.ADMIN_BOT_TOKEN, ch, '📊 *Stats*\n📦 ' + pl.length + ' products\n📋 ' + ol.length + ' orders\n💰 ' + new Intl.NumberFormat('en').format(ol.reduce((s, o) => s + (o.total || 0), 0)) + ' Br\n⚠️ ' + ls.length + ' low stock\n🏪 ' + ((vr?.data?.vendors || []).length) + ' vendors'); }
-      else if (cmd === 'orders') { if (!ol.length) await tg(ENV.ADMIN_BOT_TOKEN, ch, '📋 No orders'); else { let m = '📋 *Recent*\n'; ol.slice(0, 5).forEach(o => { m += (o.status === 'delivered' ? '✅' : '🚚') + ' *' + (o.order_number || o.orderNumber) + '* — ' + new Intl.NumberFormat('en').format(o.total || 0) + ' Br\n'; }); m += '\n_' + ol.length + ' total_'; await tg(ENV.ADMIN_BOT_TOKEN, ch, m); } }
-      else if (cmd === 'lowstock') { if (!ls.length) await tg(ENV.ADMIN_BOT_TOKEN, ch, '✅ Well-stocked!'); else { let m = '⚠️ *Low Stock*\n'; ls.forEach(p => m += (p.stock_count === 0 ? '❌' : '🔴') + ' *' + p.name_en + '* — ' + p.stock_count + ' left\n'); await tg(ENV.ADMIN_BOT_TOKEN, ch, m); } }
-      else await tg(ENV.ADMIN_BOT_TOKEN, ch, '❌ Unknown'); return ok({ ok: true });
-    }
-    if (path === '/api/admin-bot/send' && method === 'POST') { const { chatId, message } = req.body || {}; if (!chatId || !message) return fail('required'); const s = await tg(ENV.ADMIN_BOT_TOKEN, chatId, message, 'HTML'); return ok({ sent: s }); }
-    if (path === '/api/admin-bot/set-webhook' && method === 'POST') { const wh = ENV.BASE_URL + '/api/admin-bot/webhook'; const d = await fetchRetry('https://api.telegram.org/bot' + ENV.ADMIN_BOT_TOKEN + '/setWebhook?url=' + wh, { method: 'POST', timeout: 10000 }).then(r => r.json()).catch(() => ({ ok: false })); return ok({ ok: d.ok, description: d.description, webhookUrl: wh }); }
-
-
-    // ================================================================
-    // USER SYNC
-    // ================================================================
-    if (path === '/api/user/sync' && method === 'POST') {
-      const b = req.body || {}, tid = b.telegram_id || ''; if (!tid) return ok({ success: false }); const r = { success: true };
-      try { await supabase.from('users').upsert({ telegram_id: parseInt(tid), username: b.username || '', first_name: b.first_name || '', ...(b.phone ? { phone: b.phone } : {}) }, { onConflict: 'telegram_id' }); const { data: ur } = await supabase.from('users').select('*').eq('telegram_id', parseInt(tid)).single(); if (ur?.phone) r.phone = ur.phone; } catch {}
-      try { const v = await getV(); const f = tid ? v.find(vv => vv.telegram_id == parseInt(tid)) : null; if (f) { r.vendor_status = f.status || 'pending'; r.vendor_id = f.id; r.vendor_name = f.name || ''; } else r.vendor_status = 'none'; } catch { r.vendor_status = 'none'; }
-      return ok(r);
-    }
-    if (path === '/api/user/contact' && method === 'GET') { const tid = new URLSearchParams(req.url?.split('?')[1] || '').get('telegram_id') || ''; if (!tid) return ok({ phone: '' }); try { const { data } = await supabase.from('users').select('phone').eq('telegram_id', parseInt(tid)).single(); if (data?.phone) return ok({ phone: data.phone }); } catch {} return ok({ phone: '' }); }
-
-
-    // ================================================================
-    // PRODUCTS / SETTINGS / ORDERS (Idempotent + Atomic)
-    // ================================================================
-    if (path.startsWith('/api/products') || (path === '/api/' && method === 'GET')) {
-      if (method === 'GET') { if (path === '/api/products' || path === '/api/') { const { data } = await supabase.from('products').select('*').order('id', { ascending: false }); return ok({ products: (data || []).map(norm) }); } const id = parseInt(path.replace('/api/products/', '')); if (!isNaN(id)) { const { data } = await supabase.from('products').select('*').eq('id', id).single(); return ok({ product: data ? norm(data) : null }); } }
-      if (method === 'POST') { const { data } = await supabase.from('products').insert(cln(req.body)).select().single(); return ok({ success: true, product: data }); }
-      if (method === 'PUT') { await supabase.from('products').update(cln(req.body)).eq('id', pid(path)); return ok({ success: true }); }
-      if (method === 'DELETE') { await supabase.from('products').delete().eq('id', pid(path)); return ok({ success: true }); }
-    }
-    if (path === '/api/settings') {
-      if (method === 'GET') { const { data: r } = await supabase.from('settings').select('*').single(); return ok({ success: true, settings: r?.data || r || {} }); }
-      if (method === 'PUT') { const { data: ex } = await supabase.from('settings').select('*').single(); if (ex) await supabase.from('settings').update({ data: { ...(ex.data || ex), ...req.body }, updated_at: new Date().toISOString() }).eq('id', ex.id); else await supabase.from('settings').insert({ data: req.body }); return ok({ success: true }); }
-    }
-
 
     // ── ORDERS (Idempotent + Atomic Stock) ──────────────────────────
     if (path.startsWith('/api/orders')) {

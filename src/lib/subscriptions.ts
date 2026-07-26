@@ -1,60 +1,162 @@
 // ============================================
-// Smart Shop — Daily Subscriptions (የደንበኝነት ምርቶች)
+// Smart Shop — Complete Subscription System
 // Stack: Supabase + Vercel Cron (FREE)
 // ============================================
 
 export type SubscriptionFrequency = 'daily' | 'weekly' | 'monthly';
+export type SubscriptionStatus = 'active' | 'paused' | 'cancelled';
+export type DeliveryStatus = 'pending' | 'out_for_delivery' | 'delivered' | 'failed' | 'cancelled';
 
+// ── Subscription Plan (created by vendors) ──────────────────
+export interface SubscriptionPlan {
+  id: number;
+  name: string;
+  nameAmharic: string;
+  emoji: string;
+  description: string;
+  category: string;
+  unit: string;
+  unitLabel: string;
+  dailyPrice: number;
+  weeklyPrice: number;
+  monthlyPrice: number;
+  vendorId?: number;
+  vendorName: string;
+  image: string;
+  tags: string[];
+  isActive: boolean;
+  minQuantity: number;
+  maxQuantity: number;
+  createdAt: string;
+}
+
+// ── Customer Subscription ──────────────────────────────────
 export interface Subscription {
   id: number;
   telegramId: number;
-  productId: number;
+  planId: number;
+  plan?: SubscriptionPlan;
   productName: string;
   productImage: string;
   quantity: number;
   frequency: SubscriptionFrequency;
   price: number;
-  dailyPrice: number;
   nextDelivery: string;
-  status: 'active' | 'paused' | 'cancelled';
-  createdAt: string;
+  status: SubscriptionStatus;
   deliveryAddress: string;
   deliveryNote: string;
+  deliveryTime: string;
+  paymentMethod: string;
+  totalDelivered: number;
+  lastDelivery: string | null;
+  createdAt: string;
 }
 
-// ── Subscription discount tiers ─────────────────────────────
-// Longer commitment = bigger savings
-const FREQUENCY_DISCOUNTS: Record<SubscriptionFrequency, number> = {
-  daily: 0.15,    // 15% off for daily subscriptions
-  weekly: 0.10,   // 10% off for weekly
-  monthly: 0.05,  // 5% off for monthly
-};
-
-export function getSubscriptionPrice(regularPrice: number, frequency: SubscriptionFrequency): number {
-  const discount = FREQUENCY_DISCOUNTS[frequency] || 0;
-  return Math.round(regularPrice * (1 - discount));
+// ── Delivery Record ────────────────────────────────────────
+export interface SubscriptionDelivery {
+  id: number;
+  subscriptionId: number;
+  planId: number;
+  telegramId: number;
+  productName: string;
+  quantity: number;
+  price: number;
+  deliveryAddress: string;
+  deliveryDate: string;
+  status: DeliveryStatus;
+  deliveredAt: string | null;
+  notes: string;
+  createdAt: string;
 }
 
-// ── Common Ethiopian subscription items ─────────────────────
-export const SUBSCRIPTION_TEMPLATES = [
-  { name: 'ወተት', emoji: '🥛', unit: '1ሊትር', freq: 'daily' as const },
-  { name: 'እንቁላል', emoji: '🥚', unit: '12ቱ', freq: 'weekly' as const },
-  { name: 'ዳቦ', emoji: '🍞', unit: '1', freq: 'daily' as const },
-  { name: 'ውሃ ቢን', emoji: '💧', unit: '5ሊትር', freq: 'daily' as const },
-  { name: 'ቡና', emoji: '☕', unit: '500ግ', freq: 'monthly' as const },
-  { name: 'ማር', emoji: '🍯', unit: '500ግ', freq: 'monthly' as const },
-  { name: 'ስኳር', emoji: '🍚', unit: '1ኪሎ', freq: 'monthly' as const },
-  { name: 'ዘይት', emoji: '🫒', unit: '1ሊትር', freq: 'monthly' as const },
+// ── Ethiopian subscription categories ──────────────────────
+export const SUBSCRIPTION_CATEGORIES = [
+  { id: 'dairy', name: 'ወተት እና እንቁላል', nameEn: 'Milk & Eggs', emoji: '🥛' },
+  { id: 'bakery', name: 'ዳቦ እና መጋገሪያ', nameEn: 'Bakery', emoji: '🍞' },
+  { id: 'drinks', name: 'መጠጦች', nameEn: 'Drinks', emoji: '💧' },
+  { id: 'groceries', name: 'ግሮሰሪ', nameEn: 'Groceries', emoji: '🛒' },
+  { id: 'general', name: 'ሌሎች', nameEn: 'Other', emoji: '📦' },
 ];
 
-// ── Create subscription ─────────────────────────────────────
+// ── Discount display text ──────────────────────────────────
+export function getDiscountText(freq: SubscriptionFrequency): string {
+  const discounts: Record<SubscriptionFrequency, { pct: number; label: string }> = {
+    daily: { pct: 15, label: 'Save 15% daily' },
+    weekly: { pct: 10, label: 'Save 10% weekly' },
+    monthly: { pct: 5, label: 'Save 5% monthly' },
+  };
+  return discounts[freq]?.label || '';
+}
+
+export function getDiscountPercent(freq: SubscriptionFrequency): number {
+  return { daily: 15, weekly: 10, monthly: 5 }[freq] || 0;
+}
+
+// ── Calculate price for a plan at given frequency ──────────
+export function getPlanPrice(plan: SubscriptionPlan, freq: SubscriptionFrequency, quantity = 1): number {
+  const basePrice = freq === 'daily' ? plan.dailyPrice : freq === 'weekly' ? plan.weeklyPrice : plan.monthlyPrice;
+  return basePrice * quantity;
+}
+
+// ── Format frequency to Amharic ────────────────────────────
+export function formatFrequency(freq: SubscriptionFrequency): string {
+  const labels: Record<SubscriptionFrequency, string> = {
+    daily: 'በየቀኑ',
+    weekly: 'በየሳምንቱ',
+    monthly: 'በየወሩ',
+  };
+  return labels[freq];
+}
+
+// ── Next delivery date label ───────────────────────────────
+export function formatNextDelivery(dateStr: string): string {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diff = d.getTime() - now.getTime();
+  const hours = Math.round(diff / (1000 * 60 * 60));
+
+  if (hours <= 0) return 'Today 🚚';
+  if (hours <= 24) return `In ${hours}h`;
+  if (hours <= 48) return 'Tomorrow';
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+// ═══════════════════════════════════════════════════════════
+// API FUNCTIONS
+// ═══════════════════════════════════════════════════════════
+
+// ── Fetch all subscription plans ───────────────────────────
+export async function fetchPlans(category?: string): Promise<SubscriptionPlan[]> {
+  const params = new URLSearchParams();
+  params.set('active', 'true');
+  if (category) params.set('category', category);
+  const res = await fetch(`/api/subscription-plans?${params}`);
+  const data = await res.json();
+  return data.plans || [];
+}
+
+// ── Create a subscription plan (vendor) ───────────────────
+export async function createPlan(plan: Partial<SubscriptionPlan>): Promise<SubscriptionPlan> {
+  const res = await fetch('/api/subscription-plans', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(plan),
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Failed to create plan');
+  return data.plan;
+}
+
+// ── Subscribe to a plan ────────────────────────────────────
 export async function createSubscription(params: {
   telegramId: number;
-  productId: number;
-  quantity: number;
+  planId: number;
   frequency: SubscriptionFrequency;
+  quantity: number;
   deliveryAddress: string;
   deliveryNote?: string;
+  deliveryTime?: string;
+  paymentMethod?: string;
 }): Promise<Subscription> {
   const res = await fetch('/api/subscriptions', {
     method: 'POST',
@@ -66,10 +168,17 @@ export async function createSubscription(params: {
   return data.subscription;
 }
 
-// ── Update subscription status ──────────────────────────────
+// ── Get user's subscriptions ───────────────────────────────
+export async function getUserSubscriptions(telegramId: number): Promise<Subscription[]> {
+  const res = await fetch(`/api/subscriptions?telegram_id=${telegramId}`);
+  const data = await res.json();
+  return data.subscriptions || [];
+}
+
+// ── Update subscription ───────────────────────────────────
 export async function updateSubscription(
   id: number,
-  updates: { status?: 'active' | 'paused' | 'cancelled'; quantity?: number }
+  updates: Partial<Subscription>
 ): Promise<{ success: boolean }> {
   const res = await fetch(`/api/subscriptions/${id}`, {
     method: 'PATCH',
@@ -79,43 +188,31 @@ export async function updateSubscription(
   return res.json();
 }
 
-// ── Get user's subscriptions ────────────────────────────────
-export async function getUserSubscriptions(telegramId: number): Promise<Subscription[]> {
-  const res = await fetch(`/api/subscriptions?telegram_id=${telegramId}`);
+// ── Cancel subscription ───────────────────────────────────
+export async function cancelSubscription(id: number): Promise<{ success: boolean }> {
+  const res = await fetch(`/api/subscriptions/${id}`, { method: 'DELETE' });
+  return res.json();
+}
+
+// ── Get delivery history for a subscription ────────────────
+export async function getDeliveryHistory(subscriptionId: number): Promise<SubscriptionDelivery[]> {
+  const res = await fetch(`/api/subscriptions/deliveries?subscription_id=${subscriptionId}`);
   const data = await res.json();
-  return data.subscriptions || [];
+  return data.deliveries || [];
 }
 
-// ── Calculate next delivery date ────────────────────────────
-export function calculateNextDelivery(frequency: SubscriptionFrequency): Date {
-  const now = new Date();
-  const next = new Date(now);
-  
-  switch (frequency) {
-    case 'daily':
-      next.setDate(next.getDate() + 1);
-      next.setHours(7, 0, 0, 0); // Deliver at 7 AM
-      break;
-    case 'weekly':
-      next.setDate(next.getDate() + (7 - next.getDay()));
-      next.setHours(7, 0, 0, 0);
-      break;
-    case 'monthly':
-      next.setMonth(next.getMonth() + 1);
-      next.setDate(1);
-      next.setHours(7, 0, 0, 0);
-      break;
-  }
-  
-  return next;
+// ── Get vendor's subscription orders ──────────────────────
+export async function getVendorSubscriptionOrders(vendorId: number): Promise<Subscription[]> {
+  const res = await fetch(`/api/vendor/subscription-orders?vendor_id=${vendorId}`);
+  const data = await res.json();
+  return data.orders || [];
 }
 
-// ── Format frequency for display ────────────────────────────
-export function formatFrequency(freq: SubscriptionFrequency): string {
-  const labels: Record<SubscriptionFrequency, string> = {
-    daily: 'በየቀኑ',
-    weekly: 'በየሳምንቱ',
-    monthly: 'በየወሩ',
-  };
-  return labels[freq];
+// ── Calculate savings compared to buying retail ────────────
+export function calculateSavings(plan: SubscriptionPlan, freq: SubscriptionFrequency, quantity = 1): number {
+  // Simulated retail price (daily price × 30 for monthly, etc.)
+  const dailyTotal = plan.dailyPrice * quantity * 30;
+  const monthlyTotal = plan.monthlyPrice * quantity;
+  if (freq === 'monthly') return dailyTotal - monthlyTotal;
+  return 0;
 }
