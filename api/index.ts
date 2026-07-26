@@ -598,6 +598,12 @@ export default async function handler(req, res) {
       const uc = sb.message?.contact;
       const sd = (txt, kb) => tg(ENV.VENDOR_BOT_TOKEN, sc, txt, 'Markdown', kb ? { reply_markup: JSON.stringify(kb) } : {});
       const from = sb.message?.from || {};
+      
+      // Always set menu button to commands list for this chat
+      fetchTO('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/setChatMenuButton', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: sc, menu_button: { type: 'default' } }),
+      }).catch(() => {});
 
       // ── Deep links (before any gate) ───────────────────────────
       if (st.startsWith('/start ') || st.startsWith('/driver')) {
@@ -706,10 +712,6 @@ export default async function handler(req, res) {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ chat_id: sc, menu_button: { type: 'default' } }),
         }).catch(() => {});
-
-
-
-        
 
 
         // Show ALL COMMANDS as text list + inline buttons that each trigger the command

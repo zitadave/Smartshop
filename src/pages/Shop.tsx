@@ -14,6 +14,25 @@ import { Search, X, Filter, ArrowUp, Sparkles, RefreshCw } from 'lucide-react';
 import type { Product, CategoryId, SortMode } from '@/types';
 
 export default function Shop() {
+  const [isListening, setIsListening] = useState(false);
+  
+  const handleVoiceSearch = async () => {
+    if (!isAmharicVoiceSupported()) {
+      toast('🎤 Voice search not supported on this device. Use text search instead.', 'info');
+      return;
+    }
+    setIsListening(true);
+    try {
+      const text = await listenAmharic({ timeout: 5000 });
+      const query = parseVoiceQuery(text);
+      const url = buildSearchUrl(query);
+      toast('🎤 "' + text + '" — searching...', 'success');
+      navigate(url);
+    } catch (e: any) {
+      toast('🎤 ' + (e.message || 'Could not recognize speech'), 'error');
+    }
+    setIsListening(false);
+  };
   const navigate = useNavigate();
   const location = useLocation();
   const { toggleWishlist } = useStore();
@@ -52,7 +71,12 @@ export default function Shop() {
         <div className="px-4 pt-3 pb-2">
           <div className="relative group">
             <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/50 transition-colors group-focus-within:text-primary" />
-            <input
+            <button onClick={handleVoiceSearch}
+  className="p-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl flex-shrink-0 shadow-lg hover:shadow-xl transition-all active:scale-95"
+  title="Search by voice / በድምጽ ይፈልጉ">
+  🎤
+</button>
+<input
               type="text"
               placeholder="🔍 Search products..."
               className="w-full pl-10 pr-10 py-3 rounded-2xl border border-border/60 bg-card/60 text-sm focus:outline-none focus:ring-2 focus:ring-ring/30 focus:bg-card transition-all duration-300 placeholder:text-muted-foreground/40 shadow-sm"
