@@ -321,6 +321,14 @@ export default async function handler(req, res) {
       return ok({ deals: [] });
     }
 
+    if (path.startsWith('/api/group-deals/') && method === 'DELETE') {
+      var gid = parseInt(path.split('/').pop() || '0');
+      if (!gid) return fail('Invalid ID');
+      await supabase.from('group_deal_members').delete().eq('group_deal_id', gid);
+      var { error } = await supabase.from('group_deals').delete().eq('id', gid);
+      if (error) return fail(error.message);
+      return ok({ success: true });
+    }
     if (path === '/api/group-deals/join' && method === 'POST') {
       var b = req.body || {};
       if (!b.token) return fail('token required');

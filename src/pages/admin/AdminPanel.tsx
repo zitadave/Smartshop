@@ -40,8 +40,10 @@ import AdminPromotions from '@/components/admin/AdminPromotions';
 import ProductStudio from '@/components/admin/ProductStudio';
 import { sendAdminTelegram, notifyProductCreated, notifyProductUpdated, notifyProductDeleted, notifySettingsChanged, notifyVendorUpdated } from '@/lib/adminNotifier';
 import AdminDeliveryTab from './AdminDeliveryTab';
+import AdminGroupBuyTab from './AdminGroupBuyTab';
+import AdminSubscriptionsTab from './AdminSubscriptionsTab';
 
-type Tab = 'overview' | 'products' | 'orders' | 'vendors' | 'delivery' | 'marketplace' | 'reviews' 
+type Tab = 'overview' | 'products' | 'orders' | 'vendors' | 'delivery' | 'marketplace' | 'reviews' | 'subscriptions' | 'groupbuy' 
   | 'broadcast' | 'flashdeals' | 'preorders' | 'tracking' | 'themes' | 'coupons' 
   | 'settings' | 'alerts' | 'abandoned' | 'roles' | 'backup' 
   | 'bulkProducts' | 'analytics' | 'forecast' | 'activity' | 'security' | 'telegram' 
@@ -139,6 +141,8 @@ export default function AdminLayout() {
     { id: 'products', icon: Package, label: 'Products' },
     { id: 'orders', icon: ShoppingCart, label: 'Orders' },
     { id: 'vendors', icon: Store, label: 'Vendors' },
+    { id: 'subscriptions', icon: Package, label: 'Subscriptions' },
+    { id: 'groupbuy', icon: Users, label: 'Group Buy' },
     { id: 'delivery', icon: Bike, label: 'Delivery' },
     { id: 'marketplace', icon: Rocket, label: 'Marketplace' },
     { id: 'reviews', icon: Camera, label: 'Reviews' },
@@ -220,7 +224,7 @@ export default function AdminLayout() {
             const groups: { title: string; ids: Tab[] }[] = [
               { title: 'STORE', ids: ['overview', 'products', 'orders', 'vendors', 'delivery', 'marketplace', 'reviews'] },
               { title: 'PROMOTION', ids: ['promotions', 'broadcast', 'flashdeals', 'preorders', 'coupons', 'tracking', 'themes'] },
-              { title: 'OPERATIONS', ids: ['manualpayments', 'alerts', 'abandoned', 'fulfillment', 'sla', 'driver', 'returns'] },
+              { title: 'OPERATIONS', ids: ['subscriptions', 'groupbuy', 'manualpayments', 'alerts', 'abandoned', 'fulfillment', 'sla', 'driver', 'returns'] },
               { title: 'FINANCE', ids: ['finance', 'smartbooks', 'settings'] },
               { title: 'ADMIN', ids: ['roles', 'security', 'backup', 'telegram', 'activity'] },
               { title: 'INSIGHTS', ids: ['analytics', 'forecast', 'bulkProducts'] },
@@ -272,6 +276,8 @@ export default function AdminLayout() {
           {tab === 'products' && <AdminProducts />}
           {tab === 'orders' && <AdminOrders />}
           {tab === 'vendors' && <AdminVendors />}
+          {tab === 'subscriptions' && <AdminSubscriptionsTab />}
+          {tab === 'groupbuy' && <AdminGroupBuyTab />}
           {tab === 'delivery' && <AdminDeliveryTab />}
           {tab === 'marketplace' && <AdminMarketplace />}
           {tab === 'reviews' && <AdminReviews />}
