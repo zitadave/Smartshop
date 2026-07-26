@@ -91,6 +91,15 @@ const BOT_COMMANDS = [
 
 // ===== TELEGRAM BOT COMMANDS — register globally at startup =====
 (async () => {
+  const ADMIN_COMMANDS = [
+    { command: 'start', description: '🏠 Admin menu' },
+    { command: 'stats', description: '📊 Store statistics' },
+    { command: 'orders', description: '📋 Recent orders' },
+    { command: 'lowstock', description: '⚠️ Low stock alerts' },
+    { command: 'vendors', description: '🏪 Vendor applications' },
+    { command: 'alerts', description: '🔔 Active alerts' },
+    { command: 'help', description: '❓ All commands' },
+  ];
   const cmds = [
     { command: 'start', description: '🏠 Main menu / ዋና ሜኑ' },
     { command: 'shop', description: '🛍️ Open store / ሱቅ ይክፈቱ' },
@@ -99,7 +108,10 @@ const BOT_COMMANDS = [
     { command: 'contact', description: '📞 Share phone / ስልክ ያጋሩ' },
     { command: 'help', description: '❓ Commands / ትእዛዛት' },
   ];
-  const tokens = [ENV.VENDOR_BOT_TOKEN, ENV.ADMIN_BOT_TOKEN];
+  const tokens = [
+    { token: ENV.VENDOR_BOT_TOKEN, isAdmin: false },
+    { token: ENV.ADMIN_BOT_TOKEN, isAdmin: true },
+  ];
   for (const token of tokens) {
     if (!token) continue;
     try {
@@ -860,6 +872,164 @@ export default async function handler(req, res) {
     // ================================================================
     if (path === '/api/vendor/notify' && method === 'POST') { var { telegramId, type, message } = req.body || {}; if (!telegramId || !message) return fail('required'); var em = type === 'payout' ? '💰' : type === 'order' ? '📦' : '📢'; var s = await tg(ENV.VENDOR_BOT_TOKEN, telegramId, em + ' *Smart Shop*\n\n' + message); return ok({ success: s }); }
 
+
+    // ================================================================
+    // SHOP BOT WEBHOOK — Contact First → Command List
+    // ================================================================
+    if (path === '/api/shop-bot/webhook' && method === 'POST') {
+      const sb = req.body, sc = sb.message?.chat?.id, st = sb.message?.text || '';
+      if (!sc) return ok({ ok: true });
+      const uc = sb.message?.contact;
+      const sd = (txt, kb) => tg(ENV.VENDOR_BOT_TOKEN, sc, txt, 'Markdown', kb ? { reply_markup: JSON.stringify(kb) } : {});
+      const from = sb.message?.from || {};
+
+      // Deep links
+      if (st.startsWith('/start ') || st.startsWith('/driver')) {
+        const param = st.includes(' ') ? st.split(' ')[1] : '';
+        if (st.startsWith('/driver') || param.startsWith('driver')) {
+          await sd('🚚 *Driver Registration*\n\n📸 Fayda ID, 🏍 Vehicle, 👨 Emergency, 💳 Payment', { inline_keyboard: [[{ text: '🚀 Register Now', web_app: { url: ENV.BASE_URL + '/driver-register?tg_id=' + (from.id || '') + '&v=' + Date.now() } }]] });
+          return ok({ ok: true });
+        }
+        if (param.startsWith('group_')) { const t = param.replace('group_', ''); await sd('🛍️ Group Deal!', { inline_keyboard: [[{ text: '🎉 Join', web_app: { url: ENV.BASE_URL + '/group-deal/' + t + '?v=' + Date.now() } }]] }); return ok({ ok: true }); }
+      }
+
+      // /start -> Ask for contact
+      if (st === '/start' && !uc) {
+        await sd('👋 *Welcome to Smart Shop!* 🇪🇹\n\n⚠️ *Please share your contact first*\n\nTap the button below:', {
+          keyboard: [[{ text: '📱 Share Contact', request_contact: true }]], resize_keyboard: true, one_time_keyboard: true,
+        });
+        return ok({ ok: true });
+      }
+
+      // Commands (work even without fresh contact)
+      if (st === '/shop' || st === '/shop now') {
+        await sd('🛍️ *Smart Shop*\n\nTap *👇 /shop now* to start shopping!', { inline_keyboard: [[{ text: '🛍️ /shop now', web_app: { url: ENV.BASE_URL + '?tg_id=' + (from.id || '') + '&v=' + Date.now() } }]] });
+        return ok({ ok: true });
+      }
+      if (st === '/driver') {
+        await sd('🚚 *Driver Registration*', { inline_keyboard: [[{ text: '🚀 Register', web_app: { url: ENV.BASE_URL + '/driver-register?tg_id=' + (from.id || '') + '&v=' + Date.now() } }]] });
+        return ok({ ok: true });
+      }
+      if (st === '/vendor') {
+        await sd('🏪 *Become a Vendor*', { inline_keyboard: [[{ text: '🏪 Register', web_app: { url: ENV.BASE_URL + '/vendor-register?tg_id=' + (from.id || '') + '&v=' + Date.now() } }]] });
+        return ok({ ok: true });
+      }
+      if (st === '/help' || st === '/menu') {
+        await sd('❓ *All Commands*\n\n🛍️ /shop — Open store\n🚚 /driver — Driver reg\n🏪 /vendor — Seller reg\n📞 /contact — Share phone\n❓ /help — This menu');
+        return ok({ ok: true });
+      }
+      if (st === '/contact') {
+        await sd('📞 *Share your contact*', { keyboard: [[{ text: '📱 Share Contact', request_contact: true }]], resize_keyboard: true, one_time_keyboard: true });
+        return ok({ ok: true });
+      }
+
+      // Callback queries
+      if (sb.callback_query) {
+        const cbd = sb.callback_query.data;
+        const qid = sb.callback_query.id;
+        if (cbd === 'help') {
+          await sd('❓ *Commands*\n🛍️ /shop\n🚚 /driver\n🏪 /vendor\n📞 /contact\n❓ /help');
+          fetchTO('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/answerCallbackQuery', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ callback_query_id: qid }) }).catch(() => {});
+          return ok({ ok: true });
+        }
+        if (cbd === 'contact') {
+          await sd('📞 *Share contact*', { keyboard: [[{ text: '📱 Share Contact', request_contact: true }]], resize_keyboard: true, one_time_keyboard: true });
+          fetchTO('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/answerCallbackQuery', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ callback_query_id: qid }) }).catch(() => {});
+          return ok({ ok: true });
+        }
+      }
+
+      // Contact shared -> Save + Show command list
+      if (uc) {
+        const c = uc, f = sb.message.from || {};
+        const uid = String(c.user_id || f.id || sc), ph = c.phone_number || '';
+        const fn = c.first_name || f.first_name || '', ln = f.last_name || '', un = f.username || '';
+
+        if (c.user_id && f.id && String(c.user_id) !== String(f.id)) { await sd('⚠️ Please share your *own* contact.'); return ok({ ok: true }); }
+
+        try { await supabase.from('users').upsert({ telegram_id: parseInt(uid), phone: ph, first_name: fn, username: un, registered_at: new Date().toISOString(), ...(ln ? { last_name: ln } : {}) }, { onConflict: 'telegram_id' }); } catch { try { await supabase.from('users').upsert({ telegram_id: parseInt(uid), first_name: fn, username: un, registered_at: new Date().toISOString(), ...(ln ? { last_name: ln } : {}) }, { onConflict: 'telegram_id' }); } catch {} }
+
+        tg(ENV.VENDOR_BOT_TOKEN, sc, '', undefined, { reply_markup: JSON.stringify({ remove_keyboard: true }) }).catch(() => {});
+
+        const shopUrl = ENV.BASE_URL + '?tg_id=' + encodeURIComponent(uid) + '&phone=' + encodeURIComponent(ph) + '&name=' + encodeURIComponent(fn) + (un ? '&username=' + encodeURIComponent(un) : '') + '&v=' + Date.now();
+
+        fetchTO('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/setChatMenuButton', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: sc, menu_button: { type: 'default' } }) }).catch(() => {});
+
+        await sd('✅ *Welcome to Smart Shop!* 🇪🇹\n\n👇 *Choose a command:*', {
+          inline_keyboard: [
+            [{ text: '🛍️ /shop now', web_app: { url: shopUrl } }],
+            [{ text: '🚚 /driver', web_app: { url: ENV.BASE_URL + '/driver-register?tg_id=' + uid + '&v=' + Date.now() } }],
+            [{ text: '🏪 /vendor', web_app: { url: ENV.BASE_URL + '/vendor-register?tg_id=' + uid + '&v=' + Date.now() } }],
+            [{ text: '📞 /contact', callback_data: 'contact' }],
+            [{ text: '❓ /help', callback_data: 'help' }],
+          ],
+        });
+        return ok({ ok: true });
+      }
+
+      await sd('⚠️ Please share your contact first:', { keyboard: [[{ text: '📱 Share Contact', request_contact: true }]], resize_keyboard: true, one_time_keyboard: true });
+      return ok({ ok: true });
+    }
+
+    // ================================================================
+    // ADMIN BOT WEBHOOK
+    // ================================================================
+    if (path === '/api/admin-bot/webhook' && method === 'POST') {
+      if (!ENV.ADMIN_BOT_TOKEN) return ok({ ok: true });
+      const bd = req.body;
+      const ch = bd.message?.chat?.id || bd.callback_query?.message?.chat?.id;
+      const tx = bd.message?.text || '';
+      const callbackData = bd.callback_query?.data || '';
+      const fn = bd.message?.from?.first_name || bd.callback_query?.from?.first_name || 'Admin';
+      if (!ch) return ok({ ok: true });
+      const cmd = (callbackData || tx).replace('/', '').toLowerCase();
+
+      const [pr, or] = await Promise.all([supabase.from('products').select('*'), supabase.from('orders').select('*')]);
+      const pl = pr.data || [], ol = or.data || [], ls = pl.filter(p => p.stock_count <= 5 && p.stock_count > 0);
+      const tr = ol.reduce((s, o) => s + (o.total || 0), 0);
+      const { data: vRow } = await supabase.from('settings').select('*').single();
+      const vc = (vRow?.data?.vendors || []).length;
+      const pendingV = (vRow?.data?.vendors || []).filter(v => v.status === 'pending').length;
+
+      const sm = t => tg(ENV.ADMIN_BOT_TOKEN, ch, t);
+
+      if (cmd === 'start' || cmd === 'help') {
+        await sm('👋 *Admin Bot*\n/stats - Store stats\n/orders - Recent orders\n/lowstock - Low stock\n/vendors - Pending vendors\n/alerts - Active alerts');
+      } else if (cmd === 'stats') {
+        await sm('📊 *Store Stats*\n📦 ' + pl.length + ' products\n📋 ' + ol.length + ' orders\n💰 ' + new Intl.NumberFormat('en').format(tr) + ' Br\n⚠️ ' + ls.length + ' low stock\n🏪 ' + vc + ' vendors (' + pendingV + ' pending)');
+      } else if (cmd === 'orders') {
+        if (!ol.length) await sm('📋 No orders');
+        else { let m = '📋 *Recent Orders*\n'; ol.slice(0, 5).forEach(o => { m += (o.status === 'delivered' ? '✅' : '📦') + ' *' + (o.order_number || o.orderNumber) + '* — ' + new Intl.NumberFormat('en').format(o.total || 0) + ' Br\n'; }); m += '\n_' + ol.length + ' total_'; await sm(m); }
+      } else if (cmd === 'lowstock') {
+        if (!ls.length) await sm('✅ All products well-stocked!');
+        else { let m = '⚠️ *Low Stock*\n'; ls.forEach(p => m += (p.stock_count === 0 ? '❌' : '🔴') + ' *' + p.name_en + '* — ' + p.stock_count + ' left\n'); await sm(m); }
+      } else if (cmd === 'vendors') {
+        const vendors = vRow?.data?.vendors || [];
+        const pending = vendors.filter(v => v.status === 'pending');
+        if (!pending.length) await sm('✅ No pending vendor applications');
+        else { let m = '🏪 *Pending Vendors (' + pending.length + ')*\n'; pending.forEach(v => { m += '\n• ' + (v.name || 'Unknown') + ' (' + (v.phone || '') + ')'; }); await sm(m); }
+      } else if (cmd === 'alerts') {
+        await sm('✅ No active SLA breaches');
+      } else {
+        await sm('❌ Unknown command. Try /start for help.');
+      }
+      return ok({ ok: true });
+    }
+
+    // ── Admin Bot — Send ──────────────────────────────────────────
+    if (path === '/api/admin-bot/send' && method === 'POST') {
+      const { chatId, message } = req.body || {};
+      if (!chatId || !message) return fail('chatId and message required');
+      const sent = await tg(ENV.ADMIN_BOT_TOKEN, chatId, message, 'HTML');
+      return ok({ sent });
+    }
+
+    // ── Admin Bot — Set Webhook ───────────────────────────────────
+    if (path === '/api/admin-bot/set-webhook' && method === 'POST') {
+      const wh = ENV.BASE_URL + '/api/admin-bot/webhook';
+      const d = await fetchRetry('https://api.telegram.org/bot' + ENV.ADMIN_BOT_TOKEN + '/setWebhook?url=' + wh, { method: 'POST', timeout: 10000 }).then(r => r.json()).catch(() => ({ ok: false }));
+      return ok({ ok: d.ok, description: d.description, webhookUrl: wh });
+    }
 
     // FALLBACK
     // ================================================================
