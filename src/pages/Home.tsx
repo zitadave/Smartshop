@@ -16,11 +16,99 @@ import { useCart } from '@/hooks/useCart';
 import { productsApi } from '@/lib/api';
 import type { Product, CategoryId } from '@/types';
 import { toast } from '@/components/Toast';
-import { fetchPlans, getPlanPrice, getPlanCategoryColor, formatFrequency, calculateSavings, type SubscriptionPlan } from '@/lib/subscriptions';
+import { getPlanPrice, getPlanCategoryColor, formatFrequency, calculateSavings, type SubscriptionPlan } from '@/lib/subscriptions';
 import FlashDealTimer, { useFlashDeals } from '@/components/features/FlashDealTimer';
 import BroadcastBanner from '@/components/features/BroadcastBanner';
 
-/** Trending Products Section - shows sponsored/featured items */
+/** Subscription Plans Section - static data, no API calls */
+function SubscriptionSection({ onNavigate }: { onNavigate: (path: string) => void }) {
+  const SAMPLE_PLANS: SubscriptionPlan[] = [
+    { id: 1, name: 'Fresh Cow Milk', nameAmharic: 'የከብት ወተት', emoji: '🥛', description: 'Fresh milk every morning', category: 'dairy', unit: '1', unitLabel: 'liter', dailyPrice: 60, weeklyPrice: 380, monthlyPrice: 1520, vendorName: 'Smart Shop', image: '', tags: ['popular', 'essential'], isActive: true, minQuantity: 1, maxQuantity: 10, createdAt: '' },
+    { id: 2, name: 'Brown Eggs (6pcs)', nameAmharic: 'እንቁላል (6ቱ)', emoji: '🥚', description: 'Farm-fresh eggs', category: 'dairy', unit: '6', unitLabel: 'pieces', dailyPrice: 0, weeklyPrice: 150, monthlyPrice: 560, vendorName: 'Smart Shop', image: '', tags: ['popular'], isActive: true, minQuantity: 1, maxQuantity: 10, createdAt: '' },
+    { id: 3, name: 'White Bread', nameAmharic: 'ነጭ ዳቦ', emoji: '🍞', description: 'Freshly baked bread', category: 'bakery', unit: '1', unitLabel: 'loaf', dailyPrice: 25, weeklyPrice: 160, monthlyPrice: 620, vendorName: 'Smart Shop', image: '', tags: ['essential'], isActive: true, minQuantity: 1, maxQuantity: 10, createdAt: '' },
+    { id: 4, name: 'Pure Water 5L', nameAmharic: 'ንጹህ ውሃ 5ሊ', emoji: '💧', description: 'Purified drinking water', category: 'drinks', unit: '1', unitLabel: 'bottle', dailyPrice: 40, weeklyPrice: 260, monthlyPrice: 1000, vendorName: 'Smart Shop', image: '', tags: ['essential'], isActive: true, minQuantity: 1, maxQuantity: 10, createdAt: '' },
+    { id: 5, name: 'Ethiopian Coffee 500g', nameAmharic: 'የኢትዮጵያ ቡና 500㎇', emoji: '☕', description: 'Premium coffee beans', category: 'groceries', unit: '500', unitLabel: 'gram', dailyPrice: 0, weeklyPrice: 0, monthlyPrice: 800, vendorName: 'Smart Shop', image: '', tags: ['premium'], isActive: true, minQuantity: 1, maxQuantity: 10, createdAt: '' },
+    { id: 6, name: 'Pure Honey 500g', nameAmharic: 'ንጹህ ማር 500㎇', emoji: '🍯', description: 'Natural Ethiopian honey', category: 'groceries', unit: '500', unitLabel: 'gram', dailyPrice: 0, weeklyPrice: 0, monthlyPrice: 1200, vendorName: 'Smart Shop', image: '', tags: ['premium'], isActive: true, minQuantity: 1, maxQuantity: 10, createdAt: '' },
+  ];
+
+  return (
+    <section className="mt-4 animate-fadeUp">
+      <SectionHeader
+        icon={<Package size={15} className="text-white" />}
+        title="📦 Daily Subscriptions"
+        subtitle="Auto-delivery. Save up to 15%"
+        gradient="from-blue-500 to-indigo-600"
+        action={
+          <button className="text-[10px] text-primary font-semibold flex items-center gap-1 opacity-60 hover:opacity-100 transition-opacity"
+            onClick={() => onNavigate('/subscription-shop')}>
+            View All <ChevronRight size={12} />
+          </button>
+        }
+      />
+      <HorizontalScroll>
+        {SAMPLE_PLANS.map((plan) => {
+          const dailyPrice = plan.dailyPrice > 0 ? plan.dailyPrice : Math.round(plan.monthlyPrice / 30);
+          const savings = plan.dailyPrice > 0 && plan.monthlyPrice > 0
+            ? Math.round((1 - plan.monthlyPrice / (plan.dailyPrice * 30)) * 100)
+            : 0;
+
+          return (
+            <div key={plan.id}
+              className="flex-shrink-0 w-52 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-all cursor-pointer active:scale-[0.98]"
+              onClick={() => onNavigate('/subscription-shop?plan=' + plan.id)}>
+              <div className={'bg-gradient-to-r ' + getPlanCategoryColor(plan.category) + ' p-4 text-white'}>
+                <div className="flex items-center justify-between">
+                  <span className="text-3xl">{plan.emoji}</span>
+                  {savings > 0 && (
+                    <span className="bg-white/20 text-white text-[10px] font-bold px-2 py-1 rounded-full backdrop-blur-sm">
+                      -{savings}%
+                    </span>
+                  )}
+                </div>
+                <h3 className="font-bold text-sm mt-2">{plan.name}</h3>
+                <p className="text-[10px] text-white/80 mt-0.5">{plan.description}</p>
+              </div>
+              <div className="p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] text-slate-400 font-medium uppercase">{plan.unit}{plan.unitLabel}</span>
+                  {plan.tags.includes('popular') && <span className="text-[9px] bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full font-medium">🔥 Popular</span>}
+                  {plan.tags.includes('essential') && !plan.tags.includes('popular') && <span className="text-[9px] bg-green-100 text-green-600 px-2 py-0.5 rounded-full font-medium">⚡ Essential</span>}
+                </div>
+                <div className="space-y-1">
+                  {plan.dailyPrice > 0 && (
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-500">Daily</span>
+                      <span className="font-bold text-slate-800">Br {plan.dailyPrice.toLocaleString()}</span>
+                    </div>
+                  )}
+                  {plan.weeklyPrice > 0 && (
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-500">Weekly</span>
+                      <span className="font-bold text-slate-800">Br {plan.weeklyPrice.toLocaleString()}</span>
+                    </div>
+                  )}
+                  {plan.monthlyPrice > 0 && (
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-500">Monthly</span>
+                      <span className="font-bold text-slate-800">Br {plan.monthlyPrice.toLocaleString()}</span>
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onNavigate('/subscription-shop?plan=' + plan.id); }}
+                  className="w-full mt-3 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-xs font-semibold rounded-xl hover:shadow-lg transition-all active:scale-95 flex items-center justify-center gap-1">
+                  <Package size={12} /> Subscribe
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </HorizontalScroll>
+    </section>
+  );
+}
+
+/** Trending Products Section - shows sponsored/featured items *//** Trending Products Section - shows sponsored/featured items */
 function TrendingSection({ products, settings, onAdd, onWish, btnAnim, wishAnim }: any) {
   const sponsoredIds = settings.sponsoredProducts || [];
   if (sponsoredIds.length === 0) return null;
