@@ -640,10 +640,228 @@ export default async function handler(req, res) {
     if (path === '/api/tax/calculate' && method === 'POST') { const { productPrice, deliveryFee, commissionRate } = req.body || {}; const r = (commissionRate || 15) / 100; const bp = productPrice || 0, df = deliveryFee || 0; const ca = Math.round(bp * r), gf = Math.round(bp * 0.025), vc = Math.round(ca * 0.15), wht = Math.round(bp * 0.02); return ok({ basePrice: bp, deliveryFee: df, commissionRate: r, commissionAmount: ca, gatewayFee: gf, vatOnCommission: vc, withholdingTax: wht, vendorPayout: bp - ca - gf - wht, totalPaid: bp + df + vc, vatRate: 0.15, withholdingTaxRate: 0.02, totalTaxToRemit: vc + wht, shopRevenue: ca - gf }); }
     if (path === '/api/tax/receipt' && method === 'POST') { const { orderNumber } = req.body || {}; if (!orderNumber) return fail('required'); const { data: order } = await supabase.from('orders').select('*').eq('order_number', orderNumber).single(); if (!order) return fail('Not found', 404); return ok({ success: true, receiptNumber: 'SS-' + new Date().getFullYear() + '-' + Math.floor(Math.random() * 90000 + 10000), orderNumber: order.order_number, generatedAt: new Date().toISOString(), html: '<html><body><h1>Tax Receipt</h1><p>Order: ' + orderNumber + '</p></body></html>' }); }
     if (path === '/api/tax/monthly-report' && method === 'GET') { const { data: orders } = await supabase.from('orders').select('*'); const total = (orders || []).reduce((s, o) => s + (o.total || 0), 0); const cnt = (orders || []).length; const c = Math.round(total * 0.1), v = Math.round(c * 0.15), w = Math.round(total * 0.02); return ok({ period: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }), totalSales: total, orderCount: cnt, totalCommission: c, vatOnCommission: v, withholdingTax: w, totalTaxToRemit: v + w, averageOrderValue: cnt > 0 ? Math.round(total / cnt) : 0 }); }
-    if (path === '/api/vendor/notify' && method === 'POST') { const { telegramId, type, message } = req.body || {}; if (!telegramId || !message) return fail('required'); const em = type === 'payout' ? '💰' : type === 'order' ? '📦' : '📢'; const s = await tg(ENV.VENDOR_BOT_TOKEN, telegramId, em + ' *Smart Shop*\n\n' + message); return ok({ success: s }); }
 
     // ================================================================
-FALLBACK
+    // ================================================================
+    // PRODUCTS
+    // ================================================================
+    if (path.startsWith('/api/products') || (path === '/api/' && method === 'GET')) {
+      if (method === 'GET') {
+        if (path === '/api/products' || path === '/api/') {
+          var { data } = await supabase.from('products').select('*').order('id', { ascending: false });
+          return ok({ products: (data || []).map(norm) });
+        }
+        var id = parseInt(path.replace('/api/products/', ''));
+        if (!isNaN(id)) {
+          var { data } = await supabase.from('products').select('*').eq('id', id).single();
+          return ok({ product: data ? norm(data) : null });
+        }
+      }
+      if (method === 'POST') { var { data } = await supabase.from('products').insert(cln(req.body)).select().single(); return ok({ success: true, product: data }); }
+      if (method === 'PUT') { await supabase.from('products').update(cln(req.body)).eq('id', pid(path)); return ok({ success: true }); }
+      if (method === 'DELETE') { await supabase.from('products').delete().eq('id', pid(path)); return ok({ success: true }); }
+    }
+
+    // ================================================================
+    // SETTINGS
+    // ================================================================
+    if (path === '/api/settings') {
+      if (method === 'GET') { var { data: r } = await supabase.from('settings').select('*').single(); return ok({ success: true, settings: r?.data || r || {} }); }
+      if (method === 'PUT') { var { data: ex } = await supabase.from('settings').select('*').single(); if (ex) await supabase.from('settings').update({ data: { ...(ex.data || ex), ...req.body }, updated_at: new Date().toISOString() }).eq('id', ex.id); else await supabase.from('settings').insert({ data: req.body }); return ok({ success: true }); }
+    }
+
+    // ================================================================
+    // TELEGRAM AUTH
+    // ================================================================
+    if (path === '/api/auth/telegram' && method === 'POST') {
+      var { initData } = req.body || {};
+      if (!initData) return fail('initData is required');
+      var { valid, user: tgUser } = vrfy(initData);
+      if (!valid && ENV.BOT_TOKEN) return fail('Invalid Telegram authentication', 401);
+      if (!tgUser) return fail('No user data in initData');
+      var { data: existing } = await supabase.from('users').select('*').eq('telegram_id', tgUser.id).single();
+      var now = new Date().toISOString();
+      if (existing) {
+        await supabase.from('users').update({ first_name: tgUser.first_name, last_name: tgUser.last_name || '', username: tgUser.username || '' }).eq('telegram_id', tgUser.id);
+        var vendorStatus = '';
+        try { var vendors = await getV(); var found = vendors.find(function(v) { return v.telegram_id == tgUser.id; }); if (found) vendorStatus = found.status || ''; } catch(e) {}
+        return ok({ success: true, user: { telegramId: existing.telegram_id, firstName: existing.first_name || tgUser.first_name, lastName: existing.last_name || tgUser.last_name, username: existing.username || tgUser.username, languageCode: tgUser.language_code || 'en', photoUrl: tgUser.photo_url || null, phone: existing.phone || null, fullName: existing.full_name || null, city: existing.city || null, address: existing.address || null, profileComplete: !!(existing.full_name && existing.city && existing.address), vendorStatus: vendorStatus, firstSeen: existing.registered_at || now, lastSeen: now } });
+      } else {
+        var { data: newUser } = await supabase.from('users').insert({ telegram_id: tgUser.id, first_name: tgUser.first_name, last_name: tgUser.last_name || '', username: tgUser.username || '', phone: '', registered_at: now }).select().single();
+        return ok({ success: true, user: { telegramId: tgUser.id, firstName: tgUser.first_name, lastName: tgUser.last_name || '', username: tgUser.username || '', languageCode: tgUser.language_code || 'en', photoUrl: tgUser.photo_url || null, phone: null, fullName: null, city: null, address: null, profileComplete: false, vendorStatus: '', firstSeen: now, lastSeen: now } });
+      }
+    }
+
+    if (path === '/api/auth/telegram/register-phone' && method === 'POST') {
+      var { telegramId, phone } = req.body || {};
+      if (!telegramId || !phone) return fail('telegramId and phone required');
+      await supabase.from('users').update({ phone: phone, phone_verified: true }).eq('telegram_id', telegramId);
+      return ok({ success: true });
+    }
+
+    if (path === '/api/auth/telegram/complete-profile' && method === 'POST') {
+      var { telegramId, fullName, city, address } = req.body || {};
+      if (!telegramId || !fullName) return fail('telegramId and fullName required');
+      await supabase.from('users').update({ full_name: fullName, city: city || '', address: address || '' }).eq('telegram_id', telegramId);
+      return ok({ success: true });
+    }
+
+    if (path.startsWith('/api/auth/telegram/user/') && method === 'GET') {
+      var tid = pid(path);
+      if (!tid) return fail('Invalid ID');
+      var { data } = await supabase.from('users').select('*').eq('telegram_id', tid).single();
+      if (!data) return fail('Not found', 404);
+      var vs = '';
+      try { var v = await getV(); var f = v.find(vv => vv.telegram_id == tid); if (f) vs = f.status || ''; } catch {}
+      return ok({ success: true, user: { telegramId: data.telegram_id, firstName: data.first_name, lastName: data.last_name, username: data.username, phone: data.phone, fullName: data.full_name, city: data.city, address: data.address, profileComplete: !!(data.full_name && data.city && data.address), vendorStatus: vs, firstSeen: data.registered_at, lastSeen: '' } });
+    }
+
+    // ================================================================
+    // USER SYNC
+    // ================================================================
+    if (path === '/api/user/sync' && method === 'POST') {
+      var b = req.body || {}, tid = b.telegram_id || '';
+      if (!tid) return ok({ success: false });
+      var r = { success: true };
+      try { await supabase.from('users').upsert({ telegram_id: parseInt(tid), username: b.username || '', first_name: b.first_name || '', ...(b.phone ? { phone: b.phone } : {}) }, { onConflict: 'telegram_id' }); var { data: ur } = await supabase.from('users').select('*').eq('telegram_id', parseInt(tid)).single(); if (ur?.phone) r.phone = ur.phone; } catch {}
+      try { var v = await getV(); var f = tid ? v.find(vv => vv.telegram_id == parseInt(tid)) : null; if (f) { r.vendor_status = f.status || 'pending'; r.vendor_id = f.id; r.vendor_name = f.name || ''; } else r.vendor_status = 'none'; } catch { r.vendor_status = 'none'; }
+      return ok(r);
+    }
+
+    if (path === '/api/user/contact' && method === 'GET') {
+      var tid = new URLSearchParams(req.url?.split('?')[1] || '').get('telegram_id') || '';
+      if (!tid) return ok({ phone: '' });
+      try { var { data } = await supabase.from('users').select('phone').eq('telegram_id', parseInt(tid)).single(); if (data?.phone) return ok({ phone: data.phone }); } catch {}
+      return ok({ phone: '' });
+    }
+
+    // ================================================================
+    // ANALYTICS
+    // ================================================================
+    if (path === '/api/analytics') {
+      var [pr, or] = await Promise.all([supabase.from('products').select('*'), supabase.from('orders').select('*')]);
+      var p = pr.data || [], o = or.data || [];
+      var top = [...p].sort((a, b) => (b.sold_count || 0) - (a.sold_count || 0)).slice(0, 5).map(function(p) { return { name: p.name_en, sold: p.sold_count || 0, revenue: (p.sold_count || 0) * (p.price || 0) }; });
+      return ok({ analytics: { totalProducts: p.length, totalSold: p.reduce(function(s, p) { return s + (p.sold_count || 0); }, 0), totalRevenue: o.reduce(function(s, o) { return s + (o.total || 0); }, 0), totalOrders: o.length, pendingOrders: o.filter(function(o) { return o.status === 'pending'; }).length, shippedOrders: o.filter(function(o) { return o.status === 'shipped'; }).length, topProducts: top } });
+    }
+
+    // ================================================================
+    // REVIEWS
+    // ================================================================
+    if (path.startsWith('/api/reviews')) {
+      if (method === 'GET') { var pid2 = (req.url?.split('?')[1] || '').split('&').find(function(s) { return s.startsWith('productId='); })?.split('=')[1]; var q = supabase.from('reviews').select('*'); if (pid2) q = q.eq('product_id', parseInt(pid2)); var { data } = await q.order('created_at', { ascending: false }); return ok({ reviews: data || [] }); }
+      if (method === 'POST') { var { data } = await supabase.from('reviews').insert(req.body).select().single(); return ok({ success: true, review: data }); }
+      if (method === 'DELETE') { await supabase.from('reviews').delete().eq('id', pid(path)); return ok({ success: true }); }
+    }
+
+    // ================================================================
+    // BROADCAST
+    // ================================================================
+    if (path === '/api/broadcast' && method === 'POST') { return ok({ success: true, sent: 1, total: 1 }); }
+
+    // ================================================================
+    // PRE-ORDERS
+    // ================================================================
+    if (path.startsWith('/api/pre-orders')) {
+      if (method === 'GET') { var { data } = await supabase.from('pre_orders').select('*'); return ok({ preOrders: data || [] }); }
+      if (method === 'POST') { var { data } = await supabase.from('pre_orders').insert(req.body).select().single(); return ok({ success: true, preOrder: data }); }
+    }
+
+    // ================================================================
+    // UPLOAD
+    // ================================================================
+    if (path === '/api/upload' && method === 'POST') { return ok({ url: 'https://placehold.co/400x400/e2e8f0/94a3b8?text=Image' }); }
+
+    // ================================================================
+    // TRACKING
+    // ================================================================
+    if (path.startsWith('/api/tracking/')) {
+      var on = path.replace('/api/tracking/', '');
+      if (method === 'GET') { var { data } = await supabase.from('orders').select('*').eq('order_number', on).single(); return ok({ success: true, tracking: data?.tracking || null }); }
+      if (method === 'PUT') { await supabase.from('orders').update({ tracking: req.body }).eq('order_number', on); return ok({ success: true }); }
+    }
+
+    // ================================================================
+    // COMMISSION
+    // ================================================================
+    if (path === '/api/commission/calculate' && method === 'POST') {
+      var { productId, price, vendorId, category } = req.body || {};
+      var { data: sd } = await supabase.from('settings').select('*').single();
+      var s = sd?.data || {};
+      var cr = s.vendorCommission || 10;
+      var src = 'global';
+      var vc = s.vendorCommissionOverride || {}, cc = s.categoryCommission || {};
+      if (vendorId && vc[vendorId]) { cr = vc[vendorId]; src = 'vendor_' + vendorId; } else if (category && cc[category]) { cr = cc[category]; src = 'category_' + category; }
+      return ok({ commissionRate: cr, commissionAmount: Math.round((price || 0) * cr / 100), vendorPayout: (price || 0) - Math.round((price || 0) * cr / 100), source: src, productPrice: price || 0 });
+    }
+
+    if (path === '/api/commission/settings' && method === 'GET') { var { data: sd } = await supabase.from('settings').select('*').single(); var s = sd?.data || {}; return ok({ globalCommission: s.vendorCommission || 10, categoryCommission: s.categoryCommission || {}, vendorCommissionOverride: s.vendorCommissionOverride || {} }); }
+
+    // ================================================================
+    // PAYMENT
+    // ================================================================
+    if (path === '/api/payment/initiate-chapa' && method === 'POST') {
+      var { amount, email, firstName, lastName, phone, txRef, orderNumber } = req.body || {};
+      if (!amount || !email || !phone) return fail('amount, email, and phone required');
+      try {
+        var cr = await fetchRetry('https://api.chapa.co/v1/transaction/initialize', { method: 'POST', timeout: 10000,
+          headers: { 'Authorization': 'Bearer ' + ENV.CHAPA_SECRET_KEY, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount: String(amount), currency: 'ETB', email: email, first_name: firstName || 'Customer', last_name: lastName || '', phone: phone, tx_ref: txRef, callback_url: ENV.BASE_URL + '/api/payment/verify', return_url: ENV.BASE_URL + '/confirmation/' + orderNumber, customization: { title: 'Smart Shop Order #' + orderNumber, description: 'Payment' } }) });
+        var cd = await cr.json();
+        if (cd.status === 'success' && cd.data?.checkout_url) return ok({ success: true, checkout_url: cd.data.checkout_url, tx_ref: txRef });
+        return ok({ success: false, error: cd.message || 'Failed' });
+      } catch (e) { return ok({ success: false, error: e.message }); }
+    }
+
+    if (path === '/api/payment/verify' && method === 'POST') {
+      var { tx_ref } = req.body || {};
+      if (!tx_ref) return fail('tx_ref required');
+      try {
+        var vr = await fetchRetry('https://api.chapa.co/v1/transaction/verify/' + tx_ref, { headers: { 'Authorization': 'Bearer ' + ENV.CHAPA_SECRET_KEY }, timeout: 10000 });
+        var vd = await vr.json();
+        if (vd.status === 'success' && vd.data?.status === 'success') return ok({ status: 'completed', amount: vd.data.amount, reference: vd.data.reference || tx_ref, verified: true });
+        return ok({ status: 'failed', error: vd.message || 'Not completed', verified: false });
+      } catch (e) { return ok({ status: 'failed', error: e.message, verified: false }); }
+    }
+
+    if (path === '/api/payment/initiate-telebirr' && method === 'POST') { var { amount, phone, orderNumber } = req.body || {}; if (!amount || !phone) return fail('required'); return ok({ success: true, deepLink: 'telebirr://pay?amount=' + amount + '&order=' + orderNumber, ussdCode: '*847#' + amount + '#' + orderNumber, message: 'Payment initiated via Telebirr.' }); }
+
+    if (path === '/api/payment/transactions' && method === 'GET') { var { data: orders } = await supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(100); return ok({ transactions: (orders || []).map(function(o) { return { id: o.id, orderNumber: o.order_number, amount: o.total || 0, paymentMethod: o.payment_method || 'telebirr', status: o.status || 'pending', customerName: o.customer?.name || 'Unknown', date: o.created_at || o.date }; }) }); }
+
+    // ================================================================
+    // TAX
+    // ================================================================
+    if (path === '/api/tax/calculate' && method === 'POST') {
+      var { productPrice, deliveryFee, commissionRate } = req.body || {};
+      var r = (commissionRate || 15) / 100;
+      var bp = productPrice || 0, df = deliveryFee || 0;
+      var ca = Math.round(bp * r), gf = Math.round(bp * 0.025), vc = Math.round(ca * 0.15), wht = Math.round(bp * 0.02);
+      return ok({ basePrice: bp, deliveryFee: df, commissionRate: r, commissionAmount: ca, gatewayFee: gf, vatOnCommission: vc, withholdingTax: wht, vendorPayout: bp - ca - gf - wht, totalPaid: bp + df + vc, vatRate: 0.15, withholdingTaxRate: 0.02, totalTaxToRemit: vc + wht, shopRevenue: ca - gf });
+    }
+
+    if (path === '/api/tax/receipt' && method === 'POST') {
+      var { orderNumber } = req.body || {};
+      if (!orderNumber) return fail('required');
+      var { data: order } = await supabase.from('orders').select('*').eq('order_number', orderNumber).single();
+      if (!order) return fail('Not found', 404);
+      return ok({ success: true, receiptNumber: 'SS-' + new Date().getFullYear() + '-' + Math.floor(Math.random() * 90000 + 10000), orderNumber: order.order_number, generatedAt: new Date().toISOString() });
+    }
+
+    if (path === '/api/tax/monthly-report' && method === 'GET') {
+      var { data: orders } = await supabase.from('orders').select('*');
+      var total = (orders || []).reduce(function(s, o) { return s + (o.total || 0); }, 0);
+      var cnt = (orders || []).length;
+      var c = Math.round(total * 0.1), v = Math.round(c * 0.15), w = Math.round(total * 0.02);
+      return ok({ period: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }), totalSales: total, orderCount: cnt, totalCommission: c, vatOnCommission: v, withholdingTax: w, totalTaxToRemit: v + w, averageOrderValue: cnt > 0 ? Math.round(total / cnt) : 0 });
+    }
+
+    // ================================================================
+    // VENDOR NOTIFY
+    // ================================================================
+    if (path === '/api/vendor/notify' && method === 'POST') { var { telegramId, type, message } = req.body || {}; if (!telegramId || !message) return fail('required'); var em = type === 'payout' ? '💰' : type === 'order' ? '📦' : '📢'; var s = await tg(ENV.VENDOR_BOT_TOKEN, telegramId, em + ' *Smart Shop*\n\n' + message); return ok({ success: s }); }
+
+
+    // FALLBACK
     // ================================================================
     return res.status(404).json({ error: 'Not found', path: path, method: method });
 
