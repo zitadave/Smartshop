@@ -226,7 +226,9 @@ export default async function handler(req, res) {
         if (error) return fail(error.message); return ok({ success: true, message: data });
       }
       if (path.startsWith('/api/delivery/messages/') && method === 'GET') { const { data, error } = await supabase.from('delivery_messages').select('*').eq('delivery_id', pid(path)).order('created_at'); if (error) return fail(error.message, 500); return ok({ messages: data || [] }); }
-      
+      return res.status(404).json({ error: 'Not found', path: path });
+    }
+    
     // ================================================================
     // NEW FEATURES ROUTES
     // ================================================================
@@ -477,9 +479,6 @@ export default async function handler(req, res) {
       if (category) query = query.eq('category', category);
       var { data: results } = await query.or(keywords.map(function(k) { return 'name_en.ilike.%' + k + '%,name.ilike.%' + k + '%'; }).join(','));
       return ok({ products: (results || []).map(norm) });
-    }
-
-return res.status(404).json({ error: 'Not found', path: path });
     }
 
 
