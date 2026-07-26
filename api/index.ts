@@ -88,25 +88,6 @@ async function saveVendors(vendors) {
 
 // ===== HELPERS =====
 
-function normalizeProduct(p) {
-  return {
-    id: p.id, name: p.name || '', nameEn: p.name_en || '', category: p.category || '',
-    price: p.price || 0, originalPrice: p.original_price || null, image: p.image || '',
-    images: p.images || [], badge: p.badge || '', description: p.description || '',
-    descriptionEn: p.description_en || '', stockCount: p.stock_count || 0,
-    soldCount: p.sold_count || 0, rating: p.rating || 4.0, reviews: p.reviews || 0,
-    vendorId: p.vendor_id || null, vendorName: p.vendor_name || '',
-    inStock: p.in_stock !== false, visible: p.visible !== false,
-    colors: p.colors || [], sizes: p.sizes || [], features: p.features || [],
-    tags: p.tags || [], brand: p.brand || '', featured: p.featured || false,
-    weight: p.weight || 0, unit: p.unit || 'kg',
-    seoTitle: p.seo_title || '', seoDescription: p.seo_description || '',
-    createdAt: p.created_at || '', isPreOrder: p.is_pre_order || false,
-    preOrderDeposit: p.pre_order_deposit || null, preOrderReleaseDate: p.pre_order_release_date || null,
-    preOrderMax: p.pre_order_max || null,
-  };
-}
-
 function verifyTelegramInitData(initData) {
   try {
     if (!initData || !BOT_TOKEN) {
