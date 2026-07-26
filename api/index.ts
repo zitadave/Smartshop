@@ -93,6 +93,7 @@ const BOT_COMMANDS = [
 (async () => {
   const ADMIN_COMMANDS = [
     { command: 'start', description: '🏠 Admin menu' },
+    { command: 'panel', description: '🖥️ Open admin panel' },
     { command: 'stats', description: '📊 Store statistics' },
     { command: 'orders', description: '📋 Recent orders' },
     { command: 'lowstock', description: '⚠️ Low stock alerts' },
@@ -698,6 +699,8 @@ export default async function handler(req, res) {
         var vendorStatus = '';
         try { var vendors = await getV(); var found = vendors.find(function(v) { return v.telegram_id == tgUser.id; }); if (found) vendorStatus = found.status || ''; } catch(e) {}
         return ok({ success: true, user: { telegramId: existing.telegram_id, firstName: existing.first_name || tgUser.first_name, lastName: existing.last_name || tgUser.last_name, username: existing.username || tgUser.username, languageCode: tgUser.language_code || 'en', photoUrl: tgUser.photo_url || null, phone: existing.phone || null, fullName: existing.full_name || null, city: existing.city || null, address: existing.address || null, profileComplete: !!(existing.full_name && existing.city && existing.address), vendorStatus: vendorStatus, firstSeen: existing.registered_at || now, lastSeen: now } });
+      } else if (cmd === 'panel' || cmd === 'admin') {
+        tg(ENV.ADMIN_BOT_TOKEN, ch, '🖥️ *Admin Panel*\n\nTap below to open the admin dashboard:', 'Markdown', { inline_keyboard: [[{ text: '🖥️ Open Admin Panel', web_app: { url: ENV.BASE_URL + '/admin-panel' } }]] });
       } else {
         var { data: newUser } = await supabase.from('users').insert({ telegram_id: tgUser.id, first_name: tgUser.first_name, last_name: tgUser.last_name || '', username: tgUser.username || '', phone: '', registered_at: now }).select().single();
         return ok({ success: true, user: { telegramId: tgUser.id, firstName: tgUser.first_name, lastName: tgUser.last_name || '', username: tgUser.username || '', languageCode: tgUser.language_code || 'en', photoUrl: tgUser.photo_url || null, phone: null, fullName: null, city: null, address: null, profileComplete: false, vendorStatus: '', firstSeen: now, lastSeen: now } });
@@ -994,7 +997,7 @@ export default async function handler(req, res) {
       const sm = t => tg(ENV.ADMIN_BOT_TOKEN, ch, t);
 
       if (cmd === 'start' || cmd === 'help') {
-        await sm('👋 *Admin Bot*\n/stats - Store stats\n/orders - Recent orders\n/lowstock - Low stock\n/vendors - Pending vendors\n/alerts - Active alerts');
+        await sm('👋 *Admin Bot*\n/panel - 🖥️ Open Admin Panel\n/stats - 📊 Store stats\n/orders - 📋 Recent orders\n/lowstock - ⚠️ Low stock\n/vendors - 🏪 Pending vendors\n/alerts - 🔔 Active alerts');
       } else if (cmd === 'stats') {
         await sm('📊 *Store Stats*\n📦 ' + pl.length + ' products\n📋 ' + ol.length + ' orders\n💰 ' + new Intl.NumberFormat('en').format(tr) + ' Br\n⚠️ ' + ls.length + ' low stock\n🏪 ' + vc + ' vendors (' + pendingV + ' pending)');
       } else if (cmd === 'orders') {
@@ -1010,6 +1013,8 @@ export default async function handler(req, res) {
         else { let m = '🏪 *Pending Vendors (' + pending.length + ')*\n'; pending.forEach(v => { m += '\n• ' + (v.name || 'Unknown') + ' (' + (v.phone || '') + ')'; }); await sm(m); }
       } else if (cmd === 'alerts') {
         await sm('✅ No active SLA breaches');
+      } else if (cmd === 'panel' || cmd === 'admin') {
+        tg(ENV.ADMIN_BOT_TOKEN, ch, '🖥️ *Admin Panel*\n\nTap below to open the admin dashboard:', 'Markdown', { inline_keyboard: [[{ text: '🖥️ Open Admin Panel', web_app: { url: ENV.BASE_URL + '/admin-panel' } }]] });
       } else {
         await sm('❌ Unknown command. Try /start for help.');
       }
