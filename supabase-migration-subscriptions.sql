@@ -147,17 +147,18 @@ CREATE INDEX IF NOT EXISTS idx_sd_date ON subscription_deliveries(delivery_date)
 CREATE INDEX IF NOT EXISTS idx_sd_status ON subscription_deliveries(status);
 
 -- ── 8. RLS Policies (public access for service_role) ──────
-ALTER TABLE subscription_plans ENABLE ROW LEVEL SECURITY;
-ALTER TABLE subscription_deliveries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS subscription_plans ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS subscription_deliveries ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'subscription_plans' AND policyname = 'public_all') THEN
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'subscription_plans' AND policyname = 'public_all') THEN
     CREATE POLICY "public_all" ON subscription_plans FOR ALL USING (true) WITH CHECK (true);
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'subscription_deliveries' AND policyname = 'public_all') THEN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'subscription_deliveries' AND policyname = 'public_all') THEN
     CREATE POLICY "public_all" ON subscription_deliveries FOR ALL USING (true) WITH CHECK (true);
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'subscriptions' AND policyname = 'public_all') THEN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'subscriptions' AND policyname = 'public_all') THEN
     CREATE POLICY "public_all" ON subscriptions FOR ALL USING (true) WITH CHECK (true);
   END IF;
 END $$;

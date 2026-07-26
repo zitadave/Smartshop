@@ -140,9 +140,17 @@ export async function fetchPlans(category?: string, forceRefresh = false): Promi
   params.set('active', 'true');
   if (category && category !== 'all') params.set('category', category);
   
-  const res = await fetch(`/api/subscription-plans?${params}`);
-  const data = await res.json();
-  const plans = data.plans || [];
+  let plans: SubscriptionPlan[] = [];
+  try {
+    const res = await fetch(`/api/subscription-plans?${params}`);
+    if (res.ok) {
+      const data = await res.json();
+      plans = data.plans || [];
+    }
+  } catch (e) {
+    console.warn('Could not fetch subscription plans:', e);
+  }
+  // Return empty array gracefully even if API fails
   
   // Cache result
   plansCache = { data: plans, expiry: Date.now() + 120000 };
