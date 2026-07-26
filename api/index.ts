@@ -544,7 +544,8 @@ export default async function handler(req, res) {
 
 
     // ================================================================
-    // SHOP BOT WEBHOOK — With Menu, Driver Registration, All Commands
+        // ================================================================
+    // SHOP BOT WEBHOOK — With Full Menu + All Commands
     // ================================================================
     if (path === '/api/shop-bot/webhook' && method === 'POST') {
       const sb = req.body, sc = sb.message?.chat?.id, st = sb.message?.text || '';
@@ -552,69 +553,44 @@ export default async function handler(req, res) {
       const uc = sb.message?.contact;
       const sd = (txt, kb) => tg(ENV.VENDOR_BOT_TOKEN, sc, txt, 'Markdown', kb ? { reply_markup: JSON.stringify(kb) } : {});
 
-      // Deep links: /driver, /start driver_xxx, /start group_xxx, /start registry_xxx, /start ref_xxx
+      // Deep link handling: /start driver, /start group_XXX, etc
       if (st.startsWith('/start ') || st.startsWith('/driver')) {
         const param = st.includes(' ') ? st.split(' ')[1] : '';
-        // /driver or /driver-register
         if (st.startsWith('/driver') || param.startsWith('driver')) {
-          const driverUrl = ENV.BASE_URL + '/driver-register?tg_id=' + (sb.message?.from?.id || '') + '&v=' + Date.now();
-          await sd('🚚 *Driver Registration*
-
-You will need:
-📸 Fayda ID (front + back + selfie)
-🏍 Vehicle type & license plate
-👨‍👩‍👧 Emergency contact
-💳 Telebirr or bank account
-
-Ready? Tap below to begin!',
-            { inline_keyboard: [[{ text: '🚀 Register Now', web_app: { url: driverUrl } }]] });
+          const u = ENV.BASE_URL + '/driver-register?tg_id=' + (sb.message?.from?.id || '') + '&v=' + Date.now();
+          await sd('🚚 *Driver Registration*\n\nYou will need: 📸 Fayda ID, 🏍 Vehicle, 👨 Emergency, 💳 Payment\n\nReady? Tap below!', { inline_keyboard: [[{ text: '🚀 Register Now', web_app: { url: u } }]] });
           return ok({ ok: true });
         }
-        // /start group_XXXXX
         if (param.startsWith('group_')) {
-          const token = param.replace('group_', '');
-          await sd('🛍️ *Group Deal Invitation!*
-
-Someone invited you to a group deal. Tap below to join!',
-            { inline_keyboard: [[{ text: '🎉 Join Group Deal', web_app: { url: ENV.BASE_URL + '/group-deal/' + token + '?v=' + Date.now() } }]] });
+          const t = param.replace('group_', '');
+          await sd('🛍️ *Group Deal Invitation!*\n\nSomeone invited you to a group deal. Tap below to join!', { inline_keyboard: [[{ text: '🎉 Join Group Deal', web_app: { url: ENV.BASE_URL + '/group-deal/' + t + '?v=' + Date.now() } }]] });
           return ok({ ok: true });
         }
-        // /start registry_XXXXX
         if (param.startsWith('registry_')) {
-          const token = param.replace('registry_', '');
-          await sd('💍 *Gift Registry Invitation!*
-
-You are invited to view a wedding gift registry!',
-            { inline_keyboard: [[{ text: '🎁 View Registry', web_app: { url: ENV.BASE_URL + '/registry/' + token + '?v=' + Date.now() } }]] });
+          const t = param.replace('registry_', '');
+          await sd('💍 *Gift Registry Invitation!*\n\nYou are invited to view a wedding gift registry!', { inline_keyboard: [[{ text: '🎁 View Registry', web_app: { url: ENV.BASE_URL + '/registry/' + t + '?v=' + Date.now() } }]] });
           return ok({ ok: true });
         }
-        // /start ref_XXXXX
         if (param.startsWith('ref_')) {
-          const refCode = param.replace('ref_', '');
-          await sd('🛍️ *Welcome!*
-
-You were invited by a friend! Tap below to start shopping.',
-            { inline_keyboard: [[{ text: '🛍️ Start Shopping', web_app: { url: ENV.BASE_URL + '/?ref=' + refCode + '&v=' + Date.now() } }]] });
+          const c = param.replace('ref_', '');
+          await sd('🛍️ *Welcome!*\n\nYou were invited by a friend! Tap below to start shopping.', { inline_keyboard: [[{ text: '🛍️ Start Shopping', web_app: { url: ENV.BASE_URL + '/?ref=' + c + '&v=' + Date.now() } }]] });
           return ok({ ok: true });
         }
       }
 
-      // /start — Main menu with all options
+      // /start — Main menu
       if (st === '/start' && !uc) {
         const from = sb.message?.from || {};
         const fn = from.first_name || 'Customer';
         const base = ENV.BASE_URL;
-        await sd(
-          '👋 *Welcome to Smart Shop!* 🇪🇹
-
-Ethiopia's premier marketplace. Choose an option:',
-          { inline_keyboard: [
-            [{ text: '🛍 Open Shop', web_app: { url: base + '?tg_id=' + (from.id||'') + '&name=' + encodeURIComponent(fn) + '&v=' + Date.now() } },
-             { text: '🚚 Register Driver', web_app: { url: base + '/driver-register?tg_id=' + (from.id||'') + '&v=' + Date.now() } }],
-            [{ text: '🏪 Become Vendor', web_app: { url: base + '/vendor-register?tg_id=' + (from.id||'') + '&v=' + Date.now() } },
+        await sd('👋 *Welcome to Smart Shop!* 🇪🇹\n\nChoose an option:', {
+          inline_keyboard: [
+            [{ text: '🛍 Open Shop', web_app: { url: base + '?tg_id=' + (from.id || '') + '&name=' + encodeURIComponent(fn) + '&v=' + Date.now() } },
+             { text: '🚚 Register Driver', web_app: { url: base + '/driver-register?tg_id=' + (from.id || '') + '&v=' + Date.now() } }],
+            [{ text: '🏪 Become Vendor', web_app: { url: base + '/vendor-register?tg_id=' + (from.id || '') + '&v=' + Date.now() } },
              { text: '❓ Help', callback_data: 'help' }],
-          ]}
-        );
+          ],
+        });
         return ok({ ok: true });
       }
 
@@ -622,12 +598,7 @@ Ethiopia's premier marketplace. Choose an option:',
       if (sb.callback_query) {
         const cbd = sb.callback_query.data;
         if (cbd === 'help') {
-          await sd('❓ *Commands*
-/shop - Open store
-/driver - Driver reg
-/vendor - Seller reg
-/contact - Share phone
-/help - This menu');
+          await sd('❓ *Commands*\n/shop - Open store\n/driver - Driver reg\n/vendor - Seller reg\n/contact - Share phone\n/help - This menu');
           fetchTO('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/answerCallbackQuery', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ callback_query_id: sb.callback_query.id, text: 'Opened help' }),
@@ -652,34 +623,20 @@ Ethiopia's premier marketplace. Choose an option:',
       // Text commands
       if (st === '/shop') {
         const from = sb.message?.from || {};
-        await sd('🛍 *Smart Shop*
-
-Tap below to start shopping!',
-          { inline_keyboard: [[{ text: '🛍 Open Shop', web_app: { url: ENV.BASE_URL + '?tg_id=' + (from.id||'') + '&v=' + Date.now() } }]] });
+        await sd('🛍 *Smart Shop*\n\nTap below to start shopping!', { inline_keyboard: [[{ text: '🛍 Open Shop', web_app: { url: ENV.BASE_URL + '?tg_id=' + (from.id || '') + '&v=' + Date.now() } }]] });
         return ok({ ok: true });
       }
       if (st === '/vendor') {
         const from = sb.message?.from || {};
-        await sd('🏪 *Become a Vendor*
-
-Tap below to register your store!',
-          { inline_keyboard: [[{ text: '🏪 Register', web_app: { url: ENV.BASE_URL + '/vendor-register?tg_id=' + (from.id||'') + '&v=' + Date.now() } }]] });
+        await sd('🏪 *Become a Vendor*\n\nTap below to register your store!', { inline_keyboard: [[{ text: '🏪 Register', web_app: { url: ENV.BASE_URL + '/vendor-register?tg_id=' + (from.id || '') + '&v=' + Date.now() } }]] });
         return ok({ ok: true });
       }
       if (st === '/help' || st === '/menu') {
-        await sd('🤖 *Commands*
-/start - Menu
-/shop - Open store
-/driver - Driver reg
-/vendor - Seller reg
-/contact - Share phone
-/help - This menu');
+        await sd('🤖 *Commands*\n/start - Menu\n/shop - Open store\n/driver - Driver reg\n/vendor - Seller reg\n/contact - Share phone\n/help - This menu');
         return ok({ ok: true });
       }
       if (st === '/contact') {
-        await sd('📞 *Share Contact*
-
-Tap the button below:', { keyboard: [[{ text: '📱 Share Contact', request_contact: true }]], resize_keyboard: true, one_time_keyboard: true });
+        await sd('📞 *Share Contact*\n\nTap the button below:', { keyboard: [[{ text: '📱 Share Contact', request_contact: true }]], resize_keyboard: true, one_time_keyboard: true });
         return ok({ ok: true });
       }
 
@@ -688,9 +645,7 @@ Tap the button below:', { keyboard: [[{ text: '📱 Share Contact', request_cont
       return ok({ ok: true });
     }
 
-
-    // ================================================================
-    // ADMIN BOT WEBHOOK
+// ADMIN BOT WEBHOOK
     // ================================================================
     if (path === '/api/admin-bot/webhook' && method === 'POST') {
       if (!ENV.ADMIN_BOT_TOKEN) return ok({ ok: true });
