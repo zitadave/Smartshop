@@ -547,7 +547,7 @@ export default async function handler(req, res) {
         // ================================================================
         // ================================================================
         // ================================================================
-            // SHOP BOT WEBHOOK — Contact First, Then Commands Always Work
+                // SHOP BOT WEBHOOK — Contact First → Command List Text + Inline Buttons
     // ================================================================
     if (path === '/api/shop-bot/webhook' && method === 'POST') {
       const sb = req.body, sc = sb.message?.chat?.id, st = sb.message?.text || '';
@@ -568,7 +568,7 @@ export default async function handler(req, res) {
         if (param.startsWith('ref_')) { const c = param.replace('ref_', ''); await sd('🛍️ Welcome!', { inline_keyboard: [[{ text: '🛍️ Shop', web_app: { url: ENV.BASE_URL + '/?ref=' + c + '&v=' + Date.now() } }]] }); return ok({ ok: true }); }
       }
 
-      // ── /start (no contact yet) → Ask for contact ─────────────
+      // ── /start (no contact) → Ask for contact ─────────────────
       if (st === '/start' && !uc) {
         await sd('👋 *Welcome to Smart Shop!* 🇪🇹\n\n⚠️ *Please share your contact first*\n\nTap the button below:', {
           keyboard: [[{ text: '📱 Share Contact', request_contact: true }]],
@@ -577,17 +577,18 @@ export default async function handler(req, res) {
         return ok({ ok: true });
       }
 
-      // ── COMMANDS — always respond (works even without fresh contact) ─
+      // ── COMMANDS — always respond ─────────────────────────────
       if (st === '/shop' || st === '/shop now') {
-        await sd('🛍️ *Smart Shop*\n\nTap below:', { inline_keyboard: [[{ text: '🛍️ /shop now', web_app: { url: ENV.BASE_URL + '?tg_id=' + (from.id || '') + '&v=' + Date.now() } }]] });
+        const u = ENV.BASE_URL + '?tg_id=' + (from.id || '') + '&v=' + Date.now();
+        await sd('🛍️ *Smart Shop*\n\nTap *👇 /shop now* to start shopping!', { inline_keyboard: [[{ text: '🛍️ /shop now — Start Shopping', web_app: { url: u } }]] });
         return ok({ ok: true });
       }
       if (st === '/driver') {
-        await sd('🚚 *Driver Registration*', { inline_keyboard: [[{ text: '🚀 Register', web_app: { url: ENV.BASE_URL + '/driver-register?tg_id=' + (from.id || '') + '&v=' + Date.now() } }]] });
+        await sd('🚚 *Driver Registration*\n\n📸 Fayda ID, 🏍 Vehicle, 👨 Emergency, 💳 Payment', { inline_keyboard: [[{ text: '🚀 /driver — Register Now', web_app: { url: ENV.BASE_URL + '/driver-register?tg_id=' + (from.id || '') + '&v=' + Date.now() } }]] });
         return ok({ ok: true });
       }
       if (st === '/vendor') {
-        await sd('🏪 *Become a Vendor*', { inline_keyboard: [[{ text: '🏪 Register', web_app: { url: ENV.BASE_URL + '/vendor-register?tg_id=' + (from.id || '') + '&v=' + Date.now() } }]] });
+        await sd('🏪 *Become a Vendor*\n\nTap to register your store and start selling!', { inline_keyboard: [[{ text: '🏪 /vendor — Register Now', web_app: { url: ENV.BASE_URL + '/vendor-register?tg_id=' + (from.id || '') + '&v=' + Date.now() } }]] });
         return ok({ ok: true });
       }
       if (st === '/help' || st === '/menu') {
@@ -613,9 +614,26 @@ export default async function handler(req, res) {
           fetchTO('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/answerCallbackQuery', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ callback_query_id: qid }) }).catch(() => {});
           return ok({ ok: true });
         }
+        // Command callbacks — respond with command info then user taps again to open
+        if (cbd === 'shop') {
+          const u = ENV.BASE_URL + '?tg_id=' + (from.id || '') + '&v=' + Date.now();
+          await sd('🛍️ *Tap below to start shopping!*', { inline_keyboard: [[{ text: '🛍️ /shop now — Open Shop', web_app: { url: u } }]] });
+          fetchTO('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/answerCallbackQuery', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ callback_query_id: qid }) }).catch(() => {});
+          return ok({ ok: true });
+        }
+        if (cbd === 'driver') {
+          await sd('🚚 *Tap below to register as driver!*', { inline_keyboard: [[{ text: '🚀 /driver — Register Now', web_app: { url: ENV.BASE_URL + '/driver-register?tg_id=' + (from.id || '') + '&v=' + Date.now() } }]] });
+          fetchTO('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/answerCallbackQuery', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ callback_query_id: qid }) }).catch(() => {});
+          return ok({ ok: true });
+        }
+        if (cbd === 'vendor') {
+          await sd('🏪 *Tap below to become a vendor!*', { inline_keyboard: [[{ text: '🏪 /vendor — Register Now', web_app: { url: ENV.BASE_URL + '/vendor-register?tg_id=' + (from.id || '') + '&v=' + Date.now() } }]] });
+          fetchTO('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/answerCallbackQuery', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ callback_query_id: qid }) }).catch(() => {});
+          return ok({ ok: true });
+        }
       }
 
-      // ── Contact shared → Save + Show menu ─────────────────────
+      // ── Contact shared → Save + Show COMMAND LIST ─────────────
       if (uc) {
         const c = uc, f = sb.message.from || {};
         const uid = String(c.user_id || f.id || sc), ph = c.phone_number || '';
@@ -647,16 +665,23 @@ export default async function handler(req, res) {
           body: JSON.stringify({ chat_id: sc, menu_button: { type: 'web_app', text: '🛍️ Happy Shopping', web_app: { url: shopUrl } } }),
         }).catch(() => {});
 
-        // Show command list as inline buttons
+        // Show ALL COMMANDS as text list + inline buttons that each trigger the command
         await sd(
-          '✅ *Welcome to Smart Shop!* 🇪🇹\n\n👇 *Choose a command:*',
+          '✅ *Welcome to Smart Shop!* 🇪🇹\n\n' +
+          '*📋 Available Commands:*\n' +
+          '🛍️ /shop — Open store & start shopping\n' +
+          '🚚 /driver — Register as delivery driver\n' +
+          '🏪 /vendor — Become a seller\n' +
+          '📞 /contact — Share your phone number\n' +
+          '❓ /help — Show all commands\n\n' +
+          '👇 *Tap a command below to use it:*',
           {
             inline_keyboard: [
-              [{ text: '🛍️ /shop now — Start Shopping', web_app: { url: shopUrl } }],
-              [{ text: '🚚 /driver — Register as Driver', web_app: { url: ENV.BASE_URL + '/driver-register?tg_id=' + uid + '&v=' + Date.now() } }],
-              [{ text: '🏪 /vendor — Become a Vendor', web_app: { url: ENV.BASE_URL + '/vendor-register?tg_id=' + uid + '&v=' + Date.now() } }],
-              [{ text: '📞 /contact — Share Phone', callback_data: 'contact' }],
-              [{ text: '❓ /help — Show Commands', callback_data: 'help' }],
+              [{ text: '🛍️ /shop now', callback_data: 'shop' }],
+              [{ text: '🚚 /driver', callback_data: 'driver' }],
+              [{ text: '🏪 /vendor', callback_data: 'vendor' }],
+              [{ text: '📞 /contact', callback_data: 'contact' }],
+              [{ text: '❓ /help', callback_data: 'help' }],
             ],
           }
         );
