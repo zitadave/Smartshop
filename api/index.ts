@@ -299,38 +299,6 @@ export default async function handler(req, res) {
       return ok({ productName: products?.[0]?.name_en || query, productImage: products?.[0]?.image || '', options: options });
     }
 
-    // Product-specific price comparison
-     {
-      var pid = parseInt(path.split('/')[3]);
-      var { data: products } = await supabase.from('products').select('*').eq('id', pid);
-      var product = products && products[0];
-      if (!product) return ok({ productId: pid, options: [] });
-      // Get all vendors selling this or similar product
-      var { data: allProducts } = await supabase
-        .from('products')
-        .select('*')
-        .eq('category', product.category)
-        .not('vendor_id', 'is', null);
-      var options = (allProducts || []).filter(function(p) { return p.id !== pid; }).map(function(p) {
-        return {
-          vendorName: p.vendor_name || 'Unknown',
-          vendorId: p.vendor_id,
-          vendorRating: p.rating || 0,
-          price: p.price || 0,
-          originalPrice: p.original_price || null,
-          stockCount: p.stock_count || 0,
-          deliveryFee: 25,
-          totalPrice: (p.price || 0) + 25,
-          isLowest: false,
-        };
-      });
-      // Sort by total price
-      options.sort(function(a, b) { return a.totalPrice - b.totalPrice; });
-      if (options.length > 0) options[0].isLowest = true;
-      var bestPrice = options.length > 0 ? options[0].totalPrice : (product.price || 0);
-      var worstPrice = options.length > 0 ? options[options.length - 1].totalPrice : (product.price || 0);
-      return ok({ productId: pid, productName: product.name || '', productImage: product.image || '', options: options, savings: { bestPrice: bestPrice, worstPrice: worstPrice, youSave: worstPrice - bestPrice } });
-    }
 
     // ── Group Deals ────────────────────────────────────────────────
     if (path === '/api/group-deals' && method === 'POST') {
