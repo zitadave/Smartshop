@@ -10,7 +10,7 @@ import { CardSkeleton } from '@/components/ui/Skeletons';
 import { showQuickView } from '@/components/ui/QuickView';
 import { CATEGORIES } from '@/types';
 import { cn } from '@/lib/utils';
-import { Sparkles, Clock, Star, ChevronRight, Zap, Megaphone, TrendingUp, Microphone, Camera, Users, Gift, Box, Tag, Share2 } from 'lucide-react';
+import { Sparkles, Clock, Star, ChevronRight, Zap, Megaphone, TrendingUp } from 'lucide-react';
 import { useButtonAnimation, useWishlistAnimation } from '@/hooks/useAnimations';
 import { useCart } from '@/hooks/useCart';
 import { productsApi } from '@/lib/api';
@@ -127,14 +127,10 @@ export default function Home() {
       <div className="px-4 mt-4">
         <div className="grid grid-cols-4 gap-2">
           {[
-            { icon: String.fromCodePoint(127908), label: "Voice", href: "/shop?voice=1" },
             { icon: String.fromCodePoint(128700), label: "Photo Studio", href: "/photo-studio" },
             { icon: String.fromCodePoint(129309), label: "Group Buy", href: "/shop" },
-            { icon: String.fromCodePoint(128141), label: "Registry", href: "/profile" },
             { icon: String.fromCodePoint(128230), label: "Subscribe", href: "/subscriptions" },
-            { icon: String.fromCodePoint(128279), label: "Reseller", href: "/affiliate" },
-            { icon: String.fromCodePoint(127942), label: "Badges", href: "/loyalty" },
-            { icon: String.fromCodePoint(128101), label: "Friends", href: "/shop" },
+            { icon: String.fromCodePoint(127775), label: "Rewards", href: "/loyalty" },
           ].map((f, i) => (
             <button key={i} onClick={() => navigate(f.href)}
               className="bg-white rounded-xl p-3 shadow-sm text-center hover:shadow-md transition-all active:scale-95">

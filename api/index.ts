@@ -89,8 +89,6 @@ const BOT_COMMANDS = [
 
 // Register bot commands at startup (fire & forget)
 
-
-
 // ===== TELEGRAM BOT COMMANDS — register globally at startup =====
 (async () => {
   const cmds = [
@@ -276,30 +274,6 @@ export default async function handler(req, res) {
     // NEW FEATURES ROUTES
     // ================================================================
 
-    // ── Price Comparison ────────────────────────────────────────────
-    if (path === '/api/products/compare' && method === 'GET') {
-      var q = req.url?.split('?')[1] || '';
-      var params = new URLSearchParams(q);
-      var query = params.get('q') || '';
-      var cat = params.get('category') || '';
-      if (!query && !cat) return ok({ options: [] });
-      var dbq = supabase.from('products').select('*');
-      if (cat) dbq = dbq.eq('category', cat);
-      if (query) dbq = dbq.or('name_en.ilike.%' + query + '%,name.ilike.%' + query + '%');
-      var { data: products } = await dbq.limit(20).order('price', { ascending: true });
-      var options = (products || []).map(function(p) { return {
-        vendorId: p.vendor_id, vendorName: p.vendor_name || 'Main Store',
-        vendorRating: p.rating || 4, vendorSales: p.sold_count || 0,
-        price: p.price || 0, originalPrice: p.original_price || null,
-        deliveryFee: p.price > 2000 ? 0 : 25,
-        totalPrice: p.price + (p.price > 2000 ? 0 : 25),
-        stockCount: p.stock_count || 0, inStock: p.in_stock !== false,
-        badge: p.badge || '',
-      }; });
-      return ok({ productName: products?.[0]?.name_en || query, productImage: products?.[0]?.image || '', options: options });
-    }
-
-
     // ── Group Deals ────────────────────────────────────────────────
     if (path === '/api/group-deals' && method === 'POST') {
       var b = req.body || {};
@@ -356,57 +330,6 @@ export default async function handler(req, res) {
       return ok({ success: true, deal: { ...deal, current_members: newCount, group_price: newPrice, status: newStatus }, message: 'Joined! Group now has ' + newCount + ' members.' });
     }
 
-    // ── Gift Registries ────────────────────────────────────────────
-    if (path === '/api/registries' && method === 'POST') {
-      var b = req.body || {};
-      var token = Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 8).toUpperCase();
-      var { data, error } = await supabase.from('gift_registries').insert({
-        couple_name: b.couple_name, wedding_date: b.wedding_date, event_type: b.event_type || 'wedding',
-        message: b.message || '', share_token: token, creator_telegram_id: b.creator_telegram_id,
-      }).select().single();
-      if (error) return fail(error.message);
-      return ok({ success: true, registry: data });
-    }
-
-    if (path === '/api/registries' && method === 'GET') {
-      var token = new URLSearchParams(req.url?.split('?')[1] || '').get('token') || '';
-      if (token) {
-        var { data: reg, error: rErr } = await supabase.from('gift_registries').select('*').eq('share_token', token).single();
-        if (rErr || !reg) return ok({ registry: null });
-        var { data: items } = await supabase.from('registry_items').select('*').eq('registry_id', reg.id);
-        return ok({ registry: { ...reg, items: items || [] } });
-      }
-      return ok({ registry: null });
-    }
-
-    if (path.match(/^\/api\/registries\/\d+\/items$/) && method === 'POST') {
-      var rid = parseInt(path.split('/')[3]);
-      var b = req.body || {};
-      var { data, error } = await supabase.from('registry_items').insert({
-        registry_id: rid, product_id: b.product_id, product_name: b.product_name,
-        product_image: b.product_image || '', price: b.price, quantity: b.quantity || 1,
-      }).select().single();
-      if (error) return fail(error.message);
-      return ok({ success: true, item: data });
-    }
-
-    if (path === '/api/registries/contribute' && method === 'POST') {
-      var b = req.body || {};
-      if (!b.token) return fail('token required');
-      var { data: reg } = await supabase.from('gift_registries').select('*').eq('share_token', b.token).single();
-      if (!reg) return fail('Registry not found');
-      var { data: items } = await supabase.from('registry_items').select('*').eq('registry_id', reg.id);
-      if (!items || b.item_index >= items.length) return fail('Item not found');
-      var item = items[b.item_index];
-      var newPurchased = Math.min(item.purchased + (b.quantity || 1), item.quantity);
-      await supabase.from('registry_items').update({ purchased: newPurchased }).eq('id', item.id);
-      await supabase.from('registry_purchases').insert({
-        registry_item_id: item.id, contributor_name: b.contributor_name || '',
-        contributor_telegram_id: b.contributor_telegram_id, quantity: b.quantity || 1,
-      });
-      return ok({ success: true, message: 'Thank you for contributing!' });
-    }
-
     // ── Subscriptions ──────────────────────────────────────────────
     if (path === '/api/subscriptions' && method === 'POST') {
       var b = req.body || {};
@@ -434,45 +357,6 @@ export default async function handler(req, res) {
       var { error } = await supabase.from('subscriptions').update(req.body).eq('id', sid);
       if (error) return fail(error.message);
       return ok({ success: true });
-    }
-
-    // ── Reseller Stats ─────────────────────────────────────────────
-    if (path.match(/^\/api\/reseller\/stats\/\d+$/) && method === 'GET') {
-      var tid2 = parseInt(path.split('/').pop() || '0');
-      var { count: refClicks } = await supabase.from('referral_logs').select('*', { count: 'exact', head: true }).eq('referral_code', 'SS' + (tid2 * 16807 % 2147483647).toString(36).toUpperCase().substring(0, 5));
-      // Count converted clicks (sales)
-      var { count: sales } = await supabase.from('referral_logs').select('*', { count: 'exact', head: true }).eq('referral_code', 'SS' + (tid2 * 16807 % 2147483647).toString(36).toUpperCase().substring(0, 5)).eq('converted', true);
-      var totalClicks = refClicks || 0;
-      var totalSales = sales || 0;
-      // Commission calculation
-      var rate = totalSales >= 200 ? 15 : totalSales >= 50 ? 12 : totalSales >= 10 ? 8 : 5;
-      var commission = Math.round(totalSales * 850 * rate / 100); // Avg order ~850 Br
-      var code = 'SS' + (tid2 * 16807 % 2147483647).toString(36).toUpperCase().substring(0, 5);
-      return ok({ totalClicks: totalClicks, totalSales: totalSales, totalCommission: commission, pendingPayout: commission, referralCode: code, commissionRate: rate });
-    }
-
-    // ── Track Referral Click ───────────────────────────────────────
-    if (path === '/api/ref/track' && method === 'POST') {
-      var b = req.body || {};
-      if (!b.ref) return ok({ success: true });
-      await supabase.from('referral_logs').insert({
-        referral_code: b.ref, product_id: b.product_id || null,
-        visitor_telegram_id: b.visitor_telegram_id || null,
-      }).catch(function() {});
-      return ok({ success: true });
-    }
-
-    // ── Product Photo Upload (Multi-file) ──────────────────────────
-    if (path === '/api/upload/product-photos' && method === 'POST') {
-      // Accept FormData with multiple files
-      var urls = [];
-      var files = [];
-      try { files = Object.values(req.body || {}).filter(function(v) { return v && typeof v !== 'string'; }); } catch(e) {}
-      // Return placeholder URLs (actual file storage would need Supabase Storage)
-      for (var i = 0; i < 3; i++) {
-        urls.push('https://placehold.co/800x800/e2e8f0/94a3b8?text=Photo+' + (i + 1));
-      }
-      return ok({ success: true, urls: urls });
     }
 
     // ── Subscription Cron (process daily deliveries) ───────────────
@@ -504,17 +388,6 @@ export default async function handler(req, res) {
       }
       return ok({ success: true, processed: processed, total: (dueSubs || []).length });
     }
-
-    // ── Voice Search Enhancement (Amharic query) ───────────────────
-    if (path === '/api/products/voice-search' && method === 'POST') {
-      var { keywords, category } = req.body || {};
-      if (!keywords || keywords.length === 0) return ok({ products: [] });
-      var query = supabase.from('products').select('*');
-      if (category) query = query.eq('category', category);
-      var { data: results } = await query.or(keywords.map(function(k) { return 'name_en.ilike.%' + k + '%,name.ilike.%' + k + '%'; }).join(','));
-      return ok({ products: (results || []).map(norm) });
-    }
-
 
     // ================================================================
     // ADMIN FEATURE ROUTES
@@ -604,8 +477,8 @@ export default async function handler(req, res) {
           return ok({ ok: true });
         }
         if (param.startsWith('group_')) { const t = param.replace('group_', ''); await sd('🛍️ Group Deal!', { inline_keyboard: [[{ text: '🎉 Join', web_app: { url: ENV.BASE_URL + '/group-deal/' + t + '?v=' + Date.now() } }]] }); return ok({ ok: true }); }
-        if (param.startsWith('registry_')) { const t = param.replace('registry_', ''); await sd('💍 Registry!', { inline_keyboard: [[{ text: '🎁 View', web_app: { url: ENV.BASE_URL + '/registry/' + t + '?v=' + Date.now() } }]] }); return ok({ ok: true }); }
-        if (param.startsWith('ref_')) { const c = param.replace('ref_', ''); await sd('🛍️ Welcome!', { inline_keyboard: [[{ text: '🛍️ Shop', web_app: { url: ENV.BASE_URL + '/?ref=' + c + '&v=' + Date.now() } }]] }); return ok({ ok: true }); }
+
+
       }
 
       // ── /start (no contact) → Ask for contact ─────────────────
@@ -880,8 +753,6 @@ export default async function handler(req, res) {
     if (path === '/api/tax/receipt' && method === 'POST') { const { orderNumber } = req.body || {}; if (!orderNumber) return fail('required'); const { data: order } = await supabase.from('orders').select('*').eq('order_number', orderNumber).single(); if (!order) return fail('Not found', 404); return ok({ success: true, receiptNumber: 'SS-' + new Date().getFullYear() + '-' + Math.floor(Math.random() * 90000 + 10000), orderNumber: order.order_number, generatedAt: new Date().toISOString(), html: '<html><body><h1>Tax Receipt</h1><p>Order: ' + orderNumber + '</p></body></html>' }); }
     if (path === '/api/tax/monthly-report' && method === 'GET') { const { data: orders } = await supabase.from('orders').select('*'); const total = (orders || []).reduce((s, o) => s + (o.total || 0), 0); const cnt = (orders || []).length; const c = Math.round(total * 0.1), v = Math.round(c * 0.15), w = Math.round(total * 0.02); return ok({ period: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }), totalSales: total, orderCount: cnt, totalCommission: c, vatOnCommission: v, withholdingTax: w, totalTaxToRemit: v + w, averageOrderValue: cnt > 0 ? Math.round(total / cnt) : 0 }); }
     if (path === '/api/vendor/notify' && method === 'POST') { const { telegramId, type, message } = req.body || {}; if (!telegramId || !message) return fail('required'); const em = type === 'payout' ? '💰' : type === 'order' ? '📦' : '📢'; const s = await tg(ENV.VENDOR_BOT_TOKEN, telegramId, em + ' *Smart Shop*\n\n' + message); return ok({ success: s }); }
-
-
 
     // ================================================================
 FALLBACK

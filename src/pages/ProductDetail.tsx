@@ -4,9 +4,8 @@ import { useStore } from '@/stores/AppStore';
 import { t } from '@/i18n/translations';
 import { toast } from '@/components/Toast';
 import { formatPrice, stars, getDeliveryEstimate, cn, calcDiscount, isFlashDealActive } from '@/lib/utils';
-import { ShoppingCart, Heart, Share2, Minus, Plus, ChevronLeft, ChevronRight, Store, Clock, Truck, TrendingDown, MessageCircle, Camera, Zap, Users, Gift } from 'lucide-react';
+import { ShoppingCart, Heart, Share2, Minus, Plus, ChevronLeft, ChevronRight, Store, Clock, Truck, TrendingDown,  Camera, Zap, Users, Gift } from 'lucide-react';
 import PhotoReviewSection from '@/components/features/PhotoReview';
-import { askFriends } from '@/lib/askFriends';
 import { createGroupDeal, shareToTelegram } from '@/lib/groupBuying';
 import PriceDropAlert from '@/components/features/PriceDropAlert';
 import PreOrderBadge from '@/components/features/PreOrderBadge';
@@ -176,12 +175,7 @@ export default function ProductDetail() {
             <button className="w-9 h-9 rounded-md text-lg font-semibold flex items-center justify-center hover:bg-card transition-colors" onClick={() => setQty(Math.min(product.stockCount, qty + 1))}><Plus size={16} /></button>
           </div>
           <div className="flex gap-1.5">
-          <div className="flex gap-2 mb-3">
-            <button onClick={() => askFriends({ id: product.id, name: product.nameEn || product.name, price: product.price, image: product.image, rating: product.rating || 4, category: product.category || '' })}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-blue-400 to-blue-500 text-white rounded-xl text-xs font-medium shadow-lg hover:shadow-xl transition-all active:scale-95">
-              <MessageCircle size={15} /> Ask Friends
-            </button>
-            <button onClick={async () => { 
+          <button onClick={async () => { 
               try { 
                 const deal = await createGroupDeal({ productId: product.id, productName: product.nameEn || product.name, productImage: product.image, regularPrice: product.price, telegramId: 0, creatorName: 'User' }); 
                 shareToTelegram(deal);
@@ -190,10 +184,9 @@ export default function ProductDetail() {
                 toast(e.message, 'error'); 
               } 
             }}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-green-400 to-emerald-500 text-white rounded-xl text-xs font-medium shadow-lg hover:shadow-xl transition-all active:scale-95">
-              <Users size={15} /> Group Buy
+              className="flex-1 py-2.5 bg-gradient-to-r from-green-400 to-emerald-500 text-white rounded-xl text-sm font-medium shadow-lg hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2 mb-3">
+              <Users size={16} /> 🤝 Group Buy — Invite friends & save!
             </button>
-          </div>
 
             <button className="flex-1 py-3 bg-primary text-white rounded-lg text-sm font-semibold hover:bg-primary/90 active:scale-95 transition-all flex items-center justify-center gap-1.5" onClick={() => { addToCart(product, qty); store.addNotification('🛒', `Added ${product.nameEn} to cart`); }}>
               <ShoppingCart size={16} /> {t('addToCart', language)}
