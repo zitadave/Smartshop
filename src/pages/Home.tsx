@@ -10,12 +10,13 @@ import { CardSkeleton } from '@/components/ui/Skeletons';
 import { showQuickView } from '@/components/ui/QuickView';
 import { CATEGORIES } from '@/types';
 import { cn } from '@/lib/utils';
-import { Sparkles, Clock, Star, ChevronRight, Zap, Megaphone, TrendingUp } from 'lucide-react';
+import { Sparkles, Clock, Star, ChevronRight, Zap, Megaphone, TrendingUp, Package, ArrowRight } from 'lucide-react';
 import { useButtonAnimation, useWishlistAnimation } from '@/hooks/useAnimations';
 import { useCart } from '@/hooks/useCart';
 import { productsApi } from '@/lib/api';
 import type { Product, CategoryId } from '@/types';
 import { toast } from '@/components/Toast';
+import { fetchPlans, getPlanPrice, getPlanCategoryColor, formatFrequency, calculateSavings, type SubscriptionPlan } from '@/lib/subscriptions';
 import FlashDealTimer, { useFlashDeals } from '@/components/features/FlashDealTimer';
 import BroadcastBanner from '@/components/features/BroadcastBanner';
 
@@ -123,13 +124,13 @@ export default function Home() {
         <BroadcastBanner />
       </div>
 
-      {/* New Features */}
+      {/* Quick Actions */}
       <div className="px-4 mt-4">
         <div className="grid grid-cols-4 gap-2">
           {[
             { icon: String.fromCodePoint(128700), label: "Photo Studio", href: "/photo-studio" },
             { icon: String.fromCodePoint(129309), label: "Group Buy", href: "/shop" },
-            { icon: String.fromCodePoint(128230), label: "Subscribe", href: "/subscription-shop" },
+            { icon: String.fromCodePoint(128230), label: "My Subs", href: "/subscriptions" },
             { icon: String.fromCodePoint(127775), label: "Rewards", href: "/loyalty" },
           ].map((f, i) => (
             <button key={i} onClick={() => navigate(f.href)}
@@ -166,6 +167,9 @@ export default function Home() {
           </HorizontalScroll>
         </section>
       )}
+
+      {/* Subscription Plans Section */}
+      <SubscriptionSection onNavigate={navigate} />
 
       {/* Sponsored / Promoted Products */}
       <TrendingSection

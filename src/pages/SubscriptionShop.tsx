@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { fetchPlans, createSubscription, getUserSubscriptions, formatFrequency, getDiscountPercent, getPlanPrice, type SubscriptionPlan, type Subscription, type SubscriptionFrequency } from '@/lib/subscriptions';
 import { ArrowLeft, ShoppingCart, Check, Plus, Minus, Calendar, MapPin, Clock, CreditCard, ChevronRight, Bell, Package, TrendingDown } from 'lucide-react';
 import { toast } from '@/components/Toast';
@@ -28,6 +28,19 @@ export default function SubscriptionShop() {
     fetchPlans().then(d => { setPlans(d); setLoading(false); });
     if (tgId) getUserSubscriptions(tgId).then(setMySubs);
   }, [tgId]);
+
+  // Handle ?plan=ID from URL (homepage links)
+  const [searchParams] = useSearchParams();
+  const planIdParam = searchParams.get('plan');
+  useEffect(() => {
+    if (planIdParam && plans.length > 0) {
+      const plan = plans.find(p => p.id === parseInt(planIdParam));
+      if (plan) {
+        setSelectedPlan(plan);
+        setQuantity(plan.minQuantity);
+      }
+    }
+  }, [planIdParam, plans]);
 
   const filteredPlans = category === 'all' ? plans : plans.filter(p => p.category === category);
   const grouped = plans.reduce((acc, p) => {

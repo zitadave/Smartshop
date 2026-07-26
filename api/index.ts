@@ -331,6 +331,12 @@ export default async function handler(req, res) {
     }
 
     // ── Subscription Plans (vendor-created) ─────────────────────
+    if (path.match(/^\/api\/subscription-plans\/\d+$/) && method === 'GET') {
+      var pid = parseInt(path.split('/').pop() || '0');
+      var { data, error } = await supabase.from('subscription_plans').select('*').eq('id', pid).single();
+      if (error || !data) return ok({ plan: null });
+      return ok({ plan: data });
+    }
     if (path === '/api/subscription-plans' && method === 'GET') {
       var cat = new URLSearchParams(req.url?.split('?')[1] || '').get('category') || '';
       var active = new URLSearchParams(req.url?.split('?')[1] || '').get('active');
@@ -446,6 +452,30 @@ export default async function handler(req, res) {
         .order('next_delivery', { ascending: true });
       if (error) return fail(error.message, 500);
       return ok({ orders: data || [] });
+    }
+
+    // ── Update Subscription Delivery Status (driver) ──────────
+    if (path.match(/^\/api\/subscriptions\/deliveries\/\d+$/) && method === 'PATCH') {
+      var did = parseInt(path.split('/').pop() || '0');
+      var { error } = await supabase.from('subscription_deliveries').update({
+        ...req.body,
+        delivered_at: req.body.status === 'delivered' ? new Date().toISOString() : undefined,
+      }).eq('id', did);
+      if (error) return fail(error.message);
+      return ok({ success: true });
+    }
+
+    // ── Pending Deliveries for Today (driver view) ────────────
+    if (path === '/api/subscriptions/pending-deliveries' && method === 'GET') {
+      var date = new URLSearchParams(req.url?.split('?')[1] || '').get('date') || new Date().toISOString().split('T')[0];
+      var { data, error } = await supabase
+        .from('subscription_deliveries')
+        .select('*, subscriptions!inner(telegram_id, delivery_address, delivery_note, frequency, product_name)')
+        .eq('delivery_date', date)
+        .in('status', ['pending', 'confirmed', 'preparing', 'out_for_delivery'])
+        .order('delivery_time');
+      if (error) return fail(error.message, 500);
+      return ok({ deliveries: data || [] });
     }
 
     // ── Subscription Delivery History ────────────────────────────
