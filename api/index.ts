@@ -701,6 +701,12 @@ export default async function handler(req, res) {
         tg(ENV.VENDOR_BOT_TOKEN, sc, '', undefined, { reply_markup: JSON.stringify({ remove_keyboard: true }) }).catch(() => {});
 
         const shopUrl = ENV.BASE_URL + '?tg_id=' + encodeURIComponent(uid) + '&phone=' + encodeURIComponent(ph) + '&name=' + encodeURIComponent(fn) + (un ? '&username=' + encodeURIComponent(un) : '') + '&v=' + Date.now();
+        // CRITICAL: Reset this user's menu button to show commands list (not app launch)
+        fetch('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/setChatMenuButton', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: sc, menu_button: { type: 'default' } }),
+        }).catch(() => {});
+
 
 
         
