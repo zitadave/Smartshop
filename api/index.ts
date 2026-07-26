@@ -40,31 +40,13 @@ const slp = ms => new Promise(r => setTimeout(r, ms));
 async function fetchTO(url, opts) {
   opts = opts || {}; const t = opts.timeout || 5000; const ac = new AbortController();
   const id = setTimeout(() => ac.abort(), t);
-  try {
-    // Ensure bot commands are registered (idempotent, cheap call)
-    fetch('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/setMyCommands', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ commands: BOT_COMMANDS }),
-    }).catch(() => {});
-    fetch('https://api.telegram.org/bot' + ENV.ADMIN_BOT_TOKEN + '/setMyCommands', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ commands: BOT_COMMANDS }),
-    }).catch(() => {}); return await fetch(url, { ...opts, signal: ac.signal }); } finally { clearTimeout(id); }
+  try { return await fetch(url, { ...opts, signal: ac.signal }); } finally { clearTimeout(id); }
 }
 async function fetchRetry(url, opts) {
   opts = opts || {}; const mr = opts.maxRetries || 3;
   for (let a = 0; a <= mr; a++) {
     try {
-    // Ensure bot commands are registered (idempotent, cheap call)
-    fetch('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/setMyCommands', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ commands: BOT_COMMANDS }),
-    }).catch(() => {});
-    fetch('https://api.telegram.org/bot' + ENV.ADMIN_BOT_TOKEN + '/setMyCommands', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ commands: BOT_COMMANDS }),
-    }).catch(() => {});
-      const r = await fetchTO(url, opts);
+    const r = await fetchTO(url, opts);
       if (r.status >= 400 && r.status < 500) return r;
       if (r.status >= 500 && a < mr) { await slp(Math.min(200 * Math.pow(2, a) + Math.random() * 100, 10000)); continue; }
       return r;
@@ -75,16 +57,7 @@ async function fetchRetry(url, opts) {
 async function tg(bot, ch, txt, pm, ex) {
   pm = pm || 'Markdown'; ex = ex || {};
   if (!bot) return false;
-  try {
-    // Ensure bot commands are registered (idempotent, cheap call)
-    fetch('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/setMyCommands', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ commands: BOT_COMMANDS }),
-    }).catch(() => {});
-    fetch('https://api.telegram.org/bot' + ENV.ADMIN_BOT_TOKEN + '/setMyCommands', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ commands: BOT_COMMANDS }),
-    }).catch(() => {}); const r = await fetchRetry('https://api.telegram.org/bot' + bot + '/sendMessage', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: ch, text: txt, parse_mode: pm, disable_web_page_preview: true, ...ex }), timeout: 5000, maxRetries: 2 }); const d = await r.json(); return d.ok === true; }
+  try { const r = await fetchRetry('https://api.telegram.org/bot' + bot + '/sendMessage', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: ch, text: txt, parse_mode: pm, disable_web_page_preview: true, ...ex }), timeout: 5000, maxRetries: 2 }); const d = await r.json(); return d.ok === true; }
   catch (e) { console.error('TG:', e); return false; }
 }
 
@@ -99,16 +72,7 @@ async function chkIdem(k) {
 }
 async function setIdem(k, s, r) {
   idem.set(k, { status: s, result: r, created_at: new Date().toISOString() });
-  try {
-    // Ensure bot commands are registered (idempotent, cheap call)
-    fetch('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/setMyCommands', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ commands: BOT_COMMANDS }),
-    }).catch(() => {});
-    fetch('https://api.telegram.org/bot' + ENV.ADMIN_BOT_TOKEN + '/setMyCommands', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ commands: BOT_COMMANDS }),
-    }).catch(() => {}); const { data: row } = await supabase.from('settings').select('*').single(); const d = row?.data || {}; const ks = { ...(d.idempotency_keys || {}) }; ks[k] = { status: s, result: r, created_at: new Date().toISOString() }; for (const [kk, vv] of Object.entries(ks)) if (Date.now() - new Date(vv.created_at).getTime() > 86400000) delete ks[kk]; d.idempotency_keys = ks; await supabase.from('settings').update({ data: d }).eq('id', row?.id || 0); } catch (e) { console.error('Idem:', e); }
+  try { const { data: row } = await supabase.from('settings').select('*').single(); const d = row?.data || {}; const ks = { ...(d.idempotency_keys || {}) }; ks[k] = { status: s, result: r, created_at: new Date().toISOString() }; for (const [kk, vv] of Object.entries(ks)) if (Date.now() - new Date(vv.created_at).getTime() > 86400000) delete ks[kk]; d.idempotency_keys = ks; await supabase.from('settings').update({ data: d }).eq('id', row?.id || 0); } catch (e) { console.error('Idem:', e); }
 }
 function gON() { return 'ETH-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase(); }
 
@@ -127,6 +91,34 @@ const BOT_COMMANDS = [
 
 
 
+// ===== TELEGRAM BOT COMMANDS — register globally at startup =====
+(async () => {
+  const cmds = [
+    { command: 'start', description: '🏠 Main menu / ዋና ሜኑ' },
+    { command: 'shop', description: '🛍️ Open store / ሱቅ ይክፈቱ' },
+    { command: 'driver', description: '🚚 Register as driver / ሹፌር ይመዝገቡ' },
+    { command: 'vendor', description: '🏪 Become a seller / ሻጭ ይሁኑ' },
+    { command: 'contact', description: '📞 Share phone / ስልክ ያጋሩ' },
+    { command: 'help', description: '❓ Commands / ትእዛዛት' },
+  ];
+  const tokens = [ENV.VENDOR_BOT_TOKEN, ENV.ADMIN_BOT_TOKEN];
+  for (const token of tokens) {
+    if (!token) continue;
+    try {
+      // Set commands globally
+      await fetch('https://api.telegram.org/bot' + token + '/setMyCommands', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ commands: cmds }),
+      });
+      // Set global menu button to default (commands list)
+      await fetch('https://api.telegram.org/bot' + token + '/setChatMenuButton', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ menu_button: { type: 'default' } }),
+      });
+    } catch(e) { console.log('Bot init error:', e.message); }
+  }
+})();
+
 // ===== VENDORS =====
 async function getV() { try { const { data: r } = await supabase.from('settings').select('*').single(); return r?.data?.vendors || []; } catch { return []; } }
 async function setV(v) { try { const { data: r } = await supabase.from('settings').select('*').single(); const nd = { ...(r?.data || {}), vendors: v }; if (r) await supabase.from('settings').update({ data: nd, updated_at: new Date().toISOString() }).eq('id', r.id); else await supabase.from('settings').insert({ data: nd }); } catch (e) { console.error('setV:', e?.message || e); } }
@@ -143,16 +135,7 @@ function cln(b) {
 }
 function pid(p) { return parseInt(p.split('/').pop() || '0'); }
 function vrfy(init) {
-  try {
-    // Ensure bot commands are registered (idempotent, cheap call)
-    fetch('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/setMyCommands', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ commands: BOT_COMMANDS }),
-    }).catch(() => {});
-    fetch('https://api.telegram.org/bot' + ENV.ADMIN_BOT_TOKEN + '/setMyCommands', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ commands: BOT_COMMANDS }),
-    }).catch(() => {}); const p = new URLSearchParams(init); const h = p.get('hash'); if (!h) return { valid: false, user: null }; p.delete('hash'); const s = [...p.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => k + '=' + v).join('\n'); const sk = crypto.createHmac('sha256', 'WebAppData').update(ENV.BOT_TOKEN).digest(); if (crypto.createHmac('sha256', sk).update(s).digest('hex') !== h) return { valid: false, user: null }; const u = p.get('user'); return { valid: true, user: u ? JSON.parse(u) : null }; }
+  try { const p = new URLSearchParams(init); const h = p.get('hash'); if (!h) return { valid: false, user: null }; p.delete('hash'); const s = [...p.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => k + '=' + v).join('\n'); const sk = crypto.createHmac('sha256', 'WebAppData').update(ENV.BOT_TOKEN).digest(); if (crypto.createHmac('sha256', sk).update(s).digest('hex') !== h) return { valid: false, user: null }; const u = p.get('user'); return { valid: true, user: u ? JSON.parse(u) : null }; }
   catch { return { valid: false, user: null }; }
 }
 const DSTAT = ['pending','assigned','accepted','at_vendor','picked_up','in_transit','arrived','delivered','failed','cancelled','returned'];
@@ -177,15 +160,6 @@ export default async function handler(req, res) {
   function fail(m, s) { return res.status(s || 400).json({ error: m }); }
 
   try {
-    // Ensure bot commands are registered (idempotent, cheap call)
-    fetch('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/setMyCommands', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ commands: BOT_COMMANDS }),
-    }).catch(() => {});
-    fetch('https://api.telegram.org/bot' + ENV.ADMIN_BOT_TOKEN + '/setMyCommands', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ commands: BOT_COMMANDS }),
-    }).catch(() => {});
 
 
     // ================================================================
@@ -502,16 +476,7 @@ export default async function handler(req, res) {
       // Accept FormData with multiple files
       var urls = [];
       var files = [];
-      try {
-    // Ensure bot commands are registered (idempotent, cheap call)
-    fetch('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/setMyCommands', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ commands: BOT_COMMANDS }),
-    }).catch(() => {});
-    fetch('https://api.telegram.org/bot' + ENV.ADMIN_BOT_TOKEN + '/setMyCommands', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ commands: BOT_COMMANDS }),
-    }).catch(() => {}); files = Object.values(req.body || {}).filter(function(v) { return v && typeof v !== 'string'; }); } catch(e) {}
+      try { files = Object.values(req.body || {}).filter(function(v) { return v && typeof v !== 'string'; }); } catch(e) {}
       // Return placeholder URLs (actual file storage would need Supabase Storage)
       for (var i = 0; i < 3; i++) {
         urls.push('https://placehold.co/800x800/e2e8f0/94a3b8?text=Photo+' + (i + 1));
@@ -724,30 +689,12 @@ export default async function handler(req, res) {
 
         // Save user
         try {
-    // Ensure bot commands are registered (idempotent, cheap call)
-    fetch('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/setMyCommands', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ commands: BOT_COMMANDS }),
-    }).catch(() => {});
-    fetch('https://api.telegram.org/bot' + ENV.ADMIN_BOT_TOKEN + '/setMyCommands', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ commands: BOT_COMMANDS }),
-    }).catch(() => {});
           await supabase.from('users').upsert({
             telegram_id: parseInt(uid), phone: ph, first_name: fn, username: un,
             registered_at: new Date().toISOString(), ...(ln ? { last_name: ln } : {}),
           }, { onConflict: 'telegram_id' });
         } catch {
-          try {
-    // Ensure bot commands are registered (idempotent, cheap call)
-    fetch('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/setMyCommands', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ commands: BOT_COMMANDS }),
-    }).catch(() => {});
-    fetch('https://api.telegram.org/bot' + ENV.ADMIN_BOT_TOKEN + '/setMyCommands', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ commands: BOT_COMMANDS }),
-    }).catch(() => {}); await supabase.from('users').upsert({ telegram_id: parseInt(uid), first_name: fn, username: un, registered_at: new Date().toISOString(), ...(ln ? { last_name: ln } : {}) }, { onConflict: 'telegram_id' }); } catch {}
+          try { await supabase.from('users').upsert({ telegram_id: parseInt(uid), first_name: fn, username: un, registered_at: new Date().toISOString(), ...(ln ? { last_name: ln } : {}) }, { onConflict: 'telegram_id' }); } catch {}
         }
 
         // Remove contact keyboard
@@ -755,12 +702,7 @@ export default async function handler(req, res) {
 
         const shopUrl = ENV.BASE_URL + '?tg_id=' + encodeURIComponent(uid) + '&phone=' + encodeURIComponent(ph) + '&name=' + encodeURIComponent(fn) + (un ? '&username=' + encodeURIComponent(un) : '') + '&v=' + Date.now();
 
-        // Set menu button to show commands list (default)
-        // Set menu button to show commands list (default)
-        fetchTO('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/setChatMenuButton', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chat_id: sc, menu_button: { type: 'default' } }),
-        }).catch(() => {});
+
         
 
 
@@ -819,26 +761,8 @@ export default async function handler(req, res) {
     // ================================================================
     if (path === '/api/user/sync' && method === 'POST') {
       const b = req.body || {}, tid = b.telegram_id || ''; if (!tid) return ok({ success: false }); const r = { success: true };
-      try {
-    // Ensure bot commands are registered (idempotent, cheap call)
-    fetch('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/setMyCommands', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ commands: BOT_COMMANDS }),
-    }).catch(() => {});
-    fetch('https://api.telegram.org/bot' + ENV.ADMIN_BOT_TOKEN + '/setMyCommands', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ commands: BOT_COMMANDS }),
-    }).catch(() => {}); await supabase.from('users').upsert({ telegram_id: parseInt(tid), username: b.username || '', first_name: b.first_name || '', ...(b.phone ? { phone: b.phone } : {}) }, { onConflict: 'telegram_id' }); const { data: ur } = await supabase.from('users').select('*').eq('telegram_id', parseInt(tid)).single(); if (ur?.phone) r.phone = ur.phone; } catch {}
-      try {
-    // Ensure bot commands are registered (idempotent, cheap call)
-    fetch('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/setMyCommands', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ commands: BOT_COMMANDS }),
-    }).catch(() => {});
-    fetch('https://api.telegram.org/bot' + ENV.ADMIN_BOT_TOKEN + '/setMyCommands', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ commands: BOT_COMMANDS }),
-    }).catch(() => {}); const v = await getV(); const f = tid ? v.find(vv => vv.telegram_id == parseInt(tid)) : null; if (f) { r.vendor_status = f.status || 'pending'; r.vendor_id = f.id; r.vendor_name = f.name || ''; } else r.vendor_status = 'none'; } catch { r.vendor_status = 'none'; }
+      try { await supabase.from('users').upsert({ telegram_id: parseInt(tid), username: b.username || '', first_name: b.first_name || '', ...(b.phone ? { phone: b.phone } : {}) }, { onConflict: 'telegram_id' }); const { data: ur } = await supabase.from('users').select('*').eq('telegram_id', parseInt(tid)).single(); if (ur?.phone) r.phone = ur.phone; } catch {}
+      try { const v = await getV(); const f = tid ? v.find(vv => vv.telegram_id == parseInt(tid)) : null; if (f) { r.vendor_status = f.status || 'pending'; r.vendor_id = f.id; r.vendor_name = f.name || ''; } else r.vendor_status = 'none'; } catch { r.vendor_status = 'none'; }
       return ok(r);
     }
     if (path === '/api/user/contact' && method === 'GET') { const tid = new URLSearchParams(req.url?.split('?')[1] || '').get('telegram_id') || ''; if (!tid) return ok({ phone: '' }); try { const { data } = await supabase.from('users').select('phone').eq('telegram_id', parseInt(tid)).single(); if (data?.phone) return ok({ phone: data.phone }); } catch {} return ok({ phone: '' }); }
@@ -939,16 +863,7 @@ export default async function handler(req, res) {
     if (path === '/api/seed' && method === 'GET') { const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]); const v = await getV(); return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!' }); }
     if (path === '/api/admin-bot/send-file' && method === 'POST') {
       const { chatId, filename, content, contentType, caption } = req.body || {}; if (!chatId || !content) return fail('required');
-      try {
-    // Ensure bot commands are registered (idempotent, cheap call)
-    fetch('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/setMyCommands', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ commands: BOT_COMMANDS }),
-    }).catch(() => {});
-    fetch('https://api.telegram.org/bot' + ENV.ADMIN_BOT_TOKEN + '/setMyCommands', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ commands: BOT_COMMANDS }),
-    }).catch(() => {}); let buf, ct = contentType || 'text/plain', fn = filename || 'file.txt'; if (typeof content === 'string' && content.startsWith('data:')) { const mp = content.split(';base64,'); if (mp.length === 2) { ct = mp[0].replace('data:', ''); const ext = ct.includes('jpeg') ? 'jpg' : ct.includes('png') ? 'png' : 'csv'; fn = 'receipt-' + Date.now().toString(36) + '.' + ext; buf = Buffer.from(mp[1], 'base64'); } else buf = Buffer.from(content); } else buf = Buffer.from(typeof content === 'string' ? content : JSON.stringify(content)); const fd = new FormData(); fd.append('chat_id', String(chatId)); fd.append('document', new Blob([buf], { type: ct }), fn); if (caption) fd.append('caption', caption); const r = await fetchTO('https://api.telegram.org/bot' + ENV.ADMIN_BOT_TOKEN + '/sendDocument', { method: 'POST', body: fd, timeout: 15000 }); const d = await r.json(); return ok({ sent: d.ok === true, description: d.description }); }
+      try { let buf, ct = contentType || 'text/plain', fn = filename || 'file.txt'; if (typeof content === 'string' && content.startsWith('data:')) { const mp = content.split(';base64,'); if (mp.length === 2) { ct = mp[0].replace('data:', ''); const ext = ct.includes('jpeg') ? 'jpg' : ct.includes('png') ? 'png' : 'csv'; fn = 'receipt-' + Date.now().toString(36) + '.' + ext; buf = Buffer.from(mp[1], 'base64'); } else buf = Buffer.from(content); } else buf = Buffer.from(typeof content === 'string' ? content : JSON.stringify(content)); const fd = new FormData(); fd.append('chat_id', String(chatId)); fd.append('document', new Blob([buf], { type: ct }), fn); if (caption) fd.append('caption', caption); const r = await fetchTO('https://api.telegram.org/bot' + ENV.ADMIN_BOT_TOKEN + '/sendDocument', { method: 'POST', body: fd, timeout: 15000 }); const d = await r.json(); return ok({ sent: d.ok === true, description: d.description }); }
       catch (e) { return ok({ sent: false, error: e.message }); }
     }
     if (path === '/api/commission/calculate' && method === 'POST') {
@@ -962,16 +877,7 @@ export default async function handler(req, res) {
     if (path === '/api/payment/initiate-chapa' && method === 'POST') {
       const { amount, email, firstName, lastName, phone, txRef, orderNumber } = req.body || {};
       if (!amount || !email || !phone) return fail('required');
-      try {
-    // Ensure bot commands are registered (idempotent, cheap call)
-    fetch('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/setMyCommands', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ commands: BOT_COMMANDS }),
-    }).catch(() => {});
-    fetch('https://api.telegram.org/bot' + ENV.ADMIN_BOT_TOKEN + '/setMyCommands', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ commands: BOT_COMMANDS }),
-    }).catch(() => {}); const cr = await fetchRetry('https://api.chapa.co/v1/transaction/initialize', { method: 'POST', timeout: 10000, headers: { 'Authorization': 'Bearer ' + ENV.CHAPA_SECRET_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ amount: String(amount), currency: 'ETB', email, first_name: firstName || 'Customer', last_name: lastName || '', phone, tx_ref: txRef, callback_url: ENV.BASE_URL + '/api/payment/verify', return_url: ENV.BASE_URL + '/confirmation/' + orderNumber, customization: { title: 'Smart Shop Order #' + orderNumber, description: 'Payment' } }) }); const cd = await cr.json(); if (cd.status === 'success' && cd.data?.checkout_url) return ok({ success: true, checkout_url: cd.data.checkout_url, tx_ref: txRef }); return ok({ success: false, error: cd.message || 'Failed' }); }
+      try { const cr = await fetchRetry('https://api.chapa.co/v1/transaction/initialize', { method: 'POST', timeout: 10000, headers: { 'Authorization': 'Bearer ' + ENV.CHAPA_SECRET_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ amount: String(amount), currency: 'ETB', email, first_name: firstName || 'Customer', last_name: lastName || '', phone, tx_ref: txRef, callback_url: ENV.BASE_URL + '/api/payment/verify', return_url: ENV.BASE_URL + '/confirmation/' + orderNumber, customization: { title: 'Smart Shop Order #' + orderNumber, description: 'Payment' } }) }); const cd = await cr.json(); if (cd.status === 'success' && cd.data?.checkout_url) return ok({ success: true, checkout_url: cd.data.checkout_url, tx_ref: txRef }); return ok({ success: false, error: cd.message || 'Failed' }); }
       catch (e) { return ok({ success: false, error: e.message }); }
     }
     if (path === '/api/payment/verify' && method === 'POST') { const { tx_ref } = req.body || {}; if (!tx_ref) return fail('required'); try { const vr = await fetchRetry('https://api.chapa.co/v1/transaction/verify/' + tx_ref, { headers: { 'Authorization': 'Bearer ' + ENV.CHAPA_SECRET_KEY }, timeout: 10000 }); const vd = await vr.json(); if (vd.status === 'success' && vd.data?.status === 'success') return ok({ status: 'completed', amount: vd.data.amount, reference: vd.data.reference || tx_ref, verified: true }); return ok({ status: 'failed', error: vd.message || 'Not completed', verified: false }); } catch (e) { return ok({ status: 'failed', error: e.message, verified: false }); } }
