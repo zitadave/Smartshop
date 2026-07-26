@@ -12,7 +12,7 @@ import {
   Search, Plus, Edit3, Trash2, Eye, EyeOff, Check, Loader, ChevronDown,
   DollarSign, Star, Activity, AlertTriangle, Sun, Moon, Gift, CreditCard,
   Gamepad2, Coins, Smartphone, ExternalLink, Command, Columns, List, Database,
-  Truck, RotateCcw, RefreshCw, Landmark, BookOpen, Banknote, CheckCircle, XCircle
+  Truck, RotateCcw, RefreshCw, Landmark, BookOpen, Banknote, CheckCircle, XCircle, Bike
 } from 'lucide-react';
 import CommandPalette from '@/components/admin/CommandPalette';
 import LiveChart, { StatCard } from '@/components/admin/LiveChart';
@@ -39,8 +39,9 @@ import ManualPaymentReview from '@/components/admin/ManualPaymentReview';
 import AdminPromotions from '@/components/admin/AdminPromotions';
 import ProductStudio from '@/components/admin/ProductStudio';
 import { sendAdminTelegram, notifyProductCreated, notifyProductUpdated, notifyProductDeleted, notifySettingsChanged, notifyVendorUpdated } from '@/lib/adminNotifier';
+import AdminDeliveryTab from './AdminDeliveryTab';
 
-type Tab = 'overview' | 'products' | 'orders' | 'vendors' | 'marketplace' | 'reviews' 
+type Tab = 'overview' | 'products' | 'orders' | 'vendors' | 'delivery' | 'marketplace' | 'reviews' 
   | 'broadcast' | 'flashdeals' | 'preorders' | 'tracking' | 'themes' | 'coupons' 
   | 'settings' | 'alerts' | 'abandoned' | 'roles' | 'backup' 
   | 'bulkProducts' | 'analytics' | 'forecast' | 'activity' | 'security' | 'telegram' 
@@ -138,6 +139,7 @@ export default function AdminLayout() {
     { id: 'products', icon: Package, label: 'Products' },
     { id: 'orders', icon: ShoppingCart, label: 'Orders' },
     { id: 'vendors', icon: Store, label: 'Vendors' },
+    { id: 'delivery', icon: Bike, label: 'Delivery' },
     { id: 'marketplace', icon: Rocket, label: 'Marketplace' },
     { id: 'reviews', icon: Camera, label: 'Reviews' },
     { id: 'broadcast', icon: Megaphone, label: 'Broadcast' },
@@ -216,7 +218,7 @@ export default function AdminLayout() {
         <div className="flex-1 overflow-y-auto py-3 px-2 space-y-1">
           {(() => {
             const groups: { title: string; ids: Tab[] }[] = [
-              { title: 'STORE', ids: ['overview', 'products', 'orders', 'vendors', 'marketplace', 'reviews'] },
+              { title: 'STORE', ids: ['overview', 'products', 'orders', 'vendors', 'delivery', 'marketplace', 'reviews'] },
               { title: 'PROMOTION', ids: ['promotions', 'broadcast', 'flashdeals', 'preorders', 'coupons', 'tracking', 'themes'] },
               { title: 'OPERATIONS', ids: ['manualpayments', 'alerts', 'abandoned', 'fulfillment', 'sla', 'driver', 'returns'] },
               { title: 'FINANCE', ids: ['finance', 'smartbooks', 'settings'] },
@@ -270,6 +272,7 @@ export default function AdminLayout() {
           {tab === 'products' && <AdminProducts />}
           {tab === 'orders' && <AdminOrders />}
           {tab === 'vendors' && <AdminVendors />}
+          {tab === 'delivery' && <AdminDeliveryTab />}
           {tab === 'marketplace' && <AdminMarketplace />}
           {tab === 'reviews' && <AdminReviews />}
           {tab === 'broadcast' && <AdminBroadcast />}

@@ -35,6 +35,8 @@ const Notifications = lazy(() => import('@/pages/Notifications'));
 const PriceAlerts = lazy(() => import('@/pages/PriceAlerts'));
 const Loyalty = lazy(() => import('@/pages/Loyalty'));
 const Returns = lazy(() => import('@/pages/Returns'));
+const DriverDashboard = lazy(() => import('@/pages/delivery/DriverDashboard'));
+const DriverRegister = lazy(() => import('@/pages/delivery/DriverRegister'));
 
 const TG = isRunningInTelegram();
 
@@ -169,6 +171,8 @@ export default function App() {
           <Route path="/price-alerts" element={<Suspense fallback={<PageLoader />}><PriceAlerts /></Suspense>} />
           <Route path="/loyalty" element={<Suspense fallback={<PageLoader />}><Loyalty /></Suspense>} />
           <Route path="/returns" element={<Suspense fallback={<PageLoader />}><Returns /></Suspense>} />
+          <Route path="/driver" element={<Suspense fallback={<PageLoader />}><DriverDashboard /></Suspense>} />
+          <Route path="/driver-register" element={<Suspense fallback={<PageLoader />}><DriverRegister /></Suspense>} />
         </Route>
         <Route path="/admin" element={<Suspense fallback={<PageLoader />}><AdminRedirect /></Suspense>} />
         <Route path="/admin-panel/*" element={<Suspense fallback={<PageLoader />}><AdminPanel /></Suspense>} />
