@@ -30,7 +30,7 @@ export default function AdminSubscriptionsTab() {
     const res = await fetch(`/api/subscription-plans${editPlan ? '/' + editPlan.id : ''}`, {
       method: editPlan ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, tags: JSON.stringify(form.tags) }),
+      body: JSON.stringify({ ...form, tags: form.tags }),
     });
     if (res.ok) { setShowForm(false); setEditPlan(null); loadPlans(); }
   };
@@ -121,7 +121,7 @@ export default function AdminSubscriptionsTab() {
 
       {/* Create/Edit Plan Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center" onClick={() => setShowForm(false)}>
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-end sm:items-center justify-center" onClick={() => setShowForm(false)}>
           <div className="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-lg p-6 max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold">{editPlan ? 'Edit Plan' : 'New Subscription Plan'}</h2>

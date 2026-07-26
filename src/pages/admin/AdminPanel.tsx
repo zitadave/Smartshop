@@ -271,7 +271,7 @@ export default function AdminLayout() {
       {menuOpen && <div className="fixed inset-0 bg-black/40 z-30 xl:hidden backdrop-blur-sm" onClick={() => setMenuOpen(false)} />}
 
       <main className="xl:ml-60 pt-14 min-h-screen transition-all duration-300 overflow-x-hidden">
-        <div className="p-4 md:p-6 max-w-7xl mx-auto animate-fadeUp overflow-x-hidden">
+        <div className="p-4 md:p-6 max-w-7xl mx-auto animate-fadeUp overflow-x-visible">
           {tab === 'overview' && <Overview onNavigate={handleCmdNavigate} />}
           {tab === 'products' && <AdminProducts />}
           {tab === 'orders' && <AdminOrders />}

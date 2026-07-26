@@ -380,7 +380,7 @@ export default async function handler(req, res) {
         monthly_price: b.monthlyPrice || b.monthly_price || 0,
         vendor_id: b.vendorId || b.vendor_id || null,
         vendor_name: b.vendorName || b.vendor_name || 'Smart Shop',
-        image: b.image || '', tags: JSON.stringify(b.tags || []),
+        image: b.image || '', tags: b.tags || [],
         is_active: b.isActive !== false,
         min_quantity: b.minQuantity || b.min_quantity || 1,
         max_quantity: b.maxQuantity || b.max_quantity || 10,
@@ -390,7 +390,10 @@ export default async function handler(req, res) {
     }
     if (path.startsWith('/api/subscription-plans/') && method === 'PUT') {
       var pid = parseInt(path.split('/').pop() || '0');
-      var { error } = await supabase.from('subscription_plans').update(req.body).eq('id', pid);
+      var b = req.body || {};
+      // Handle tags properly (may come as array from frontend)
+      if (b.tags && Array.isArray(b.tags)) b.tags = b.tags;
+      var { error } = await supabase.from('subscription_plans').update(b).eq('id', pid);
       if (error) return fail(error.message);
       return ok({ success: true });
     }
