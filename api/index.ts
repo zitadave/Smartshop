@@ -1,6 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
-import { cors, normalizeProduct, verifyTelegramInitData, parseRequest, requireFields, safeInt, generateOrderNumber } from './helpers.js';
 
 // ===== CONFIG =====
 // SECURITY: All secrets MUST be set in Vercel Environment Variables.
@@ -13,6 +12,50 @@ const VENDOR_BOT_TOKEN = process.env.VENDOR_BOT_TOKEN || BOT_TOKEN || '776137428
 var adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID || '336997351';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false } });
+// ===== HELPER FUNCTIONS (inlined from helpers.ts for Vercel compatibility) =====
+function cors(res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', '*');
+  res.setHeader('Access-Control-Allow-Headers', '*');
+}
+
+function normalizeProduct(p) {
+  return {
+    id: p.id, name: p.name || '', nameEn: p.name_en || '', category: p.category || '',
+    price: p.price || 0, originalPrice: p.original_price || null, image: p.image || '',
+    images: p.images || [], badge: p.badge || '', description: p.description || '',
+    descriptionEn: p.description_en || '', stockCount: p.stock_count || 0,
+    soldCount: p.sold_count || 0, rating: p.rating || 4.0, reviews: p.reviews || 0,
+    vendorId: p.vendor_id || null, vendorName: p.vendor_name || '',
+    inStock: p.in_stock !== false, visible: p.visible !== false,
+    colors: p.colors || [], sizes: p.sizes || [], features: p.features || [],
+    tags: p.tags || [], brand: p.brand || '', featured: p.featured || false,
+    weight: p.weight || 0, unit: p.unit || 'kg',
+    seoTitle: p.seo_title || '', seoDescription: p.seo_description || '',
+    createdAt: p.created_at || '', isPreOrder: p.is_pre_order || false,
+    preOrderDeposit: p.pre_order_deposit || null, preOrderReleaseDate: p.pre_order_release_date || null,
+    preOrderMax: p.pre_order_max || null,
+  };
+}
+
+function parseRequest(req) {
+  return {
+    path: (req.url || '').split('?')[0],
+    method: req.method || 'GET',
+    query: Object.fromEntries(new URLSearchParams(req.url?.split('?')[1] || '')),
+    body: req.body || {},
+  };
+}
+
+function requireFields(body, fields) {
+  var missing = fields.filter(function(f) { return !body[f]; });
+  if (missing.length > 0) return { valid: false, error: 'Missing required fields: ' + missing.join(', ') };
+  return { valid: true };
+}
+
+function safeInt(val, fallback) { var n = parseInt(val); return isNaN(n) ? (fallback || 0) : n; }
+function generateOrderNumber() { return 'ETH-' + Date.now().toString(36).toUpperCase(); }
+
 
 // ===== VENDOR HELPERS (stored in settings.data.vendors JSONB) =====
 // TODO: Migrate to a dedicated 'vendors' table for proper relations and indexes
@@ -44,11 +87,6 @@ async function saveVendors(vendors) {
 }
 
 // ===== HELPERS =====
-function cors(res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', '*');
-  res.setHeader('Access-Control-Allow-Headers', '*');
-}
 
 function normalizeProduct(p) {
   return {
