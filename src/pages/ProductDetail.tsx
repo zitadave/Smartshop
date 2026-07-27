@@ -177,7 +177,14 @@ export default function ProductDetail() {
           <div className="flex gap-1.5">
           <button onClick={async () => { 
               try { 
-                const deal = await createGroupDeal({ productId: product.id, productName: product.nameEn || product.name, productImage: product.image, regularPrice: product.price, telegramId: 0, creatorName: 'User' }); 
+                const deal = await createGroupDeal({ 
+                  productId: product.id, 
+                  productName: product.nameEn || product.name, 
+                  productImage: product.image, 
+                  regularPrice: product.price, 
+                  telegramId: store.telegramId || 0, 
+                  creatorName: store.profile?.name || 'User' 
+                }); 
                 shareToTelegram(deal);
                 toast('Group deal shared!', 'success'); 
               } catch(e: any) { 

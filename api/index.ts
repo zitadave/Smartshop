@@ -306,19 +306,29 @@ export default async function handler(req, res) {
     }
 
     if (path === '/api/group-deals' && method === 'GET') {
-      var token = new URLSearchParams(req.url?.split('?')[1] || '').get('token') || '';
+      var uParams = new URLSearchParams(req.url?.split('?')[1] || '');
+      var token = uParams.get('token') || '';
       if (token) {
-        var { data, error } = await supabase.from('group_deals').select('*').eq('share_token', token).single();
-        if (error || !data) return ok({ deal: null });
-        return ok({ deal: data });
+        var { data, error } = await supabase.from('group_deals').select('*, group_deal_members(*)').eq('share_token', token).single();
+        if (error || !data) return ok({ deal: null, deals: [] });
+        return ok({ deal: data, deals: [data] });
       }
-      var tid = new URLSearchParams(req.url?.split('?')[1] || '').get('telegram_id') || '';
+      
+      var q = supabase.from('group_deals').select('*, group_deal_members(*)');
+      
+      var tid = uParams.get('telegram_id') || uParams.get('creator') || '';
       if (tid) {
-        var { data, error } = await supabase.from('group_deals').select('*, group_deal_members(*)').eq('creator_telegram_id', parseInt(tid)).order('created_at', { ascending: false });
-        if (error) return fail(error.message, 500);
-        return ok({ deals: data || [] });
+        q = q.eq('creator_telegram_id', parseInt(tid));
       }
-      return ok({ deals: [] });
+      
+      var pidVal = uParams.get('product_id') || '';
+      if (pidVal) {
+        q = q.eq('product_id', parseInt(pidVal));
+      }
+      
+      var { data, error } = await q.order('created_at', { ascending: false });
+      if (error) return fail(error.message, 500);
+      return ok({ deals: data || [] });
     }
 
     if (path.startsWith('/api/group-deals/') && method === 'DELETE') {
