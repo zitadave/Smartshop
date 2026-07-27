@@ -392,7 +392,7 @@ export default async function handler(req, res) {
       var pid = parseInt(path.split('/').pop() || '0');
       var b = req.body || {};
       // Handle tags properly (may come as array from frontend)
-      if (b.tags && Array.isArray(b.tags)) b.tags = b.tags;
+      if (b.tags && typeof b.tags === 'string') { try { b.tags = JSON.parse(b.tags); } catch(e) {} }
       var { error } = await supabase.from('subscription_plans').update(b).eq('id', pid);
       if (error) return fail(error.message);
       return ok({ success: true });

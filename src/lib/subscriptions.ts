@@ -93,8 +93,11 @@ export function getDiscountPercent(freq: SubscriptionFrequency): number {
 }
 
 // ── Calculate price for a plan at given frequency ──────────
-export function getPlanPrice(plan: SubscriptionPlan, freq: SubscriptionFrequency, quantity = 1): number {
-  const basePrice = freq === 'daily' ? plan.dailyPrice : freq === 'weekly' ? plan.weeklyPrice : plan.monthlyPrice;
+export function getPlanPrice(plan: any, freq: SubscriptionFrequency, quantity = 1): number {
+  const dailyPrice = plan.dailyPrice !== undefined ? plan.dailyPrice : (plan.daily_price || 0);
+  const weeklyPrice = plan.weeklyPrice !== undefined ? plan.weeklyPrice : (plan.weekly_price || 0);
+  const monthlyPrice = plan.monthlyPrice !== undefined ? plan.monthlyPrice : (plan.monthly_price || 0);
+  const basePrice = freq === 'daily' ? dailyPrice : freq === 'weekly' ? weeklyPrice : monthlyPrice;
   return basePrice * quantity;
 }
 
@@ -145,7 +148,28 @@ export async function fetchPlans(category?: string, forceRefresh = false): Promi
     const res = await fetch(`/api/subscription-plans?${params}`);
     if (res.ok) {
       const data = await res.json();
-      plans = data.plans || [];
+      const rawPlans = data.plans || [];
+      plans = rawPlans.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        nameAmharic: p.nameAmharic || p.name_amharic || '',
+        emoji: p.emoji || '📦',
+        description: p.description || '',
+        category: p.category || 'general',
+        unit: p.unit || '1',
+        unitLabel: p.unitLabel || p.unit_label || 'pc',
+        dailyPrice: Number(p.dailyPrice !== undefined ? p.dailyPrice : (p.daily_price || 0)),
+        weeklyPrice: Number(p.weeklyPrice !== undefined ? p.weeklyPrice : (p.weekly_price || 0)),
+        monthlyPrice: Number(p.monthlyPrice !== undefined ? p.monthlyPrice : (p.monthly_price || 0)),
+        vendorId: p.vendorId || p.vendor_id || null,
+        vendorName: p.vendorName || p.vendor_name || 'Smart Shop',
+        image: p.image || '',
+        tags: p.tags || [],
+        isActive: p.isActive !== undefined ? p.isActive : (p.is_active !== false),
+        minQuantity: Number(p.minQuantity !== undefined ? p.minQuantity : (p.min_quantity || 1)),
+        maxQuantity: Number(p.maxQuantity !== undefined ? p.maxQuantity : (p.max_quantity || 10)),
+        createdAt: p.createdAt || p.created_at || '',
+      }));
     }
   } catch (e) {
     console.warn('Could not fetch subscription plans:', e);
@@ -172,11 +196,12 @@ export async function fetchPlansGrouped(): Promise<Record<string, SubscriptionPl
 export async function fetchFeaturedPlans(limit = 6): Promise<SubscriptionPlan[]> {
   const all = await fetchPlans();
   // Sort: popular first, then essential, then rest
-  const score = (p: SubscriptionPlan) => {
+  const score = (p: any) => {
     let s = 0;
-    if (p.tags.includes('popular')) s += 100;
-    if (p.tags.includes('essential')) s += 50;
-    if (p.dailyPrice > 0) s += 30; // Daily plans are more engaging
+    if (p.tags?.includes('popular')) s += 100;
+    if (p.tags?.includes('essential')) s += 50;
+    const dailyPrice = p.dailyPrice !== undefined ? p.dailyPrice : (p.daily_price || 0);
+    if (dailyPrice > 0) s += 30; // Daily plans are more engaging
     return s;
   };
   return all.sort((a, b) => score(b) - score(a)).slice(0, limit);
@@ -256,15 +281,19 @@ export async function getVendorSubscriptionOrders(vendorId: number): Promise<Sub
 }
 
 // ── Calculate savings compared to buying retail ────────────
-export function calculateSavings(plan: SubscriptionPlan, freq: SubscriptionFrequency, quantity = 1): { saved: number; pct: number } {
-  const dailyTotal = plan.dailyPrice * quantity * 30;
-  if (freq === 'monthly' && plan.monthlyPrice > 0 && plan.dailyPrice > 0) {
-    const saved = dailyTotal - (plan.monthlyPrice * quantity);
+export function calculateSavings(plan: any, freq: SubscriptionFrequency, quantity = 1): { saved: number; pct: number } {
+  const dailyPrice = plan.dailyPrice !== undefined ? plan.dailyPrice : (plan.daily_price || 0);
+  const weeklyPrice = plan.weeklyPrice !== undefined ? plan.weeklyPrice : (plan.weekly_price || 0);
+  const monthlyPrice = plan.monthlyPrice !== undefined ? plan.monthlyPrice : (plan.monthly_price || 0);
+
+  const dailyTotal = dailyPrice * quantity * 30;
+  if (freq === 'monthly' && monthlyPrice > 0 && dailyPrice > 0) {
+    const saved = dailyTotal - (monthlyPrice * quantity);
     return { saved, pct: Math.round((saved / dailyTotal) * 100) };
   }
-  if (freq === 'weekly' && plan.weeklyPrice > 0 && plan.dailyPrice > 0) {
-    const weeklyRetail = plan.dailyPrice * quantity * 7;
-    const saved = weeklyRetail - (plan.weeklyPrice * quantity);
+  if (freq === 'weekly' && weeklyPrice > 0 && dailyPrice > 0) {
+    const weeklyRetail = dailyPrice * quantity * 7;
+    const saved = weeklyRetail - (weeklyPrice * quantity);
     return { saved, pct: Math.round((saved / weeklyRetail) * 100) };
   }
   return { saved: 0, pct: 0 };
