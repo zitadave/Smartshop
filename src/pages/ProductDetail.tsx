@@ -6,7 +6,7 @@ import { toast } from '@/components/Toast';
 import { formatPrice, stars, getDeliveryEstimate, cn, calcDiscount, isFlashDealActive } from '@/lib/utils';
 import { ShoppingCart, Heart, Share2, Minus, Plus, ChevronLeft, ChevronRight, Store, Clock, Truck, TrendingDown,  Camera, Zap, Users, Gift } from 'lucide-react';
 import PhotoReviewSection from '@/components/features/PhotoReview';
-import { createGroupDeal, shareToTelegram } from '@/lib/groupBuying';
+import { createGroupDeal, shareToTelegram, getActiveDealsForProduct } from '@/lib/groupBuying';
 import PriceDropAlert from '@/components/features/PriceDropAlert';
 import PreOrderBadge from '@/components/features/PreOrderBadge';
 import FlashDealTimer from '@/components/features/FlashDealTimer';
@@ -21,6 +21,13 @@ export default function ProductDetail() {
   const [qty, setQty] = useState(1);
   const [galleryIdx, setGalleryIdx] = useState(0);
   const [zoom, setZoom] = useState(false);
+  const [activeDeals, setActiveDeals] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (product?.id) {
+      getActiveDealsForProduct(product.id).then(setActiveDeals).catch(console.error);
+    }
+  }, [product?.id]);
 
   if (!product) {
     return (
@@ -205,6 +212,42 @@ export default function ProductDetail() {
               <Share2 size={16} />
             </button>
           </div>
+
+          {/* Active Group Deals list */}
+          {activeDeals.length > 0 && (
+            <div className="mt-1 bg-green-50/70 border border-green-100 rounded-2xl p-3.5 mb-3">
+              <h4 className="text-xs font-bold text-green-800 mb-2 flex items-center gap-1">
+                🤝 Join Active Mahiber Groups & Save!
+              </h4>
+              <div className="space-y-2">
+                {activeDeals.map((deal) => (
+                  <div key={deal.id} 
+                    onClick={() => navigate(`/group-deal/${deal.share_token}`)}
+                    className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-green-100 cursor-pointer hover:border-green-300 transition-all">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 bg-green-100 text-green-600 font-bold rounded-full flex items-center justify-center text-xs">
+                        {deal.creator_name?.charAt(0).toUpperCase() || 'U'}
+                      </div>
+                      <div className="text-left">
+                        <p className="text-xs font-bold text-slate-800">{deal.creator_name || 'Anonymous'}'s Group</p>
+                        <p className="text-[9px] text-slate-400">{deal.current_members} joined · {deal.max_members - deal.current_members} spots left</p>
+                      </div>
+                    </div>
+                    <div className="text-right flex items-center gap-1.5">
+                      <div>
+                        <p className="text-xs font-bold text-green-600">Br {(deal.group_price || 0).toLocaleString()}</p>
+                        <p className="text-[8px] text-slate-400 line-through">Br {(deal.regular_price || 0).toLocaleString()}</p>
+                      </div>
+                      <span className="text-[10px] bg-green-500 text-white px-2 py-1 rounded-lg font-bold flex items-center gap-0.5">
+                        Join
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <button className="w-full py-2.5 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-lg text-xs font-semibold shadow-sm hover:shadow active:scale-95 transition-all" onClick={() => { addToCart(product, qty); navigate('/checkout'); }}>
             ⚡ Buy Now
           </button>
