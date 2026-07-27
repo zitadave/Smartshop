@@ -65,8 +65,8 @@ export default function SubscriptionsPage() {
   const activeSubs = subs.filter(s => s.status === 'active');
   const pausedSubs = subs.filter(s => s.status === 'paused');
   const cancelledSubs = subs.filter(s => s.status === 'cancelled');
-  const totalMonthly = activeSubs.reduce((s, sub) => sub.frequency === 'monthly' ? s + sub.price : s, 0);
-  const totalDaily = activeSubs.filter(s => s.frequency === 'daily').reduce((s, sub) => s + sub.price, 0);
+  const totalMonthly = activeSubs.reduce((s, sub) => sub.frequency === 'monthly' ? s + (sub.price || 0) : s, 0);
+  const totalDaily = activeSubs.filter(s => s.frequency === 'daily').reduce((s, sub) => s + (sub.price || 0), 0);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
@@ -173,7 +173,7 @@ function SubCard({ sub, onToggle, onCancel, onExpand, expanded, deliveries, canc
                 <p className="text-xs text-slate-400">{formatFrequency(sub.frequency)} · x{sub.quantity}</p>
               </div>
               <div className="text-right">
-                <div className="text-sm font-bold text-slate-800">Br {sub.price.toLocaleString()}</div>
+                <div className="text-sm font-bold text-slate-800">Br {(sub.price || 0).toLocaleString()}</div>
                 <div className="text-[10px] text-slate-400">/ {sub.frequency === 'daily' ? 'day' : sub.frequency === 'weekly' ? 'week' : 'month'}</div>
               </div>
             </div>

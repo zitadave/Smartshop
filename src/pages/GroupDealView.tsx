@@ -48,10 +48,10 @@ export default function GroupDealView() {
           <div className="text-5xl mb-3">🛍️</div>
           <h1 className="text-xl font-bold text-slate-800">{deal.product_name}</h1>
           <div className="flex items-center justify-center gap-3 mt-2">
-            <span className="text-3xl font-bold text-green-600">Br {deal.group_price.toLocaleString()}</span>
-            <span className="text-lg text-slate-400 line-through">Br {deal.regular_price.toLocaleString()}</span>
+            <span className="text-3xl font-bold text-green-600">Br {(deal.group_price || 0).toLocaleString()}</span>
+            <span className="text-lg text-slate-400 line-through">Br {(deal.regular_price || 0).toLocaleString()}</span>
           </div>
-          {savings > 0 && <p className="text-green-500 font-medium mt-1">💰 Save Br {savings.toLocaleString()}!</p>}
+          {savings > 0 && <p className="text-green-500 font-medium mt-1">💰 Save Br {(savings || 0).toLocaleString()}!</p>}
         </div>
 
         <div className="grid grid-cols-3 gap-3 mb-4">
