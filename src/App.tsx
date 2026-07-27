@@ -39,6 +39,7 @@ const Returns = lazy(() => import('@/pages/Returns'));
 const DriverDashboard = lazy(() => import('@/pages/delivery/DriverDashboard'));
 const DriverRegister = lazy(() => import('@/pages/delivery/DriverRegister'));
 const GroupDealView = lazy(() => import('@/pages/GroupDealView'));
+const MyGroupDeals = lazy(() => import('@/pages/MyGroupDeals'));
 const PhotoStudio = lazy(() => import('@/pages/PhotoStudio'));
 const SubscriptionsPage = lazy(() => import('@/pages/SubscriptionsPage'));
 const SubscriptionShop = lazy(() => import('@/pages/SubscriptionShop'));
@@ -179,6 +180,7 @@ export default function App() {
           <Route path="/driver" element={<Suspense fallback={<PageLoader />}><DriverDashboard /></Suspense>} />
           <Route path="/driver-register" element={<Suspense fallback={<PageLoader />}><DriverRegister /></Suspense>} />
           <Route path="/group-deal/:token" element={<Suspense fallback={<PageLoader />}><GroupDealView /></Suspense>} />
+          <Route path="/my-group-deals" element={<Suspense fallback={<PageLoader />}><MyGroupDeals /></Suspense>} />
           <Route path="/photo-studio" element={<Suspense fallback={<PageLoader />}><PhotoStudio /></Suspense>} />
           <Route path="/subscriptions" element={<Suspense fallback={<PageLoader />}><SubscriptionsPage /></Suspense>} />
           <Route path="/subscription-shop" element={<Suspense fallback={<PageLoader />}><SubscriptionShop /></Suspense>} />

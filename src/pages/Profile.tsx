@@ -229,6 +229,7 @@ export default function Profile() {
         <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider px-1 mt-4 mb-1">Shopping</div>
         <MenuItem icon="📦" label="My Orders" badge={ordCount} desc={ordCount + ' total orders'} onClick={function() { navigate('/orders'); }} />
         <MenuItem icon="🗓" label="Subscriptions" desc="Daily, weekly & monthly delivery plans" onClick={function() { navigate('/subscriptions'); }} />
+        <MenuItem icon="🤝" label="Group Buys" desc="My active group shopping deals" onClick={function() { navigate('/my-group-deals'); }} />
         <MenuItem icon="❤️" label="Wishlist" badge={wishlist.length} desc={wishlist.length + ' items'} onClick={function() { navigate('/wishlist'); }} />
         <MenuItem icon="🎁" label="Gift Cards" desc="Redeem & send gifts" onClick={function() { navigate('/gift-cards'); }} />
         <MenuItem icon="🤝" label="Affiliate Program" desc="Earn commissions" onClick={function() { navigate('/affiliate'); }} />
