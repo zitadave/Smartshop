@@ -68,9 +68,9 @@ export default function AdminGroupBuyTab() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-bold text-green-600">Br {deal.group_price.toLocaleString()}</div>
-                    <div className="text-[10px] text-slate-400 line-through">Br {deal.regular_price.toLocaleString()}</div>
-                    {savings > 0 && <div className="text-[10px] text-green-500 font-medium">-{Math.round((savings/deal.regular_price)*100)}%</div>}
+                    <div className="text-sm font-bold text-green-600">Br {(deal.group_price || 0).toLocaleString()}</div>
+                    <div className="text-[10px] text-slate-400 line-through">Br {(deal.regular_price || 0).toLocaleString()}</div>
+                    {savings > 0 && <div className="text-[10px] text-green-500 font-medium">-{Math.round((savings/(deal.regular_price || 1))*100)}%</div>}
                   </div>
                 </div>
                 <div className="mt-3">

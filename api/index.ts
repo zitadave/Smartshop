@@ -429,9 +429,11 @@ export default async function handler(req, res) {
 
     if (path === '/api/subscriptions' && method === 'POST') {
       var b = req.body || {};
-      if (!b.telegram_id || !b.plan_id) return fail('telegram_id and plan_id required');
+      var tid = b.telegram_id || b.telegramId;
+      var pid = b.plan_id || b.planId;
+      if (!tid || !pid) return fail('telegram_id and plan_id required');
       // Get plan details
-      var { data: plan } = await supabase.from('subscription_plans').select('*').eq('id', b.plan_id).single();
+      var { data: plan } = await supabase.from('subscription_plans').select('*').eq('id', pid).single();
       if (!plan) return fail('Plan not found');
 
       var freq = b.frequency || 'daily';
@@ -445,14 +447,14 @@ export default async function handler(req, res) {
       else { nextDel.setMonth(nextDel.getMonth() + 1); nextDel.setDate(1); nextDel.setHours(7, 0, 0, 0); }
 
       var { data, error } = await supabase.from('subscriptions').insert({
-        telegram_id: b.telegram_id, plan_id: b.plan_id,
+        telegram_id: tid, plan_id: pid,
         product_name: plan.name, product_image: plan.image || plan.emoji || '',
         quantity: qty, frequency: freq,
         price: price * qty, next_delivery: nextDel.toISOString(),
-        delivery_address: b.delivery_address || '',
-        delivery_note: b.delivery_note || '',
-        delivery_time: b.delivery_time || '07:00',
-        payment_method: b.payment_method || 'cod',
+        delivery_address: b.delivery_address || b.deliveryAddress || '',
+        delivery_note: b.delivery_note || b.deliveryNote || '',
+        delivery_time: b.delivery_time || b.deliveryTime || '07:00',
+        payment_method: b.payment_method || b.paymentMethod || 'cod',
       }).select().single();
       if (error) return fail(error.message);
       return ok({ success: true, subscription: data });
