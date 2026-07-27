@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Search, Plus, Package, Users, Edit3, Calendar, CheckCircle, RotateCcw, AlertCircle } from 'lucide-react';
 import { toast } from '@/components/Toast';
 
@@ -285,7 +286,7 @@ export default function AdminSubscriptionsTab() {
       )}
 
       {/* ─── CREATE/EDIT MODAL ─── */}
-      {showForm && (
+      {showForm && createPortal(
         <>
           {/* Dark backdrop */}
           <div className="fixed inset-0 bg-black/60 z-[100]" onClick={() => setShowForm(false)} />
@@ -420,7 +421,8 @@ export default function AdminSubscriptionsTab() {
               </div>
             </div>
           </div>
-        </>
+        </>,
+        document.body
       )}
     </div>
   );
