@@ -16,6 +16,14 @@ export default function AdminDeliveryTab() {
   var [search, setSearch] = useState('');
   var [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   var [selectedKYC, setSelectedKYC] = useState<any | null>(null);
+  var [mounted, setMounted] = useState(false);
+  var [rejectingDriverId, setRejectingDriverId] = useState<number | null>(null);
+  var [rejectingDriverName, setRejectingDriverName] = useState<string>('');
+  var [rejectionReason, setRejectionReason] = useState<string>('');
+
+  useEffect(function() {
+    setMounted(true);
+  }, []);
 
   function fetchAll() {
     setLoading(true);
@@ -44,16 +52,26 @@ export default function AdminDeliveryTab() {
   }
 
   function rejectDriver(id, name) {
-    const reason = prompt('Enter rejection reason:') || 'Application does not meet requirements';
+    setRejectingDriverId(id);
+    setRejectingDriverName(name);
+    setRejectionReason('');
+  }
+
+  function submitRejection() {
+    if (!rejectingDriverId) return;
+    const finalReason = rejectionReason.trim() || 'Application does not meet requirements';
     fetch('/api/delivery/approve', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: id, driver_id: id, status: 'rejected', reason: reason })
+      body: JSON.stringify({ id: rejectingDriverId, driver_id: rejectingDriverId, status: 'rejected', reason: finalReason })
     }).then(function(r) { return r.json(); }).then(function(d) {
       if (d.success) { 
-        toast('❌ ' + name + ' rejected.', 'info'); 
+        toast('❌ ' + rejectingDriverName + ' rejected.', 'info'); 
+        setRejectingDriverId(null);
         setSelectedKYC(null);
         fetchAll(); 
+      } else {
+        toast('Error: ' + (d.error || ''), 'error');
       }
     }).catch(function(e) { toast('Error: ' + e.message, 'error'); });
   }
@@ -260,9 +278,9 @@ export default function AdminDeliveryTab() {
                   <span className="text-[8px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">Active</span>
                 </div>
                 <div className="space-y-1 text-[10px] text-slate-500">
-                  <div className="flex justify-between"><span>Base fee</span><span className="font-semibold text-slate-800 dark:text-slate-200">Br {z.base_fee || z.base_fee || 25}</span></div>
-                  <div className="flex justify-between"><span>Per km</span><span className="font-semibold text-slate-800 dark:text-slate-200">Br {z.per_km_fee || z.per_km_fee || 10}</span></div>
-                  <div className="flex justify-between"><span>Max distance</span><span className="font-semibold text-slate-800 dark:text-slate-200">{z.max_distance_km || z.max_distance_km || 10} km</span></div>
+                  <div className="flex justify-between"><span>Base fee</span><span className="font-semibold text-slate-800 dark:text-slate-200">Br {z.base_fee || 25}</span></div>
+                  <div className="flex justify-between"><span>Per km</span><span className="font-semibold text-slate-800 dark:text-slate-200">Br {z.per_km_fee || 10}</span></div>
+                  <div className="flex justify-between"><span>Max distance</span><span className="font-semibold text-slate-800 dark:text-slate-200">{z.max_distance_km || 10} km</span></div>
                 </div>
               </div>
             );
@@ -290,7 +308,7 @@ export default function AdminDeliveryTab() {
       )}
 
       {/* KYC Full Detailed Review Modal */}
-      {selectedKYC && createPortal(
+      {selectedKYC && mounted && typeof document !== 'undefined' && document.body && createPortal(
         <>
           <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm overflow-y-auto py-6" onClick={function() { setSelectedKYC(null); }}>
             <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 w-full max-w-lg mx-auto my-auto shadow-2xl relative" onClick={function(e) { e.stopPropagation(); }}>
@@ -476,6 +494,44 @@ export default function AdminDeliveryTab() {
             </div>
           </div>
         </>,
+        document.body
+      )}
+
+      {/* Rejection Reason Modal */}
+      {rejectingDriverId && mounted && typeof document !== 'undefined' && document.body && createPortal(
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={function() { setRejectingDriverId(null); }}>
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 w-full max-w-sm shadow-2xl relative" onClick={function(e) { e.stopPropagation(); }}>
+            <button className="absolute right-4 top-4 w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-sm" onClick={function() { setRejectingDriverId(null); }}>✕</button>
+            <div className="text-center mb-4">
+              <span className="text-[10px] bg-red-100 text-red-700 px-3 py-1 rounded-full font-bold uppercase tracking-wider">Reject Application</span>
+              <h3 className="text-sm font-bold mt-2 text-slate-900 dark:text-white">Rejecting: {rejectingDriverName}</h3>
+              <p className="text-[10px] text-slate-500 mt-1">Please provide a reason for rejecting this application.</p>
+            </div>
+            
+            <div className="space-y-3">
+              <textarea 
+                className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-indigo-500"
+                rows={3}
+                placeholder="Reason (e.g. Invalid photo ID, unclear selfie...)"
+                value={rejectionReason}
+                onChange={function(e) { setRejectionReason(e.target.value); }}
+              />
+              
+              <div className="flex gap-2">
+                <button 
+                  className="flex-1 py-3 border border-slate-200 rounded-xl text-xs font-semibold text-slate-500" 
+                  onClick={function() { setRejectingDriverId(null); }}>
+                  Cancel
+                </button>
+                <button 
+                  className="flex-1 py-3 bg-red-500 text-white rounded-xl text-xs font-bold shadow hover:bg-red-600 transition-all"
+                  onClick={submitRejection}>
+                  Confirm Reject
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
         document.body
       )}
     </div>

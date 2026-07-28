@@ -292,8 +292,21 @@ export default async function handler(req: any, res: any) {
         if (error) return fail(error.message); return ok({ success: true });
       }
       if (path.startsWith('/api/delivery/tracking/') && method === 'GET') {
-        const did = pid(path); const { data: del, error } = await supabase.from('deliveries').select('*').eq('id', did).single();
-        if (error || !del) return ok({ delivery: null }); let dr = null; if (del.driver_id) { const { data: drv } = await supabase.from('delivery_personnel').select('*').eq('id', del.driver_id).single(); dr = drv; } return ok({ delivery: { ...del, driver: dr } });
+        const param = path.split('/').pop() || '';
+        let query = supabase.from('deliveries').select('*');
+        if (/^\d+$/.test(param)) {
+          query = query.eq('id', parseInt(param));
+        } else {
+          query = query.eq('order_number', param);
+        }
+        const { data: del, error } = await query.single();
+        if (error || !del) return ok({ delivery: null });
+        let dr = null;
+        if (del.driver_id) {
+          const { data: drv } = await supabase.from('delivery_personnel').select('*').eq('id', del.driver_id).single();
+          dr = drv;
+        }
+        return ok({ delivery: { ...del, driver: dr } });
       }
       if (path.startsWith('/api/delivery/earnings/') && method === 'GET') { const { data, error } = await supabase.from('driver_earnings').select('*').eq('driver_id', pid(path)).order('created_at', { ascending: false }); if (error) return fail(error.message, 500); return ok({ earnings: data || [] }); }
       if (path.startsWith('/api/delivery/history/') && method === 'GET') { const { data, error } = await supabase.from('deliveries').select('*').eq('driver_id', pid(path)).order('created_at', { ascending: false }); if (error) return fail(error.message, 500); return ok({ deliveries: data || [] }); }
@@ -320,6 +333,20 @@ export default async function handler(req: any, res: any) {
     // ================================================================
 
     // ── Group Deals ────────────────────────────────────────────────
+    if (path === '/api/cron/expire-deals') {
+      if (method !== 'GET' && method !== 'POST') return fail('Method not allowed', 405);
+      const nowStr = new Date().toISOString();
+      const { data, error } = await supabase
+        .from('group_deals')
+        .update({ status: 'expired' })
+        .in('status', ['open', 'active'])
+        .lt('expires_at', nowStr)
+        .select();
+
+      if (error) return fail(error.message, 500);
+      return ok({ success: true, expiredCount: data?.length || 0, expiredDeals: data || [] });
+    }
+
     if (path === '/api/group-deals' && method === 'POST') {
       var b = req.body || {};
       const token = b.share_token || Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
