@@ -260,7 +260,15 @@ export default async function handler(req: any, res: any) {
       if (path === '/api/delivery/register' && method === 'POST') {
         const b = req.body || {};
         if (!b.full_name_latin || !b.phone) return fail('full_name_latin and phone required');
-        const { data, error } = await supabase.from('delivery_personnel').insert({
+        
+        // Check if a driver is already registered under this telegram_id (even if rejected)
+        let existingDriver = null;
+        if (b.telegram_id) {
+          const { data } = await supabase.from('delivery_personnel').select('*').eq('telegram_id', b.telegram_id).maybeSingle();
+          existingDriver = data;
+        }
+
+        const payload = {
           full_name_latin: b.full_name_latin, 
           full_name_amharic: b.full_name_amharic || '', 
           phone: b.phone,
@@ -271,7 +279,6 @@ export default async function handler(req: any, res: any) {
           fayda_selfie_url: b.driver_selfie || '',
           vehicle_type: b.vehicle_type || 'motorcycle', 
           license_plate: b.license_plate || '',
-          telegram_id: b.telegram_id || null,
           service_zones: b.service_zones || [],
           available_days: b.available_days || [],
           available_hours: b.available_hours || [],
@@ -282,9 +289,22 @@ export default async function handler(req: any, res: any) {
           bank_name: b.bank_name || '',
           bank_account: b.bank_account || '',
           telebirr_number: b.telebirr_number || '',
-          status: 'pending_review',
-          agreed_to_terms_at: new Date().toISOString(),
-        }).select().single();
+          status: 'pending_review', // reset status back to pending_review for review!
+          rejection_reason: null, // clear previous rejection reason!
+        };
+
+        let result;
+        if (existingDriver) {
+          result = await supabase.from('delivery_personnel').update(payload).eq('id', existingDriver.id).select().single();
+        } else {
+          result = await supabase.from('delivery_personnel').insert({
+            telegram_id: b.telegram_id || null,
+            agreed_to_terms_at: new Date().toISOString(),
+            ...payload
+          }).select().single();
+        }
+
+        const { data, error } = result;
         if (error) return fail(error.message);
         tg(ENV.ADMIN_BOT_TOKEN, ENV.adminChatId, '🆕 *New Driver* ' + (b.full_name_latin || '') + ' ' + (b.phone || ''));
         return ok({ success: true, driver: data });
