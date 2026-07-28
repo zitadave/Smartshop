@@ -10,7 +10,7 @@ import { CardSkeleton } from '@/components/ui/Skeletons';
 import { showQuickView } from '@/components/ui/QuickView';
 import { CATEGORIES } from '@/types';
 import { cn } from '@/lib/utils';
-import { Sparkles, Clock, Star, ChevronRight, Zap, Megaphone, TrendingUp, Package, ArrowRight } from 'lucide-react';
+import { Sparkles, Clock, Star, ChevronRight, Zap, Megaphone, TrendingUp, Package, ArrowRight, Users } from 'lucide-react';
 import { useButtonAnimation, useWishlistAnimation } from '@/hooks/useAnimations';
 import { useCart } from '@/hooks/useCart';
 import { productsApi } from '@/lib/api';
