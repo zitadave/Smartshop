@@ -143,6 +143,18 @@ export default function Home() {
   const btnAnim = useButtonAnimation();
   const wishAnim = useWishlistAnimation();
   const [activeCat, setActiveCat] = useState<CategoryId>('all');
+  const [groupDeals, setGroupDeals] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch('/api/group-deals')
+      .then(r => r.json())
+      .then(d => {
+        const all = d.deals || [];
+        const openDeals = all.filter((deal: any) => deal.status === 'open' || deal.status === 'active');
+        setGroupDeals(openDeals.slice(0, 10));
+      })
+      .catch(console.error);
+  }, []);
 
   const activeDeals = useFlashDeals(settings);
 
@@ -248,6 +260,74 @@ export default function Home() {
                     addingId={btnAnim.activeId} wishAnimId={wishAnim.activeId} />
                   <div className="absolute top-1 left-1 z-10">
                     <FlashDealTimer endTime={deal?.endTime || 0} discount={deal?.discount} compact />
+                  </div>
+                </div>
+              );
+            })}
+          </HorizontalScroll>
+        </section>
+      )}
+
+      {/* Dedicated Group Buy Section */}
+      {groupDeals.length > 0 && (
+        <section className="mt-4 animate-fadeUp">
+          <SectionHeader
+            icon={<Users size={15} className="text-white" />}
+            title="🤝 Active Group Buy (ማህበር ግዢ)"
+            subtitle="Shop together with peers to save up to 25%!"
+            gradient="from-green-500 to-emerald-600"
+          />
+          <HorizontalScroll>
+            {groupDeals.map((deal) => {
+              const progress = Math.round((deal.current_members / (deal.max_members || 10)) * 100);
+              const savings = deal.regular_price - deal.group_price;
+              return (
+                <div key={deal.id} 
+                  onClick={() => navigate(`/group-deal/${deal.share_token}`)}
+                  className="flex-shrink-0 w-52 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-3.5 shadow-sm hover:shadow hover:border-green-300 transition-all cursor-pointer relative overflow-hidden snap-start">
+                  
+                  {/* Top Header Badge */}
+                  <div className="absolute top-2 left-2 z-10 flex gap-1">
+                    <span className="text-[8px] font-bold bg-green-500 text-white px-2 py-0.5 rounded-full shadow-sm">
+                      Br {savings.toLocaleString()} Off
+                    </span>
+                  </div>
+
+                  {/* Product Image */}
+                  <div className="relative aspect-square rounded-xl overflow-hidden bg-slate-50 border border-slate-100 dark:border-slate-800 mb-2.5">
+                    {deal.product_image ? (
+                      <img src={deal.product_image} alt={deal.product_name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-4xl bg-slate-100">📦</div>
+                    )}
+                  </div>
+
+                  {/* Product Name */}
+                  <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 line-clamp-1 mb-1">{deal.product_name}</h4>
+                  
+                  {/* Price */}
+                  <div className="flex items-baseline gap-1.5 mb-2">
+                    <span className="text-sm font-extrabold text-green-600">Br {deal.group_price.toLocaleString()}</span>
+                    <span className="text-[10px] text-slate-400 line-through">Br {deal.regular_price.toLocaleString()}</span>
+                  </div>
+
+                  {/* Member Progress Bar */}
+                  <div className="bg-slate-50 dark:bg-slate-800/50 p-2 rounded-xl">
+                    <div className="flex justify-between text-[8px] text-slate-400 mb-1">
+                      <span className="font-semibold flex items-center gap-0.5">👥 {deal.current_members} joined</span>
+                      <span>{progress}%</span>
+                    </div>
+                    <div className="h-1 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-green-400 to-green-500 rounded-full" style={{ width: `${progress}%` }} />
+                    </div>
+                  </div>
+
+                  {/* Overlay Join Action CTA */}
+                  <div className="mt-3 flex items-center justify-between text-[9px] text-slate-400 border-t border-slate-50 dark:border-slate-800 pt-2">
+                    <span className="truncate max-w-[100px]">By {deal.creator_name?.split(' ')[0] || 'Anonymous'}</span>
+                    <span className="bg-green-100 text-green-600 dark:bg-green-950/40 dark:text-green-400 px-2 py-1 rounded-lg font-extrabold">
+                      Join Group →
+                    </span>
                   </div>
                 </div>
               );
