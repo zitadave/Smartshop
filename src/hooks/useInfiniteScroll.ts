@@ -26,6 +26,13 @@ export function useInfiniteScroll<T>(items: T[], options: UseInfiniteScrollOptio
   }, [isLoading, hasMore]);
 
   useEffect(() => {
+    if (typeof window === 'undefined' || !('IntersectionObserver' in window)) {
+      // Fallback for older WebViews: auto-load pages to prevent blocking
+      if (hasMore && !isLoading) {
+        loadMore();
+      }
+      return;
+    }
     if (!sentinelRef.current) return;
     const observer = new IntersectionObserver(
       ([entry]) => {

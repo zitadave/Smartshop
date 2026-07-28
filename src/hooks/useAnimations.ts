@@ -28,6 +28,10 @@ export function useIntersectionObserver(options?: IntersectionObserverInit) {
 
   const observe = useCallback((node: HTMLDivElement | null) => {
     if (!node) return;
+    if (typeof window === 'undefined' || !('IntersectionObserver' in window)) {
+      setIsVisible(true);
+      return;
+    }
     const observer = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting) {
         setIsVisible(true);
