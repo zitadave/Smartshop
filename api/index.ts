@@ -359,7 +359,18 @@ export default async function handler(req: any, res: any) {
         if (status === 'delivered') ud.delivered_at = new Date().toISOString();
         const { data, error } = await supabase.from('deliveries').update(ud).eq('id', delivery_id).select().single();
         if (error) return fail(error.message);
-        if (status === 'delivered' && data) { const dp = data.driver_payout || 0; const c = data.platform_commission || Math.round(dp * 0.2); await supabase.from('driver_earnings').insert({ driver_id: data.driver_id, delivery_id: data.id, amount: dp - c, commission: c, type: 'delivery', status: 'pending' }); }
+        if (status === 'delivered' && data) { 
+          const dp = data.driver_payout || 0; 
+          const c = data.platform_commission || Math.round((data.fee || 0) * 0.2); 
+          await supabase.from('driver_earnings').insert({ 
+            driver_id: data.driver_id, 
+            delivery_id: data.id, 
+            amount: dp || ((data.fee || 0) - c), 
+            commission: c, 
+            type: 'delivery', 
+            status: 'pending' 
+          }); 
+        }
         return ok({ success: true, delivery: data });
       }
       if (path === '/api/delivery/verify-pin' && method === 'POST') {
@@ -406,9 +417,15 @@ export default async function handler(req: any, res: any) {
       if (path.startsWith('/api/delivery/history/') && method === 'GET') { const { data, error } = await supabase.from('deliveries').select('*').eq('driver_id', pid(path)).order('created_at', { ascending: false }); if (error) return fail(error.message, 500); return ok({ deliveries: data || [] }); }
       if (path === '/api/delivery/create' && method === 'POST') {
         const b = req.body || {}; if (!b.pickup_address || !b.delivery_address) return fail('pickup_address and delivery_address required');
+        const fee = b.fee || 0;
+        const commission = Math.round(fee * 0.2);
+        const payout = fee - commission;
+
         const { data, error } = await supabase.from('deliveries').insert({
           order_number: b.order_number || 'DEL-' + Date.now().toString(36).toUpperCase(), status: 'pending',
-          item_count: b.item_count || 0, fee: b.fee || 0, distance_km: b.distance_km || 0,
+          item_count: b.item_count || 0, fee: fee, distance_km: b.distance_km || 0,
+          platform_commission: commission,
+          driver_payout: payout,
           pickup_address: b.pickup_address, delivery_address: b.delivery_address, no_contact: b.no_contact || false,
         }).select().single();
         if (error) return fail(error.message); return ok({ success: true, delivery: data });
