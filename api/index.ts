@@ -726,7 +726,7 @@ export default async function handler(req: any, res: any) {
       if (existing) {
         await supabase.from('users').update({ first_name: tgUser.first_name, last_name: tgUser.last_name || '', username: tgUser.username || '' }).eq('telegram_id', tgUser.id);
         var vendorStatus = '';
-        try { var vendors = await getV(); var found = vendors.find(function(v) { return v.telegram_id == tgUser.id; }); if (found) vendorStatus = found.status || ''; } catch(e: any) {}
+        try { var vendors = await getV(); var found = vendors.find(function(v: any) { return v.telegram_id == tgUser.id; }); if (found) vendorStatus = found.status || ''; } catch(e: any) {}
         return ok({ success: true, user: { telegramId: existing.telegram_id, firstName: existing.first_name || tgUser.first_name, lastName: existing.last_name || tgUser.last_name, username: existing.username || tgUser.username, languageCode: tgUser.language_code || 'en', photoUrl: tgUser.photo_url || null, phone: existing.phone || null, fullName: existing.full_name || null, city: existing.city || null, address: existing.address || null, profileComplete: !!(existing.full_name && existing.city && existing.address), vendorStatus: vendorStatus, firstSeen: existing.registered_at || now, lastSeen: now } });
             } else {
         const { data: newUser } = await supabase.from('users').insert({ telegram_id: tgUser.id, first_name: tgUser.first_name, last_name: tgUser.last_name || '', username: tgUser.username || '', phone: '', registered_at: now }).select().single();
@@ -754,7 +754,7 @@ export default async function handler(req: any, res: any) {
       const { data } = await supabase.from('users').select('*').eq('telegram_id', tid).single();
       if (!data) return fail('Not found', 404);
       var vs = '';
-      try { var v = await getV(); var f = v.find(vv => vv.telegram_id == tid); if (f) vs = f.status || ''; } catch {}
+      try { var v = await getV(); var f = v.find((vv: any) => vv.telegram_id == tid); if (f) vs = f.status || ''; } catch {}
       return ok({ success: true, user: { telegramId: data.telegram_id, firstName: data.first_name, lastName: data.last_name, username: data.username, phone: data.phone, fullName: data.full_name, city: data.city, address: data.address, profileComplete: !!(data.full_name && data.city && data.address), vendorStatus: vs, firstSeen: data.registered_at, lastSeen: '' } });
     }
 
@@ -762,11 +762,12 @@ export default async function handler(req: any, res: any) {
     // USER SYNC
     // ================================================================
     if (path === '/api/user/sync' && method === 'POST') {
-      var b = req.body || {}, tid = b.telegram_id || '';
+      var b = req.body || {};
+      const tid = b.telegram_id || '';
       if (!tid) return ok({ success: false });
-      var r = { success: true };
+      var r: Record<string, any> = { success: true };
       try { await supabase.from('users').upsert({ telegram_id: parseInt(tid), username: b.username || '', first_name: b.first_name || '', ...(b.phone ? { phone: b.phone } : {}) }, { onConflict: 'telegram_id' }); const { data: ur } = await supabase.from('users').select('*').eq('telegram_id', parseInt(tid)).single(); if (ur?.phone) r.phone = ur.phone; } catch {}
-      try { var v = await getV(); var f = tid ? v.find(vv => vv.telegram_id == parseInt(tid)) : null; if (f) { r.vendor_status = f.status || 'pending'; r.vendor_id = f.id; r.vendor_name = f.name || ''; } else r.vendor_status = 'none'; } catch { r.vendor_status = 'none'; }
+      try { var v = await getV(); var f = tid ? v.find((vv: any) => vv.telegram_id == parseInt(tid)) : null; if (f) { r.vendor_status = f.status || 'pending'; r.vendor_id = f.id; r.vendor_name = f.name || ''; } else r.vendor_status = 'none'; } catch { r.vendor_status = 'none'; }
       return ok(r);
     }
 
@@ -791,7 +792,7 @@ export default async function handler(req: any, res: any) {
     // REVIEWS
     // ================================================================
     if (path.startsWith('/api/reviews')) {
-      if (method === 'GET') { var pid2 = (req.url?.split('?')[1] || '').split('&').find(function(s) { return s.startsWith('productId='); })?.split('=')[1]; var q = supabase.from('reviews').select('*'); if (pid2) q = q.eq('product_id', parseInt(pid2)); const { data } = await q.order('created_at', { ascending: false }); return ok({ reviews: data || [] }); }
+      if (method === 'GET') { var pid2 = (req.url?.split('?')[1] || '').split('&').find(function(s: any) { return s.startsWith('productId='); })?.split('=')[1]; var q = supabase.from('reviews').select('*'); if (pid2) q = q.eq('product_id', parseInt(pid2)); const { data } = await q.order('created_at', { ascending: false }); return ok({ reviews: data || [] }); }
       if (method === 'POST') { const { data } = await supabase.from('reviews').insert(req.body).select().single(); return ok({ success: true, review: data }); }
       if (method === 'DELETE') { await supabase.from('reviews').delete().eq('id', pid(path)); return ok({ success: true }); }
     }
@@ -875,10 +876,10 @@ export default async function handler(req: any, res: any) {
     // ================================================================
     if (path === '/api/tax/calculate' && method === 'POST') {
       var { productPrice, deliveryFee, commissionRate } = req.body || {};
-      var r = (commissionRate || 15) / 100;
+      const taxRate = (commissionRate || 15) / 100;
       var bp = productPrice || 0, df = deliveryFee || 0;
-      var ca = Math.round(bp * r), gf = Math.round(bp * 0.025), vc = Math.round(ca * 0.15), wht = Math.round(bp * 0.02);
-      return ok({ basePrice: bp, deliveryFee: df, commissionRate: r, commissionAmount: ca, gatewayFee: gf, vatOnCommission: vc, withholdingTax: wht, vendorPayout: bp - ca - gf - wht, totalPaid: bp + df + vc, vatRate: 0.15, withholdingTaxRate: 0.02, totalTaxToRemit: vc + wht, shopRevenue: ca - gf });
+      var ca = Math.round(bp * taxRate), gf = Math.round(bp * 0.025), taxVc = Math.round(ca * 0.15), wht = Math.round(bp * 0.02);
+      return ok({ basePrice: bp, deliveryFee: df, commissionRate: taxRate, commissionAmount: ca, gatewayFee: gf, vatOnCommission: taxVc, withholdingTax: wht, vendorPayout: bp - ca - gf - wht, totalPaid: bp + df + taxVc, vatRate: 0.15, withholdingTaxRate: 0.02, totalTaxToRemit: taxVc + wht, shopRevenue: ca - gf });
     }
 
     if (path === '/api/tax/receipt' && method === 'POST') {
@@ -893,14 +894,14 @@ export default async function handler(req: any, res: any) {
       const { data: orders } = await supabase.from('orders').select('*');
       var total = (orders || []).reduce(function(s, o) { return s + (o.total || 0); }, 0);
       var cnt = (orders || []).length;
-      var c = Math.round(total * 0.1), v = Math.round(c * 0.15), w = Math.round(total * 0.02);
-      return ok({ period: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }), totalSales: total, orderCount: cnt, totalCommission: c, vatOnCommission: v, withholdingTax: w, totalTaxToRemit: v + w, averageOrderValue: cnt > 0 ? Math.round(total / cnt) : 0 });
+      var c = Math.round(total * 0.1), taxV = Math.round(c * 0.15), w = Math.round(total * 0.02);
+      return ok({ period: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }), totalSales: total, orderCount: cnt, totalCommission: c, vatOnCommission: taxV, withholdingTax: w, totalTaxToRemit: taxV + w, averageOrderValue: cnt > 0 ? Math.round(total / cnt) : 0 });
     }
 
     // ================================================================
     // VENDOR NOTIFY
     // ================================================================
-    if (path === '/api/vendor/notify' && method === 'POST') { var { telegramId, type, message } = req.body || {}; if (!telegramId || !message) return fail('required'); var em = type === 'payout' ? '💰' : type === 'order' ? '📦' : '📢'; var s = await tg(ENV.VENDOR_BOT_TOKEN, telegramId, em + ' *Smart Shop*\n\n' + message); return ok({ success: s }); }
+    if (path === '/api/vendor/notify' && method === 'POST') { var { telegramId, type, message } = req.body || {}; if (!telegramId || !message) return fail('required'); var em = type === 'payout' ? '💰' : type === 'order' ? '📦' : '📢'; var isSent = await tg(ENV.VENDOR_BOT_TOKEN, telegramId, em + ' *Smart Shop*\n\n' + message); return ok({ success: isSent }); }
 
 
     // ================================================================
@@ -910,7 +911,7 @@ export default async function handler(req: any, res: any) {
       const sb = req.body, sc = sb.message?.chat?.id, st = sb.message?.text || '';
       if (!sc) return ok({ ok: true });
       const uc = sb.message?.contact;
-      const sd = (txt, kb) => tg(ENV.VENDOR_BOT_TOKEN, sc, txt, 'Markdown', kb ? { reply_markup: JSON.stringify(kb) } : {});
+      const sd = (txt: any, kb?: any) => tg(ENV.VENDOR_BOT_TOKEN, sc, txt, 'Markdown', kb ? { reply_markup: JSON.stringify(kb) } : {});
       const from = sb.message?.from || {};
 
       // Deep links
@@ -1019,9 +1020,9 @@ export default async function handler(req: any, res: any) {
       const tr = ol.reduce((s, o) => s + (o.total || 0), 0);
       const { data: vRow } = await supabase.from('settings').select('*').single();
       const vc = (vRow?.data?.vendors || []).length;
-      const pendingV = (vRow?.data?.vendors || []).filter(v => v.status === 'pending').length;
+      const pendingV = (vRow?.data?.vendors || []).filter((v: any) => v.status === 'pending').length;
 
-      const sm = t => tg(ENV.ADMIN_BOT_TOKEN, ch, t);
+      const sm = (t: any) => tg(ENV.ADMIN_BOT_TOKEN, ch, t);
 
       if (cmd === 'start' || cmd === 'help') {
         await sm('👋 *Admin Bot*\n/panel - 🖥️ Open Admin Panel\n/stats - 📊 Store stats\n/orders - 📋 Recent orders\n/lowstock - ⚠️ Low stock\n/vendors - 🏪 Pending vendors\n/alerts - 🔔 Active alerts');
@@ -1029,15 +1030,15 @@ export default async function handler(req: any, res: any) {
         await sm('📊 *Store Stats*\n📦 ' + pl.length + ' products\n📋 ' + ol.length + ' orders\n💰 ' + new Intl.NumberFormat('en').format(tr) + ' Br\n⚠️ ' + ls.length + ' low stock\n🏪 ' + vc + ' vendors (' + pendingV + ' pending)');
       } else if (cmd === 'orders') {
         if (!ol.length) await sm('📋 No orders');
-        else { let m = '📋 *Recent Orders*\n'; ol.slice(0, 5).forEach(o => { m += (o.status === 'delivered' ? '✅' : '📦') + ' *' + (o.order_number || o.orderNumber) + '* — ' + new Intl.NumberFormat('en').format(o.total || 0) + ' Br\n'; }); m += '\n_' + ol.length + ' total_'; await sm(m); }
+        else { let m = '📋 *Recent Orders*\n'; ol.slice(0, 5).forEach((o: any) => { m += (o.status === 'delivered' ? '✅' : '📦') + ' *' + (o.order_number || o.orderNumber) + '* — ' + new Intl.NumberFormat('en').format(o.total || 0) + ' Br\n'; }); m += '\n_' + ol.length + ' total_'; await sm(m); }
       } else if (cmd === 'lowstock') {
         if (!ls.length) await sm('✅ All products well-stocked!');
-        else { let m = '⚠️ *Low Stock*\n'; ls.forEach(p => m += (p.stock_count === 0 ? '❌' : '🔴') + ' *' + p.name_en + '* — ' + p.stock_count + ' left\n'); await sm(m); }
+        else { let m = '⚠️ *Low Stock*\n'; ls.forEach((p: any) => m += (p.stock_count === 0 ? '❌' : '🔴') + ' *' + p.name_en + '* — ' + p.stock_count + ' left\n'); await sm(m); }
       } else if (cmd === 'vendors') {
         const vendors = vRow?.data?.vendors || [];
-        const pending = vendors.filter(v => v.status === 'pending');
+        const pending = vendors.filter((v: any) => v.status === 'pending');
         if (!pending.length) await sm('✅ No pending vendor applications');
-        else { let m = '🏪 *Pending Vendors (' + pending.length + ')*\n'; pending.forEach(v => { m += '\n• ' + (v.name || 'Unknown') + ' (' + (v.phone || '') + ')'; }); await sm(m); }
+        else { let m = '🏪 *Pending Vendors (' + pending.length + ')*\n'; pending.forEach((v: any) => { m += '\n• ' + (v.name || 'Unknown') + ' (' + (v.phone || '') + ')'; }); await sm(m); }
       } else if (cmd === 'alerts') {
         await sm('✅ No active SLA breaches');
       } else if (cmd === 'panel' || cmd === 'admin') {
