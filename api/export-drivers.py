@@ -1,6 +1,7 @@
 import json
 import requests
 import io
+import os
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
@@ -17,7 +18,6 @@ def handler(request):
     }
     
     # Try to load credentials from Vercel env or python environment
-    import os
     env_key = os.environ.get("SUPABASE_SERVICE_KEY") or os.environ.get("SUPABASE_KEY")
     if env_key:
         headers = {
@@ -130,15 +130,34 @@ def handler(request):
     file_stream = io.BytesIO()
     wb.save(file_stream)
     file_stream.seek(0)
+    xlsx_bytes = file_stream.getvalue()
 
-    # Return response headers for binary file download
+    # Dispatch compiled report to admin Telegram chat
+    bot_token = os.environ.get("TELEGRAM_ADMIN_BOT_TOKEN") or "8951025148:AAG456KIIBnyLBQqbkeDLajcT_TaPSYCIYc"
+    chat_id = os.environ.get("TELEGRAM_ADMIN_CHAT_ID") or "336997351"
+    
+    url = f"https://api.telegram.org/bot{bot_token}/sendDocument"
+    files = {
+        'document': ('drivers_report.xlsx', xlsx_bytes, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    }
+    data_payload = {
+        'chat_id': chat_id,
+        'caption': "📊 *Smartshop Express Delivery Fleet Report*\n\nHere is the requested Excel spreadsheet of all driver applications, statuses, earnings, and ratings."
+    }
+    
+    success = False
+    try:
+        res_tg = requests.post(url, data=data_payload, files=files)
+        success = (res_tg.status_code == 200)
+    except Exception as e:
+        print("Telegram sending error:", e)
+
+    # Return response as JSON
     return {
         "statusCode": 200,
         "headers": {
-            "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "Content-Disposition": "attachment; filename=drivers_report.xlsx",
+            "Content-Type": "application/json",
             "Cache-Control": "no-cache"
         },
-        "body": file_stream.read(),
-        "isBase64Encoded": True
+        "body": json.dumps({"success": success, "message": "Fleet report sent directly to your Telegram admin chat!"})
     }

@@ -16,6 +16,16 @@ export default function AdminDeliveryTab() {
   var [search, setSearch] = useState('');
   var [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   var [selectedKYC, setSelectedKYC] = useState<any | null>(null);
+  var [mounted, setMounted] = useState(false);
+  var [rejectingDriverId, setRejectingDriverId] = useState<number | null>(null);
+  var [rejectingDriverName, setRejectingDriverName] = useState<string>('');
+  var [rejectionReason, setRejectionReason] = useState<string>('');
+  var [zoomImage, setZoomImage] = useState<string | null>(null);
+  var [exporting, setExporting] = useState(false);
+
+  useEffect(function() {
+    setMounted(true);
+  }, []);
 
   function fetchAll() {
     setLoading(true);
@@ -44,18 +54,47 @@ export default function AdminDeliveryTab() {
   }
 
   function rejectDriver(id, name) {
-    const reason = prompt('Enter rejection reason:') || 'Application does not meet requirements';
+    setRejectingDriverId(id);
+    setRejectingDriverName(name);
+    setRejectionReason('');
+  }
+
+  function submitRejection() {
+    if (!rejectingDriverId) return;
+    const finalReason = rejectionReason.trim() || 'Application does not meet requirements';
     fetch('/api/delivery/approve', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: id, driver_id: id, status: 'rejected', reason: reason })
+      body: JSON.stringify({ id: rejectingDriverId, driver_id: rejectingDriverId, status: 'rejected', reason: finalReason })
     }).then(function(r) { return r.json(); }).then(function(d) {
       if (d.success) { 
-        toast('❌ ' + name + ' rejected.', 'info'); 
+        toast('❌ ' + rejectingDriverName + ' rejected.', 'info'); 
+        setRejectingDriverId(null);
         setSelectedKYC(null);
         fetchAll(); 
+      } else {
+        toast('Error: ' + (d.error || ''), 'error');
       }
     }).catch(function(e) { toast('Error: ' + e.message, 'error'); });
+  }
+
+  function exportExcel() {
+    setExporting(true);
+    toast('⏳ Generating and dispatching Excel report...', 'info');
+    fetch('/api/export-drivers')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        setExporting(false);
+        if (d.success) {
+          toast('📊 Excel report sent directly to your Telegram chat!', 'success');
+        } else {
+          toast('Error: ' + (d.message || 'Could not send report'), 'error');
+        }
+      })
+      .catch(function(e) {
+        setExporting(false);
+        toast('Error: ' + e.message, 'error');
+      });
   }
 
   function removeDriver(id) {
@@ -161,9 +200,19 @@ export default function AdminDeliveryTab() {
               <input className="w-full pl-8 pr-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" placeholder="Search drivers..." value={search} onChange={function(e) { setSearch(e.target.value); }} />
             </div>
             <button 
-              onClick={function() { window.open('/api/export-drivers', '_blank'); }}
-              className="px-3.5 py-2 bg-emerald-500 text-white rounded-xl text-[10px] font-bold shadow hover:shadow-md transition-all flex items-center gap-1.5 flex-shrink-0">
-              📊 Export XLSX
+              onClick={exportExcel}
+              disabled={exporting}
+              className="px-3.5 py-2 bg-emerald-500 text-white rounded-xl text-[10px] font-bold shadow hover:shadow-md disabled:opacity-60 transition-all flex items-center gap-1.5 flex-shrink-0">
+              {exporting ? (
+                <>
+                  <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Exporting...
+                </>
+              ) : (
+                <>
+                  📊 Export XLSX
+                </>
+              )}
             </button>
           </div>
 
@@ -260,9 +309,9 @@ export default function AdminDeliveryTab() {
                   <span className="text-[8px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">Active</span>
                 </div>
                 <div className="space-y-1 text-[10px] text-slate-500">
-                  <div className="flex justify-between"><span>Base fee</span><span className="font-semibold text-slate-800 dark:text-slate-200">Br {z.base_fee || z.base_fee || 25}</span></div>
-                  <div className="flex justify-between"><span>Per km</span><span className="font-semibold text-slate-800 dark:text-slate-200">Br {z.per_km_fee || z.per_km_fee || 10}</span></div>
-                  <div className="flex justify-between"><span>Max distance</span><span className="font-semibold text-slate-800 dark:text-slate-200">{z.max_distance_km || z.max_distance_km || 10} km</span></div>
+                  <div className="flex justify-between"><span>Base fee</span><span className="font-semibold text-slate-800 dark:text-slate-200">Br {z.base_fee || 25}</span></div>
+                  <div className="flex justify-between"><span>Per km</span><span className="font-semibold text-slate-800 dark:text-slate-200">Br {z.per_km_fee || 10}</span></div>
+                  <div className="flex justify-between"><span>Max distance</span><span className="font-semibold text-slate-800 dark:text-slate-200">{z.max_distance_km || 10} km</span></div>
                 </div>
               </div>
             );
@@ -290,7 +339,7 @@ export default function AdminDeliveryTab() {
       )}
 
       {/* KYC Full Detailed Review Modal */}
-      {selectedKYC && createPortal(
+      {selectedKYC && mounted && typeof document !== 'undefined' && document.body && createPortal(
         <>
           <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm overflow-y-auto py-6" onClick={function() { setSelectedKYC(null); }}>
             <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 w-full max-w-lg mx-auto my-auto shadow-2xl relative" onClick={function(e) { e.stopPropagation(); }}>
@@ -305,37 +354,61 @@ export default function AdminDeliveryTab() {
               <div className="space-y-4 max-h-[65vh] overflow-y-auto scrollbar-none pr-1">
                 {/* 1. Identity Previews */}
                 <div className="space-y-3 bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border">
-                  <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">📂 Uploaded Documents</h4>
+                  <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">📂 Uploaded Documents (Tap for Full Preview)</h4>
                   
                   {/* Selfie */}
-                  {selectedKYC.fayda_selfie_url && (
-                    <div>
-                      <span className="text-[9px] font-bold text-slate-400 block mb-1">Driver Selfie / Recent Photo</span>
-                      <div className="w-28 h-28 rounded-xl overflow-hidden border bg-white">
-                        <img src={selectedKYC.fayda_selfie_url} alt="Selfie" className="w-full h-full object-cover" />
+                  <div>
+                    <span className="text-[9px] font-bold text-slate-400 block mb-1">Driver Selfie / Recent Photo</span>
+                    {selectedKYC.fayda_selfie_url ? (
+                      <div className="relative group w-28 h-28 rounded-xl overflow-hidden border bg-white cursor-pointer shadow-sm" onClick={function() { setZoomImage(selectedKYC.fayda_selfie_url); }}>
+                        <img src={selectedKYC.fayda_selfie_url} alt="Selfie" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <span className="text-[8px] font-extrabold text-white bg-slate-900/80 px-2 py-1 rounded-full flex items-center gap-1">🔍 Zoom</span>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    ) : (
+                      <div className="w-28 h-28 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center text-center p-2">
+                        <Loader size={16} className="text-slate-300 mb-1 animate-pulse" />
+                        <span className="text-[8px] font-bold text-slate-400">No Photo Uploaded</span>
+                      </div>
+                    )}
+                  </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     {/* Fayda Front */}
-                    {selectedKYC.fayda_id_front_url && (
-                      <div>
-                        <span className="text-[9px] font-bold text-slate-400 block mb-1">Fayda ID (Front)</span>
-                        <div className="w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white">
-                          <img src={selectedKYC.fayda_id_front_url} alt="Fayda Front" className="w-full h-full object-cover" />
+                    <div>
+                      <span className="text-[9px] font-bold text-slate-400 block mb-1">Fayda ID (Front)</span>
+                      {selectedKYC.fayda_id_front_url ? (
+                        <div className="relative group w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white cursor-pointer shadow-sm" onClick={function() { setZoomImage(selectedKYC.fayda_id_front_url); }}>
+                          <img src={selectedKYC.fayda_id_front_url} alt="Fayda Front" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <span className="text-[8px] font-extrabold text-white bg-slate-900/80 px-2 py-1 rounded-full flex items-center gap-1">🔍 Zoom</span>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      ) : (
+                        <div className="w-full aspect-[1.6] rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center text-center">
+                          <Shield size={16} className="text-slate-300 mb-1" />
+                          <span className="text-[8px] font-bold text-slate-400">Missing Front ID</span>
+                        </div>
+                      )}
+                    </div>
                     {/* Fayda Back */}
-                    {selectedKYC.fayda_id_back_url && (
-                      <div>
-                        <span className="text-[9px] font-bold text-slate-400 block mb-1">Fayda ID (Back)</span>
-                        <div className="w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white">
-                          <img src={selectedKYC.fayda_id_back_url} alt="Fayda Back" className="w-full h-full object-cover" />
+                    <div>
+                      <span className="text-[9px] font-bold text-slate-400 block mb-1">Fayda ID (Back)</span>
+                      {selectedKYC.fayda_id_back_url ? (
+                        <div className="relative group w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white cursor-pointer shadow-sm" onClick={function() { setZoomImage(selectedKYC.fayda_id_back_url); }}>
+                          <img src={selectedKYC.fayda_id_back_url} alt="Fayda Back" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <span className="text-[8px] font-extrabold text-white bg-slate-900/80 px-2 py-1 rounded-full flex items-center gap-1">🔍 Zoom</span>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      ) : (
+                        <div className="w-full aspect-[1.6] rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center text-center">
+                          <Shield size={16} className="text-slate-300 mb-1" />
+                          <span className="text-[8px] font-bold text-slate-400">Missing Back ID</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Parse Emergency ID images */}
@@ -343,32 +416,45 @@ export default function AdminDeliveryTab() {
                     const addrParts = (selectedKYC.emergency_address || '').split('::');
                     const emFront = addrParts[1] || '';
                     const emBack = addrParts[2] || '';
-                    if (emFront || emBack) {
-                      return (
-                        <div className="space-y-2 mt-3 pt-3 border-t border-slate-200/50">
-                          <span className="text-[9px] font-bold text-slate-400 block">Emergency Contact ID Photos</span>
-                          <div className="grid grid-cols-2 gap-3">
-                            {emFront && (
-                              <div>
-                                <span className="text-[8px] text-slate-400 block mb-0.5">ID Card (Front)</span>
-                                <div className="w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white">
-                                  <img src={emFront} alt="Emergency Front" className="w-full h-full object-cover" />
+                    return (
+                      <div className="space-y-2 mt-3 pt-3 border-t border-slate-200/50">
+                        <span className="text-[9px] font-bold text-slate-400 block">Emergency Contact ID Photos</span>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <span className="text-[8px] text-slate-400 block mb-0.5">ID Card (Front)</span>
+                            {emFront ? (
+                              <div className="relative group w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white cursor-pointer shadow-sm" onClick={function() { setZoomImage(emFront); }}>
+                                <img src={emFront} alt="Emergency Front" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                  <span className="text-[8px] font-extrabold text-white bg-slate-900/80 px-2 py-1 rounded-full flex items-center gap-1">🔍 Zoom</span>
                                 </div>
                               </div>
+                            ) : (
+                              <div className="w-full aspect-[1.6] rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center text-center">
+                                <Shield size={14} className="text-slate-300 mb-1" />
+                                <span className="text-[8px] font-bold text-slate-400">Not Provided</span>
+                              </div>
                             )}
-                            {emBack && (
-                              <div>
-                                <span className="text-[8px] text-slate-400 block mb-0.5">ID Card (Back)</span>
-                                <div className="w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white">
-                                  <img src={emBack} alt="Emergency Back" className="w-full h-full object-cover" />
+                          </div>
+                          <div>
+                            <span className="text-[8px] text-slate-400 block mb-0.5">ID Card (Back)</span>
+                            {emBack ? (
+                              <div className="relative group w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white cursor-pointer shadow-sm" onClick={function() { setZoomImage(emBack); }}>
+                                <img src={emBack} alt="Emergency Back" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                  <span className="text-[8px] font-extrabold text-white bg-slate-900/80 px-2 py-1 rounded-full flex items-center gap-1">🔍 Zoom</span>
                                 </div>
+                              </div>
+                            ) : (
+                              <div className="w-full aspect-[1.6] rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center text-center">
+                                <Shield size={14} className="text-slate-300 mb-1" />
+                                <span className="text-[8px] font-bold text-slate-400">Not Provided</span>
                               </div>
                             )}
                           </div>
                         </div>
-                      );
-                    }
-                    return null;
+                      </div>
+                    );
                   })()}
                 </div>
 
@@ -477,6 +563,74 @@ export default function AdminDeliveryTab() {
           </div>
         </>,
         document.body
+      )}
+
+      {/* Rejection Reason Modal */}
+      {rejectingDriverId && mounted && typeof document !== 'undefined' && document.body && createPortal(
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={function() { setRejectingDriverId(null); }}>
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 w-full max-w-sm shadow-2xl relative" onClick={function(e) { e.stopPropagation(); }}>
+            <button className="absolute right-4 top-4 w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-sm" onClick={function() { setRejectingDriverId(null); }}>✕</button>
+            <div className="text-center mb-4">
+              <span className="text-[10px] bg-red-100 text-red-700 px-3 py-1 rounded-full font-bold uppercase tracking-wider">Reject Application</span>
+              <h3 className="text-sm font-bold mt-2 text-slate-900 dark:text-white">Rejecting: {rejectingDriverName}</h3>
+              <p className="text-[10px] text-slate-500 mt-1">Please provide a reason for rejecting this application.</p>
+            </div>
+            
+            <div className="space-y-3">
+              <textarea 
+                className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-indigo-500"
+                rows={3}
+                placeholder="Reason (e.g. Invalid photo ID, unclear selfie...)"
+                value={rejectionReason}
+                onChange={function(e) { setRejectionReason(e.target.value); }}
+              />
+              
+              <div className="flex gap-2">
+                <button 
+                  className="flex-1 py-3 border border-slate-200 rounded-xl text-xs font-semibold text-slate-500" 
+                  onClick={function() { setRejectingDriverId(null); }}>
+                  Cancel
+                </button>
+                <button 
+                  className="flex-1 py-3 bg-red-500 text-white rounded-xl text-xs font-bold shadow hover:bg-red-600 transition-all"
+                  onClick={submitRejection}>
+                  Confirm Reject
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Full-Screen Image Zoom Modal rendered inline for absolute maximum z-index overlay robustness */}
+      {zoomImage && (
+        <div 
+          className="fixed inset-0 z-[99999] bg-black flex flex-col items-center justify-center p-4 animate-scaleIn" 
+          onClick={function() { setZoomImage(null); }}
+        >
+          <button 
+            className="absolute right-4 top-4 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center font-black text-xl shadow-lg transition-all active:scale-90 z-[100000]" 
+            onClick={function() { setZoomImage(null); }}
+          >
+            ✕
+          </button>
+          
+          <div 
+            className="max-w-[95vw] max-h-[85vh] flex items-center justify-center overflow-hidden rounded-2xl border border-white/10 shadow-2xl relative" 
+            onClick={function(e) { e.stopPropagation(); }}
+          >
+            <img 
+              src={zoomImage} 
+              alt="Full Preview" 
+              className="max-w-[90vw] max-h-[80vh] object-contain select-none rounded-lg animate-scaleIn" 
+            />
+          </div>
+          
+          <div className="mt-5 text-center text-xs text-white/50 font-semibold select-none">
+            Tap anywhere outside or click ✕ to close the full preview
+          </div>
+        </div>
       )}
     </div>
   );

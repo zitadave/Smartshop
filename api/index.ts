@@ -4,6 +4,7 @@
 // ============================================
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
+import * as XLSX from 'xlsx';
 
 // ===== CONFIG (env-only, no hardcoded secrets) =====
 const ENV = {
@@ -175,6 +176,61 @@ export default async function handler(req: any, res: any) {
 
 
     // ================================================================
+    // EXPORT DRIVERS ROUTE
+    // ================================================================
+    if (path === '/api/export-drivers') {
+      if (method !== 'GET' && method !== 'POST') return fail('Method not allowed', 405);
+      try {
+        const { data: drivers, error: dbError } = await supabase
+          .from('delivery_personnel')
+          .select('*')
+          .order('joined_at', { ascending: false });
+          
+        if (dbError) return fail(dbError.message, 500);
+        
+        const rows = (drivers || []).map((d: any) => ({
+          'Driver ID': d.id,
+          'Full Name (Latin)': d.full_name_latin || '',
+          'Full Name (Amharic)': d.full_name_amharic || '',
+          'Phone': d.phone || '',
+          'Email': d.email || '',
+          'Fayda ID': d.fayda_id || '',
+          'Vehicle Type': d.vehicle_type || 'motorcycle',
+          'License Plate': d.license_plate || '',
+          'Status': d.status || 'pending_review',
+          'Rating': d.rating || 0,
+          'Deliveries': d.total_deliveries || 0,
+          'Earnings (Br)': d.total_earnings || 0,
+          'Score': d.driver_score || 0,
+          'Tier': d.driver_tier || 'bronze',
+          'Online': d.is_online ? 'Yes' : 'No',
+          'Joined At': d.joined_at ? d.joined_at.slice(0, 10) : ''
+        }));
+        
+        const ws = XLSX.utils.json_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Drivers');
+        const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+        
+        const formData = new FormData();
+        const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        formData.append('chat_id', ENV.adminChatId);
+        formData.append('document', blob, 'drivers_report.xlsx');
+        formData.append('caption', '📊 *Smartshop Express Delivery Fleet Report*\n\nHere is the requested Excel spreadsheet of all driver applications, statuses, earnings, and ratings.');
+        
+        const tgRes = await fetch(`https://api.telegram.org/bot${ENV.ADMIN_BOT_TOKEN}/sendDocument`, {
+          method: 'POST',
+          body: formData
+        });
+        const tgData: any = await tgRes.json();
+        
+        return ok({ success: !!tgData.ok, message: tgData.description || 'Fleet report sent directly to your Telegram admin chat!' });
+      } catch (e: any) {
+        return fail(e.message, 500);
+      }
+    }
+
+    // ================================================================
     // DELIVERY ROUTES
     // ================================================================
     if (path.startsWith('/api/delivery/')) {
@@ -203,7 +259,7 @@ export default async function handler(req: any, res: any) {
           fayda_id: b.fayda_id || 'TEMP-' + Date.now(),
           fayda_id_front_url: b.fayda_front_image || '',
           fayda_id_back_url: b.fayda_back_image || '',
-          fayda_selfie_url: b.fayda_front_image || '',
+          fayda_selfie_url: b.driver_selfie || '',
           vehicle_type: b.vehicle_type || 'motorcycle', 
           license_plate: b.license_plate || '',
           telegram_id: b.telegram_id || null,
@@ -292,8 +348,21 @@ export default async function handler(req: any, res: any) {
         if (error) return fail(error.message); return ok({ success: true });
       }
       if (path.startsWith('/api/delivery/tracking/') && method === 'GET') {
-        const did = pid(path); const { data: del, error } = await supabase.from('deliveries').select('*').eq('id', did).single();
-        if (error || !del) return ok({ delivery: null }); let dr = null; if (del.driver_id) { const { data: drv } = await supabase.from('delivery_personnel').select('*').eq('id', del.driver_id).single(); dr = drv; } return ok({ delivery: { ...del, driver: dr } });
+        const param = path.split('/').pop() || '';
+        let query = supabase.from('deliveries').select('*');
+        if (/^\d+$/.test(param)) {
+          query = query.eq('id', parseInt(param));
+        } else {
+          query = query.eq('order_number', param);
+        }
+        const { data: del, error } = await query.single();
+        if (error || !del) return ok({ delivery: null });
+        let dr = null;
+        if (del.driver_id) {
+          const { data: drv } = await supabase.from('delivery_personnel').select('*').eq('id', del.driver_id).single();
+          dr = drv;
+        }
+        return ok({ delivery: { ...del, driver: dr } });
       }
       if (path.startsWith('/api/delivery/earnings/') && method === 'GET') { const { data, error } = await supabase.from('driver_earnings').select('*').eq('driver_id', pid(path)).order('created_at', { ascending: false }); if (error) return fail(error.message, 500); return ok({ earnings: data || [] }); }
       if (path.startsWith('/api/delivery/history/') && method === 'GET') { const { data, error } = await supabase.from('deliveries').select('*').eq('driver_id', pid(path)).order('created_at', { ascending: false }); if (error) return fail(error.message, 500); return ok({ deliveries: data || [] }); }
@@ -320,6 +389,20 @@ export default async function handler(req: any, res: any) {
     // ================================================================
 
     // ── Group Deals ────────────────────────────────────────────────
+    if (path === '/api/cron/expire-deals') {
+      if (method !== 'GET' && method !== 'POST') return fail('Method not allowed', 405);
+      const nowStr = new Date().toISOString();
+      const { data, error } = await supabase
+        .from('group_deals')
+        .update({ status: 'expired' })
+        .in('status', ['open', 'active'])
+        .lt('expires_at', nowStr)
+        .select();
+
+      if (error) return fail(error.message, 500);
+      return ok({ success: true, expiredCount: data?.length || 0, expiredDeals: data || [] });
+    }
+
     if (path === '/api/group-deals' && method === 'POST') {
       var b = req.body || {};
       const token = b.share_token || Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
