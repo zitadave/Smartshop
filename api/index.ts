@@ -632,11 +632,7 @@ export default async function handler(req: any, res: any) {
     if (path === '/api/affiliates/with-products' && method === 'GET') { const { data } = await supabase.from('products').select('*').eq('visible', true).gte('rating', 4); return ok({ products: (data || []).map(norm) }); }
     if (path === '/api/affiliates' && method === 'POST') { const { data, error } = await supabase.from('affiliates').insert(req.body).select().single(); if (error) return fail(error.message); return ok({ success: true, affiliate: data }); }
     if (path.startsWith('/api/affiliates/') && method === 'PUT') { const aid = pid(path); const { error } = await supabase.from('affiliates').update(req.body).eq('id', aid); if (error) return fail(error.message); return ok({ success: true }); }
-    if (path.startsWith('/api/reviews')) {
-      if (method === 'GET') { const pid2 = (req.url?.split('?')[1] || '').split('&').find((s: any) => s.startsWith('productId='))?.split('=')[1]; let q = supabase.from('reviews').select('*'); if (pid2) q = q.eq('product_id', parseInt(pid2)); const { data } = await q.order('created_at', { ascending: false }); return ok({ reviews: data || [] }); }
-      if (method === 'POST') { const { data } = await supabase.from('reviews').insert(req.body).select().single(); return ok({ success: true, review: data }); }
-      if (method === 'DELETE') { await supabase.from('reviews').delete().eq('id', pid(path)); return ok({ success: true }); }
-    }
+
     if (path === '/api/broadcast' && method === 'POST') { return ok({ success: true, sent: 1, total: 1 }); }
     if (path === '/api/pre-orders/cancel' && method === 'POST') { const { id } = req.body || {}; if (!id) return fail('id required'); await supabase.from('pre_orders').update({ status: 'cancelled' }).eq('id', id); return ok({ success: true }); }
     if (path.startsWith('/api/pre-orders')) {
@@ -793,7 +789,19 @@ export default async function handler(req: any, res: any) {
     // ================================================================
     if (path.startsWith('/api/reviews')) {
       if (method === 'GET') { var pid2 = (req.url?.split('?')[1] || '').split('&').find(function(s: any) { return s.startsWith('productId='); })?.split('=')[1]; var q = supabase.from('reviews').select('*'); if (pid2) q = q.eq('product_id', parseInt(pid2)); const { data } = await q.order('created_at', { ascending: false }); return ok({ reviews: data || [] }); }
-      if (method === 'POST') { const { data } = await supabase.from('reviews').insert(req.body).select().single(); return ok({ success: true, review: data }); }
+      if (method === 'POST') {
+        const b = req.body || {};
+        const { data, error } = await supabase.from('reviews').insert({
+          product_id: b.product_id || b.productId,
+          user_name: b.user_name || b.userName || 'Anonymous',
+          rating: parseInt(b.rating) || 5,
+          text: b.text || '',
+          images: b.images || [],
+          verified: b.verified !== false,
+        }).select().single();
+        if (error) return fail(error.message);
+        return ok({ success: true, review: data });
+      }
       if (method === 'DELETE') { await supabase.from('reviews').delete().eq('id', pid(path)); return ok({ success: true }); }
     }
 
