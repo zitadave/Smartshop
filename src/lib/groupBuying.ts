@@ -100,7 +100,7 @@ export async function joinGroupDeal(params: {
   telegramId: number;
   fullName: string;
   phone: string;
-}): Promise<{ success: boolean; deal?: GroupDeal; newPrice?: number }> {
+}): Promise<{ success: boolean; deal?: GroupDeal; newPrice?: number; error?: string }> {
   const res = await fetch('/api/group-deals/join', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
