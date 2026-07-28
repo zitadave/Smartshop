@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { toast } from '@/components/Toast';
 import { cn } from '@/lib/utils';
+import { useStore } from '@/stores/AppStore';
 import { Bike, CheckCircle, XCircle, Trash2, RefreshCw, Search, Loader, MapPin, Phone, DollarSign, Star, ChevronRight, Clock, Shield } from 'lucide-react';
 
 type SubTab = 'applications' | 'drivers' | 'deliveries' | 'zones';
 
 export default function AdminDeliveryTab() {
+  const { profile } = useStore();
   var [subTab, setSubTab] = useState<SubTab>('applications');
   var [applications, setApplications] = useState<any[]>([]);
   var [drivers, setDrivers] = useState<any[]>([]);
@@ -81,7 +83,7 @@ export default function AdminDeliveryTab() {
   function exportExcel() {
     setExporting(true);
     toast('⏳ Generating and dispatching Excel report...', 'info');
-    fetch('/api/export-drivers')
+    fetch('/api/export-drivers?chatId=' + (profile?.telegramId || ''))
       .then(function(r) { return r.json(); })
       .then(function(d) {
         setExporting(false);
@@ -360,7 +362,7 @@ export default function AdminDeliveryTab() {
                   <div>
                     <span className="text-[9px] font-bold text-slate-400 block mb-1">Driver Selfie / Recent Photo</span>
                     {selectedKYC.fayda_selfie_url ? (
-                      <div className="relative group w-28 h-28 rounded-xl overflow-hidden border bg-white cursor-pointer shadow-sm" onClick={function() { setZoomImage(selectedKYC.fayda_selfie_url); }}>
+                      <div className="relative group w-28 h-28 rounded-xl overflow-hidden border bg-white cursor-pointer shadow-sm" onClick={function(e) { e.stopPropagation(); setZoomImage(selectedKYC.fayda_selfie_url); }}>
                         <img src={selectedKYC.fayda_selfie_url} alt="Selfie" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                           <span className="text-[8px] font-extrabold text-white bg-slate-900/80 px-2 py-1 rounded-full flex items-center gap-1">🔍 Zoom</span>
@@ -379,7 +381,7 @@ export default function AdminDeliveryTab() {
                     <div>
                       <span className="text-[9px] font-bold text-slate-400 block mb-1">Fayda ID (Front)</span>
                       {selectedKYC.fayda_id_front_url ? (
-                        <div className="relative group w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white cursor-pointer shadow-sm" onClick={function() { setZoomImage(selectedKYC.fayda_id_front_url); }}>
+                        <div className="relative group w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white cursor-pointer shadow-sm" onClick={function(e) { e.stopPropagation(); setZoomImage(selectedKYC.fayda_id_front_url); }}>
                           <img src={selectedKYC.fayda_id_front_url} alt="Fayda Front" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                             <span className="text-[8px] font-extrabold text-white bg-slate-900/80 px-2 py-1 rounded-full flex items-center gap-1">🔍 Zoom</span>
@@ -396,7 +398,7 @@ export default function AdminDeliveryTab() {
                     <div>
                       <span className="text-[9px] font-bold text-slate-400 block mb-1">Fayda ID (Back)</span>
                       {selectedKYC.fayda_id_back_url ? (
-                        <div className="relative group w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white cursor-pointer shadow-sm" onClick={function() { setZoomImage(selectedKYC.fayda_id_back_url); }}>
+                        <div className="relative group w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white cursor-pointer shadow-sm" onClick={function(e) { e.stopPropagation(); setZoomImage(selectedKYC.fayda_id_back_url); }}>
                           <img src={selectedKYC.fayda_id_back_url} alt="Fayda Back" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                             <span className="text-[8px] font-extrabold text-white bg-slate-900/80 px-2 py-1 rounded-full flex items-center gap-1">🔍 Zoom</span>
@@ -423,7 +425,7 @@ export default function AdminDeliveryTab() {
                           <div>
                             <span className="text-[8px] text-slate-400 block mb-0.5">ID Card (Front)</span>
                             {emFront ? (
-                              <div className="relative group w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white cursor-pointer shadow-sm" onClick={function() { setZoomImage(emFront); }}>
+                              <div className="relative group w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white cursor-pointer shadow-sm" onClick={function(e) { e.stopPropagation(); setZoomImage(emFront); }}>
                                 <img src={emFront} alt="Emergency Front" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                   <span className="text-[8px] font-extrabold text-white bg-slate-900/80 px-2 py-1 rounded-full flex items-center gap-1">🔍 Zoom</span>
@@ -439,7 +441,7 @@ export default function AdminDeliveryTab() {
                           <div>
                             <span className="text-[8px] text-slate-400 block mb-0.5">ID Card (Back)</span>
                             {emBack ? (
-                              <div className="relative group w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white cursor-pointer shadow-sm" onClick={function() { setZoomImage(emBack); }}>
+                              <div className="relative group w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white cursor-pointer shadow-sm" onClick={function(e) { e.stopPropagation(); setZoomImage(emBack); }}>
                                 <img src={emBack} alt="Emergency Back" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                   <span className="text-[8px] font-extrabold text-white bg-slate-900/80 px-2 py-1 rounded-full flex items-center gap-1">🔍 Zoom</span>
@@ -603,15 +605,15 @@ export default function AdminDeliveryTab() {
         document.body
       )}
 
-      {/* Full-Screen Image Zoom Modal rendered inline for absolute maximum z-index overlay robustness */}
-      {zoomImage && (
+      {/* Full-Screen Image Zoom Modal rendered inside a React Portal with complete event stopPropagation */}
+      {zoomImage && mounted && typeof document !== 'undefined' && document.body && createPortal(
         <div 
           className="fixed inset-0 z-[99999] bg-black flex flex-col items-center justify-center p-4 animate-scaleIn" 
-          onClick={function() { setZoomImage(null); }}
+          onClick={function(e) { e.stopPropagation(); setZoomImage(null); }}
         >
           <button 
             className="absolute right-4 top-4 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center font-black text-xl shadow-lg transition-all active:scale-90 z-[100000]" 
-            onClick={function() { setZoomImage(null); }}
+            onClick={function(e) { e.stopPropagation(); setZoomImage(null); }}
           >
             ✕
           </button>
@@ -623,14 +625,15 @@ export default function AdminDeliveryTab() {
             <img 
               src={zoomImage} 
               alt="Full Preview" 
-              className="max-w-[90vw] max-h-[80vh] object-contain select-none rounded-lg animate-scaleIn" 
+              className="max-w-[90vw] max-h-[80vh] object-contain select-none rounded-lg" 
             />
           </div>
           
           <div className="mt-5 text-center text-xs text-white/50 font-semibold select-none">
             Tap anywhere outside or click ✕ to close the full preview
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

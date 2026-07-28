@@ -181,6 +181,10 @@ export default async function handler(req: any, res: any) {
     if (path === '/api/export-drivers') {
       if (method !== 'GET' && method !== 'POST') return fail('Method not allowed', 405);
       try {
+        var uParams = new URLSearchParams(req.url?.split('?')[1] || '');
+        const reqBody = req.body || {};
+        const chatId = reqBody.chat_id || reqBody.chatId || uParams.get('chat_id') || uParams.get('chatId') || ENV.adminChatId;
+
         const { data: drivers, error: dbError } = await supabase
           .from('delivery_personnel')
           .select('*')
@@ -214,7 +218,7 @@ export default async function handler(req: any, res: any) {
         
         const formData = new FormData();
         const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        formData.append('chat_id', ENV.adminChatId);
+        formData.append('chat_id', chatId);
         formData.append('document', blob, 'drivers_report.xlsx');
         formData.append('caption', '📊 *Smartshop Express Delivery Fleet Report*\n\nHere is the requested Excel spreadsheet of all driver applications, statuses, earnings, and ratings.');
         
