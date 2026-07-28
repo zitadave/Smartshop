@@ -37,11 +37,11 @@ export default function GroupDealView() {
         setDeal(fetchedDeal);
         if (fetchedDeal) {
           // Check if current user is already a member
-          const userTelegramId = store.telegramId;
+          const userTelegramId = store.profile?.telegramId;
           const userPhone = store.profile?.phone;
           const isMember = fetchedDeal.group_deal_members?.some(
             (m: any) =>
-              (userTelegramId && m.telegram_id === userTelegramId) ||
+              (userTelegramId && String(m.telegram_id) === String(userTelegramId)) ||
               (userPhone && m.phone === userPhone)
           );
           if (isMember) {
@@ -77,7 +77,7 @@ export default function GroupDealView() {
 
   useEffect(() => {
     loadDeal();
-  }, [token, store.telegramId, store.profile?.phone]);
+  }, [token, store.profile?.telegramId, store.profile?.phone]);
 
   const handleJoin = async () => {
     // If logged in, automatically pull credentials
@@ -91,7 +91,7 @@ export default function GroupDealView() {
     try {
       const result = await joinGroupDeal({
         token: token!,
-        telegramId: store.telegramId || 0,
+        telegramId: store.profile?.telegramId ? parseInt(store.profile.telegramId) : 0,
         fullName: finalName,
         phone: finalPhone,
       });
@@ -244,23 +244,60 @@ export default function GroupDealView() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 via-slate-50 to-white">
-      <div className="max-w-lg mx-auto p-4 pb-24">
-        
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-4">
-          <button onClick={() => navigate(-1)} className="p-2 rounded-xl bg-white shadow-sm hover:bg-slate-100 transition-colors">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-24">
+      {/* 1. Large Hero Product Image on Top (Full Product Page Style) */}
+      {deal.product_image && (
+        <div className="relative aspect-square w-full bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 overflow-hidden cursor-zoom-in group" onClick={() => setShowZoom(true)}>
+          <img src={deal.product_image} alt={parsedName} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+          
+          {/* Floating Back Button */}
+          <button onClick={() => navigate(-1)} className="absolute top-4 left-4 z-20 p-2.5 rounded-full bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition-colors shadow">
             <ArrowLeft size={18} />
           </button>
-          <div>
-            <h1 className="text-lg font-bold text-slate-800">🤝 ማህበር ግዢ (Group Buy)</h1>
-            <p className="text-[10px] text-slate-500">Shop together with friends & unlock massive discounts</p>
+
+          {/* Floating Badge */}
+          <span className="absolute top-4 right-4 z-20 px-3 py-1.5 rounded-xl text-[10px] font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 shadow-md">
+            🤝 {isTargetModel ? 'TARGET LOCK' : 'PROGRESSIVE'} DEAL
+          </span>
+
+          <span className="absolute bottom-3 right-3 bg-black/60 text-white rounded px-2.5 py-1 text-[9px] font-bold backdrop-blur-sm">
+            View Full Screen 🔍
+          </span>
+        </div>
+      )}
+
+      <div className="max-w-lg mx-auto p-4 space-y-4">
+        
+        {/* Product Details Section (Tied directly under the image) */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+          <span className="text-[9px] bg-green-100 text-green-700 px-2.5 py-0.5 rounded-full font-bold">
+            🛒 ACTIVE DEAL
+          </span>
+          <h2 className="font-extrabold text-slate-800 text-base mt-1.5 leading-tight">{parsedName}</h2>
+          
+          <div className="flex items-baseline gap-2.5 mt-3">
+            <span className="text-3xl font-black text-green-600">Br {deal.group_price.toLocaleString()}</span>
+            <span className="text-sm text-slate-400 line-through">Br {deal.regular_price.toLocaleString()}</span>
           </div>
+
+          {savings > 0 && (
+            <div className="text-xs text-emerald-500 font-semibold mt-1.5">
+              🎉 Saving Br {savings.toLocaleString()} compared to retail!
+            </div>
+          )}
+
+          {/* Native Product Description */}
+          {matchedProduct && (matchedProduct.description || matchedProduct.descriptionEn) && (
+            <div className="mt-4 pt-4 border-t border-slate-100 text-xs text-slate-500 leading-relaxed">
+              <h4 className="font-bold text-slate-700 mb-1.5">📋 Product Description</h4>
+              <p>{matchedProduct.description || matchedProduct.descriptionEn}</p>
+            </div>
+          )}
         </div>
 
         {/* Campaign Model Status Alert */}
         {isTargetModel && (
-          <div className={`p-4 rounded-2xl mb-4 border flex items-start gap-3 shadow-sm ${isUnlocked ? 'bg-emerald-50 border-emerald-100 text-emerald-800 animate-bounce' : 'bg-amber-50 border-amber-100 text-amber-800'}`}>
+          <div className={`p-4 rounded-2xl border flex items-start gap-3 shadow-sm ${isUnlocked ? 'bg-emerald-50 border-emerald-100 text-emerald-800 animate-bounce' : 'bg-amber-50 border-amber-100 text-amber-800'}`}>
             <div className="text-2xl">{isUnlocked ? '🔓' : '🔒'}</div>
             <div>
               <h4 className="text-xs font-bold uppercase tracking-wide">
@@ -274,39 +311,6 @@ export default function GroupDealView() {
             </div>
           </div>
         )}
-
-        {/* Product Card */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm mb-4 border border-slate-100">
-          <div className="flex gap-4">
-            {deal.product_image && (
-              <div className="w-24 h-24 rounded-xl overflow-hidden border cursor-zoom-in relative group" onClick={() => setShowZoom(true)}>
-                <img src={deal.product_image} alt={parsedName} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
-                <span className="absolute bottom-1 right-1 bg-black/60 text-white rounded px-1 text-[8px] font-bold">Zoom 🔍</span>
-              </div>
-            )}
-            <div className="flex-1">
-              <span className="text-[9px] bg-green-100 text-green-700 px-2.5 py-0.5 rounded-full font-bold">🛒 {deal.status.toUpperCase()} DEAL</span>
-              <h2 className="font-bold text-slate-800 text-sm mt-1">{parsedName}</h2>
-              <div className="flex items-baseline gap-2 mt-2">
-                <span className="text-2xl font-extrabold text-green-600">Br {deal.group_price.toLocaleString()}</span>
-                <span className="text-xs text-slate-400 line-through">Br {deal.regular_price.toLocaleString()}</span>
-              </div>
-              {savings > 0 && (
-                <div className="text-xs text-emerald-500 font-semibold mt-1">
-                  🎉 Save Br {savings.toLocaleString()} per unit!
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Product Description */}
-          {matchedProduct && (matchedProduct.description || matchedProduct.descriptionEn) && (
-            <div className="mt-4 pt-4 border-t border-slate-50 text-xs text-slate-500 leading-relaxed">
-              <h4 className="font-bold text-slate-700 mb-1">📋 Product Description</h4>
-              <p className="line-clamp-3">{matchedProduct.description || matchedProduct.descriptionEn}</p>
-            </div>
-          )}
-        </div>
 
         {/* Campaign Description & Preferences */}
         {(description || (color && color !== 'Any') || (size && size !== 'Any')) && (
@@ -498,7 +502,7 @@ export default function GroupDealView() {
             </h3>
             <button 
               onClick={() => {
-                if (!store.telegramId) {
+                if (!store.profile?.telegramId) {
                   toast('🚪 Please log in via Telegram first!', 'error');
                 } else {
                   setShowReviewModal(true);

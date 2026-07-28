@@ -131,6 +131,8 @@ export function useTelegramAuth() {
           registered: true,
           joinedAt: cachedUser.firstSeen,
           avatar: cachedUser.photoUrl,
+          telegramId: String(cachedUser.telegramId),
+          telegramUsername: cachedUser.username || '',
         });
       });
     }
@@ -155,6 +157,8 @@ export function useTelegramAuth() {
           email: '', registered: true,
           joinedAt: user.firstSeen,
           avatar: user.photoUrl,
+          telegramId: String(user.telegramId),
+          telegramUsername: user.username || '',
         });
       });
 
@@ -187,7 +191,16 @@ export function useTelegramAuth() {
     persistAuth(updated);
     setState({ status: 'authenticated', user: updated, error: null });
     startTransition(() => {
-      setProfile({ name: fullName, phone: state.user!.phone || '', email: '', registered: true, joinedAt: state.user!.firstSeen, avatar: state.user!.photoUrl });
+      setProfile({ 
+        name: fullName, 
+        phone: state.user!.phone || '', 
+        email: '', 
+        registered: true, 
+        joinedAt: state.user!.firstSeen, 
+        avatar: state.user!.photoUrl,
+        telegramId: String(state.user!.telegramId),
+        telegramUsername: state.user!.username || '',
+      });
     });
     useStore.getState().addAddress({ label: 'Home', city, address, phone: state.user.phone });
   }, [state.user, setProfile]);
