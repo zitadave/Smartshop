@@ -14,6 +14,7 @@ export default function AdminDeliveryTab() {
   var [loading, setLoading] = useState(true);
   var [search, setSearch] = useState('');
   var [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+  var [selectedKYC, setSelectedKYC] = useState<any | null>(null);
 
   function fetchAll() {
     setLoading(true);
@@ -30,20 +31,29 @@ export default function AdminDeliveryTab() {
     fetch('/api/delivery/approve', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: id, status: 'approved' })
+      body: JSON.stringify({ id: id, driver_id: id, status: 'approved' })
     }).then(function(r) { return r.json(); }).then(function(d) {
-      if (d.success) { toast('✅ ' + name + ' approved!', 'success'); fetchAll(); }
+      if (d.success) { 
+        toast('✅ ' + name + ' approved!', 'success'); 
+        setSelectedKYC(null);
+        fetchAll(); 
+      }
       else { toast('Error: ' + (d.error || ''), 'error'); }
     }).catch(function(e) { toast('Error: ' + e.message, 'error'); });
   }
 
   function rejectDriver(id, name) {
+    const reason = prompt('Enter rejection reason:') || 'Application does not meet requirements';
     fetch('/api/delivery/approve', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: id, status: 'rejected', reason: 'Application does not meet requirements' })
+      body: JSON.stringify({ id: id, driver_id: id, status: 'rejected', reason: reason })
     }).then(function(r) { return r.json(); }).then(function(d) {
-      if (d.success) { toast('❌ ' + name + ' rejected.', 'info'); fetchAll(); }
+      if (d.success) { 
+        toast('❌ ' + name + ' rejected.', 'info'); 
+        setSelectedKYC(null);
+        fetchAll(); 
+      }
     }).catch(function(e) { toast('Error: ' + e.message, 'error'); });
   }
 
@@ -111,33 +121,25 @@ export default function AdminDeliveryTab() {
             <div className="space-y-3">
               {applications.map(function(a) {
                 return (
-                  <div key={a.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-amber-200 dark:border-amber-800/30 p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3 min-w-0">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white text-lg flex-shrink-0">
+                  <div key={a.id} 
+                    onClick={function() { setSelectedKYC(a); }}
+                    className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 hover:border-emerald-300 transition-all cursor-pointer shadow-sm">
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
                           {a.full_name_latin?.charAt(0) || '?'}
                         </div>
                         <div className="min-w-0">
-                          <div className="text-sm font-bold">{a.full_name_latin}</div>
-                          <div className="text-[10px] text-slate-500">{getVehicleIcon(a.vehicle_type)} {a.vehicle_type} · 📍 {a.service_zones?.join(', ') || 'N/A'}</div>
-                          <div className="flex flex-wrap gap-1 mt-1.5">
-                            <span className="text-[8px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full">🆔 {a.fayda_id}</span>
-                            <span className="text-[8px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">📞 {a.phone}</span>
-                          </div>
-                          <div className="text-[8px] text-slate-400 mt-1">
-                            🆘 Emergency: {a.emergency_name} ({a.emergency_relationship}) · {a.emergency_phone}
-                          </div>
-                          <div className="text-[8px] text-slate-400">
-                            {a.telebirr_number ? '💳 Telebirr: ' + a.telebirr_number : ''}
-                          </div>
+                          <div className="text-xs font-bold text-slate-800 dark:text-slate-200">{a.full_name_latin}</div>
+                          <div className="text-[10px] text-slate-500 mt-0.5">{getVehicleIcon(a.vehicle_type)} {a.vehicle_type} · 📞 {a.phone}</div>
                         </div>
                       </div>
-                      <div className="flex gap-1.5 flex-shrink-0">
-                        <button className="px-3 py-2 bg-emerald-500 text-white rounded-lg text-[9px] font-bold hover:shadow-md" onClick={function() { approveDriver(a.id, a.full_name_latin); }}>
-                          <CheckCircle size={11} className="inline mr-1" /> Approve
-                        </button>
-                        <button className="px-3 py-2 bg-red-500 text-white rounded-lg text-[9px] font-bold hover:shadow-md" onClick={function() { rejectDriver(a.id, a.full_name_latin); }}>
-                          <XCircle size={11} className="inline mr-1" /> Reject
+                      <div className="flex gap-1.5 items-center">
+                        <span className="text-[8px] bg-amber-50 text-amber-700 border border-amber-100 px-2 py-0.5 rounded-full font-bold">Pending Review</span>
+                        <button 
+                          className="px-3 py-1.5 bg-indigo-500 text-white rounded-lg text-[9px] font-bold shadow hover:bg-indigo-600 transition-all"
+                          onClick={function(e) { e.stopPropagation(); setSelectedKYC(a); }}>
+                          👁️ Review KYC
                         </button>
                       </div>
                     </div>
@@ -152,9 +154,16 @@ export default function AdminDeliveryTab() {
       {/* Drivers Tab */}
       {subTab === 'drivers' && (
         <>
-          <div className="relative">
-            <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input className="w-full pl-8 pr-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" placeholder="Search drivers..." value={search} onChange={function(e) { setSearch(e.target.value); }} />
+          <div className="flex gap-2">
+            <div className="flex-1 relative">
+              <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input className="w-full pl-8 pr-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" placeholder="Search drivers..." value={search} onChange={function(e) { setSearch(e.target.value); }} />
+            </div>
+            <button 
+              onClick={function() { window.open('/api/export-drivers', '_blank'); }}
+              className="px-3.5 py-2 bg-emerald-500 text-white rounded-xl text-[10px] font-bold shadow hover:shadow-md transition-all flex items-center gap-1.5 flex-shrink-0">
+              📊 Export XLSX
+            </button>
           </div>
 
           {/* Stats */}
@@ -185,7 +194,9 @@ export default function AdminDeliveryTab() {
                 var statusColor = d.status === 'approved' ? 'bg-green-100 text-green-700' : d.status === 'suspended' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700';
                 var tierBadge = d.driver_tier === 'platinum' ? '💎' : d.driver_tier === 'gold' ? '🥇' : d.driver_tier === 'silver' ? '🥈' : '🥉';
                 return (
-                  <div key={d.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 hover:shadow-sm transition-all">
+                  <div key={d.id} 
+                    onClick={function() { setSelectedKYC(d); }}
+                    className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-3 hover:shadow-sm hover:border-emerald-300 cursor-pointer transition-all">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">{d.full_name_latin?.charAt(0) || '?'}</div>
@@ -275,6 +286,190 @@ export default function AdminDeliveryTab() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* KYC Full Detailed Review Modal */}
+      {selectedKYC && createPortal(
+        <>
+          <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm overflow-y-auto py-6" onClick={function() { setSelectedKYC(null); }}>
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 w-full max-w-lg mx-auto my-auto shadow-2xl relative" onClick={function(e) { e.stopPropagation(); }}>
+              <button className="absolute right-4 top-4 w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-sm" onClick={function() { setSelectedKYC(null); }}>✕</button>
+              
+              <div className="text-center mb-4 pb-3 border-b border-slate-100 dark:border-slate-800">
+                <span className="text-[10px] bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full font-bold uppercase tracking-wider">KYC identity verification</span>
+                <h3 className="text-base font-black mt-2 text-slate-900 dark:text-white">{selectedKYC.full_name_latin}</h3>
+                {selectedKYC.full_name_amharic && <p className="text-xs text-slate-400 mt-0.5">{selectedKYC.full_name_amharic}</p>}
+              </div>
+
+              <div className="space-y-4 max-h-[65vh] overflow-y-auto scrollbar-none pr-1">
+                {/* 1. Identity Previews */}
+                <div className="space-y-3 bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border">
+                  <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">📂 Uploaded Documents</h4>
+                  
+                  {/* Selfie */}
+                  {selectedKYC.fayda_selfie_url && (
+                    <div>
+                      <span className="text-[9px] font-bold text-slate-400 block mb-1">Driver Selfie / Recent Photo</span>
+                      <div className="w-28 h-28 rounded-xl overflow-hidden border bg-white">
+                        <img src={selectedKYC.fayda_selfie_url} alt="Selfie" className="w-full h-full object-cover" />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Fayda Front */}
+                    {selectedKYC.fayda_id_front_url && (
+                      <div>
+                        <span className="text-[9px] font-bold text-slate-400 block mb-1">Fayda ID (Front)</span>
+                        <div className="w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white">
+                          <img src={selectedKYC.fayda_id_front_url} alt="Fayda Front" className="w-full h-full object-cover" />
+                        </div>
+                      </div>
+                    )}
+                    {/* Fayda Back */}
+                    {selectedKYC.fayda_id_back_url && (
+                      <div>
+                        <span className="text-[9px] font-bold text-slate-400 block mb-1">Fayda ID (Back)</span>
+                        <div className="w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white">
+                          <img src={selectedKYC.fayda_id_back_url} alt="Fayda Back" className="w-full h-full object-cover" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Parse Emergency ID images */}
+                  {(() => {
+                    const addrParts = (selectedKYC.emergency_address || '').split('::');
+                    const emFront = addrParts[1] || '';
+                    const emBack = addrParts[2] || '';
+                    if (emFront || emBack) {
+                      return (
+                        <div className="space-y-2 mt-3 pt-3 border-t border-slate-200/50">
+                          <span className="text-[9px] font-bold text-slate-400 block">Emergency Contact ID Photos</span>
+                          <div className="grid grid-cols-2 gap-3">
+                            {emFront && (
+                              <div>
+                                <span className="text-[8px] text-slate-400 block mb-0.5">ID Card (Front)</span>
+                                <div className="w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white">
+                                  <img src={emFront} alt="Emergency Front" className="w-full h-full object-cover" />
+                                </div>
+                              </div>
+                            )}
+                            {emBack && (
+                              <div>
+                                <span className="text-[8px] text-slate-400 block mb-0.5">ID Card (Back)</span>
+                                <div className="w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white">
+                                  <img src={emBack} alt="Emergency Back" className="w-full h-full object-cover" />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+                </div>
+
+                {/* 2. Driver Onboarding Details */}
+                <div className="bg-white dark:bg-slate-900 border rounded-2xl p-4 space-y-2 text-xs">
+                  <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">📋 Personal & Profile Details</h4>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Fayda ID Number:</span>
+                    <span className="font-bold">{selectedKYC.fayda_id}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Phone:</span>
+                    <span className="font-bold">{selectedKYC.phone}</span>
+                  </div>
+                  {selectedKYC.email && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Email:</span>
+                      <span className="font-bold">{selectedKYC.email}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Vehicle Type:</span>
+                    <span className="font-bold capitalize">{selectedKYC.vehicle_type}</span>
+                  </div>
+                  {selectedKYC.license_plate && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">License Plate:</span>
+                      <span className="font-bold uppercase">{selectedKYC.license_plate}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Service Zones:</span>
+                    <span className="font-bold">{selectedKYC.service_zones?.join(', ') || 'None'}</span>
+                  </div>
+                </div>
+
+                {/* 3. Emergency Contact */}
+                <div className="bg-white dark:bg-slate-900 border rounded-2xl p-4 space-y-2 text-xs">
+                  <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">🆘 Emergency Contact Details</h4>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Contact Person:</span>
+                    <span className="font-bold">{selectedKYC.emergency_name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Relationship:</span>
+                    <span className="font-bold">{selectedKYC.emergency_relationship}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Phone:</span>
+                    <span className="font-bold">{selectedKYC.emergency_phone}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Address:</span>
+                    <span className="font-bold">{(selectedKYC.emergency_address || '').split('::')[0]}</span>
+                  </div>
+                </div>
+
+                {/* 4. Payment */}
+                <div className="bg-white dark:bg-slate-900 border rounded-2xl p-4 space-y-2 text-xs">
+                  <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">💸 Payment & Financials</h4>
+                  {selectedKYC.telebirr_number && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Telebirr Number:</span>
+                      <span className="font-bold">{selectedKYC.telebirr_number}</span>
+                    </div>
+                  )}
+                  {selectedKYC.bank_name && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Bank Account:</span>
+                      <span className="font-bold">{selectedKYC.bank_name} - {selectedKYC.bank_account}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Buttons inside Modal */}
+              <div className="flex gap-2.5 mt-5 pt-3 border-t border-slate-100 dark:border-slate-800">
+                {selectedKYC.status !== 'approved' ? (
+                  <>
+                    <button 
+                      onClick={function() { rejectDriver(selectedKYC.id, selectedKYC.full_name_latin); }}
+                      className="flex-1 py-3 bg-red-500 text-white rounded-xl text-xs font-bold shadow hover:bg-red-600 transition-all flex items-center justify-center gap-1">
+                      ✕ Reject Application
+                    </button>
+                    <button 
+                      onClick={function() { approveDriver(selectedKYC.id, selectedKYC.full_name_latin); }}
+                      className="flex-1 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold shadow hover:shadow-lg transition-all flex items-center justify-center gap-1">
+                      ✓ Approve & Verify
+                    </button>
+                  </>
+                ) : (
+                  <button 
+                    onClick={function() { setDeleteConfirmId(selectedKYC.id); setSelectedKYC(null); }}
+                    className="w-full py-3 bg-red-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1 hover:bg-red-600 transition-all">
+                     Suspend Driver Account
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </>,
+        document.body
       )}
     </div>
   );
