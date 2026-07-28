@@ -1,6 +1,6 @@
 /**
  * Error Tracking — Sentry integration
- * Only initializes in production. Set VITE_SENTRY_DSN in Netlify env vars.
+ * Only initializes in production. Set VITE_SENTRY_DSN in Vercel env vars.
  */
 
 export function initSentry() {

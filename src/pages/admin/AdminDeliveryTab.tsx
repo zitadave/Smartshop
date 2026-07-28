@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { toast } from '@/components/Toast';
 import { cn } from '@/lib/utils';
 import { useStore } from '@/stores/AppStore';
@@ -17,11 +18,16 @@ export default function AdminDeliveryTab() {
   var [search, setSearch] = useState('');
   var [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   var [selectedKYC, setSelectedKYC] = useState<any | null>(null);
+  var [mounted, setMounted] = useState(false);
   var [rejectingDriverId, setRejectingDriverId] = useState<number | null>(null);
   var [rejectingDriverName, setRejectingDriverName] = useState<string>('');
   var [rejectionReason, setRejectionReason] = useState<string>('');
   var [zoomImage, setZoomImage] = useState<string | null>(null);
   var [exporting, setExporting] = useState(false);
+
+  useEffect(function() {
+    setMounted(true);
+  }, []);
 
   function fetchAll() {
     setLoading(true);
@@ -334,8 +340,8 @@ export default function AdminDeliveryTab() {
         </div>
       )}
 
-      {/* KYC Full Detailed Review Modal rendered fully inline to prevent React Portal early rendering/caching glitches */}
-      {selectedKYC && (
+      {/* KYC Full Detailed Review Modal rendered inside a React Portal to escape any parent CSS overflow / transform clipping */}
+      {selectedKYC && mounted && typeof document !== 'undefined' && document.body && createPortal(
         <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm overflow-y-auto py-6" onClick={function() { setSelectedKYC(null); }}>
           <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 w-full max-w-lg mx-auto my-auto shadow-2xl relative" onClick={function(e) { e.stopPropagation(); }}>
             <button className="absolute right-4 top-4 w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-sm" onClick={function() { setSelectedKYC(null); }}>✕</button>
@@ -421,7 +427,7 @@ export default function AdminDeliveryTab() {
                             <div className="relative group w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white cursor-pointer shadow-sm" onClick={function(e) { e.stopPropagation(); setZoomImage(emFront); }}>
                               <img src={emFront} alt="Emergency Front" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                <span className="text-[8px] font-extrabold text-white bg-slate-900/80 px-2 py-1 rounded-full flex items-center gap-1">🔍 Zoom</span>
+                                <span className="text-[8px] font-extrabold text-white bg-slate-950/85 px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">🔍 Zoom</span>
                               </div>
                             </div>
                           ) : (
@@ -437,7 +443,7 @@ export default function AdminDeliveryTab() {
                             <div className="relative group w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white cursor-pointer shadow-sm" onClick={function(e) { e.stopPropagation(); setZoomImage(emBack); }}>
                               <img src={emBack} alt="Emergency Back" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                <span className="text-[8px] font-extrabold text-white bg-slate-900/80 px-2 py-1 rounded-full flex items-center gap-1">🔍 Zoom</span>
+                                <span className="text-[8px] font-extrabold text-white bg-slate-950/85 px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">🔍 Zoom</span>
                               </div>
                             </div>
                           ) : (
@@ -555,11 +561,12 @@ export default function AdminDeliveryTab() {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* Rejection Reason Modal rendered inline */}
-      {rejectingDriverId && (
+      {/* Rejection Reason Modal rendered inside a React Portal to escape parent transform overlays */}
+      {rejectingDriverId && mounted && typeof document !== 'undefined' && document.body && createPortal(
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={function() { setRejectingDriverId(null); }}>
           <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 w-full max-w-sm shadow-2xl relative" onClick={function(e) { e.stopPropagation(); }}>
             <button className="absolute right-4 top-4 w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-sm" onClick={function() { setRejectingDriverId(null); }}>✕</button>
@@ -592,13 +599,14 @@ export default function AdminDeliveryTab() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* Full-Screen Image Zoom Modal rendered fully inline to prevent React Portal sibling layer and early mounting glitches */}
-      {zoomImage && (
+      {/* Full-Screen Image Zoom Modal rendered inside a React Portal with complete event stopPropagation and NO cropping wrappers */}
+      {zoomImage && mounted && typeof document !== 'undefined' && document.body && createPortal(
         <div 
-          className="fixed inset-0 z-[99999] bg-black flex flex-col items-center justify-center p-4 animate-scaleIn" 
+          className="fixed inset-0 z-[99999] bg-black/95 backdrop-blur-sm flex flex-col items-center justify-center p-4 animate-scaleIn" 
           onClick={function(e) { e.stopPropagation(); setZoomImage(null); }}
         >
           <button 
@@ -608,21 +616,18 @@ export default function AdminDeliveryTab() {
             ✕
           </button>
           
-          <div 
-            className="max-w-[95vw] max-h-[85vh] flex items-center justify-center overflow-hidden rounded-2xl border border-white/10 shadow-2xl relative" 
+          <img 
+            src={zoomImage} 
+            alt="Full Preview" 
+            className="max-w-full max-h-[90vh] object-contain select-none rounded-lg shadow-2xl" 
             onClick={function(e) { e.stopPropagation(); }}
-          >
-            <img 
-              src={zoomImage} 
-              alt="Full Preview" 
-              className="max-w-[90vw] max-h-[80vh] object-contain select-none rounded-lg" 
-            />
-          </div>
+          />
           
           <div className="mt-5 text-center text-xs text-white/50 font-semibold select-none">
             Tap anywhere outside or click ✕ to close the full preview
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

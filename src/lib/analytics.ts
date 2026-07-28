@@ -1,7 +1,7 @@
 /**
  * Privacy-first Analytics
  * Tracks only essential events. No cookies, no PII.
- * Set VITE_UMAMI_URL and VITE_UMAMI_ID in Netlify env vars.
+ * Set VITE_UMAMI_URL and VITE_UMAMI_ID in Vercel env vars.
  */
 
 type EventName = 'page_view' | 'product_click' | 'add_to_cart' | 'remove_from_cart' | 'checkout_start' | 'order_placed' | 'search' | 'wishlist_toggle';

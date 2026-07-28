@@ -1,6 +1,6 @@
 /**
  * Smart Shop API Client
- * Works with any backend: Render, Cloudflare Workers, or local dev server
+ * Works with any backend: Vercel or local dev server
  */
 
 const API_BASE = '';
