@@ -4,7 +4,6 @@
 // ============================================
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
-import * as XLSX from 'xlsx';
 
 // ===== CONFIG (env-only, no hardcoded secrets) =====
 const ENV = {
@@ -178,9 +177,10 @@ export default async function handler(req: any, res: any) {
     // ================================================================
     // EXPORT DRIVERS ROUTE
     // ================================================================
-    if (path === '/api/export-drivers') {
+    if (path.includes('export-drivers')) {
       if (method !== 'GET' && method !== 'POST') return fail('Method not allowed', 405);
       try {
+        const XLSX = await import('xlsx');
         var uParams = new URLSearchParams(req.url?.split('?')[1] || '');
         const reqBody = req.body || {};
         const chatId = reqBody.chat_id || reqBody.chatId || uParams.get('chat_id') || uParams.get('chatId') || ENV.adminChatId;
