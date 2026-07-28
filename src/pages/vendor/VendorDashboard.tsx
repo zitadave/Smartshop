@@ -910,6 +910,7 @@ function VendorPromotionsView() {
   const [groupDuration, setGroupDuration] = useState(24);
   const [groupImage, setGroupImage] = useState("");
   const [groupImageType, setGroupImageType] = useState<'url' | 'file'>('url');
+  const [groupCampaignType, setGroupCampaignType] = useState<'progressive' | 'target'>('progressive');
 
   const loadGroupDeals = () => {
     setLoadingDeals(true);
@@ -955,7 +956,7 @@ function VendorPromotionsView() {
     }
     
     try {
-      const serializedName = `${product.nameEn || product.name}::${groupDescription}::${groupColor}::${groupSize}`;
+      const serializedName = `${product.nameEn || product.name}::${groupDescription}::${groupColor}::${groupSize}::${groupCampaignType}::${groupPrice}::${groupMaxMembers}`;
       const expiresAt = new Date(Date.now() + groupDuration * 60 * 60 * 1000).toISOString();
       
       const res = await fetch('/api/group-deals', {
@@ -969,7 +970,7 @@ function VendorPromotionsView() {
           group_price: price,
           creator_telegram_id: 1, 
           creator_name: vendorName + " (Shop Special)",
-          min_members: groupMinMembers,
+          min_members: groupCampaignType === 'target' ? groupMaxMembers : groupMinMembers,
           max_members: groupMaxMembers,
           expires_at: expiresAt,
         }),
@@ -1239,6 +1240,25 @@ function VendorPromotionsView() {
                     </select>
                   </div>
 
+                  {/* Campaign Discount Model */}
+                  <div>
+                    <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Discount Model Type</label>
+                    <div className="flex gap-2 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl w-full">
+                      <button 
+                        type="button"
+                        onClick={() => setGroupCampaignType('progressive')}
+                        className={`flex-1 py-1.5 rounded-lg text-[9px] font-bold ${groupCampaignType === 'progressive' ? 'bg-white dark:bg-slate-700 text-emerald-600 shadow-sm' : 'text-slate-500'}`}>
+                        📈 Progressive
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => setGroupCampaignType('target')}
+                        className={`flex-1 py-1.5 rounded-lg text-[9px] font-bold ${groupCampaignType === 'target' ? 'bg-white dark:bg-slate-700 text-emerald-600 shadow-sm' : 'text-slate-500'}`}>
+                        🎯 Locked Target
+                      </button>
+                    </div>
+                  </div>
+
                   {/* Campaign Description */}
                   <div>
                     <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Campaign Description</label>
@@ -1252,7 +1272,7 @@ function VendorPromotionsView() {
 
                   {/* Special Group Price */}
                   <div>
-                    <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Special Group Price (Br)</label>
+                    <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">{groupCampaignType === 'target' ? 'Locked Target Price (Br)' : 'Special Group Price (Br)'}</label>
                     <input 
                       type="number" 
                       className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200 outline-none" 
@@ -1263,24 +1283,41 @@ function VendorPromotionsView() {
 
                   {/* Members count */}
                   <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Min Members</label>
-                      <input 
-                        type="number" 
-                        className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200 outline-none" 
-                        value={groupMinMembers} 
-                        onChange={e => setGroupMinMembers(Number(e.target.value))} 
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Max Capacity</label>
-                      <input 
-                        type="number" 
-                        className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200 outline-none" 
-                        value={groupMaxMembers} 
-                        onChange={e => setGroupMaxMembers(Number(e.target.value))} 
-                      />
-                    </div>
+                    {groupCampaignType === 'progressive' ? (
+                      <>
+                        <div>
+                          <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Min Members</label>
+                          <input 
+                            type="number" 
+                            className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200 outline-none" 
+                            value={groupMinMembers} 
+                            onChange={e => setGroupMinMembers(Number(e.target.value))} 
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Max Capacity</label>
+                          <input 
+                            type="number" 
+                            className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200 outline-none" 
+                            value={groupMaxMembers} 
+                            onChange={e => setGroupMaxMembers(Number(e.target.value))} 
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <div className="col-span-2">
+                        <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Target Group Members Count</label>
+                        <input 
+                          type="number" 
+                          className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200 outline-none" 
+                          value={groupMaxMembers} 
+                          onChange={e => {
+                            setGroupMaxMembers(Number(e.target.value));
+                            setGroupMinMembers(Number(e.target.value));
+                          }} 
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {/* Color & Size Preferences */}

@@ -125,49 +125,72 @@ export async function getUserGroupDeals(telegramId: number): Promise<GroupDeal[]
 }
 
 // ── Generate Telegram share message ───────────────────────────
-export function generateShareMessage(deal: GroupDeal): string {
-  const savings = deal.regularPrice - deal.groupPrice;
-  const spotsLeft = deal.maxMembers - deal.currentMembers;
-  const nextTier = getNextTier(deal.currentMembers);
-  const link = `https://t.me/smart_shopping_et_bot?start=group_${deal.shareToken}`;
+export function generateShareMessage(deal: GroupDeal | any): string {
+  const parsed = parseSerializedName(deal.productName || deal.product_name || '');
+  const displayName = parsed.name || deal.productName || deal.product_name || '';
+  
+  const link = `https://t.me/smart_shopping_et_bot?start=group_${deal.shareToken || deal.share_token}`;
   
   let msg = `🛍️ *ማህበር ግዢ — Group Buy!*\n\n`;
-  msg += `📦 *${deal.productName}*\n`;
-  msg += `💰 መደበኛ ዋጋ: Br ${deal.regularPrice.toLocaleString()}\n`;
-  msg += `🎉 *የቡድን ዋጋ: Br ${deal.groupPrice.toLocaleString()}*`;
-  if (savings > 0) msg += ` (ቆጥበህ ${savings.toLocaleString()} Br!)`;
-  msg += `\n\n`;
-  msg += `👥 የተቀሩ ቦታዎች: ${spotsLeft}\n`;
-  if (nextTier) {
-    const nextPrice = calculateGroupPrice(deal.regularPrice, nextTier.minMembers);
-    msg += `🎯 ተጨማሪ ${nextTier.minMembers - deal.currentMembers} ሰው ከተቀላቀለ → Br ${nextPrice.toLocaleString()}\n`;
+  msg += `📦 *${displayName}*\n`;
+  
+  if (parsed.campaignType === 'target') {
+    msg += `💰 መደበኛ ዋጋ: Br ${(deal.regularPrice || deal.regular_price || 0).toLocaleString()}\n`;
+    msg += `🎯 *ዒላማ ዋጋ: Br ${parsed.targetPrice.toLocaleString()}* (If and Only If ${parsed.targetCount} join!)\n\n`;
+    msg += `👥 ዒላማ አባላት: ${deal.currentMembers || deal.current_members || 0}/${parsed.targetCount}\n`;
+    msg += `⏳ ${Math.max(0, parsed.targetCount - (deal.currentMembers || deal.current_members || 0))} more members needed to unlock the discount!\n`;
+  } else {
+    const savings = (deal.regularPrice || deal.regular_price || 0) - (deal.groupPrice || deal.group_price || 0);
+    const spotsLeft = (deal.maxMembers || deal.max_members || 10) - (deal.currentMembers || deal.current_members || 0);
+    const nextTier = getNextTier(deal.currentMembers || deal.current_members || 0);
+    msg += `💰 መደበኛ ዋጋ: Br ${(deal.regularPrice || deal.regular_price || 0).toLocaleString()}\n`;
+    msg += `🎉 *የቡድን ዋጋ: Br ${(deal.groupPrice || deal.group_price || 0).toLocaleString()}*`;
+    if (savings > 0) msg += ` (ቆጥበህ ${savings.toLocaleString()} Br!)`;
+    msg += `\n\n`;
+    msg += `👥 የተቀሩ ቦታዎች: ${spotsLeft}\n`;
+    if (nextTier) {
+      const nextPrice = calculateGroupPrice(deal.regularPrice || deal.regular_price || 0, nextTier.minMembers);
+      msg += `🎯 ተጨማሪ ${nextTier.minMembers - (deal.currentMembers || deal.current_members || 0)} ሰው ከተቀላቀለ → Br ${nextPrice.toLocaleString()}\n`;
+    }
   }
-  msg += `⏰ የሚያበቃበት: ${new Date(deal.expiresAt).toLocaleDateString()}\n\n`;
+  
+  msg += `⏰ የሚያበቃበት: ${new Date(deal.expiresAt || deal.expires_at || Date.now()).toLocaleDateString()}\n\n`;
   msg += `👇 ለመቀላቀል አንኳኩ:\n${link}`;
   
   return msg;
 }
 
 // ── Share group deal to Telegram ─────────────────────────────
-export function shareToTelegram(deal: GroupDeal): void {
+export function shareToTelegram(deal: GroupDeal | any): void {
   const message = generateShareMessage(deal);
   
   const tg = (window as any).Telegram?.WebApp;
   if (tg?.switchInlineQuery) {
     tg.switchInlineQuery(message, { allowGroupChats: true, allowBotChats: false });
   } else {
-    navigator.clipboard.writeText(`https://t.me/smart_shopping_et_bot?start=group_${deal.shareToken}`);
+    navigator.clipboard.writeText(`https://t.me/smart_shopping_et_bot?start=group_${deal.shareToken || deal.share_token}`);
   }
 }
 
 // ── Parse serialized custom group buy attributes ─────────────
-export function parseSerializedName(rawName: string): { name: string; description: string; color: string; size: string } {
-  if (!rawName) return { name: '', description: '', color: '', size: '' };
+export function parseSerializedName(rawName: string): { 
+  name: string; 
+  description: string; 
+  color: string; 
+  size: string;
+  campaignType: 'progressive' | 'target';
+  targetPrice: number;
+  targetCount: number;
+} {
+  if (!rawName) return { name: '', description: '', color: '', size: '', campaignType: 'progressive', targetPrice: 0, targetCount: 3 };
   const parts = rawName.split('::');
   return {
     name: parts[0] || '',
     description: parts[1] || '',
     color: parts[2] || '',
     size: parts[3] || '',
+    campaignType: (parts[4] as any) || 'progressive',
+    targetPrice: Number(parts[5]) || 0,
+    targetCount: Number(parts[6]) || 3,
   };
 }

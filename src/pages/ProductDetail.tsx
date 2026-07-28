@@ -35,6 +35,10 @@ export default function ProductDetail() {
   const [sizePreference, setSizePreference] = useState("Any");
   const [durationHours, setDurationHours] = useState(24);
   const [creating, setCreating] = useState(false);
+  
+  // New campaign states
+  const [campaignType, setCampaignType] = useState<'progressive' | 'target'>('progressive');
+  const [targetPrice, setTargetPrice] = useState(0);
 
   const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -61,8 +65,11 @@ export default function ProductDetail() {
     }
     setCreating(true);
     try {
-      const calculatedPrice = Math.round(product.price * (1 - discountPercent / 100));
-      const serializedName = `${product.nameEn || product.name}::${customDescription}::${colorPreference}::${sizePreference}`;
+      const calculatedPrice = campaignType === 'target' 
+        ? targetPrice 
+        : Math.round(product.price * (1 - discountPercent / 100));
+        
+      const serializedName = `${product.nameEn || product.name}::${customDescription}::${colorPreference}::${sizePreference}::${campaignType}::${targetPrice}::${targetMembers}`;
       const expiresAt = new Date(Date.now() + durationHours * 60 * 60 * 1000).toISOString();
       
       const res = await fetch('/api/group-deals', {
@@ -76,7 +83,7 @@ export default function ProductDetail() {
           group_price: calculatedPrice,
           creator_telegram_id: store.telegramId,
           creator_name: store.profile?.name || 'User',
-          min_members: 2,
+          min_members: campaignType === 'target' ? targetMembers : 2,
           max_members: targetMembers,
           expires_at: expiresAt,
         }),
@@ -444,27 +451,64 @@ export default function ProductDetail() {
                   />
                 </div>
 
-                {/* 3. Discount Rate Input (Slider / Number) */}
+                {/* 2.5 Campaign Model Type Selection */}
                 <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Discount Rate</label>
-                    <span className="text-xs font-bold text-green-600">{discountPercent}% OFF</span>
-                  </div>
-                  <input 
-                    type="range" 
-                    min="5" 
-                    max="50" 
-                    step="5"
-                    value={discountPercent} 
-                    onChange={e => setDiscountPercent(Number(e.target.value))}
-                    className="w-full accent-green-500 cursor-pointer" 
-                  />
-                  <div className="flex justify-between text-[8px] text-slate-400">
-                    <span>5% (Starter)</span>
-                    <span>25% (Recommended)</span>
-                    <span>50% (Max)</span>
+                  <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Campaign Discount Model</label>
+                  <div className="flex gap-2 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl w-full">
+                    <button 
+                      type="button"
+                      onClick={() => setCampaignType('progressive')}
+                      className={`flex-1 py-2 rounded-lg text-[10px] font-bold ${campaignType === 'progressive' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}>
+                      📈 Progressive (Drops steadily)
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        setCampaignType('target');
+                        setTargetPrice(Math.round(product.price * 0.75)); // default 25% off
+                      }}
+                      className={`flex-1 py-2 rounded-lg text-[10px] font-bold ${campaignType === 'target' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}>
+                      🎯 Locked Target ("If-and-Only-If")
+                    </button>
                   </div>
                 </div>
+
+                {/* 3. Discount rate (Progressive) vs. Target Price (Locked Target) */}
+                {campaignType === 'progressive' ? (
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Discount Rate</label>
+                      <span className="text-xs font-bold text-green-600">{discountPercent}% OFF</span>
+                    </div>
+                    <input 
+                      type="range" 
+                      min="5" 
+                      max="50" 
+                      step="5"
+                      value={discountPercent} 
+                      onChange={e => setDiscountPercent(Number(e.target.value))}
+                      className="w-full accent-green-500 cursor-pointer" 
+                    />
+                    <div className="flex justify-between text-[8px] text-slate-400">
+                      <span>5% (Starter)</span>
+                      <span>25% (Recommended)</span>
+                      <span>50% (Max)</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Locked Target Price (Br)</label>
+                    <input 
+                      type="number" 
+                      min="1"
+                      max={product.price - 1}
+                      value={targetPrice} 
+                      onChange={e => setTargetPrice(Number(e.target.value))}
+                      className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-slate-50 dark:bg-transparent text-slate-800 dark:text-slate-200 outline-none focus:border-green-400 transition-colors" 
+                    />
+                    <p className="text-[8px] text-slate-400 mt-1">This price is locked and only activates if you reach your target group size.</p>
+                  </div>
+                )}
 
                 {/* 4. Target Group Size Input */}
                 <div>
@@ -522,7 +566,12 @@ export default function ProductDetail() {
                 {/* Live pricing estimation card */}
                 <div className="bg-green-50 dark:bg-green-950/20 rounded-xl p-3 space-y-1 border border-green-100">
                   <div className="flex justify-between text-xs"><span className="text-slate-500">Retail Price</span><span className="font-semibold text-slate-800 dark:text-slate-200">{formatPrice(product.price)}</span></div>
-                  <div className="flex justify-between text-xs"><span className="text-slate-500">Group Price (For Everyone!)</span><span className="font-extrabold text-green-600">{formatPrice(Math.round(product.price * (1 - discountPercent / 100)))}</span></div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-500">{campaignType === 'target' ? 'Locked Target Price' : 'Group Price (For Everyone!)'}</span>
+                    <span className="font-extrabold text-green-600">
+                      {formatPrice(campaignType === 'target' ? targetPrice : Math.round(product.price * (1 - discountPercent / 100)))}
+                    </span>
+                  </div>
                 </div>
               </div>
 
