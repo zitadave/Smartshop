@@ -4,6 +4,7 @@
 // ============================================
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
+import * as XLSX from 'xlsx';
 
 // ===== CONFIG (env-only, no hardcoded secrets) =====
 const ENV = {
@@ -173,6 +174,61 @@ export default async function handler(req: any, res: any) {
 
   try {
 
+
+    // ================================================================
+    // EXPORT DRIVERS ROUTE
+    // ================================================================
+    if (path === '/api/export-drivers') {
+      if (method !== 'GET' && method !== 'POST') return fail('Method not allowed', 405);
+      try {
+        const { data: drivers, error: dbError } = await supabase
+          .from('delivery_personnel')
+          .select('*')
+          .order('joined_at', { ascending: false });
+          
+        if (dbError) return fail(dbError.message, 500);
+        
+        const rows = (drivers || []).map((d: any) => ({
+          'Driver ID': d.id,
+          'Full Name (Latin)': d.full_name_latin || '',
+          'Full Name (Amharic)': d.full_name_amharic || '',
+          'Phone': d.phone || '',
+          'Email': d.email || '',
+          'Fayda ID': d.fayda_id || '',
+          'Vehicle Type': d.vehicle_type || 'motorcycle',
+          'License Plate': d.license_plate || '',
+          'Status': d.status || 'pending_review',
+          'Rating': d.rating || 0,
+          'Deliveries': d.total_deliveries || 0,
+          'Earnings (Br)': d.total_earnings || 0,
+          'Score': d.driver_score || 0,
+          'Tier': d.driver_tier || 'bronze',
+          'Online': d.is_online ? 'Yes' : 'No',
+          'Joined At': d.joined_at ? d.joined_at.slice(0, 10) : ''
+        }));
+        
+        const ws = XLSX.utils.json_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Drivers');
+        const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+        
+        const formData = new FormData();
+        const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        formData.append('chat_id', ENV.adminChatId);
+        formData.append('document', blob, 'drivers_report.xlsx');
+        formData.append('caption', '📊 *Smartshop Express Delivery Fleet Report*\n\nHere is the requested Excel spreadsheet of all driver applications, statuses, earnings, and ratings.');
+        
+        const tgRes = await fetch(`https://api.telegram.org/bot${ENV.ADMIN_BOT_TOKEN}/sendDocument`, {
+          method: 'POST',
+          body: formData
+        });
+        const tgData: any = await tgRes.json();
+        
+        return ok({ success: !!tgData.ok, message: tgData.description || 'Fleet report sent directly to your Telegram admin chat!' });
+      } catch (e: any) {
+        return fail(e.message, 500);
+      }
+    }
 
     // ================================================================
     // DELIVERY ROUTES

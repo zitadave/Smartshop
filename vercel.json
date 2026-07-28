@@ -4,7 +4,6 @@
   "installCommand": "npm install",
   "framework": "vite",
   "rewrites": [
-    { "source": "/api/export-drivers", "destination": "/api/export-drivers.py" },
     { "source": "/api/(.*)", "destination": "/api" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
