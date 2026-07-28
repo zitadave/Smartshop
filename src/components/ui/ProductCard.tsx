@@ -34,7 +34,7 @@ export const ProductCard = memo(function ProductCard({
   const handlePointerDown = useCallback(() => {
     longPressTimer.current = setTimeout(() => {
       setLongPressed(true);
-      import('../ui/QuickView').then(m => m.showQuickView(product));
+      import('./QuickView').then(m => m.showQuickView(product));
     }, 500);
   }, [product]);
 
