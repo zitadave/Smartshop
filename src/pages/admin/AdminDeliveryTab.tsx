@@ -20,6 +20,8 @@ export default function AdminDeliveryTab() {
   var [rejectingDriverId, setRejectingDriverId] = useState<number | null>(null);
   var [rejectingDriverName, setRejectingDriverName] = useState<string>('');
   var [rejectionReason, setRejectionReason] = useState<string>('');
+  var [zoomImage, setZoomImage] = useState<string | null>(null);
+  var [exporting, setExporting] = useState(false);
 
   useEffect(function() {
     setMounted(true);
@@ -74,6 +76,25 @@ export default function AdminDeliveryTab() {
         toast('Error: ' + (d.error || ''), 'error');
       }
     }).catch(function(e) { toast('Error: ' + e.message, 'error'); });
+  }
+
+  function exportExcel() {
+    setExporting(true);
+    toast('⏳ Generating and dispatching Excel report...', 'info');
+    fetch('/api/export-drivers')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        setExporting(false);
+        if (d.success) {
+          toast('📊 Excel report sent directly to your Telegram chat!', 'success');
+        } else {
+          toast('Error: ' + (d.message || 'Could not send report'), 'error');
+        }
+      })
+      .catch(function(e) {
+        setExporting(false);
+        toast('Error: ' + e.message, 'error');
+      });
   }
 
   function removeDriver(id) {
@@ -179,9 +200,19 @@ export default function AdminDeliveryTab() {
               <input className="w-full pl-8 pr-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200" placeholder="Search drivers..." value={search} onChange={function(e) { setSearch(e.target.value); }} />
             </div>
             <button 
-              onClick={function() { window.open('/api/export-drivers', '_blank'); }}
-              className="px-3.5 py-2 bg-emerald-500 text-white rounded-xl text-[10px] font-bold shadow hover:shadow-md transition-all flex items-center gap-1.5 flex-shrink-0">
-              📊 Export XLSX
+              onClick={exportExcel}
+              disabled={exporting}
+              className="px-3.5 py-2 bg-emerald-500 text-white rounded-xl text-[10px] font-bold shadow hover:shadow-md disabled:opacity-60 transition-all flex items-center gap-1.5 flex-shrink-0">
+              {exporting ? (
+                <>
+                  <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Exporting...
+                </>
+              ) : (
+                <>
+                  📊 Export XLSX
+                </>
+              )}
             </button>
           </div>
 
@@ -323,13 +354,13 @@ export default function AdminDeliveryTab() {
               <div className="space-y-4 max-h-[65vh] overflow-y-auto scrollbar-none pr-1">
                 {/* 1. Identity Previews */}
                 <div className="space-y-3 bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border">
-                  <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">📂 Uploaded Documents</h4>
+                  <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">📂 Uploaded Documents (Tap for Full Preview)</h4>
                   
                   {/* Selfie */}
                   {selectedKYC.fayda_selfie_url && (
                     <div>
                       <span className="text-[9px] font-bold text-slate-400 block mb-1">Driver Selfie / Recent Photo</span>
-                      <div className="w-28 h-28 rounded-xl overflow-hidden border bg-white">
+                      <div className="w-28 h-28 rounded-xl overflow-hidden border bg-white cursor-zoom-in hover:opacity-90 active:scale-[0.98] transition-all shadow-sm" onClick={function() { setZoomImage(selectedKYC.fayda_selfie_url); }} title="Click to view full size">
                         <img src={selectedKYC.fayda_selfie_url} alt="Selfie" className="w-full h-full object-cover" />
                       </div>
                     </div>
@@ -340,7 +371,7 @@ export default function AdminDeliveryTab() {
                     {selectedKYC.fayda_id_front_url && (
                       <div>
                         <span className="text-[9px] font-bold text-slate-400 block mb-1">Fayda ID (Front)</span>
-                        <div className="w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white">
+                        <div className="w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white cursor-zoom-in hover:opacity-90 active:scale-[0.98] transition-all shadow-sm" onClick={function() { setZoomImage(selectedKYC.fayda_id_front_url); }} title="Click to view full size">
                           <img src={selectedKYC.fayda_id_front_url} alt="Fayda Front" className="w-full h-full object-cover" />
                         </div>
                       </div>
@@ -349,7 +380,7 @@ export default function AdminDeliveryTab() {
                     {selectedKYC.fayda_id_back_url && (
                       <div>
                         <span className="text-[9px] font-bold text-slate-400 block mb-1">Fayda ID (Back)</span>
-                        <div className="w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white">
+                        <div className="w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white cursor-zoom-in hover:opacity-90 active:scale-[0.98] transition-all shadow-sm" onClick={function() { setZoomImage(selectedKYC.fayda_id_back_url); }} title="Click to view full size">
                           <img src={selectedKYC.fayda_id_back_url} alt="Fayda Back" className="w-full h-full object-cover" />
                         </div>
                       </div>
@@ -369,7 +400,7 @@ export default function AdminDeliveryTab() {
                             {emFront && (
                               <div>
                                 <span className="text-[8px] text-slate-400 block mb-0.5">ID Card (Front)</span>
-                                <div className="w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white">
+                                <div className="w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white cursor-zoom-in hover:opacity-90 active:scale-[0.98] transition-all shadow-sm" onClick={function() { setZoomImage(emFront); }} title="Click to view full size">
                                   <img src={emFront} alt="Emergency Front" className="w-full h-full object-cover" />
                                 </div>
                               </div>
@@ -377,7 +408,7 @@ export default function AdminDeliveryTab() {
                             {emBack && (
                               <div>
                                 <span className="text-[8px] text-slate-400 block mb-0.5">ID Card (Back)</span>
-                                <div className="w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white">
+                                <div className="w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white cursor-zoom-in hover:opacity-90 active:scale-[0.98] transition-all shadow-sm" onClick={function() { setZoomImage(emBack); }} title="Click to view full size">
                                   <img src={emBack} alt="Emergency Back" className="w-full h-full object-cover" />
                                 </div>
                               </div>
@@ -530,6 +561,22 @@ export default function AdminDeliveryTab() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Full-Screen Image Zoom Modal */}
+      {zoomImage && mounted && typeof document !== 'undefined' && document.body && createPortal(
+        <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-4 animate-scaleIn" onClick={function() { setZoomImage(null); }}>
+          <button className="absolute right-4 top-4 w-10 h-10 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center font-bold text-base transition-all active:scale-[0.90]" onClick={function() { setZoomImage(null); }}>✕</button>
+          
+          <div className="max-w-full max-h-[85vh] flex items-center justify-center overflow-hidden rounded-2xl border border-white/10 shadow-2xl relative" onClick={function(e) { e.stopPropagation(); }}>
+            <img src={zoomImage} alt="Full Preview" className="max-w-full max-h-[80vh] object-contain select-none" />
+          </div>
+          
+          <div className="mt-4 text-center text-xs text-white/50 font-semibold select-none">
+            Tap anywhere outside or click ✕ to return
           </div>
         </div>,
         document.body
