@@ -195,11 +195,28 @@ export default async function handler(req: any, res: any) {
         const b = req.body || {};
         if (!b.full_name_latin || !b.phone) return fail('full_name_latin and phone required');
         const { data, error } = await supabase.from('delivery_personnel').insert({
-          full_name_latin: b.full_name_latin, full_name_amharic: b.full_name_amharic || '', phone: b.phone,
-          email: b.email || '', fayda_id: b.fayda_id || 'TEMP-' + Date.now(),
-          vehicle_type: b.vehicle_type || 'motorcycle', telegram_id: b.telegram_id || null,
-          emergency_name: b.emergency_name || '', emergency_phone: b.emergency_phone || '',
-          emergency_relationship: b.emergency_relationship || '', status: 'pending_review',
+          full_name_latin: b.full_name_latin, 
+          full_name_amharic: b.full_name_amharic || '', 
+          phone: b.phone,
+          email: b.email || '', 
+          fayda_id: b.fayda_id || 'TEMP-' + Date.now(),
+          fayda_id_front_url: b.fayda_front_image || '',
+          fayda_id_back_url: b.fayda_back_image || '',
+          fayda_selfie_url: b.fayda_front_image || '',
+          vehicle_type: b.vehicle_type || 'motorcycle', 
+          license_plate: b.license_plate || '',
+          telegram_id: b.telegram_id || null,
+          service_zones: b.service_zones || [],
+          available_days: b.available_days || [],
+          available_hours: b.available_hours || [],
+          emergency_name: b.emergency_name || '', 
+          emergency_phone: b.emergency_phone || '',
+          emergency_relationship: b.emergency_relationship || '', 
+          emergency_address: (b.emergency_address || '') + '::' + (b.emergency_id_image || ''),
+          bank_name: b.bank_name || '',
+          bank_account: b.bank_account || '',
+          telebirr_number: b.telebirr_number || '',
+          status: 'pending_review',
           agreed_to_terms_at: new Date().toISOString(),
         }).select().single();
         if (error) return fail(error.message);

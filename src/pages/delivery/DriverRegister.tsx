@@ -27,12 +27,16 @@ export default function DriverRegister() {
   var [phone, setPhone] = useState('');
   var [email, setEmail] = useState('');
   var [faydaId, setFaydaId] = useState('');
+  var [faydaFrontImage, setFaydaFrontImage] = useState('');
+  var [faydaBackImage, setFaydaBackImage] = useState('');
   
   // Step 2: Vehicle
   var [vehicleType, setVehicleType] = useState('');
   var [licensePlate, setLicensePlate] = useState('');
   
   // Step 3: Service
+  var [allZones, setAllZones] = useState(['Bole', 'Merkato', 'Piassa', 'Summit', 'Mexico', 'Kazanchis', 'CMC', 'Ayat']);
+  var [customZoneInput, setCustomZoneInput] = useState('');
   var [zones, setZones] = useState<string[]>([]);
   var [days, setDays] = useState<number[]>([1, 2, 3, 4, 5, 6]);
   var [hours, setHours] = useState<string[]>(['Morning (6-12)', 'Afternoon (12-5)']);
@@ -42,6 +46,35 @@ export default function DriverRegister() {
   var [emergencyPhone, setEmergencyPhone] = useState('');
   var [emergencyRelation, setEmergencyRelation] = useState('');
   var [emergencyAddress, setEmergencyAddress] = useState('');
+  var [emergencyIdImage, setEmergencyIdImage] = useState('');
+
+  // Image upload helpers
+  function handleFaydaFrontChange(e: any) {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setFaydaFrontImage(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  }
+
+  function handleFaydaBackChange(e: any) {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setFaydaBackImage(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  }
+
+  function handleEmergencyIdChange(e: any) {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setEmergencyIdImage(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  }
   
   // Payment
   var [telebirr, setTelebirr] = useState('');
@@ -64,18 +97,21 @@ export default function DriverRegister() {
   }
 
   async function submit() {
-    if (!nameLatin.trim() || !phone.trim() || !faydaId.trim()) {
-      toast('Please fill in all required fields', 'error');
+    if (!nameLatin.trim() || !phone.trim() || !faydaId.trim() || !faydaFrontImage || !faydaBackImage) {
+      toast('Please fill in all required identity verification fields', 'error');
       return;
     }
     if (!vehicleType) { toast('Please select a vehicle type', 'error'); return; }
     if (zones.length === 0) { toast('Please select at least one service zone', 'error'); return; }
-    if (!emergencyName.trim() || !emergencyPhone.trim()) { toast('Emergency contact is required', 'error'); return; }
+    if (!emergencyName.trim() || !emergencyPhone.trim() || !emergencyIdImage) { 
+      toast('Emergency contact person and their ID are required', 'error'); 
+      return; 
+    }
     if (!agreeTerms) { toast('Please agree to the terms', 'error'); return; }
     
     setSubmitting(true);
     
-    var ls = {};
+    var ls: any = {};
     try { ls = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
     var tgId = ls.telegramId || '';
     
@@ -90,6 +126,8 @@ export default function DriverRegister() {
           phone: phone.trim(),
           email: email.trim(),
           fayda_id: faydaId.trim(),
+          fayda_front_image: faydaFrontImage,
+          fayda_back_image: faydaBackImage,
           vehicle_type: vehicleType,
           license_plate: licensePlate.trim(),
           service_zones: zones,
@@ -99,6 +137,7 @@ export default function DriverRegister() {
           emergency_phone: emergencyPhone.trim(),
           emergency_relationship: emergencyRelation || 'Other',
           emergency_address: emergencyAddress.trim(),
+          emergency_id_image: emergencyIdImage,
           telebirr_number: telebirr.trim(),
           bank_name: bankName.trim(),
           bank_account: bankAccount.trim(),
@@ -174,13 +213,36 @@ export default function DriverRegister() {
                   <input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-600 rounded-xl text-sm bg-transparent" value={email} onChange={function(e) { setEmail(e.target.value); }} placeholder="email@example.com" />
                 </div>
               </div>
-              <div className="bg-amber-50 dark:bg-amber-950/20 rounded-xl p-3 border border-amber-200 dark:border-amber-800/30">
-                <label className="text-[9px] font-semibold text-amber-700 dark:text-amber-400 uppercase">Fayda ID Number *</label>
-                <input className="w-full mt-1 p-2.5 border border-amber-200 dark:border-amber-700 rounded-xl text-sm bg-transparent text-amber-900 dark:text-amber-200" value={faydaId} onChange={function(e) { setFaydaId(e.target.value); }} placeholder="ETH-FD-XXXX-XXXX" />
-                <p className="text-[8px] text-amber-600 mt-1">You will need to upload photos of your Fayda ID for verification</p>
+              <div className="bg-amber-50 dark:bg-amber-950/20 rounded-xl p-3 border border-amber-200 dark:border-amber-800/30 space-y-3">
+                <div>
+                  <label className="text-[9px] font-semibold text-amber-700 dark:text-amber-400 uppercase">Fayda ID Number *</label>
+                  <input className="w-full mt-1 p-2.5 border border-amber-200 dark:border-amber-700 rounded-xl text-sm bg-transparent text-amber-900 dark:text-amber-200" value={faydaId} onChange={function(e) { setFaydaId(e.target.value); }} placeholder="ETH-FD-XXXX-XXXX" />
+                </div>
+                
+                {/* Fayda ID Front Upload */}
+                <div>
+                  <label className="text-[9px] font-bold text-amber-800 dark:text-amber-400 uppercase block mb-1">Fayda ID Photo (Front) *</label>
+                  <input type="file" accept="image/*" onChange={handleFaydaFrontChange} className="w-full text-xs text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[9px] file:font-semibold file:bg-amber-100 file:text-amber-700 cursor-pointer" />
+                  {faydaFrontImage && (
+                    <div className="mt-2 w-14 h-14 rounded-lg overflow-hidden border border-amber-200 shadow-sm">
+                      <img src={faydaFrontImage} className="w-full h-full object-cover" alt="Front Preview" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Fayda ID Back Upload */}
+                <div>
+                  <label className="text-[9px] font-bold text-amber-800 dark:text-amber-400 uppercase block mb-1">Fayda ID Photo (Back) *</label>
+                  <input type="file" accept="image/*" onChange={handleFaydaBackChange} className="w-full text-xs text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[9px] file:font-semibold file:bg-amber-100 file:text-amber-700 cursor-pointer" />
+                  {faydaBackImage && (
+                    <div className="mt-2 w-14 h-14 rounded-lg overflow-hidden border border-amber-200 shadow-sm">
+                      <img src={faydaBackImage} className="w-full h-full object-cover" alt="Back Preview" />
+                    </div>
+                  )}
+                </div>
               </div>
               
-              <button className="w-full py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-sm font-bold" onClick={function() { if (nameLatin && phone && faydaId) setStep(2); else toast('Fill required fields', 'error'); }}>Continue →</button>
+              <button className="w-full py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-sm font-bold" onClick={function() { if (nameLatin && phone && faydaId && faydaFrontImage && faydaBackImage) setStep(2); else toast('Fayda ID and Front/Back photos are required', 'error'); }}>Continue →</button>
             </div>
           )}
 
@@ -221,13 +283,42 @@ export default function DriverRegister() {
             <div className="space-y-4 max-h-[500px] overflow-y-auto">
               <h2 className="text-sm font-bold">Service Areas</h2>
               <div className="flex flex-wrap gap-1.5">
-                {ZONES.map(function(z) {
+                {allZones.map(function(z) {
                   return (
                     <button key={z} className={'px-3 py-1.5 rounded-full text-[10px] font-semibold border transition-all ' + (zones.includes(z) ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-white text-slate-500 border-slate-200')} onClick={function() { toggleZone(z); }}>
                       📍 {z}
                     </button>
                   );
                 })}
+              </div>
+
+              {/* Add Custom Zone input field */}
+              <div className="flex gap-2 mt-2 bg-slate-50 dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700">
+                <input 
+                  type="text" 
+                  placeholder="Add custom service area..." 
+                  value={customZoneInput} 
+                  onChange={function(e) { setCustomZoneInput(e.target.value); }}
+                  className="flex-1 p-2 border border-slate-200 dark:border-slate-600 rounded-xl text-xs bg-transparent outline-none focus:border-emerald-500 transition-colors" 
+                />
+                <button 
+                  type="button"
+                  onClick={function() {
+                    if (customZoneInput.trim()) {
+                      const newZone = customZoneInput.trim();
+                      if (!allZones.includes(newZone)) {
+                        setAllZones([...allZones, newZone]);
+                      }
+                      if (!zones.includes(newZone)) {
+                        setZones([...zones, newZone]);
+                      }
+                      setCustomZoneInput('');
+                      toast(`📍 Added zone: ${newZone}`, 'success');
+                    }
+                  }}
+                  className="px-3.5 py-2 bg-emerald-500 text-white rounded-xl text-xs font-bold hover:bg-emerald-600 transition-all">
+                  ➕ Add Area
+                </button>
               </div>
 
               <h2 className="text-sm font-bold mt-4">Available Days</h2>
@@ -283,10 +374,21 @@ export default function DriverRegister() {
                     <label className="text-[9px] font-semibold text-slate-400 uppercase">Address</label>
                     <input className="w-full mt-1 p-2.5 border border-slate-200 rounded-xl text-sm bg-transparent" value={emergencyAddress} onChange={function(e) { setEmergencyAddress(e.target.value); }} placeholder="Emergency contact address" />
                   </div>
+
+                  {/* Emergency Contact ID Upload field */}
+                  <div className="border-t border-slate-100 dark:border-slate-800 pt-3 mt-3">
+                    <label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">Emergency Contact ID (Fayda / Kebele) *</label>
+                    <input type="file" accept="image/*" onChange={handleEmergencyIdChange} className="w-full text-xs text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[9px] file:font-semibold file:bg-slate-100 file:text-slate-700 cursor-pointer" />
+                    {emergencyIdImage && (
+                      <div className="mt-2 w-14 h-14 rounded-lg overflow-hidden border border-slate-200 shadow-sm">
+                        <img src={emergencyIdImage} className="w-full h-full object-cover" alt="Emergency ID Preview" />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              <button className="w-full py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-sm font-bold" onClick={function() { if (zones.length > 0 && emergencyName && emergencyPhone) setStep(4); else toast('Fill required fields', 'error'); }}>Continue →</button>
+              <button className="w-full py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-sm font-bold" onClick={function() { if (zones.length > 0 && emergencyName && emergencyPhone && emergencyIdImage) setStep(4); else toast('Service zones, Emergency name, phone, and ID card are required', 'error'); }}>Continue →</button>
             </div>
           )}
 
