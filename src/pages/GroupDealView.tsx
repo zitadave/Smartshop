@@ -63,6 +63,19 @@ export default function GroupDealView() {
   };
 
   useEffect(() => {
+    if (products.length === 0) {
+      fetch('/api/products')
+        .then(r => r.json())
+        .then(d => {
+          if (d?.products) {
+            store.setProducts(d.products);
+          }
+        })
+        .catch(console.error);
+    }
+  }, [products.length]);
+
+  useEffect(() => {
     loadDeal();
   }, [token, store.telegramId, store.profile?.phone]);
 
@@ -84,8 +97,20 @@ export default function GroupDealView() {
       });
       if (result.success) {
         setJoined(true);
-        toast('🎉 Successfully joined the group deal!', 'success');
+        toast('🎉 Joined! Taking you to checkout...', 'success');
+        
+        // Auto-add product to cart at locked group buy price
+        const product = products.find(p => p.id === deal.product_id);
+        if (product) {
+          const discountedProduct = {
+            ...product,
+            price: deal.group_price,
+          };
+          addToCart(discountedProduct, 1);
+        }
+        
         loadDeal();
+        setTimeout(() => navigate('/checkout'), 800);
       } else {
         toast(result.error || 'Failed to join group deal', 'error');
       }
