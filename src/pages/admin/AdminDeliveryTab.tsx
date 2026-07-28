@@ -76,13 +76,13 @@ export default function AdminDeliveryTab() {
 
   function exportExcel() {
     setExporting(true);
-    toast('⏳ Generating and dispatching Excel report...', 'info');
+    toast('⏳ Generating and dispatching Fleet report...', 'info');
     fetch('/api/export-drivers?chatId=' + (profile?.telegramId || ''))
       .then(function(r) { return r.json(); })
       .then(function(d) {
         setExporting(false);
         if (d.success) {
-          toast('📊 Excel report sent directly to your Telegram chat!', 'success');
+          toast('📊 Fleet report sent directly to your Telegram chat!', 'success');
         } else {
           toast('Error: ' + (d.message || 'Could not send report'), 'error');
         }
