@@ -113,16 +113,17 @@ const BOT_COMMANDS = [
     { token: ENV.VENDOR_BOT_TOKEN, isAdmin: false },
     { token: ENV.ADMIN_BOT_TOKEN, isAdmin: true },
   ];
-  for (const token of tokens) {
-    if (!token) continue;
+  for (const tObj of tokens) {
+    if (!tObj?.token) continue;
     try {
+      const cmds = tObj.isAdmin ? ADMIN_COMMANDS : BOT_COMMANDS;
       // Set commands globally
-      await fetch('https://api.telegram.org/bot' + token + '/setMyCommands', {
+      await fetch('https://api.telegram.org/bot' + tObj.token + '/setMyCommands', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ commands: cmds }),
       });
       // Set global menu button to default (commands list)
-      await fetch('https://api.telegram.org/bot' + token + '/setChatMenuButton', {
+      await fetch('https://api.telegram.org/bot' + tObj.token + '/setChatMenuButton', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ menu_button: { type: 'default' } }),
       });
