@@ -290,7 +290,16 @@ export default async function handler(req: any, res: any) {
         return ok({ success: true, driver: data });
       }
       if (path.startsWith('/api/delivery/drivers')) {
-        if (method === 'GET') { const did = pid(path); if (did) { const { data, error } = await supabase.from('delivery_personnel').select('*').eq('id', did).single(); return ok({ success: !error, driver: data || null }); } const { data, error } = await supabase.from('delivery_personnel').select('*').order('joined_at', { ascending: false }); if (error) return fail(error.message, 500); return ok({ drivers: data || [] }); }
+        if (method === 'GET') { 
+          var uParams = new URLSearchParams(req.url?.split('?')[1] || '');
+          const tgId = uParams.get('telegram_id') || uParams.get('telegramId');
+          if (tgId) {
+            const { data, error } = await supabase.from('delivery_personnel').select('*').eq('telegram_id', parseInt(tgId)).single();
+            if (error || !data) return ok({ success: false, driver: null });
+            return ok({ success: true, driver: data });
+          }
+          const did = pid(path); 
+          if (did) { const { data, error } = await supabase.from('delivery_personnel').select('*').eq('id', did).single(); return ok({ success: !error, driver: data || null }); } const { data, error } = await supabase.from('delivery_personnel').select('*').order('joined_at', { ascending: false }); if (error) return fail(error.message, 500); return ok({ drivers: data || [] }); }
         if (method === 'DELETE') { const { error } = await supabase.from('delivery_personnel').update({ status: 'rejected' }).eq('id', pid(path)); if (error) return fail(error.message); return ok({ success: true }); }
       }
       if (path === '/api/delivery/applications' && method === 'GET') { const { data, error } = await supabase.from('delivery_personnel').select('*').in('status', ['pending_fayda', 'pending_review']).order('joined_at', { ascending: false }); if (error) return fail(error.message, 500); return ok({ applications: data || [] }); }

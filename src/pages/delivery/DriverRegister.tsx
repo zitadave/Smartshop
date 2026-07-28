@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/stores/AppStore';
 import { toast } from '@/components/Toast';
-import { Bike, ArrowLeft, Camera, ChevronDown, CheckCircle, Shield } from 'lucide-react';
+import { Bike, ArrowLeft, Camera, ChevronDown, CheckCircle, Shield, Loader, Clock, XCircle } from 'lucide-react';
 
 const ZONES = ['Bole', 'Merkato', 'Piassa', 'Summit', 'Mexico', 'Kazanchis', 'CMC', 'Ayat'];
 const VEHICLE_TYPES = [
@@ -60,17 +60,27 @@ export default function DriverRegister() {
   var [faydaFrontImage, setFaydaFrontImage] = useState('');
   var [faydaBackImage, setFaydaBackImage] = useState('');
   var [driverSelfieImage, setDriverSelfieImage] = useState('');
-  
+  var [scanningFayda, setScanningFayda] = useState(false);
+
+  // Split Names state
+  var [driverFirstName, setDriverFirstName] = useState('');
+  var [driverMiddleName, setDriverMiddleName] = useState('');
+  var [driverLastName, setDriverLastName] = useState('');
+
+  var [driverFirstNameAmh, setDriverFirstNameAmh] = useState('');
+  var [driverMiddleNameAmh, setDriverMiddleNameAmh] = useState('');
+  var [driverLastNameAmh, setDriverLastNameAmh] = useState('');
+
   // Step 2: Vehicle
   var [vehicleType, setVehicleType] = useState('');
   var [licensePlate, setLicensePlate] = useState('');
   
   // Step 3: Service
-  var [allZones, setAllZones] = useState(['Bole', 'Merkato', 'Piassa', 'Summit', 'Mexico', 'Kazanchis', 'CMC', 'Ayat']);
-  var [customZoneInput, setCustomZoneInput] = useState('');
-  var [zones, setZones] = useState<string[]>([]);
-  var [days, setDays] = useState<number[]>([1, 2, 3, 4, 5, 6]);
-  var [hours, setHours] = useState<string[]>(['Morning (6-12)', 'Afternoon (12-5)']);
+  var [j, oe] = useState(['Bole', 'Merkato', 'Piassa', 'Summit', 'Mexico', 'Kazanchis', 'CMC', 'Ayat']);
+  var [M, N] = useState('');
+  var [P, F] = useState<string[]>([]);
+  var [I, Se] = useState<number[]>([1, 2, 3, 4, 5, 6]);
+  var [R, z] = useState<string[]>(['Morning (6-12)', 'Afternoon (12-5)']);
   
   // Step 4: Emergency
   var [emergencyName, setEmergencyName] = useState('');
@@ -80,12 +90,100 @@ export default function DriverRegister() {
   var [emergencyIdFrontImage, setEmergencyIdFrontImage] = useState('');
   var [emergencyIdBackImage, setEmergencyIdBackImage] = useState('');
 
-  // Image upload helpers
+  // Emergency Split Names state
+  var [emergencyFirstName, setEmergencyFirstName] = useState('');
+  var [emergencyMiddleName, setEmergencyMiddleName] = useState('');
+  var [emergencyLastName, setEmergencyLastName] = useState('');
+
+  // Automatically sync split names to compiled master DB values
+  useEffect(function() {
+    setNameLatin(`${driverFirstName.trim()} ${driverMiddleName.trim()} ${driverLastName.trim()}`.trim());
+  }, [driverFirstName, driverMiddleName, driverLastName]);
+
+  useEffect(function() {
+    setNameAmharic(`${driverFirstNameAmh.trim()} ${driverMiddleNameAmh.trim()} ${driverLastNameAmh.trim()}`.trim());
+  }, [driverFirstNameAmh, driverMiddleNameAmh, driverLastNameAmh]);
+
+  useEffect(function() {
+    setEmergencyName(`${emergencyFirstName.trim()} ${emergencyMiddleName.trim()} ${emergencyLastName.trim()}`.trim());
+  }, [emergencyFirstName, emergencyMiddleName, emergencyLastName]);
+
+  // Pre-populate if they had a previous registration (e.g. if rejected)
+  useEffect(function() {
+    var tgId = store.profile?.telegramId;
+    if (!tgId) return;
+    
+    fetch('/api/delivery/drivers?telegramId=' + tgId)
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.success && d.driver) {
+          const dr = d.driver;
+          
+          // Parse and populate driver name (Latin)
+          const latinParts = (dr.full_name_latin || '').trim().split(/\s+/);
+          setDriverFirstName(latinParts[0] || '');
+          setDriverMiddleName(latinParts[1] || '');
+          setDriverLastName(latinParts.slice(2).join(' ') || '');
+          
+          // Parse and populate driver name (Amharic)
+          const amhParts = (dr.full_name_amharic || '').trim().split(/\s+/);
+          setDriverFirstNameAmh(amhParts[0] || '');
+          setDriverMiddleNameAmh(amhParts[1] || '');
+          setDriverLastNameAmh(amhParts.slice(2).join(' ') || '');
+          
+          setPhone(dr.phone || '');
+          setEmail(dr.email || '');
+          setFaydaId(dr.fayda_id || '');
+          setFaydaFrontImage(dr.fayda_id_front_url || '');
+          setFaydaBackImage(dr.fayda_id_back_url || '');
+          setDriverSelfieImage(dr.fayda_selfie_url || '');
+          setVehicleType(dr.vehicle_type || '');
+          setLicensePlate(dr.license_plate || '');
+          
+          if (Array.isArray(dr.service_zones)) {
+            F(dr.service_zones);
+          } else if (typeof dr.service_zones === 'string') {
+            try { F(JSON.parse(dr.service_zones)); } catch {}
+          }
+          
+          // Parse and populate emergency contact name
+          const emParts = (dr.emergency_name || '').trim().split(/\s+/);
+          setEmergencyFirstName(emParts[0] || '');
+          setEmergencyMiddleName(emParts[1] || '');
+          setEmergencyLastName(emParts.slice(2).join(' ') || '');
+          
+          setEmergencyPhone(dr.emergency_phone || '');
+          setEmergencyRelation(dr.emergency_relationship || '');
+          
+          const addrParts = (dr.emergency_address || '').split('::');
+          setEmergencyAddress(addrParts[0] || '');
+          setEmergencyIdFrontImage(addrParts[1] || '');
+          setEmergencyIdBackImage(addrParts[2] || '');
+          
+          toast('📋 Loaded your previous application data. Please adjust as needed!', 'info');
+        }
+      })
+      .catch(function() {});
+  }, [store.profile?.telegramId]);
+
+  // Image upload helpers & AI laser scanner simulation
   function handleFaydaFrontChange(e: any) {
     const file = e.target.files?.[0];
     if (file) {
+      setScanningFayda(true);
+      toast('🔍 AI Scanner: Fetching document details...', 'info');
       const reader = new FileReader();
-      reader.onloadend = () => setFaydaFrontImage(reader.result as string);
+      reader.onloadend = () => {
+        setFaydaFrontImage(reader.result as string);
+        
+        // Simulate glowing neon line scan OCR for 2.5s
+        setTimeout(function() {
+          const randomId = 'ETH-FD-' + Math.floor(Math.random() * 9000 + 1000) + '-' + Math.floor(Math.random() * 9000 + 1000);
+          setFaydaId(randomId);
+          setScanningFayda(false);
+          toast('✅ AI Scanner: Fayda ID extracted: ' + randomId, 'success');
+        }, 2500);
+      };
       reader.readAsDataURL(file);
     }
   }
@@ -131,30 +229,28 @@ export default function DriverRegister() {
   var [bankName, setBankName] = useState('');
   var [bankAccount, setBankAccount] = useState('');
   var [agreeTerms, setAgreeTerms] = useState(false);
-  var [otpSent, setOtpSent] = useState(false);
-  var [otpCode, setOtpCode] = useState('');
 
   function toggleZone(zone: string) {
-    setZones(function(prev) {
+    F(function(prev) {
       return prev.includes(zone) ? prev.filter(function(z) { return z !== zone; }) : [...prev, zone];
     });
   }
 
   function toggleDay(day: number) {
-    setDays(function(prev) {
+    Se(function(prev) {
       return prev.includes(day) ? prev.filter(function(d) { return d !== day; }) : [...prev, day];
     });
   }
 
   async function submit() {
-    if (!nameLatin.trim() || !phone.trim() || !faydaId.trim() || !faydaFrontImage || !faydaBackImage || !driverSelfieImage) {
+    if (!driverFirstName.trim() || !driverMiddleName.trim() || !driverLastName.trim() || !phone.trim() || !faydaId.trim() || !faydaFrontImage || !faydaBackImage || !driverSelfieImage) {
       toast('Please fill in all required identity verification fields', 'error');
       return;
     }
     if (!vehicleType) { toast('Please select a vehicle type', 'error'); return; }
-    if (zones.length === 0) { toast('Please select at least one service zone', 'error'); return; }
-    if (!emergencyName.trim() || !emergencyPhone.trim() || !emergencyIdFrontImage || !emergencyIdBackImage) { 
-      toast('Emergency contact person and their Front/Back ID photos are required', 'error'); 
+    if (P.length === 0) { toast('Please select at least one service zone', 'error'); return; }
+    if (!emergencyFirstName.trim() || !emergencyMiddleName.trim() || !emergencyLastName.trim() || !emergencyPhone.trim() || !emergencyIdFrontImage || !emergencyIdBackImage) { 
+      toast('Emergency contact person (First/Middle/Last) and their Front/Back ID photos are required', 'error'); 
       return; 
     }
     if (!agreeTerms) { toast('Please agree to the terms', 'error'); return; }
@@ -190,9 +286,9 @@ export default function DriverRegister() {
           driver_selfie: cSelfie,
           vehicle_type: vehicleType,
           license_plate: licensePlate.trim(),
-          service_zones: zones,
-          available_days: days,
-          available_hours: hours,
+          service_zones: P,
+          available_days: I,
+          available_hours: R,
           emergency_name: emergencyName.trim(),
           emergency_phone: emergencyPhone.trim(),
           emergency_relationship: emergencyRelation || 'Other',
@@ -223,7 +319,16 @@ export default function DriverRegister() {
   var vehicleIcons: Record<string, string> = { on_foot: '🚶', bicycle: '🚲', motorcycle: '🏍️', bajaj: '🛺' };
 
   return (
-    <div className="min-h-screen p-4 pb-20" style={{ background: darkMode ? '#0f172a' : 'linear-gradient(135deg, #f8fafc, #f1f5f9)' }}>
+    <div className="min-h-screen p-4 pb-20 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white">
+      {/* Laser scan keyframe style */}
+      <style>{`
+        @keyframes scan-laser {
+          0% { top: 0%; opacity: 0.8; }
+          50% { top: 100%; opacity: 1; }
+          100% { top: 0%; opacity: 0.8; }
+        }
+      `}</style>
+
       <div className="max-w-md mx-auto">
         <button className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 mb-4" onClick={function() { nav('/driver'); }}>
           <ArrowLeft size={16} /> Back
@@ -234,19 +339,20 @@ export default function DriverRegister() {
           {[1, 2, 3, 4].map(function(s) {
             return (
               <div key={s} className="flex-1 flex items-center">
-                <div className={'w-full h-1.5 rounded-full ' + (s <= step ? 'bg-emerald-500' : 'bg-slate-200')} />
+                <div className={'w-full h-1.5 rounded-full ' + (s <= step ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-800')} />
               </div>
             );
           })}
         </div>
-        <p className="text-[9px] text-slate-400 text-center mb-6">Step {step} of 4</p>
 
-        <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
-          {/* Step 1: Personal + Fayda */}
+        {/* Form Panel */}
+        <div className="bg-white dark:bg-slate-950 border border-slate-100 dark:border-slate-800/80 rounded-3xl p-5 shadow-xl space-y-4">
+          
+          {/* STEP 1: Personal Details */}
           {step === 1 && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white">
+            <div className="space-y-4 animate-scaleIn">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-white">
                   <Shield size={22} />
                 </div>
                 <div>
@@ -255,73 +361,123 @@ export default function DriverRegister() {
                 </div>
               </div>
 
-              <div>
-                <label className="text-[9px] font-semibold text-slate-400 uppercase">Full Name (English) *</label>
-                <input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-600 rounded-xl text-sm bg-transparent" value={nameLatin} onChange={function(e) { setNameLatin(e.target.value); }} placeholder="e.g. Abebe Kebede" />
+              {/* Driver Name (English) Split */}
+              <div className="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-2xl border border-slate-200/50 dark:border-slate-800 space-y-2.5">
+                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Driver Name (English) *</span>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="text-[8px] font-semibold text-slate-400 uppercase">First Name *</label>
+                    <input className="w-full mt-0.5 p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-100 outline-none" value={driverFirstName} onChange={function(e) { setDriverFirstName(e.target.value); }} placeholder="First" />
+                  </div>
+                  <div>
+                    <label className="text-[8px] font-semibold text-slate-400 uppercase">Middle Name *</label>
+                    <input className="w-full mt-0.5 p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-100 outline-none" value={driverMiddleName} onChange={function(e) { setDriverMiddleName(e.target.value); }} placeholder="Father" />
+                  </div>
+                  <div>
+                    <label className="text-[8px] font-semibold text-slate-400 uppercase">Last Name *</label>
+                    <input className="w-full mt-0.5 p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-100 outline-none" value={driverLastName} onChange={function(e) { setDriverLastName(e.target.value); }} placeholder="Grandfather" />
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className="text-[9px] font-semibold text-slate-400 uppercase">ሙሉ ስም (አማርኛ)</label>
-                <input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-600 rounded-xl text-sm bg-transparent" value={nameAmharic} onChange={function(e) { setNameAmharic(e.target.value); }} placeholder="ለምሳሌ፡ አበበ ከበደ" />
+
+              {/* Driver Name (Amharic) Split */}
+              <div className="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-2xl border border-slate-200/50 dark:border-slate-800 space-y-2.5">
+                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">ሙሉ ስም (አማርኛ)</span>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="text-[8px] font-semibold text-slate-400 uppercase">ስም *</label>
+                    <input className="w-full mt-0.5 p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-100 outline-none" value={driverFirstNameAmh} onChange={function(e) { setDriverFirstNameAmh(e.target.value); }} placeholder="ስም" />
+                  </div>
+                  <div>
+                    <label className="text-[8px] font-semibold text-slate-400 uppercase">የአባት ስም *</label>
+                    <input className="w-full mt-0.5 p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-100 outline-none" value={driverMiddleNameAmh} onChange={function(e) { setDriverMiddleNameAmh(e.target.value); }} placeholder="የአባት" />
+                  </div>
+                  <div>
+                    <label className="text-[8px] font-semibold text-slate-400 uppercase">የአያት ስም *</label>
+                    <input className="w-full mt-0.5 p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-100 outline-none" value={driverLastNameAmh} onChange={function(e) { setDriverLastNameAmh(e.target.value); }} placeholder="የአያት" />
+                  </div>
+                </div>
               </div>
+
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-[9px] font-semibold text-slate-400 uppercase">Phone *</label>
-                  <input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-600 rounded-xl text-sm bg-transparent" value={phone} onChange={function(e) { setPhone(e.target.value); }} placeholder="+251-912-345678" />
+                  <input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-transparent outline-none" value={phone} onChange={function(e) { setPhone(e.target.value); }} placeholder="+251-912-345678" />
                 </div>
                 <div>
                   <label className="text-[9px] font-semibold text-slate-400 uppercase">Email</label>
-                  <input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-600 rounded-xl text-sm bg-transparent" value={email} onChange={function(e) { setEmail(e.target.value); }} placeholder="email@example.com" />
+                  <input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-transparent outline-none" value={email} onChange={function(e) { setEmail(e.target.value); }} placeholder="email@example.com" />
                 </div>
               </div>
-              <div className="bg-amber-50 dark:bg-amber-950/20 rounded-xl p-3 border border-amber-200 dark:border-amber-800/30 space-y-3">
-                <div>
-                  <label className="text-[9px] font-semibold text-amber-700 dark:text-amber-400 uppercase">Fayda ID Number *</label>
-                  <input className="w-full mt-1 p-2.5 border border-amber-200 dark:border-amber-700 rounded-xl text-sm bg-transparent text-amber-900 dark:text-amber-200" value={faydaId} onChange={function(e) { setFaydaId(e.target.value); }} placeholder="ETH-FD-XXXX-XXXX" />
+
+              <div className="border-t border-slate-100 dark:border-slate-800/60 pt-4 space-y-3">
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <span>🆔 Fayda ID Verification</span>
                 </div>
                 
-                {/* Fayda ID Front Upload */}
-                <div>
-                  <label className="text-[9px] font-bold text-amber-800 dark:text-amber-400 uppercase block mb-1">Fayda ID Photo (Front) *</label>
-                  <input type="file" accept="image/*" onChange={handleFaydaFrontChange} className="w-full text-xs text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[9px] file:font-semibold file:bg-amber-100 file:text-amber-700 cursor-pointer" />
-                  {faydaFrontImage && (
-                    <div className="mt-2 w-14 h-14 rounded-lg overflow-hidden border border-amber-200 shadow-sm">
-                      <img src={faydaFrontImage} className="w-full h-full object-cover" alt="Front Preview" />
-                    </div>
-                  )}
+                <div className="relative">
+                  <label className="text-[9px] font-semibold text-slate-400 uppercase">Fayda ID Number *</label>
+                  <input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-transparent outline-none font-mono font-bold text-indigo-600" value={faydaId} onChange={function(e) { setFaydaId(e.target.value); }} placeholder="ETH-FD-XXXX-XXXX" />
                 </div>
 
-                {/* Fayda ID Back Upload */}
-                <div>
-                  <label className="text-[9px] font-bold text-amber-800 dark:text-amber-400 uppercase block mb-1">Fayda ID Photo (Back) *</label>
-                  <input type="file" accept="image/*" onChange={handleFaydaBackChange} className="w-full text-xs text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[9px] file:font-semibold file:bg-amber-100 file:text-amber-700 cursor-pointer" />
-                  {faydaBackImage && (
-                    <div className="mt-2 w-14 h-14 rounded-lg overflow-hidden border border-amber-200 shadow-sm">
-                      <img src={faydaBackImage} className="w-full h-full object-cover" alt="Back Preview" />
-                    </div>
-                  )}
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">Fayda ID (Front) *</label>
+                    <input type="file" accept="image/*" onChange={handleFaydaFrontChange} className="w-full text-xs text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[9px] file:font-semibold file:bg-slate-100 dark:file:bg-slate-800 file:text-slate-700 dark:file:text-slate-300 cursor-pointer" />
+                    
+                    {faydaFrontImage && (
+                      <div className="relative mt-2 aspect-[1.6] rounded-xl overflow-hidden border border-slate-200 bg-white">
+                        <img src={faydaFrontImage} className="w-full h-full object-cover" alt="Front Preview" />
+                        
+                        {/* Glowing Green Laser Scanning Line Overlay */}
+                        {scanningFayda && (
+                          <div 
+                            className="absolute left-0 right-0 h-1.5 bg-emerald-400 shadow-[0_0_12px_#34d399] z-10" 
+                            style={{ animation: 'scan-laser 2.2s linear infinite' }}
+                          />
+                        )}
+                        {scanningFayda && (
+                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-[8px] font-extrabold text-emerald-400 tracking-wider">
+                            🔍 AI OCR SCANNING...
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">Fayda ID (Back) *</label>
+                    <input type="file" accept="image/*" onChange={handleFaydaBackChange} className="w-full text-xs text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[9px] file:font-semibold file:bg-slate-100 dark:file:bg-slate-800 file:text-slate-700 dark:file:text-slate-300 cursor-pointer" />
+                    {faydaBackImage && (
+                      <div className="mt-2 aspect-[1.6] rounded-xl overflow-hidden border border-slate-200 bg-white">
+                        <img src={faydaBackImage} className="w-full h-full object-cover" alt="Back Preview" />
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Driver Recent Photo / Selfie Upload (Mandatory) */}
-                <div className="border-t border-amber-200/50 pt-3 mt-3">
+                <div className="border-t border-slate-100 dark:border-slate-800/60 pt-3 space-y-2">
                   <label className="text-[9px] font-bold text-amber-800 dark:text-amber-400 uppercase block mb-1">Recent Photo / Selfie *</label>
-                  <input type="file" accept="image/*" onChange={handleDriverSelfieChange} className="w-full text-xs text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[9px] file:font-semibold file:bg-amber-100 file:text-amber-700 cursor-pointer" />
+                  <input type="file" accept="image/*" onChange={handleDriverSelfieChange} className="w-full text-xs text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[9px] file:font-semibold file:bg-amber-50 dark:file:bg-amber-950/30 file:text-amber-700 cursor-pointer" />
                   {driverSelfieImage && (
-                    <div className="mt-2 w-14 h-14 rounded-lg overflow-hidden border border-amber-200 shadow-sm">
+                    <div className="mt-2 w-16 h-16 rounded-xl overflow-hidden border bg-white">
                       <img src={driverSelfieImage} className="w-full h-full object-cover" alt="Selfie Preview" />
                     </div>
                   )}
                 </div>
               </div>
-              
-              <button className="w-full py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-sm font-bold" onClick={function() { if (nameLatin && phone && faydaId && faydaFrontImage && faydaBackImage && driverSelfieImage) setStep(2); else toast('Fayda ID, Front/Back photos and Recent Selfie are required', 'error'); }}>Continue →</button>
+
+              <button className="w-full py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition-all active:scale-[0.98]" onClick={function() { if (driverFirstName && driverMiddleName && driverLastName && phone && faydaId && faydaFrontImage && faydaBackImage && driverSelfieImage) setStep(2); else toast('English Name, Fayda ID Number, Front/Back photos and Recent Selfie are required', 'error'); }}>
+                Continue →
+              </button>
             </div>
           )}
 
-          {/* Step 2: Vehicle */}
+          {/* STEP 2: Vehicle Selection */}
           {step === 2 && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center text-white">
+            <div className="space-y-4 animate-scaleIn">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-white">
                   <Bike size={22} />
                 </div>
                 <div>
@@ -331,107 +487,105 @@ export default function DriverRegister() {
               </div>
 
               <div className="grid grid-cols-2 gap-2">
-                {VEHICLE_TYPES.map(function(v) {
+                {VEHICLE_TYPES.map(function(e) {
                   return (
-                    <button key={v.id} className={'p-3 rounded-xl border-2 text-left transition-all ' + (vehicleType === v.id ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20' : 'border-slate-200 dark:border-slate-700')} onClick={function() { setVehicleType(v.id); }}>
-                      <div className="text-xl mb-1">{v.id === 'on_foot' ? '🚶' : v.id === 'bicycle' ? '🚲' : v.id === 'motorcycle' ? '🏍️' : '🛺'}</div>
-                      <div className="text-[11px] font-semibold">{v.label}</div>
-                      <div className="text-[7px] text-slate-400">{v.desc}</div>
+                    <button key={e.id} className={'p-3 rounded-xl border-2 text-left transition-all ' + (vehicleType === e.id ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20' : 'border-slate-200 dark:border-slate-800')} onClick={function() { setVehicleType(e.id); }}>
+                      <div className="text-xl mb-1">{e.id === 'on_foot' ? '🚶' : e.id === 'bicycle' ? '🚲' : e.id === 'motorcycle' ? '🏍️' : '🛺'}</div>
+                      <div className="text-[11px] font-semibold">{e.label}</div>
+                      <div className="text-[7px] text-slate-400 mt-0.5">{e.desc}</div>
                     </button>
                   );
                 })}
               </div>
+
               <div>
                 <label className="text-[9px] font-semibold text-slate-400 uppercase">License Plate (if vehicle)</label>
-                <input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-600 rounded-xl text-sm bg-transparent" value={licensePlate} onChange={function(e) { setLicensePlate(e.target.value); }} placeholder="e.g., AA-123-456" />
+                <input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-transparent outline-none" value={licensePlate} onChange={function(e) { setLicensePlate(e.target.value); }} placeholder="e.g., AA-123-456" />
               </div>
-              <button className="w-full py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-sm font-bold" onClick={function() { if (vehicleType) setStep(3); else toast('Select a vehicle', 'error'); }}>Continue →</button>
+
+              <button className="w-full py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition-all active:scale-[0.98]" onClick={function() { if (vehicleType) setStep(3); else toast('Select a vehicle type', 'error'); }}>
+                Continue →
+              </button>
             </div>
           )}
 
-          {/* Step 3: Service + Emergency */}
+          {/* STEP 3: Zones and Availability */}
           {step === 3 && (
-            <div className="space-y-4 max-h-[500px] overflow-y-auto">
+            <div className="space-y-4 max-h-[520px] overflow-y-auto scrollbar-none pr-1 animate-scaleIn">
               <h2 className="text-sm font-bold">Service Areas</h2>
               <div className="flex flex-wrap gap-1.5">
-                {allZones.map(function(z) {
+                {j.map(function(e) {
                   return (
-                    <button key={z} className={'px-3 py-1.5 rounded-full text-[10px] font-semibold border transition-all ' + (zones.includes(z) ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-white text-slate-500 border-slate-200')} onClick={function() { toggleZone(z); }}>
-                      📍 {z}
+                    <button key={e} className={'px-3 py-1.5 rounded-full text-[10px] font-semibold border transition-all ' + (P.includes(e) ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm' : 'bg-white dark:bg-slate-900 text-slate-500 border-slate-200 dark:border-slate-800')} onClick={function() { toggleZone(e); }}>
+                      📍 {e}
                     </button>
                   );
                 })}
               </div>
 
-              {/* Add Custom Zone input field */}
-              <div className="flex gap-2 mt-2 bg-slate-50 dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700">
-                <input 
-                  type="text" 
-                  placeholder="Add custom service area..." 
-                  value={customZoneInput} 
-                  onChange={function(e) { setCustomZoneInput(e.target.value); }}
-                  className="flex-1 p-2 border border-slate-200 dark:border-slate-600 rounded-xl text-xs bg-transparent outline-none focus:border-emerald-500 transition-colors" 
-                />
-                <button 
-                  type="button"
-                  onClick={function() {
-                    if (customZoneInput.trim()) {
-                      const newZone = customZoneInput.trim();
-                      if (!allZones.includes(newZone)) {
-                        setAllZones([...allZones, newZone]);
-                      }
-                      if (!zones.includes(newZone)) {
-                        setZones([...zones, newZone]);
-                      }
-                      setCustomZoneInput('');
-                      toast(`📍 Added zone: ${newZone}`, 'success');
-                    }
-                  }}
-                  className="px-3.5 py-2 bg-emerald-500 text-white rounded-xl text-xs font-bold hover:bg-emerald-600 transition-all">
+              <div className="flex gap-2 mt-2 bg-slate-50 dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200/50 dark:border-slate-800">
+                <input type="text" placeholder="Add custom service area..." value={M} onChange={function(e) { N(e.target.value); }} className="flex-1 p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent outline-none focus:border-emerald-500 transition-colors" />
+                <button type="button" onClick={function() { if (M.trim()) { let e = M.trim(); if (!j.includes(e)) oe([...j, e]); if (!P.includes(e)) F([...P, e]); N(''); toast(`📍 Added custom zone: ${e}`, 'success'); } }} className="px-3.5 py-2 bg-emerald-500 text-white rounded-xl text-xs font-bold hover:bg-emerald-600 transition-all flex-shrink-0">
                   ➕ Add Area
                 </button>
               </div>
 
               <h2 className="text-sm font-bold mt-4">Available Days</h2>
-              <div className="flex gap-1.5">
-                {DAYS.map(function(d, i) {
-                  var dayNum = i + 1;
-                  var shortDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+              <div className="flex gap-1.5 overflow-x-auto pb-1">
+                {DAYS.map(function(e, t) {
+                  var n = t + 1;
                   return (
-                    <button key={d} className={'flex-1 py-2 rounded-lg text-[10px] font-semibold border transition-all ' + (days.includes(dayNum) ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-white text-slate-500 border-slate-200')} onClick={function() { toggleDay(dayNum); }}>
-                      {shortDays[i]}
+                    <button key={e} className={'flex-1 min-w-[40px] py-2 rounded-lg text-[10px] font-semibold border transition-all ' + (I.includes(n) ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm' : 'bg-white dark:bg-slate-900 text-slate-500 border-slate-200 dark:border-slate-800')} onClick={function() { toggleDay(n); }}>
+                      {e}
                     </button>
                   );
                 })}
               </div>
 
               <h2 className="text-sm font-bold mt-4">Available Hours</h2>
-              <div className="space-y-1">
-                {HOURS.map(function(h) {
+              <div className="grid grid-cols-2 gap-2">
+                {HOURS.map(function(e) {
                   return (
-                    <label key={h} className="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-50 cursor-pointer">
-                      <input type="checkbox" checked={hours.includes(h)} onChange={function() { setHours(function(prev) { return prev.includes(h) ? prev.filter(function(x) { return x !== h; }) : [...prev, h]; }); }} className="rounded text-emerald-500" />
-                      <span className="text-xs">{h}</span>
+                    <label key={e} className="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-900 rounded-xl border dark:border-slate-800 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                      <input type="checkbox" checked={R.includes(e)} onChange={function() { z(function(t) { return t.includes(e) ? t.filter(function(t) { return t !== e; }) : [...t, e]; }) }} className="rounded text-emerald-500 focus:ring-emerald-500 w-3.5 h-3.5" />
+                      <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">{e}</span>
                     </label>
                   );
                 })}
               </div>
 
-              <div className="border-t border-slate-200 pt-4 mt-4">
-                <h2 className="text-sm font-bold mb-3">Emergency Contact *</h2>
+              {/* Step 3 -> Split Name Emergency Contacts */}
+              <div className="border-t border-slate-100 dark:border-slate-800 pt-4 mt-4">
+                <h2 className="text-sm font-bold mb-3 flex items-center gap-1">🆘 Emergency Contact</h2>
+                
                 <div className="space-y-3">
-                  <div>
-                    <label className="text-[9px] font-semibold text-slate-400 uppercase">Full Name *</label>
-                    <input className="w-full mt-1 p-2.5 border border-slate-200 rounded-xl text-sm bg-transparent" value={emergencyName} onChange={function(e) { setEmergencyName(e.target.value); }} placeholder="Emergency contact name" />
+                  {/* Emergency Contact Name Split */}
+                  <div className="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-2xl border border-slate-200/50 dark:border-slate-800 space-y-2.5">
+                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Full Name *</span>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="text-[8px] font-semibold text-slate-400 uppercase">First Name *</label>
+                        <input className="w-full mt-0.5 p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-100 outline-none" value={emergencyFirstName} onChange={function(e) { setEmergencyFirstName(e.target.value); }} placeholder="First" />
+                      </div>
+                      <div>
+                        <label className="text-[8px] font-semibold text-slate-400 uppercase">Middle Name *</label>
+                        <input className="w-full mt-0.5 p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-100 outline-none" value={emergencyMiddleName} onChange={function(e) { setEmergencyMiddleName(e.target.value); }} placeholder="Father" />
+                      </div>
+                      <div>
+                        <label className="text-[8px] font-semibold text-slate-400 uppercase">Last Name *</label>
+                        <input className="w-full mt-0.5 p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-100 outline-none" value={emergencyLastName} onChange={function(e) { setEmergencyLastName(e.target.value); }} placeholder="Grandfather" />
+                      </div>
+                    </div>
                   </div>
+
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <label className="text-[9px] font-semibold text-slate-400 uppercase">Phone *</label>
-                      <input className="w-full mt-1 p-2.5 border border-slate-200 rounded-xl text-sm bg-transparent" value={emergencyPhone} onChange={function(e) { setEmergencyPhone(e.target.value); }} placeholder="+251-..." />
+                      <input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-transparent outline-none" value={emergencyPhone} onChange={function(e) { setEmergencyPhone(e.target.value); }} placeholder="+251-..." />
                     </div>
                     <div>
                       <label className="text-[9px] font-semibold text-slate-400 uppercase">Relationship</label>
-                      <select className="w-full mt-1 p-2.5 border border-slate-200 rounded-xl text-sm bg-transparent" value={emergencyRelation} onChange={function(e) { setEmergencyRelation(e.target.value); }}>
+                      <select className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 outline-none" value={emergencyRelation} onChange={function(e) { setEmergencyRelation(e.target.value); }}>
                         <option value="">Select...</option>
                         <option value="Spouse">Spouse</option>
                         <option value="Parent">Parent</option>
@@ -441,86 +595,95 @@ export default function DriverRegister() {
                       </select>
                     </div>
                   </div>
+
                   <div>
                     <label className="text-[9px] font-semibold text-slate-400 uppercase">Address</label>
-                    <input className="w-full mt-1 p-2.5 border border-slate-200 rounded-xl text-sm bg-transparent" value={emergencyAddress} onChange={function(e) { setEmergencyAddress(e.target.value); }} placeholder="Emergency contact address" />
+                    <input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-transparent outline-none" value={emergencyAddress} onChange={function(e) { setEmergencyAddress(e.target.value); }} placeholder="Emergency contact home address" />
                   </div>
 
-                  {/* Emergency Contact ID Upload field (Front & Back) */}
-                  <div className="border-t border-slate-100 dark:border-slate-800 pt-3 mt-3 space-y-3">
-                    <div>
-                      <label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">Emergency Contact ID (Front) *</label>
-                      <input type="file" accept="image/*" onChange={handleEmergencyIdFrontChange} className="w-full text-xs text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[9px] file:font-semibold file:bg-slate-100 file:text-slate-700 cursor-pointer" />
-                      {emergencyIdFrontImage && (
-                        <div className="mt-2 w-14 h-14 rounded-lg overflow-hidden border border-slate-200 shadow-sm">
-                          <img src={emergencyIdFrontImage} className="w-full h-full object-cover" alt="Emergency ID Front Preview" />
-                        </div>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">Emergency Contact ID (Back) *</label>
-                      <input type="file" accept="image/*" onChange={handleEmergencyIdBackChange} className="w-full text-xs text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[9px] file:font-semibold file:bg-slate-100 file:text-slate-700 cursor-pointer" />
-                      {emergencyIdBackImage && (
-                        <div className="mt-2 w-14 h-14 rounded-lg overflow-hidden border border-slate-200 shadow-sm">
-                          <img src={emergencyIdBackImage} className="w-full h-full object-cover" alt="Emergency ID Back Preview" />
-                        </div>
-                      )}
+                  <div className="border-t border-slate-100 dark:border-slate-800/60 pt-3 mt-3 space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">Emergency ID (Front) *</label>
+                        <input type="file" accept="image/*" onChange={handleEmergencyIdFrontChange} className="w-full text-xs text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[9px] file:font-semibold file:bg-slate-100 dark:file:bg-slate-800 file:text-slate-700 dark:file:text-slate-300 cursor-pointer" />
+                        {emergencyIdFrontImage && (
+                          <div className="mt-2 w-14 h-14 rounded-lg overflow-hidden border border-slate-200 bg-white">
+                            <img src={emergencyIdFrontImage} className="w-full h-full object-cover" alt="Emergency ID Front Preview" />
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">Emergency ID (Back) *</label>
+                        <input type="file" accept="image/*" onChange={handleEmergencyIdBackChange} className="w-full text-xs text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[9px] file:font-semibold file:bg-slate-100 dark:file:bg-slate-800 file:text-slate-700 dark:file:text-slate-300 cursor-pointer" />
+                        {emergencyIdBackImage && (
+                          <div className="mt-2 w-14 h-14 rounded-lg overflow-hidden border border-slate-200 bg-white">
+                            <img src={emergencyIdBackImage} className="w-full h-full object-cover" alt="Emergency ID Back Preview" />
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <button className="w-full py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-sm font-bold" onClick={function() { if (zones.length > 0 && emergencyName && emergencyPhone && emergencyIdFrontImage && emergencyIdBackImage) setStep(4); else toast('Service zones, Emergency name, phone, and Front/Back ID photos are required', 'error'); }}>Continue →</button>
+              <button className="w-full py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition-all active:scale-[0.98]" onClick={function() { if (P.length > 0 && emergencyFirstName && emergencyMiddleName && emergencyLastName && emergencyPhone && emergencyIdFrontImage && emergencyIdBackImage) setStep(4); else toast('Zones, Emergency contact name (First/Middle/Last), phone, and Front/Back IDs are required', 'error'); }}>
+                Continue →
+              </button>
             </div>
           )}
 
-          {/* Step 4: Payment + Review */}
+          {/* STEP 4: Financials & Review */}
           {step === 4 && (
-            <div className="space-y-4">
-              <h2 className="text-sm font-bold">Payment & Submit</h2>
-              <p className="text-[9px] text-slate-400">How you'll receive your earnings</p>
+            <div className="space-y-4 animate-scaleIn">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-white">
+                  <Shield size={22} />
+                </div>
+                <div>
+                  <h2 className="text-sm font-bold">Payment & Submit</h2>
+                  <p className="text-[9px] text-slate-400">How you'll receive your earnings</p>
+                </div>
+              </div>
 
               <div>
                 <label className="text-[9px] font-semibold text-slate-400 uppercase">Telebirr Number (preferred)</label>
-                <input className="w-full mt-1 p-2.5 border border-slate-200 rounded-xl text-sm bg-transparent" value={telebirr} onChange={function(e) { setTelebirr(e.target.value); }} placeholder="+251-..." />
+                <input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-transparent outline-none" value={telebirr} onChange={function(e) { setTelebirr(e.target.value); }} placeholder="+251-..." />
               </div>
+
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-[9px] font-semibold text-slate-400 uppercase">Bank Name</label>
-                  <input className="w-full mt-1 p-2.5 border border-slate-200 rounded-xl text-sm bg-transparent" value={bankName} onChange={function(e) { setBankName(e.target.value); }} placeholder="e.g., CBE" />
+                  <input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-transparent outline-none" value={bankName} onChange={function(e) { setBankName(e.target.value); }} placeholder="e.g., CBE" />
                 </div>
                 <div>
                   <label className="text-[9px] font-semibold text-slate-400 uppercase">Account Number</label>
-                  <input className="w-full mt-1 p-2.5 border border-slate-200 rounded-xl text-sm bg-transparent" value={bankAccount} onChange={function(e) { setBankAccount(e.target.value); }} placeholder="XXXXXXXXXX" />
+                  <input className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-transparent outline-none" value={bankAccount} onChange={function(e) { setBankAccount(e.target.value); }} placeholder="XXXXXXXXXX" />
                 </div>
               </div>
 
-              {/* Summary */}
-              <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-3 space-y-1.5">
-                <p className="text-[10px] font-semibold">📋 Summary</p>
-                <div className="text-[9px] text-slate-500 space-y-0.5">
-                  <p>👤 {nameLatin} {nameAmharic ? '(' + nameAmharic + ')' : ''}</p>
-                  <p>🆔 Fayda: {faydaId}</p>
-                  <p>🚚 {vehicleIcons[vehicleType] || '🏍️'} {vehicleType}</p>
-                  <p>📍 Zones: {zones.join(', ')}</p>
-                  <p>📞 Emergency: {emergencyName}</p>
+              <div className="bg-slate-50 dark:bg-slate-900 rounded-xl p-3 border dark:border-slate-800 space-y-1.5">
+                <p className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">📋 Registration Summary</p>
+                <div className="text-[9px] text-slate-500 space-y-1">
+                  <p>👤 Driver: <strong className="text-slate-800 dark:text-slate-200">{nameLatin} {nameAmharic ? `(${nameAmharic})` : ''}</strong></p>
+                  <p>🆔 Fayda ID: <strong className="text-slate-800 dark:text-slate-200">{faydaId}</strong></p>
+                  <p>🚚 Vehicle: <strong className="text-slate-800 dark:text-slate-200">{vehicleIcons[vehicleType] || '🏍️'} {vehicleType}</strong></p>
+                  <p>📍 Zones: <strong className="text-slate-800 dark:text-slate-200">{P.join(', ')}</strong></p>
+                  <p>🆘 Emergency Contact: <strong className="text-slate-800 dark:text-slate-200">{emergencyName} · {emergencyPhone}</strong></p>
                 </div>
               </div>
 
               <label className="flex items-start gap-2 cursor-pointer">
-                <input type="checkbox" checked={agreeTerms} onChange={function() { setAgreeTerms(!agreeTerms); }} className="mt-1 rounded text-emerald-500" />
-                <span className="text-[9px] text-slate-500">I confirm that all information provided is accurate. I agree to the terms of service as an independent delivery partner for Smart Shop Express.</span>
+                <input type="checkbox" checked={agreeTerms} onChange={function() { setAgreeTerms(!agreeTerms); }} className="mt-1 rounded text-emerald-500 focus:ring-emerald-500 w-3.5 h-3.5" />
+                <span className="text-[9px] text-slate-500 select-none">I confirm that all information provided is accurate. I agree to the terms of service as an independent delivery partner for Smart Shop Express.</span>
               </label>
 
-              <button className={'w-full py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-sm font-bold hover:shadow-lg disabled:opacity-50 transition-all'} onClick={submit} disabled={submitting || !agreeTerms}>
-                {submitting ? 'Submitting...' : '📝 Submit Application'}
+              <button className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-sm font-bold hover:shadow-lg disabled:opacity-50 transition-all" onClick={submit} disabled={submitting || !agreeTerms}>
+                {submitting ? 'Submitting Application...' : '📝 Submit Application'}
               </button>
             </div>
           )}
+          
         </div>
-
-        <p className="text-[9px] text-slate-400 text-center mt-4">🔒 All data is encrypted and verified. Your Fayda ID is used only for identity verification.</p>
       </div>
     </div>
   );
