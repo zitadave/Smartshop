@@ -29,6 +29,7 @@ export default function DriverRegister() {
   var [faydaId, setFaydaId] = useState('');
   var [faydaFrontImage, setFaydaFrontImage] = useState('');
   var [faydaBackImage, setFaydaBackImage] = useState('');
+  var [driverSelfieImage, setDriverSelfieImage] = useState('');
   
   // Step 2: Vehicle
   var [vehicleType, setVehicleType] = useState('');
@@ -46,7 +47,8 @@ export default function DriverRegister() {
   var [emergencyPhone, setEmergencyPhone] = useState('');
   var [emergencyRelation, setEmergencyRelation] = useState('');
   var [emergencyAddress, setEmergencyAddress] = useState('');
-  var [emergencyIdImage, setEmergencyIdImage] = useState('');
+  var [emergencyIdFrontImage, setEmergencyIdFrontImage] = useState('');
+  var [emergencyIdBackImage, setEmergencyIdBackImage] = useState('');
 
   // Image upload helpers
   function handleFaydaFrontChange(e: any) {
@@ -67,11 +69,29 @@ export default function DriverRegister() {
     }
   }
 
-  function handleEmergencyIdChange(e: any) {
+  function handleDriverSelfieChange(e: any) {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => setEmergencyIdImage(reader.result as string);
+      reader.onloadend = () => setDriverSelfieImage(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  }
+
+  function handleEmergencyIdFrontChange(e: any) {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setEmergencyIdFrontImage(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  }
+
+  function handleEmergencyIdBackChange(e: any) {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setEmergencyIdBackImage(reader.result as string);
       reader.readAsDataURL(file);
     }
   }
@@ -97,14 +117,14 @@ export default function DriverRegister() {
   }
 
   async function submit() {
-    if (!nameLatin.trim() || !phone.trim() || !faydaId.trim() || !faydaFrontImage || !faydaBackImage) {
+    if (!nameLatin.trim() || !phone.trim() || !faydaId.trim() || !faydaFrontImage || !faydaBackImage || !driverSelfieImage) {
       toast('Please fill in all required identity verification fields', 'error');
       return;
     }
     if (!vehicleType) { toast('Please select a vehicle type', 'error'); return; }
     if (zones.length === 0) { toast('Please select at least one service zone', 'error'); return; }
-    if (!emergencyName.trim() || !emergencyPhone.trim() || !emergencyIdImage) { 
-      toast('Emergency contact person and their ID are required', 'error'); 
+    if (!emergencyName.trim() || !emergencyPhone.trim() || !emergencyIdFrontImage || !emergencyIdBackImage) { 
+      toast('Emergency contact person and their Front/Back ID photos are required', 'error'); 
       return; 
     }
     if (!agreeTerms) { toast('Please agree to the terms', 'error'); return; }
@@ -128,6 +148,7 @@ export default function DriverRegister() {
           fayda_id: faydaId.trim(),
           fayda_front_image: faydaFrontImage,
           fayda_back_image: faydaBackImage,
+          driver_selfie: driverSelfieImage,
           vehicle_type: vehicleType,
           license_plate: licensePlate.trim(),
           service_zones: zones,
@@ -137,7 +158,7 @@ export default function DriverRegister() {
           emergency_phone: emergencyPhone.trim(),
           emergency_relationship: emergencyRelation || 'Other',
           emergency_address: emergencyAddress.trim(),
-          emergency_id_image: emergencyIdImage,
+          emergency_id_image: emergencyIdFrontImage + '::' + emergencyIdBackImage,
           telebirr_number: telebirr.trim(),
           bank_name: bankName.trim(),
           bank_account: bankAccount.trim(),
@@ -240,9 +261,20 @@ export default function DriverRegister() {
                     </div>
                   )}
                 </div>
+
+                {/* Driver Recent Photo / Selfie Upload (Mandatory) */}
+                <div className="border-t border-amber-200/50 pt-3 mt-3">
+                  <label className="text-[9px] font-bold text-amber-800 dark:text-amber-400 uppercase block mb-1">Recent Photo / Selfie *</label>
+                  <input type="file" accept="image/*" onChange={handleDriverSelfieChange} className="w-full text-xs text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[9px] file:font-semibold file:bg-amber-100 file:text-amber-700 cursor-pointer" />
+                  {driverSelfieImage && (
+                    <div className="mt-2 w-14 h-14 rounded-lg overflow-hidden border border-amber-200 shadow-sm">
+                      <img src={driverSelfieImage} className="w-full h-full object-cover" alt="Selfie Preview" />
+                    </div>
+                  )}
+                </div>
               </div>
               
-              <button className="w-full py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-sm font-bold" onClick={function() { if (nameLatin && phone && faydaId && faydaFrontImage && faydaBackImage) setStep(2); else toast('Fayda ID and Front/Back photos are required', 'error'); }}>Continue →</button>
+              <button className="w-full py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-sm font-bold" onClick={function() { if (nameLatin && phone && faydaId && faydaFrontImage && faydaBackImage && driverSelfieImage) setStep(2); else toast('Fayda ID, Front/Back photos and Recent Selfie are required', 'error'); }}>Continue →</button>
             </div>
           )}
 
@@ -375,20 +407,32 @@ export default function DriverRegister() {
                     <input className="w-full mt-1 p-2.5 border border-slate-200 rounded-xl text-sm bg-transparent" value={emergencyAddress} onChange={function(e) { setEmergencyAddress(e.target.value); }} placeholder="Emergency contact address" />
                   </div>
 
-                  {/* Emergency Contact ID Upload field */}
-                  <div className="border-t border-slate-100 dark:border-slate-800 pt-3 mt-3">
-                    <label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">Emergency Contact ID (Fayda / Kebele) *</label>
-                    <input type="file" accept="image/*" onChange={handleEmergencyIdChange} className="w-full text-xs text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[9px] file:font-semibold file:bg-slate-100 file:text-slate-700 cursor-pointer" />
-                    {emergencyIdImage && (
-                      <div className="mt-2 w-14 h-14 rounded-lg overflow-hidden border border-slate-200 shadow-sm">
-                        <img src={emergencyIdImage} className="w-full h-full object-cover" alt="Emergency ID Preview" />
-                      </div>
-                    )}
+                  {/* Emergency Contact ID Upload field (Front & Back) */}
+                  <div className="border-t border-slate-100 dark:border-slate-800 pt-3 mt-3 space-y-3">
+                    <div>
+                      <label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">Emergency Contact ID (Front) *</label>
+                      <input type="file" accept="image/*" onChange={handleEmergencyIdFrontChange} className="w-full text-xs text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[9px] file:font-semibold file:bg-slate-100 file:text-slate-700 cursor-pointer" />
+                      {emergencyIdFrontImage && (
+                        <div className="mt-2 w-14 h-14 rounded-lg overflow-hidden border border-slate-200 shadow-sm">
+                          <img src={emergencyIdFrontImage} className="w-full h-full object-cover" alt="Emergency ID Front Preview" />
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">Emergency Contact ID (Back) *</label>
+                      <input type="file" accept="image/*" onChange={handleEmergencyIdBackChange} className="w-full text-xs text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[9px] file:font-semibold file:bg-slate-100 file:text-slate-700 cursor-pointer" />
+                      {emergencyIdBackImage && (
+                        <div className="mt-2 w-14 h-14 rounded-lg overflow-hidden border border-slate-200 shadow-sm">
+                          <img src={emergencyIdBackImage} className="w-full h-full object-cover" alt="Emergency ID Back Preview" />
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <button className="w-full py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-sm font-bold" onClick={function() { if (zones.length > 0 && emergencyName && emergencyPhone && emergencyIdImage) setStep(4); else toast('Service zones, Emergency name, phone, and ID card are required', 'error'); }}>Continue →</button>
+              <button className="w-full py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-sm font-bold" onClick={function() { if (zones.length > 0 && emergencyName && emergencyPhone && emergencyIdFrontImage && emergencyIdBackImage) setStep(4); else toast('Service zones, Emergency name, phone, and Front/Back ID photos are required', 'error'); }}>Continue →</button>
             </div>
           )}
 
