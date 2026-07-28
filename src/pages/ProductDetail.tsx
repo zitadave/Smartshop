@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 import { useStore } from '@/stores/AppStore';
 import { t } from '@/i18n/translations';
 import { toast } from '@/components/Toast';
@@ -22,12 +23,66 @@ export default function ProductDetail() {
   const [galleryIdx, setGalleryIdx] = useState(0);
   const [zoom, setZoom] = useState(false);
   const [activeDeals, setActiveDeals] = useState<any[]>([]);
+  
+  // Custom Group Buy states
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [customImage, setCustomImage] = useState("");
+  const [imageType, setImageType] = useState<'url' | 'file'>('url');
+  const [customDescription, setCustomDescription] = useState("");
+  const [discountPercent, setDiscountPercent] = useState(15);
+  const [targetMembers, setTargetMembers] = useState(3);
+  const [colorPreference, setColorPreference] = useState("Any");
+  const [sizePreference, setSizePreference] = useState("Any");
+  const [durationHours, setDurationHours] = useState(24);
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     if (product?.id) {
       getActiveDealsForProduct(product.id).then(setActiveDeals).catch(console.error);
     }
   }, [product?.id]);
+
+  const handleCreateGroupBuy = async () => {
+    if (!store.telegramId) {
+      toast('🚪 Please log in via Telegram first!', 'error');
+      return;
+    }
+    setCreating(true);
+    try {
+      const calculatedPrice = Math.round(product.price * (1 - discountPercent / 100));
+      const serializedName = `${product.nameEn || product.name}::${customDescription}::${colorPreference}::${sizePreference}`;
+      const expiresAt = new Date(Date.now() + durationHours * 60 * 60 * 1000).toISOString();
+      
+      const res = await fetch('/api/group-deals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          product_id: product.id,
+          product_name: serializedName,
+          product_image: customImage || product.image || '',
+          regular_price: product.price,
+          group_price: calculatedPrice,
+          creator_telegram_id: store.telegramId,
+          creator_name: store.profile?.name || 'User',
+          min_members: 2,
+          max_members: targetMembers,
+          expires_at: expiresAt,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast('🎉 Group Buy group created successfully!', 'success');
+        setShowCreateGroup(false);
+        getActiveDealsForProduct(product.id).then(setActiveDeals).catch(console.error);
+        shareToTelegram(data.deal);
+      } else {
+        toast(data.error || 'Failed to create group buy', 'error');
+      }
+    } catch (e: any) {
+      toast(e.message || 'An error occurred', 'error');
+    }
+    setCreating(false);
+  };
 
   if (!product) {
     return (
@@ -182,21 +237,13 @@ export default function ProductDetail() {
             <button className="w-9 h-9 rounded-md text-lg font-semibold flex items-center justify-center hover:bg-card transition-colors" onClick={() => setQty(Math.min(product.stockCount, qty + 1))}><Plus size={16} /></button>
           </div>
           <div className="flex gap-1.5">
-          <button onClick={async () => { 
-              try { 
-                const deal = await createGroupDeal({ 
-                  productId: product.id, 
-                  productName: product.nameEn || product.name, 
-                  productImage: product.image, 
-                  regularPrice: product.price, 
-                  telegramId: store.telegramId || 0, 
-                  creatorName: store.profile?.name || 'User' 
-                }); 
-                shareToTelegram(deal);
-                toast('Group deal shared!', 'success'); 
-              } catch(e: any) { 
-                toast(e.message, 'error'); 
-              } 
+          <button onClick={() => { 
+              if (!store.telegramId) {
+                toast('🚪 Please log in via Telegram first!', 'error');
+              } else {
+                setCustomImage(product.image || "");
+                setShowCreateGroup(true);
+              }
             }}
               className="flex-1 py-2.5 bg-gradient-to-r from-green-400 to-emerald-500 text-white rounded-xl text-sm font-medium shadow-lg hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2 mb-3">
               <Users size={16} /> 🤝 Group Buy — Invite friends & save!
@@ -324,6 +371,167 @@ export default function ProductDetail() {
           </div>
         )}
       </div>
+
+      {/* COMPREHENSIVE CUSTOM GROUP BUY CREATION MODAL */}
+      {showCreateGroup && createPortal(
+        <>
+          <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm overflow-y-auto py-6" onClick={() => setShowCreateGroup(false)}>
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 w-full max-w-md mx-auto my-auto shadow-2xl relative" onClick={e => e.stopPropagation()}>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-1">🤝 Start ማህበር ግዢ (Group Buy)</h3>
+              <p className="text-[10px] text-slate-400 mb-4">Configure your saving campaign. Price drops as more peers join!</p>
+              
+              <div className="space-y-3.5 max-h-[70vh] overflow-y-auto scrollbar-none pr-1">
+                {/* 1. Group Buy Image (File vs. URL) */}
+                <div>
+                  <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Campaign Product Image</label>
+                  <div className="flex gap-2 mb-2 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg w-fit">
+                    <button 
+                      onClick={() => setImageType('url')}
+                      className={`px-3 py-1 rounded-md text-[9px] font-bold ${imageType === 'url' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}>
+                      Paste Image URL
+                    </button>
+                    <button 
+                      onClick={() => setImageType('file')}
+                      className={`px-3 py-1 rounded-md text-[9px] font-bold ${imageType === 'file' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}>
+                      Upload from Device
+                    </button>
+                  </div>
+                  {imageType === 'url' ? (
+                    <input 
+                      type="text" 
+                      placeholder="https://example.com/product.jpg (Optional)" 
+                      value={customImage} 
+                      onChange={e => setCustomImage(e.target.value)}
+                      className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-slate-50 dark:bg-transparent text-slate-800 dark:text-slate-200 outline-none" 
+                    />
+                  ) : (
+                    <div>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={handleImageFileChange}
+                        className="w-full text-xs text-slate-400 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-blue-700 file:cursor-pointer" 
+                      />
+                    </div>
+                  )}
+                  {customImage && (
+                    <div className="mt-2 w-14 h-14 rounded-lg overflow-hidden border border-slate-200">
+                      <img src={customImage} alt="Preview" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. Custom Description / Invitation Message */}
+                <div>
+                  <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Your Invitation Message</label>
+                  <textarea 
+                    placeholder="e.g., Looking for 3 people to buy this amazing jacket with me so we get 20% off!" 
+                    value={customDescription} 
+                    onChange={e => setCustomDescription(e.target.value)}
+                    className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-slate-50 dark:bg-transparent resize-none h-16 text-slate-800 dark:text-slate-200 outline-none" 
+                  />
+                </div>
+
+                {/* 3. Discount Rate Input (Slider / Number) */}
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Discount Rate</label>
+                    <span className="text-xs font-bold text-green-600">{discountPercent}% OFF</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="5" 
+                    max="50" 
+                    step="5"
+                    value={discountPercent} 
+                    onChange={e => setDiscountPercent(Number(e.target.value))}
+                    className="w-full accent-green-500 cursor-pointer" 
+                  />
+                  <div className="flex justify-between text-[8px] text-slate-400">
+                    <span>5% (Starter)</span>
+                    <span>25% (Recommended)</span>
+                    <span>50% (Max)</span>
+                  </div>
+                </div>
+
+                {/* 4. Target Group Size Input */}
+                <div>
+                  <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Group Size (Members)</label>
+                  <select 
+                    value={targetMembers} 
+                    onChange={e => setTargetMembers(Number(e.target.value))}
+                    className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-slate-50 dark:bg-transparent text-slate-800 dark:text-slate-200 outline-none">
+                    <option value={2}>2 Members (5% Base Savings)</option>
+                    <option value={3}>3 Members (10% Base Savings)</option>
+                    <option value={5}>5 Members (15% Base Savings)</option>
+                    <option value={10}>10 Members (25% Base Savings)</option>
+                  </select>
+                </div>
+
+                {/* 5. Color & Size Preferences */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Color Preference</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. Black / Any" 
+                      value={colorPreference} 
+                      onChange={e => setColorPreference(e.target.value)}
+                      className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-slate-50 dark:bg-transparent text-slate-800 dark:text-slate-200 outline-none" 
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Size Preference</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. Large / Any" 
+                      value={sizePreference} 
+                      onChange={e => setSizePreference(e.target.value)}
+                      className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-slate-50 dark:bg-transparent text-slate-800 dark:text-slate-200 outline-none" 
+                    />
+                  </div>
+                </div>
+
+                {/* 6. Date/Hours Duration */}
+                <div>
+                  <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Campaign Active Duration</label>
+                  <select 
+                    value={durationHours} 
+                    onChange={e => setDurationHours(Number(e.target.value))}
+                    className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-slate-50 dark:bg-transparent text-slate-800 dark:text-slate-200 outline-none">
+                    <option value={1}>1 Hour (Urgent Buy)</option>
+                    <option value={6}>6 Hours (Short Promo)</option>
+                    <option value={12}>12 Hours</option>
+                    <option value={24}>24 Hours (Standard)</option>
+                    <option value={48}>48 Hours (Long-form)</option>
+                  </select>
+                </div>
+
+                {/* Live pricing estimation card */}
+                <div className="bg-green-50 dark:bg-green-950/20 rounded-xl p-3 space-y-1 border border-green-100">
+                  <div className="flex justify-between text-xs"><span className="text-slate-500">Retail Price</span><span className="font-semibold text-slate-800 dark:text-slate-200">{formatPrice(product.price)}</span></div>
+                  <div className="flex justify-between text-xs"><span className="text-slate-500">Group Price (For Everyone!)</span><span className="font-extrabold text-green-600">{formatPrice(Math.round(product.price * (1 - discountPercent / 100)))}</span></div>
+                </div>
+              </div>
+
+              <div className="flex gap-2.5 mt-5">
+                <button 
+                  onClick={() => setShowCreateGroup(false)}
+                  className="flex-1 py-3 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400">
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleCreateGroupBuy}
+                  disabled={creating}
+                  className="flex-1 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl text-xs font-bold shadow hover:shadow-lg disabled:opacity-50">
+                  {creating ? 'Publishing...' : '🚀 Publish & Share'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
     </div>
   );
 }
