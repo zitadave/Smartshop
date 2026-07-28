@@ -27,9 +27,10 @@ export function formatPriceWithCurrency(price: number, currency: string, rates?:
 }
 
 export function stars(rating: number = 0): string {
-  const f = Math.floor(rating);
-  const h = rating % 1 >= 0.5 ? 1 : 0;
-  const e = 5 - f - h;
+  const r = typeof rating === 'number' && !isNaN(rating) ? rating : 0;
+  const f = Math.max(0, Math.min(5, Math.floor(r)));
+  const h = r % 1 >= 0.5 ? 1 : 0;
+  const e = Math.max(0, 5 - f - h);
   return '★'.repeat(f) + (h ? '½' : '') + '☆'.repeat(e);
 }
 
