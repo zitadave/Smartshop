@@ -19,6 +19,7 @@ import { toast } from '@/components/Toast';
 import { getPlanPrice, getPlanCategoryColor, formatFrequency, calculateSavings, type SubscriptionPlan } from '@/lib/subscriptions';
 import FlashDealTimer, { useFlashDeals } from '@/components/features/FlashDealTimer';
 import BroadcastBanner from '@/components/features/BroadcastBanner';
+import { parseSerializedName } from '@/lib/groupBuying';
 
 /** Subscription Plans Section - static data, no API calls */
 function SubscriptionSection({ onNavigate }: { onNavigate: (path: string) => void }) {
@@ -296,14 +297,14 @@ export default function Home() {
                   {/* Product Image */}
                   <div className="relative aspect-square rounded-xl overflow-hidden bg-slate-50 border border-slate-100 dark:border-slate-800 mb-2.5">
                     {deal.product_image ? (
-                      <img src={deal.product_image} alt={deal.product_name} className="w-full h-full object-cover" />
+                      <img src={deal.product_image} alt={parseSerializedName(deal.product_name).name} className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-4xl bg-slate-100">📦</div>
                     )}
                   </div>
 
                   {/* Product Name */}
-                  <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 line-clamp-1 mb-1">{deal.product_name}</h4>
+                  <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 line-clamp-1 mb-1">{parseSerializedName(deal.product_name).name}</h4>
                   
                   {/* Price */}
                   <div className="flex items-baseline gap-1.5 mb-2">

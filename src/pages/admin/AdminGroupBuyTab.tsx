@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Search, Users, Tag, Clock, CheckCircle, XCircle, Eye, Trash2, RefreshCw, ChevronRight, Share2 } from 'lucide-react';
+import { parseSerializedName } from '@/lib/groupBuying';
 
 interface GroupDeal {
   id: number; product_name: string; regular_price: number; group_price: number;
@@ -61,7 +62,7 @@ export default function AdminGroupBuyTab() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-slate-800">{deal.product_name}</h3>
+                      <h3 className="font-semibold text-slate-800">{parseSerializedName(deal.product_name).name}</h3>
                       <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${statusColors[deal.status] || 'bg-slate-100'}`}>{statusLabels[deal.status] || deal.status}</span>
                     </div>
                     <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">

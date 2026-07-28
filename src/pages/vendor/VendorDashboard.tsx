@@ -15,6 +15,7 @@ import {
   Heart, Share2, ChevronDown, MessageCircle, Video, ExternalLink
 } from 'lucide-react';
 import { toast } from '@/components/Toast';
+import { parseSerializedName } from '@/lib/groupBuying';
 import ProductStudio from '@/components/admin/ProductStudio';
 
 type VendorTab = 'dashboard' | 'products' | 'storefront' | 'analytics' | 'orders' | 'reviews' | 'inventory' | 'payouts' | 'notifications' | 'promotions' ;
@@ -900,6 +901,15 @@ function VendorPromotionsView() {
   const [groupProductId, setGroupProductId] = useState("");
   const [groupPrice, setGroupPrice] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  
+  const [groupDescription, setGroupDescription] = useState("");
+  const [groupMinMembers, setGroupMinMembers] = useState(2);
+  const [groupMaxMembers, setGroupMaxMembers] = useState(5);
+  const [groupColor, setGroupColor] = useState("Any");
+  const [groupSize, setGroupSize] = useState("Any");
+  const [groupDuration, setGroupDuration] = useState(24);
+  const [groupImage, setGroupImage] = useState("");
+  const [groupImageType, setGroupImageType] = useState<'url' | 'file'>('url');
 
   const loadGroupDeals = () => {
     setLoadingDeals(true);
@@ -923,6 +933,17 @@ function VendorPromotionsView() {
     loadGroupDeals();
   }, [products]);
 
+  const handleVendorImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setGroupImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const createVendorGroupBuy = async () => {
     if (!groupProductId) { toast("❌ Please select a product", "error"); return; }
     const product = vendorProducts.find(p => String(p.id) === groupProductId);
@@ -934,17 +955,23 @@ function VendorPromotionsView() {
     }
     
     try {
+      const serializedName = `${product.nameEn || product.name}::${groupDescription}::${groupColor}::${groupSize}`;
+      const expiresAt = new Date(Date.now() + groupDuration * 60 * 60 * 1000).toISOString();
+      
       const res = await fetch('/api/group-deals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           product_id: product.id,
-          product_name: product.nameEn || product.name,
-          product_image: product.image,
+          product_name: serializedName,
+          product_image: groupImage || product.image || '',
           regular_price: product.price,
           group_price: price,
           creator_telegram_id: 1, 
           creator_name: vendorName + " (Shop Special)",
+          min_members: groupMinMembers,
+          max_members: groupMaxMembers,
+          expires_at: expiresAt,
         }),
       });
       const data = await res.json();
@@ -953,6 +980,8 @@ function VendorPromotionsView() {
         setShowCreateGroupModal(false);
         setGroupProductId("");
         setGroupPrice("");
+        setGroupDescription("");
+        setGroupImage("");
         loadGroupDeals();
       } else {
         toast(data.error || "Failed to publish campaign", "error");
@@ -1115,7 +1144,7 @@ function VendorPromotionsView() {
                   <div key={deal.id} className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col justify-between">
                     <div>
                       <div className="flex justify-between items-start gap-2">
-                        <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 line-clamp-1">{deal.product_name}</h4>
+                        <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 line-clamp-1">{parseSerializedName(deal.product_name).name}</h4>
                         <span className={`text-[8px] px-2 py-0.5 rounded-full font-bold uppercase ${deal.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
                           {deal.status}
                         </span>
@@ -1154,10 +1183,42 @@ function VendorPromotionsView() {
           {/* Creation Modal */}
           {showCreateGroupModal && createPortal(
             <>
-              <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm" onClick={() => setShowCreateGroupModal(false)} />
-              <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[110] bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 w-full max-w-sm shadow-2xl">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">🚀 Create Group Buy Special</h3>
-                <div className="space-y-3">
+              <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm overflow-y-auto py-6" onClick={() => setShowCreateGroupModal(false)} />
+              <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[110] bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 w-full max-w-md shadow-2xl">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-2">🚀 Create Group Buy Special</h3>
+                <div className="space-y-3 max-h-[70vh] overflow-y-auto scrollbar-none pr-1">
+                  
+                  {/* Image Options */}
+                  <div>
+                    <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Campaign Image</label>
+                    <div className="flex gap-2 mb-2 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg w-fit">
+                      <button onClick={() => setGroupImageType('url')} className={`px-2.5 py-1 rounded text-[8px] font-bold ${groupImageType === 'url' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500'}`}>Paste URL</button>
+                      <button onClick={() => setGroupImageType('file')} className={`px-2.5 py-1 rounded text-[8px] font-bold ${groupImageType === 'file' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500'}`}>Upload File</button>
+                    </div>
+                    {groupImageType === 'url' ? (
+                      <input 
+                        type="text" 
+                        placeholder="https://example.com/image.jpg (Optional)" 
+                        value={groupImage} 
+                        onChange={e => setGroupImage(e.target.value)}
+                        className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200 outline-none" 
+                      />
+                    ) : (
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={handleVendorImageChange}
+                        className="w-full text-xs text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[9px] file:font-semibold file:bg-emerald-50 file:text-emerald-700" 
+                      />
+                    )}
+                    {groupImage && (
+                      <div className="mt-2 w-12 h-14 rounded overflow-hidden border border-slate-200">
+                        <img src={groupImage} className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Select Product */}
                   <div>
                     <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Select Product</label>
                     <select 
@@ -1166,7 +1227,10 @@ function VendorPromotionsView() {
                       onChange={e => {
                         setGroupProductId(e.target.value);
                         const product = vendorProducts.find(p => String(p.id) === e.target.value);
-                        if (product) setGroupPrice(String(Math.round(product.price * 0.85))); // default 15% off
+                        if (product) {
+                          setGroupPrice(String(Math.round(product.price * 0.85))); // default 15% off
+                          setGroupImage(product.image || "");
+                        }
                       }}>
                       <option value="">Choose product...</option>
                       {vendorProducts.map(p => (
@@ -1174,6 +1238,19 @@ function VendorPromotionsView() {
                       ))}
                     </select>
                   </div>
+
+                  {/* Campaign Description */}
+                  <div>
+                    <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Campaign Description</label>
+                    <textarea 
+                      placeholder="Special discount info or group buy description..." 
+                      value={groupDescription} 
+                      onChange={e => setGroupDescription(e.target.value)}
+                      className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent resize-none h-14 text-slate-800 dark:text-slate-200 outline-none" 
+                    />
+                  </div>
+
+                  {/* Special Group Price */}
                   <div>
                     <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Special Group Price (Br)</label>
                     <input 
@@ -1183,18 +1260,79 @@ function VendorPromotionsView() {
                       onChange={e => setGroupPrice(e.target.value)} 
                     />
                   </div>
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => setShowCreateGroupModal(false)}
-                      className="flex-1 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400">
-                      Cancel
-                    </button>
-                    <button 
-                      onClick={createVendorGroupBuy}
-                      className="flex-1 py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold">
-                      Publish Campaign
-                    </button>
+
+                  {/* Members count */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Min Members</label>
+                      <input 
+                        type="number" 
+                        className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200 outline-none" 
+                        value={groupMinMembers} 
+                        onChange={e => setGroupMinMembers(Number(e.target.value))} 
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Max Capacity</label>
+                      <input 
+                        type="number" 
+                        className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200 outline-none" 
+                        value={groupMaxMembers} 
+                        onChange={e => setGroupMaxMembers(Number(e.target.value))} 
+                      />
+                    </div>
                   </div>
+
+                  {/* Color & Size Preferences */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Color Preference</label>
+                      <input 
+                        type="text" 
+                        placeholder="Any / Red" 
+                        value={groupColor} 
+                        onChange={e => setGroupColor(e.target.value)}
+                        className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200 outline-none" 
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Size Preference</label>
+                      <input 
+                        type="text" 
+                        placeholder="Any / L" 
+                        value={groupSize} 
+                        onChange={e => setGroupSize(e.target.value)}
+                        className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200 outline-none" 
+                      />
+                    </div>
+                  </div>
+
+                  {/* Duration */}
+                  <div>
+                    <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Active Duration (Hours)</label>
+                    <select 
+                      value={groupDuration} 
+                      onChange={e => setGroupDuration(Number(e.target.value))}
+                      className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200 outline-none">
+                      <option value={1}>1 Hour (Flash Campaign)</option>
+                      <option value={12}>12 Hours</option>
+                      <option value={24}>24 Hours (Standard)</option>
+                      <option value={48}>48 Hours (Long-form)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 mt-4 pt-2">
+                  <button 
+                    onClick={() => setShowCreateGroupModal(false)}
+                    className="flex-1 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400">
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={createVendorGroupBuy}
+                    className="flex-1 py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold">
+                    Publish Campaign
+                  </button>
                 </div>
               </div>
             </>,

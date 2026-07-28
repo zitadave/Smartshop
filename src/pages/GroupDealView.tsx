@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { joinGroupDeal, shareToTelegram, calculateGroupPrice, type GroupDeal } from '@/lib/groupBuying';
+import { joinGroupDeal, shareToTelegram, calculateGroupPrice, parseSerializedName, type GroupDeal } from '@/lib/groupBuying';
 import { useStore } from '@/stores/AppStore';
 import { ArrowLeft, Users, Share2, Tag, Clock, CheckCircle, ArrowRight } from 'lucide-react';
 import { toast } from '@/components/Toast';
@@ -98,6 +98,7 @@ export default function GroupDealView() {
     );
   }
 
+  const { name: parsedName, description, color, size } = parseSerializedName(deal.product_name);
   const savings = deal.regular_price - deal.group_price;
   const spotsLeft = Math.max(0, deal.max_members - deal.current_members);
   const progress = Math.round((deal.current_members / deal.max_members) * 100);
@@ -130,11 +131,11 @@ export default function GroupDealView() {
         <div className="bg-white rounded-2xl p-5 shadow-sm mb-4 border border-slate-100">
           <div className="flex gap-4">
             {deal.product_image && (
-              <img src={deal.product_image} alt={deal.product_name} className="w-20 h-20 rounded-xl object-cover border" />
+              <img src={deal.product_image} alt={parsedName} className="w-20 h-20 rounded-xl object-cover border" />
             )}
             <div className="flex-1">
               <span className="text-[9px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">🛒 ACTIVE DEAL</span>
-              <h2 className="font-bold text-slate-800 text-base mt-1">{deal.product_name}</h2>
+              <h2 className="font-bold text-slate-800 text-base mt-1">{parsedName}</h2>
               <div className="flex items-baseline gap-2 mt-2">
                 <span className="text-2xl font-extrabold text-green-600">Br {deal.group_price.toLocaleString()}</span>
                 <span className="text-xs text-slate-400 line-through">Br {deal.regular_price.toLocaleString()}</span>
@@ -147,6 +148,32 @@ export default function GroupDealView() {
             </div>
           </div>
         </div>
+
+        {/* Campaign Description & Preferences */}
+        {(description || (color && color !== 'Any') || (size && size !== 'Any')) && (
+          <div className="bg-white rounded-2xl p-4 shadow-sm mb-4 border border-slate-100">
+            <h3 className="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5">
+              📝 Campaign Details & Preferences
+            </h3>
+            {description && (
+              <p className="text-xs text-slate-500 bg-slate-50 dark:bg-slate-800 p-3 rounded-xl mb-2.5 leading-relaxed italic">
+                "{description}"
+              </p>
+            )}
+            <div className="flex flex-wrap gap-2.5">
+              {color && color !== 'Any' && (
+                <span className="text-[10px] bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full font-bold border border-blue-100">
+                  🎨 Color: {color}
+                </span>
+              )}
+              {size && size !== 'Any' && (
+                <span className="text-[10px] bg-purple-50 text-purple-600 px-2.5 py-1 rounded-full font-bold border border-purple-100">
+                  📏 Size: {size}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Discount Stepper Tracker */}
         <div className="bg-white rounded-2xl p-4 shadow-sm mb-4 border border-slate-100">

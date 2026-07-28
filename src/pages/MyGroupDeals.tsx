@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getUserGroupDeals, type GroupDeal } from '@/lib/groupBuying';
+import { getUserGroupDeals, parseSerializedName, type GroupDeal } from '@/lib/groupBuying';
 import { useStore } from '@/stores/AppStore';
 import { ArrowLeft, Users, Tag, Clock, Share2, ChevronRight, Package, Compass, Award } from 'lucide-react';
 import { toast } from '@/components/Toast';
@@ -126,7 +126,7 @@ export default function MyGroupDeals() {
                   
                   <div className="flex gap-3">
                     {deal.product_image && (
-                      <img src={deal.product_image} alt={deal.product_name} className="w-14 h-14 rounded-lg object-cover border-slate-100 border" />
+                      <img src={deal.product_image} alt={parseSerializedName(deal.product_name).name} className="w-14 h-14 rounded-lg object-cover border-slate-100 border" />
                     )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
@@ -137,7 +137,7 @@ export default function MyGroupDeals() {
                           Expires {new Date(deal.expires_at || Date.now() + 86400000).toLocaleDateString()}
                         </span>
                       </div>
-                      <h3 className="font-bold text-slate-800 text-sm mt-1 truncate">{deal.product_name}</h3>
+                      <h3 className="font-bold text-slate-800 text-sm mt-1 truncate">{parseSerializedName(deal.product_name).name}</h3>
                       <div className="flex items-baseline gap-2 mt-1">
                         <span className="text-sm font-extrabold text-green-600">Br {deal.group_price.toLocaleString()}</span>
                         <span className="text-[10px] text-slate-400 line-through">Br {deal.regular_price.toLocaleString()}</span>
