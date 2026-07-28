@@ -21,28 +21,28 @@ const supabase = createClient(ENV.SUPABASE_URL, ENV.SUPABASE_KEY, { auth: { pers
 // ===== RATE LIMITING =====
 const rateStore = new Map();
 const RATE_WIN = 60000, RATE_MAX = 60;
-function chkRate(ip) {
-  const n = Date.now(); const r = rateStore.get(ip);
+function chkRate(ip: any) {
+  const n = Date.now(); const r: any = rateStore.get(ip);
   if (!r || n > r.resetAt) { rateStore.set(ip, { c: 1, resetAt: n + RATE_WIN }); return { ok: true, rem: RATE_MAX - 1 }; }
   if (r.c >= RATE_MAX) return { ok: false, rem: 0 };
   r.c++; return { ok: true, rem: RATE_MAX - r.c };
 }
-setInterval(() => { const n = Date.now(); for (const [k, v] of rateStore) if (n > v.resetAt) rateStore.delete(k); }, 60000);
+setInterval(() => { const n = Date.now(); for (const [k, v] of rateStore) if (n > (v as any).resetAt) rateStore.delete(k); }, 60000);
 
 // ===== LOGGING =====
-function logReq(m, p, c, ms, ip, e) {
+function logReq(m: any, p: any, c: any, ms: any, ip: any, e?: any) {
   console.log('[' + new Date().toISOString() + '] [' + (c >= 500 ? 'ERROR' : c >= 400 ? 'WARN' : 'INFO') + '] ' + m + ' ' + p + ' -> ' + c + ' ' + ms + 'ms ip=' + ip + (e ? ' err=' + e : ''));
 }
-function dur(s) { const d = process.hrtime(s); return Math.round(d[0] * 1000 + d[1] / 1000000); }
-const slp = ms => new Promise(r => setTimeout(r, ms));
+function dur(s: any) { const d = process.hrtime(s); return Math.round(d[0] * 1000 + d[1] / 1000000); }
+const slp = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 // ===== RETRY + TIMEOUT =====
-async function fetchTO(url, opts) {
+async function fetchTO(url: string, opts?: any) {
   opts = opts || {}; const t = opts.timeout || 5000; const ac = new AbortController();
   const id = setTimeout(() => ac.abort(), t);
   try { return await fetch(url, { ...opts, signal: ac.signal }); } finally { clearTimeout(id); }
 }
-async function fetchRetry(url, opts) {
+async function fetchRetry(url: string, opts?: any) {
   opts = opts || {}; const mr = opts.maxRetries || 3;
   for (let a = 0; a <= mr; a++) {
     try {
@@ -50,29 +50,29 @@ async function fetchRetry(url, opts) {
       if (r.status >= 400 && r.status < 500) return r;
       if (r.status >= 500 && a < mr) { await slp(Math.min(200 * Math.pow(2, a) + Math.random() * 100, 10000)); continue; }
       return r;
-    } catch (e) { if (a < mr) await slp(Math.min(200 * Math.pow(2, a) + Math.random() * 100, 10000)); else throw e; }
+    } catch (e: any) { if (a < mr) await slp(Math.min(200 * Math.pow(2, a) + Math.random() * 100, 10000)); else throw e; }
   }
   throw new Error('Failed: ' + url);
 }
-async function tg(bot, ch, txt, pm, ex) {
+async function tg(bot: any, ch: any, txt: any, pm?: any, ex?: any) {
   pm = pm || 'Markdown'; ex = ex || {};
   if (!bot) return false;
   try { const r = await fetchRetry('https://api.telegram.org/bot' + bot + '/sendMessage', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: ch, text: txt, parse_mode: pm, disable_web_page_preview: true, ...ex }), timeout: 5000, maxRetries: 2 }); const d = await r.json(); return d.ok === true; }
-  catch (e) { console.error('TG:', e); return false; }
+  catch (e: any) { console.error('TG:', e); return false; }
 }
 
 // ===== IDEMPOTENCY =====
 const idem = new Map();
-async function chkIdem(k) {
+async function chkIdem(k: string) {
   const c = idem.get(k); if (c) return c;
   const { data } = await supabase.from('settings').select('*').single();
   const ks = data?.data?.idempotency_keys || {};
   if (ks[k]) { const a = Date.now() - new Date(ks[k].created_at).getTime(); if (a < 86400000) { idem.set(k, ks[k]); return ks[k]; } }
   return null;
 }
-async function setIdem(k, s, r) {
+async function setIdem(k: string, s: string, r: any) {
   idem.set(k, { status: s, result: r, created_at: new Date().toISOString() });
-  try { const { data: row } = await supabase.from('settings').select('*').single(); const d = row?.data || {}; const ks = { ...(d.idempotency_keys || {}) }; ks[k] = { status: s, result: r, created_at: new Date().toISOString() }; for (const [kk, vv] of Object.entries(ks)) if (Date.now() - new Date(vv.created_at).getTime() > 86400000) delete ks[kk]; d.idempotency_keys = ks; await supabase.from('settings').update({ data: d }).eq('id', row?.id || 0); } catch (e) { console.error('Idem:', e); }
+  try { const { data: row } = await supabase.from('settings').select('*').single(); const d = row?.data || {}; const ks = { ...(d.idempotency_keys || {}) }; ks[k] = { status: s, result: r, created_at: new Date().toISOString() }; for (const [kk, vv] of Object.entries(ks)) if (Date.now() - new Date((vv as any).created_at).getTime() > 86400000) delete ks[kk]; d.idempotency_keys = ks; await supabase.from('settings').update({ data: d }).eq('id', row?.id || 0); } catch (e: any) { console.error('Idem:', e?.message || e); }
 }
 function gON() { return 'ETH-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase(); }
 
@@ -126,33 +126,33 @@ const BOT_COMMANDS = [
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ menu_button: { type: 'default' } }),
       });
-    } catch(e) { console.log('Bot init error:', e.message); }
+    } catch(e: any) { console.log('Bot init error:', e?.message || e); }
   }
 })();
 
 // ===== VENDORS =====
 async function getV() { try { const { data: r } = await supabase.from('settings').select('*').single(); return r?.data?.vendors || []; } catch { return []; } }
-async function setV(v) { try { const { data: r } = await supabase.from('settings').select('*').single(); const nd = { ...(r?.data || {}), vendors: v }; if (r) await supabase.from('settings').update({ data: nd, updated_at: new Date().toISOString() }).eq('id', r.id); else await supabase.from('settings').insert({ data: nd }); } catch (e) { console.error('setV:', e?.message || e); } }
+async function setV(v: any) { try { const { data: r } = await supabase.from('settings').select('*').single(); const nd = { ...(r?.data || {}), vendors: v }; if (r) await supabase.from('settings').update({ data: nd, updated_at: new Date().toISOString() }).eq('id', r.id); else await supabase.from('settings').insert({ data: nd }); } catch (e: any) { console.error('setV:', e?.message || e); } }
 
 // ===== HELPERS =====
-function norm(p) {
+function norm(p: any) {
   if (!p) return null;
   return { id: p.id, name: p.name || '', nameEn: p.name_en || '', category: p.category || '', price: p.price || 0, originalPrice: p.original_price || null, image: p.image || '', images: p.images || [], badge: p.badge || '', description: p.description || '', descriptionEn: p.description_en || '', stockCount: p.stock_count || 0, soldCount: p.sold_count || 0, rating: p.rating || 4.0, reviews: p.reviews || 0, vendorId: p.vendor_id || null, vendorName: p.vendor_name || '', inStock: p.in_stock !== false, visible: p.visible !== false, colors: p.colors || [], sizes: p.sizes || [], features: p.features || [], tags: p.tags || [], brand: p.brand || '', featured: p.featured || false, weight: p.weight || 0, unit: p.unit || 'kg', seoTitle: p.seo_title || '', seoDescription: p.seo_description || '', createdAt: p.created_at || '', isPreOrder: p.is_pre_order || false, preOrderDeposit: p.pre_order_deposit || null, preOrderReleaseDate: p.pre_order_release_date || null, preOrderMax: p.pre_order_max || null };
 }
-function cln(b) {
+function cln(b: any) {
   const r = { ...b, name_en: b.nameEn || b.name_en || '', name: b.name || b.name_en || '', description_en: b.descriptionEn || b.description_en || '', description: b.description || '', stock_count: b.stockCount ?? b.stock_count ?? 10, sold_count: b.soldCount ?? b.sold_count ?? 0, original_price: b.originalPrice ?? b.original_price ?? null, vendor_id: b.vendorId ?? b.vendor_id ?? null, vendor_name: b.vendorName ?? b.vendor_name ?? '', is_pre_order: b.isPreOrder ?? b.is_pre_order ?? false, pre_order_deposit: b.preOrderDeposit ?? b.pre_order_deposit ?? null, pre_order_release_date: b.preOrderReleaseDate ?? b.pre_order_release_date ?? '', pre_order_max: b.preOrderMax ?? b.pre_order_max ?? null, seo_title: b.seoTitle ?? b.seo_title ?? '', seo_description: b.seoDescription ?? b.seo_description ?? '', in_stock: b.inStock ?? b.in_stock ?? true };
   delete r.nameEn; delete r.descriptionEn; delete r.stockCount; delete r.soldCount; delete r.originalPrice; delete r.vendorId; delete r.vendorName; delete r.isPreOrder; delete r.preOrderDeposit; delete r.preOrderReleaseDate; delete r.preOrderMax; delete r.seoTitle; delete r.seoDescription; delete r.inStock;
   return r;
 }
-function pid(p) { return parseInt(p.split('/').pop() || '0'); }
-function vrfy(init) {
+function pid(p: any) { return parseInt(p.split('/').pop() || '0'); }
+function vrfy(init: any) {
   try { const p = new URLSearchParams(init); const h = p.get('hash'); if (!h) return { valid: false, user: null }; p.delete('hash'); const s = [...p.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => k + '=' + v).join('\n'); const sk = crypto.createHmac('sha256', 'WebAppData').update(ENV.BOT_TOKEN).digest(); if (crypto.createHmac('sha256', sk).update(s).digest('hex') !== h) return { valid: false, user: null }; const u = p.get('user'); return { valid: true, user: u ? JSON.parse(u) : null }; }
   catch { return { valid: false, user: null }; }
 }
 const DSTAT = ['pending','assigned','accepted','at_vendor','picked_up','in_transit','arrived','delivered','failed','cancelled','returned'];
 
 // ===== MAIN HANDLER =====
-export default async function handler(req, res) {
+export default async function handler(req: any, res: any) {
   const start = process.hrtime();
   const path = (req.url || '').split('?')[0];
   const method = req.method || 'GET';
@@ -167,8 +167,8 @@ export default async function handler(req, res) {
   if (!rc.ok) { res.setHeader('Retry-After', '60'); logReq(method, path, 429, dur(start), ip, 'RL'); return res.status(429).json({ error: 'Too many requests' }); }
   res.setHeader('X-RateLimit-Remaining', rc.rem);
 
-  function ok(d, s) { return res.status(s || 200).json(d); }
-  function fail(m, s) { return res.status(s || 400).json({ error: m }); }
+  function ok(d: any, s: number = 200) { return res.status(s).json(d); }
+  function fail(m: any, s: number = 400) { return res.status(s).json({ error: m }); }
 
   try {
 
@@ -185,7 +185,7 @@ export default async function handler(req, res) {
       }
       if (path === '/api/delivery/calculate-fee' && method === 'POST') {
         const b = req.body || {}; const dist = parseFloat(b.distance_km) || 1; const vt = b.vehicle_type || 'motorcycle';
-        const pr = { on_foot: { b: 15, pk: 5, mx: 2 }, bicycle: { b: 20, pk: 7, mx: 4 }, motorcycle: { b: 30, pk: 10, mx: 10 }, bajaj: { b: 40, pk: 15, mx: 15 } };
+        const pr: Record<string, any> = { on_foot: { b: 15, pk: 5, mx: 2 }, bicycle: { b: 20, pk: 7, mx: 4 }, motorcycle: { b: 30, pk: 10, mx: 10 }, bajaj: { b: 40, pk: 15, mx: 15 } };
         const p = pr[vt] || pr.motorcycle; let mx = p.mx; let bf = p.b, pk = p.pk;
         if (b.zone_id) { const { data: z } = await supabase.from('delivery_zones').select('*').eq('id', b.zone_id).single(); if (z) { bf = z.base_fee || p.b; pk = z.per_km_fee || p.pk; mx = Math.min(mx, z.max_distance_km || mx); } }
         const ed = Math.min(dist, mx); const fee = Math.max(20, Math.round(bf + ed * pk)); const cm = Math.round(fee * 0.2);
@@ -227,7 +227,7 @@ export default async function handler(req, res) {
       if (path === '/api/delivery/status' && method === 'POST') {
         const { delivery_id, status, item_count } = req.body || {};
         if (!delivery_id || !status) return fail('delivery_id and status required'); if (!DSTAT.includes(status)) return fail('Invalid status');
-        const ud = { status }; if (status === 'at_vendor' && item_count) ud.item_count_confirmed_at_vendor = item_count;
+        const ud: Record<string, any> = { status }; if (status === 'at_vendor' && item_count) ud.item_count_confirmed_at_vendor = item_count;
         if (status === 'picked_up') ud.picked_up_at = new Date().toISOString();
         if (status === 'arrived') ud.delivery_pin = Math.floor(100000 + Math.random() * 900000).toString();
         if (status === 'delivered') ud.delivered_at = new Date().toISOString();
@@ -244,7 +244,7 @@ export default async function handler(req, res) {
       }
       if (path === '/api/delivery/rate' && method === 'POST') {
         const { delivery_id, driver_rating, customer_rating } = req.body || {}; if (!delivery_id) return fail('delivery_id required');
-        const ud = {}; if (driver_rating) ud.driver_rating = Math.max(1, Math.min(5, parseInt(driver_rating))); if (customer_rating) ud.customer_rating = Math.max(1, Math.min(5, parseInt(customer_rating)));
+        const ud: Record<string, any> = {}; if (driver_rating) ud.driver_rating = Math.max(1, Math.min(5, parseInt(driver_rating))); if (customer_rating) ud.customer_rating = Math.max(1, Math.min(5, parseInt(customer_rating)));
         const { error } = await supabase.from('deliveries').update(ud).eq('id', delivery_id); if (error) return fail(error.message);
         if (driver_rating) { const { data: d } = await supabase.from('deliveries').select('driver_id').eq('id', delivery_id).single(); if (d?.driver_id) { const { data: rt } = await supabase.from('deliveries').select('driver_rating').eq('driver_id', d.driver_id).not('driver_rating', 'is', null); if (rt?.length) { const a = rt.reduce((s, r) => s + (r.driver_rating || 0), 0) / rt.length; await supabase.from('delivery_personnel').update({ rating: Math.round(a * 10) / 10 }).eq('id', d.driver_id); } } }
         return ok({ success: true });
@@ -290,8 +290,8 @@ export default async function handler(req, res) {
     // ── Group Deals ────────────────────────────────────────────────
     if (path === '/api/group-deals' && method === 'POST') {
       var b = req.body || {};
-      var token = b.share_token || Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
-      var { data, error } = await supabase.from('group_deals').insert({
+      const token = b.share_token || Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
+      const { data, error } = await supabase.from('group_deals').insert({
         product_id: b.product_id, product_name: b.product_name, product_image: b.product_image || '',
         regular_price: b.regular_price, group_price: b.group_price || b.regular_price,
         creator_telegram_id: b.creator_telegram_id, share_token: token, current_members: 1,
@@ -310,16 +310,16 @@ export default async function handler(req, res) {
 
     if (path === '/api/group-deals' && method === 'GET') {
       var uParams = new URLSearchParams(req.url?.split('?')[1] || '');
-      var token = uParams.get('token') || '';
+      const token = uParams.get('token') || '';
       if (token) {
-        var { data, error } = await supabase.from('group_deals').select('*, group_deal_members(*)').eq('share_token', token).single();
+        const { data, error } = await supabase.from('group_deals').select('*, group_deal_members(*)').eq('share_token', token).single();
         if (error || !data) return ok({ deal: null, deals: [] });
         return ok({ deal: data, deals: [data] });
       }
       
       var q = supabase.from('group_deals').select('*, group_deal_members(*)');
       
-      var tid = uParams.get('telegram_id') || uParams.get('creator') || '';
+      const tid = uParams.get('telegram_id') || uParams.get('creator') || '';
       if (tid) {
         q = q.eq('creator_telegram_id', parseInt(tid));
       }
@@ -329,7 +329,7 @@ export default async function handler(req, res) {
         q = q.eq('product_id', parseInt(pidVal));
       }
       
-      var { data, error } = await q.order('created_at', { ascending: false });
+      const { data, error } = await q.order('created_at', { ascending: false });
       if (error) return fail(error.message, 500);
       return ok({ deals: data || [] });
     }
@@ -345,7 +345,7 @@ export default async function handler(req, res) {
     if (path === '/api/group-deals/join' && method === 'POST') {
       var b = req.body || {};
       if (!b.token) return fail('token required');
-      var { data: deal, error: dError } = await supabase.from('group_deals').select('*').eq('share_token', b.token).eq('status', 'open').single();
+      const { data: deal, error: dError } = await supabase.from('group_deals').select('*').eq('share_token', b.token).eq('status', 'open').single();
       if (dError || !deal) return fail('Deal expired or invalid');
       if (deal.current_members >= deal.max_members) return fail('Group is full');
       // Add member
@@ -366,8 +366,8 @@ export default async function handler(req, res) {
 
     // ── Subscription Plans (vendor-created) ─────────────────────
     if (path.match(/^\/api\/subscription-plans\/\d+$/) && method === 'GET') {
-      var pid = parseInt(path.split('/').pop() || '0');
-      var { data, error } = await supabase.from('subscription_plans').select('*').eq('id', pid).single();
+      var parsedPid = parseInt(path.split('/').pop() || '0');
+      const { data, error } = await supabase.from('subscription_plans').select('*').eq('id', parsedPid).single();
       if (error || !data) return ok({ plan: null });
       return ok({ plan: data });
     }
@@ -377,13 +377,13 @@ export default async function handler(req, res) {
       var q = supabase.from('subscription_plans').select('*');
       if (cat) q = q.eq('category', cat);
       if (active === 'true') q = q.eq('is_active', true);
-      var { data, error } = await q.order('created_at', { ascending: false });
+      const { data, error } = await q.order('created_at', { ascending: false });
       if (error) return fail(error.message, 500);
       return ok({ plans: data || [] });
     }
     if (path === '/api/subscription-plans' && method === 'POST') {
       var b = req.body || {};
-      var { data, error } = await supabase.from('subscription_plans').insert({
+      const { data, error } = await supabase.from('subscription_plans').insert({
         name: b.name, name_amharic: b.nameAmharic || b.name_amharic || '',
         emoji: b.emoji || '📦', description: b.description || '',
         category: b.category || 'general',
@@ -402,26 +402,26 @@ export default async function handler(req, res) {
       return ok({ success: true, plan: data });
     }
     if (path.startsWith('/api/subscription-plans/') && method === 'PUT') {
-      var pid = parseInt(path.split('/').pop() || '0');
+      var parsedPid = parseInt(path.split('/').pop() || '0');
       var b = req.body || {};
       // Handle tags properly (may come as array from frontend)
-      if (b.tags && typeof b.tags === 'string') { try { b.tags = JSON.parse(b.tags); } catch(e) {} }
-      var { error } = await supabase.from('subscription_plans').update(b).eq('id', pid);
+      if (b.tags && typeof b.tags === 'string') { try { b.tags = JSON.parse(b.tags); } catch(e: any) {} }
+      var { error } = await supabase.from('subscription_plans').update(b).eq('id', parsedPid);
       if (error) return fail(error.message);
       return ok({ success: true });
     }
     if (path.startsWith('/api/subscription-plans/') && method === 'DELETE') {
-      var pid = parseInt(path.split('/').pop() || '0');
-      var { error } = await supabase.from('subscription_plans').delete().eq('id', pid);
+      var parsedPid = parseInt(path.split('/').pop() || '0');
+      var { error } = await supabase.from('subscription_plans').delete().eq('id', parsedPid);
       if (error) return fail(error.message);
       return ok({ success: true });
     }
 
     // ── Customer Subscriptions ───────────────────────────────────
     if (path === '/api/subscriptions' && method === 'GET') {
-      var tid = new URLSearchParams(req.url?.split('?')[1] || '').get('telegram_id') || '';
+      const tid = new URLSearchParams(req.url?.split('?')[1] || '').get('telegram_id') || '';
       if (!tid) return ok({ subscriptions: [] });
-      var { data, error } = await supabase
+      const { data, error } = await supabase
         .from('subscriptions')
         .select('*, subscription_plans(*)')
         .eq('telegram_id', parseInt(tid))
@@ -432,11 +432,11 @@ export default async function handler(req, res) {
 
     if (path === '/api/subscriptions' && method === 'POST') {
       var b = req.body || {};
-      var tid = b.telegram_id || b.telegramId;
-      var pid = b.plan_id || b.planId;
-      if (!tid || !pid) return fail('telegram_id and plan_id required');
+      const tid = b.telegram_id || b.telegramId;
+      var planId = b.plan_id || b.planId;
+      if (!tid || !planId) return fail('telegram_id and plan_id required');
       // Get plan details
-      var { data: plan } = await supabase.from('subscription_plans').select('*').eq('id', pid).single();
+      const { data: plan } = await supabase.from('subscription_plans').select('*').eq('id', planId).single();
       if (!plan) return fail('Plan not found');
 
       var freq = b.frequency || 'daily';
@@ -449,8 +449,8 @@ export default async function handler(req, res) {
       else if (freq === 'weekly') { nextDel.setDate(nextDel.getDate() + 7); nextDel.setHours(7, 0, 0, 0); }
       else { nextDel.setMonth(nextDel.getMonth() + 1); nextDel.setDate(1); nextDel.setHours(7, 0, 0, 0); }
 
-      var { data, error } = await supabase.from('subscriptions').insert({
-        telegram_id: tid, plan_id: pid,
+      const { data, error } = await supabase.from('subscriptions').insert({
+        telegram_id: tid, plan_id: planId,
         product_name: plan.name, product_image: plan.image || plan.emoji || '',
         quantity: qty, frequency: freq,
         price: price * qty, next_delivery: nextDel.toISOString(),
@@ -464,14 +464,14 @@ export default async function handler(req, res) {
     }
 
     if (path.match(/^\/api\/subscriptions\/\d+$/) && method === 'PATCH') {
-      var sid = parseInt(path.split('/').pop() || '0');
+      const sid = parseInt(path.split('/').pop() || '0');
       var { error } = await supabase.from('subscriptions').update(req.body).eq('id', sid);
       if (error) return fail(error.message);
       return ok({ success: true });
     }
 
     if (path.match(/^\/api\/subscriptions\/\d+$/) && method === 'DELETE') {
-      var sid = parseInt(path.split('/').pop() || '0');
+      const sid = parseInt(path.split('/').pop() || '0');
       var { error } = await supabase.from('subscriptions').update({ status: 'cancelled' }).eq('id', sid);
       if (error) return fail(error.message);
       return ok({ success: true });
@@ -481,10 +481,10 @@ export default async function handler(req, res) {
     if (path === '/api/vendor/subscription-orders' && method === 'GET') {
       var vid = new URLSearchParams(req.url?.split('?')[1] || '').get('vendor_id') || '';
       if (!vid) return ok({ orders: [] });
-      var { data: plans } = await supabase.from('subscription_plans').select('id').eq('vendor_id', parseInt(vid));
+      const { data: plans } = await supabase.from('subscription_plans').select('id').eq('vendor_id', parseInt(vid));
       var planIds = (plans || []).map(function(p) { return p.id; });
       if (planIds.length === 0) return ok({ orders: [] });
-      var { data, error } = await supabase
+      const { data, error } = await supabase
         .from('subscriptions')
         .select('*, subscription_plans(*)')
         .in('plan_id', planIds)
@@ -507,7 +507,7 @@ export default async function handler(req, res) {
     // ── Pending Deliveries for Today (driver view) ────────────
     if (path === '/api/subscriptions/pending-deliveries' && method === 'GET') {
       var date = new URLSearchParams(req.url?.split('?')[1] || '').get('date') || new Date().toISOString().split('T')[0];
-      var { data, error } = await supabase
+      const { data, error } = await supabase
         .from('subscription_deliveries')
         .select('*, subscriptions!inner(telegram_id, delivery_address, delivery_note, frequency, product_name)')
         .eq('delivery_date', date)
@@ -519,9 +519,9 @@ export default async function handler(req, res) {
 
     // ── Subscription Delivery History ────────────────────────────
     if (path === '/api/subscriptions/deliveries' && method === 'GET') {
-      var sid = new URLSearchParams(req.url?.split('?')[1] || '').get('subscription_id') || '';
+      const sid = new URLSearchParams(req.url?.split('?')[1] || '').get('subscription_id') || '';
       if (!sid) return ok({ deliveries: [] });
-      var { data, error } = await supabase
+      const { data, error } = await supabase
         .from('subscription_deliveries')
         .select('*')
         .eq('subscription_id', parseInt(sid))
@@ -535,7 +535,7 @@ export default async function handler(req, res) {
     if (path === '/api/cron/subscriptions' && method === 'POST') {
       var today = new Date();
       today.setHours(0, 0, 0, 0);
-      var { data: dueSubs, error } = await supabase
+      const { data: dueSubs, error } = await supabase
         .from('subscriptions')
         .select('*, subscription_plans(*)')
         .eq('status', 'active')
@@ -543,17 +543,20 @@ export default async function handler(req, res) {
         .limit(50);
       if (error) return fail(error.message, 500);
       var processed = 0;
-      for (var si = 0; si < (dueSubs || []).length; si++) {
-        var sub = dueSubs[si];
+      const subList = dueSubs || [];
+      for (var si = 0; si < subList.length; si++) {
+        var sub = subList[si];
         // Create delivery record
-        await supabase.from('subscription_deliveries').insert({
-          subscription_id: sub.id, plan_id: sub.plan_id,
-          telegram_id: sub.telegram_id,
-          product_name: sub.product_name, quantity: sub.quantity,
-          price: sub.price, delivery_address: sub.delivery_address,
-          delivery_date: today.toISOString().split('T')[0],
-          status: 'pending',
-        }).catch(function() {});
+        try {
+          await supabase.from('subscription_deliveries').insert({
+            subscription_id: sub.id, plan_id: sub.plan_id,
+            telegram_id: sub.telegram_id,
+            product_name: sub.product_name, quantity: sub.quantity,
+            price: sub.price, delivery_address: sub.delivery_address,
+            delivery_date: today.toISOString().split('T')[0],
+            status: 'pending',
+          });
+        } catch (err) {}
         // Update next delivery
         var nextDate = new Date(today);
         if (sub.frequency === 'daily') nextDate.setDate(nextDate.getDate() + 1);
@@ -586,15 +589,15 @@ export default async function handler(req, res) {
         for (const item of items) {
           if (!item.productId) continue; const qty = item.quantity || 1;
           const { data: up, error: se } = await supabase.rpc('decrement_stock', { row_id: item.productId, qty }).single();
-          if (se || up === null || up === undefined) { for (const prev of items) { if (prev.productId === item.productId) break; await supabase.rpc('increment_stock', { row_id: prev.productId, qty: prev.quantity || 1 }).catch(() => {}); } return fail('Insufficient stock for #' + item.productId, 409); }
+          if (se || up === null || up === undefined) { for (const prev of items) { if (prev.productId === item.productId) break; await supabase.rpc('increment_stock', { row_id: prev.productId, qty: prev.quantity || 1 }); } return fail('Insufficient stock for #' + item.productId, 409); }
           await supabase.from('products').update({ sold_count: supabase.rpc('increment', { x: qty }) }).eq('id', item.productId);
         }
         const { data: order, error: oe } = await supabase.from('orders').insert({ ...req.body, order_number: on }).select().single();
-        if (oe) { for (const item of items) { if (item.productId) await supabase.rpc('increment_stock', { row_id: item.productId, qty: item.quantity || 1 }).catch(() => {}); } return fail(oe.message); }
+        if (oe) { for (const item of items) { if (item.productId) await supabase.rpc('increment_stock', { row_id: item.productId, qty: item.quantity || 1 }); } return fail(oe.message); }
         if (ik) await setIdem(ik, 'completed', order); return ok({ success: true, order });
       }
       if (method === 'GET') { const on = path.replace('/api/orders/', '').split('/')[0]; const { data } = await supabase.from('orders').select('*').eq('order_number', on).single(); return ok({ success: true, order: data }); }
-      if (method === 'POST' && path.includes('/cancel')) { const on = path.split('/')[3]; const { data: order } = await supabase.from('orders').select('*').eq('order_number', on).single(); if (order?.items) { for (const item of order.items) { if (item.productId) await supabase.rpc('increment_stock', { row_id: item.productId, qty: item.quantity || 1 }).catch(() => {}); } } await supabase.from('orders').update({ status: 'cancelled' }).eq('order_number', on); return ok({ success: true }); }
+      if (method === 'POST' && path.includes('/cancel')) { const on = path.split('/')[3]; const { data: order } = await supabase.from('orders').select('*').eq('order_number', on).single(); if (order?.items) { for (const item of order.items) { if (item.productId) await supabase.rpc('increment_stock', { row_id: item.productId, qty: item.quantity || 1 }); } } await supabase.from('orders').update({ status: 'cancelled' }).eq('order_number', on); return ok({ success: true }); }
       if (method === 'PATCH' && path.includes('/status')) { const on = path.split('/')[3]; await supabase.from('orders').update({ status: req.body.status }).eq('order_number', on); return ok({ success: true }); }
     }
 
@@ -603,14 +606,14 @@ export default async function handler(req, res) {
     // VENDORS
     // ================================================================
     if (path.startsWith('/api/vendors')) {
-      if (method === 'GET' && !['/api/vendors/applications', '/api/vendors/check-status', '/api/vendors/approve'].includes(path) && /\/api\/vendors\/\d+/.test(path)) { const v = await getV(); const f = v.find(vv => vv.id == pid(path) || vv.id === String(pid(path))); return ok({ vendor: f || null }); }
-      if (path === '/api/vendors/approve' && method === 'POST') { const id = req.body.id; try { let v = await getV(); let okf = false; v = v.map(vv => { if (vv.id == id || vv.id === String(id)) { okf = true; return { ...vv, status: 'approved' }; } return vv; }); if (okf) await setV(v); tg(ENV.ADMIN_BOT_TOKEN, ENV.adminChatId, '✅ Approved: ' + (req.body.name || id), 'HTML'); const uv = await getV(); const av = uv.find(vv => vv.id == id || vv.id === String(id)); if (av?.telegram_id) tg(ENV.VENDOR_BOT_TOKEN, av.telegram_id, '🎉 *Approved!*', 'HTML'); return ok({ success: true, status: 'approved' }); } catch (e) { return fail(e.message, 500); } }
-      if (path === '/api/vendors/check-status' && method === 'GET') { const id = new URLSearchParams(req.url?.split('?')[1] || '').get('id') || ''; const ph = new URLSearchParams(req.url?.split('?')[1] || '').get('phone') || ''; try { const v = await getV(); if (id) { const f = v.find(vv => vv.id == id || vv.id === id); return ok({ status: f?.status || 'none' }); } if (ph) { const f = v.find(vv => vv.phone == ph); return ok({ status: f?.status || 'none' }); } } catch {} return ok({ status: 'none' }); }
+      if (method === 'GET' && !['/api/vendors/applications', '/api/vendors/check-status', '/api/vendors/approve'].includes(path) && /\/api\/vendors\/\d+/.test(path)) { const v = await getV(); const f = v.find((vv: any) => vv.id == pid(path) || vv.id === String(pid(path))); return ok({ vendor: f || null }); }
+      if (path === '/api/vendors/approve' && method === 'POST') { const id = req.body.id; try { let v = await getV(); let okf = false; v = v.map((vv: any) => { if (vv.id == id || vv.id === String(id)) { okf = true; return { ...vv, status: 'approved' }; } return vv; }); if (okf) await setV(v); tg(ENV.ADMIN_BOT_TOKEN, ENV.adminChatId, '✅ Approved: ' + (req.body.name || id), 'HTML'); const uv = await getV(); const av = uv.find((vv: any) => vv.id == id || vv.id === String(id)); if (av?.telegram_id) tg(ENV.VENDOR_BOT_TOKEN, av.telegram_id, '🎉 *Approved!*', 'HTML'); return ok({ success: true, status: 'approved' }); } catch (e: any) { return fail(e.message, 500); } }
+      if (path === '/api/vendors/check-status' && method === 'GET') { const id = new URLSearchParams(req.url?.split('?')[1] || '').get('id') || ''; const ph = new URLSearchParams(req.url?.split('?')[1] || '').get('phone') || ''; try { const v = await getV(); if (id) { const f = v.find((vv: any) => vv.id == id || vv.id === id); return ok({ status: f?.status || 'none' }); } if (ph) { const f = v.find((vv: any) => vv.phone == ph); return ok({ status: f?.status || 'none' }); } } catch {} return ok({ status: 'none' }); }
       if (path === '/api/vendors/applications' && method === 'GET') { const v = await getV(); return ok({ applications: v }); }
       if (method === 'GET' && (path === '/api/vendors' || path === '/api/')) { const v = await getV(); return ok({ vendors: v || [] }); }
-      if (method === 'POST' && path === '/api/vendors/register') { const v = { id: Date.now(), ...req.body, status: 'pending', joined_at: new Date().toISOString() }; try { const vs = await getV(); vs.push(v); await setV(vs); } catch (e) { console.log('V:', e.message); } tg(ENV.ADMIN_BOT_TOKEN, ENV.adminChatId, '🆕 Vendor: ' + (req.body.name || '') + ' ' + (req.body.phone || '')); return ok({ success: true, vendor: v }); }
-      if (method === 'DELETE') { const vid = pid(path); try { let vs = await getV(); let dv = null; const f = vs.filter(v => { if (v.id == vid || v.id === String(vid)) { dv = v; return false; } return true; }); await setV(f); if (dv?.telegram_id) tg(ENV.VENDOR_BOT_TOKEN, dv.telegram_id, '⚠️ Revoked.'); return ok({ success: true, deleted: true }); } catch (e) { return fail(e.message, 500); } }
-      if (method === 'PUT') { const vid = pid(path); try { const vs = await getV(); const up = vs.map(v => v.id == vid ? { ...v, ...req.body } : v); await setV(up); } catch {} const em = req.body.status === 'approved' ? '✅' : req.body.status === 'rejected' ? '❌' : '⏸️'; tg(ENV.ADMIN_BOT_TOKEN, ENV.adminChatId, em + ' Vendor ' + vid + ': ' + (req.body.status || 'updated')); return ok({ success: true }); }
+      if (method === 'POST' && path === '/api/vendors/register') { const v = { id: Date.now(), ...req.body, status: 'pending', joined_at: new Date().toISOString() }; try { const vs = await getV(); vs.push(v); await setV(vs); } catch (e: any) { console.log('V:', e.message); } tg(ENV.ADMIN_BOT_TOKEN, ENV.adminChatId, '🆕 Vendor: ' + (req.body.name || '') + ' ' + (req.body.phone || '')); return ok({ success: true, vendor: v }); }
+      if (method === 'DELETE') { const vid = pid(path); try { let vs = await getV(); let dv: any = null; const f = vs.filter((v: any) => { if (v.id == vid || v.id === String(vid)) { dv = v; return false; } return true; }); await setV(f); if (dv?.telegram_id) tg(ENV.VENDOR_BOT_TOKEN, dv.telegram_id, '⚠️ Revoked.'); return ok({ success: true, deleted: true }); } catch (e: any) { return fail(e.message, 500); } }
+      if (method === 'PUT') { const vid = pid(path); try { const vs = await getV(); const up = vs.map((v: any) => v.id == vid ? { ...v, ...req.body } : v); await setV(up); } catch {} const em = req.body.status === 'approved' ? '✅' : req.body.status === 'rejected' ? '❌' : '⏸️'; tg(ENV.ADMIN_BOT_TOKEN, ENV.adminChatId, em + ' Vendor ' + vid + ': ' + (req.body.status || 'updated')); return ok({ success: true }); }
     }
 
 
@@ -630,7 +633,7 @@ export default async function handler(req, res) {
     if (path === '/api/affiliates' && method === 'POST') { const { data, error } = await supabase.from('affiliates').insert(req.body).select().single(); if (error) return fail(error.message); return ok({ success: true, affiliate: data }); }
     if (path.startsWith('/api/affiliates/') && method === 'PUT') { const aid = pid(path); const { error } = await supabase.from('affiliates').update(req.body).eq('id', aid); if (error) return fail(error.message); return ok({ success: true }); }
     if (path.startsWith('/api/reviews')) {
-      if (method === 'GET') { const pid2 = (req.url?.split('?')[1] || '').split('&').find(s => s.startsWith('productId='))?.split('=')[1]; let q = supabase.from('reviews').select('*'); if (pid2) q = q.eq('product_id', parseInt(pid2)); const { data } = await q.order('created_at', { ascending: false }); return ok({ reviews: data || [] }); }
+      if (method === 'GET') { const pid2 = (req.url?.split('?')[1] || '').split('&').find((s: any) => s.startsWith('productId='))?.split('=')[1]; let q = supabase.from('reviews').select('*'); if (pid2) q = q.eq('product_id', parseInt(pid2)); const { data } = await q.order('created_at', { ascending: false }); return ok({ reviews: data || [] }); }
       if (method === 'POST') { const { data } = await supabase.from('reviews').insert(req.body).select().single(); return ok({ success: true, review: data }); }
       if (method === 'DELETE') { await supabase.from('reviews').delete().eq('id', pid(path)); return ok({ success: true }); }
     }
@@ -642,9 +645,9 @@ export default async function handler(req, res) {
     }
     if (path === '/api/currency/rates' && method === 'GET') { return ok({ rates: { ETB: 1, USD: 0.019, EUR: 0.017, GBP: 0.015, KES: 2.45 }, base: 'ETB' }); }
     if (path.startsWith('/api/receipts/')) { if (method === 'POST') { const on = path.replace('/api/receipts/', ''); return ok({ success: true, receiptUrl: ENV.BASE_URL + '/receipt/' + on }); } if (method === 'GET') { const on = path.replace('/api/receipts/', ''); return ok({ success: true, receipt: { orderNumber: on, generatedAt: new Date().toISOString() } }); } }
-    if (path === '/api/flash-deals' && method === 'GET') { const { data: fr } = await supabase.from('settings').select('*').single(); const fs = fr?.data?.flashSales || {}; return ok({ deals: Object.entries(fs).map(([k, v]) => ({ id: parseInt(k), productId: parseInt(k), ...v })) }); }
-    if (path === '/api/flash-deals' && method === 'POST') { const fs = req.body || {}; const { data: fr } = await supabase.from('settings').select('*').single(); const cd = fr?.data || {}; const fl = { ...(cd.flashSales || {}) }; const did = Date.now(); fl[did] = { productId: fs.productId, endTime: fs.endTime || Date.now() + 86400000, discount: fs.discount || 0, maxQuantity: fs.maxQuantity || 100 }; cd.flashSales = fl; await supabase.from('settings').update({ data: cd }).eq('id', fr.id); return ok({ success: true, deal: { id: did, ...fl[did] } }); }
-    if (path.startsWith('/api/flash-deals/') && method === 'PUT') { const did = pid(path); const { data: fr } = await supabase.from('settings').select('*').single(); const cd = fr?.data || {}; const fl = { ...(cd.flashSales || {}) }; if (fl[did]) { fl[did] = { ...fl[did], ...req.body }; cd.flashSales = fl; await supabase.from('settings').update({ data: cd }).eq('id', fr.id); } return ok({ success: true }); }
+    if (path === '/api/flash-deals' && method === 'GET') { const { data: fr } = await supabase.from('settings').select('*').single(); const fs = fr?.data?.flashSales || {}; return ok({ deals: Object.entries(fs).map(([k, v]: any) => ({ id: parseInt(k), productId: parseInt(k), ...(v as any) })) }); }
+    if (path === '/api/flash-deals' && method === 'POST') { const fs = req.body || {}; const { data: fr } = await supabase.from('settings').select('*').single(); const cd = fr?.data || {}; const fl = { ...(cd.flashSales || {}) }; const did = Date.now(); fl[did] = { productId: fs.productId, endTime: fs.endTime || Date.now() + 86400000, discount: fs.discount || 0, maxQuantity: fs.maxQuantity || 100 }; cd.flashSales = fl; await supabase.from('settings').update({ data: cd }).eq('id', fr.id); return ok({ success: true, deal: { id: did, ...(fl[did] as any) } }); }
+    if (path.startsWith('/api/flash-deals/') && method === 'PUT') { const did = pid(path); const { data: fr } = await supabase.from('settings').select('*').single(); const cd = fr?.data || {}; const fl = { ...(cd.flashSales || {}) }; if (fl[did]) { fl[did] = { ...(fl[did] as any), ...req.body }; cd.flashSales = fl; await supabase.from('settings').update({ data: cd }).eq('id', fr.id); } return ok({ success: true }); }
     if (path.startsWith('/api/flash-deals/') && method === 'DELETE') { const did = pid(path); const { data: fr } = await supabase.from('settings').select('*').single(); const cd = fr?.data || {}; const fl = { ...(cd.flashSales || {}) }; delete fl[did]; cd.flashSales = fl; await supabase.from('settings').update({ data: cd }).eq('id', fr.id); return ok({ success: true }); }
     if (path.startsWith('/api/tracking/')) { const on = path.replace('/api/tracking/', ''); if (method === 'GET') { const { data } = await supabase.from('orders').select('*').eq('order_number', on).single(); return ok({ success: true, tracking: data?.tracking || null }); } if (method === 'PUT') { await supabase.from('orders').update({ tracking: req.body }).eq('order_number', on); return ok({ success: true }); } }
     if (path === '/api/upload' && method === 'POST') { return ok({ url: 'https://placehold.co/400x400/e2e8f0/94a3b8?text=Image' }); }
@@ -657,7 +660,7 @@ export default async function handler(req, res) {
     if (path === '/api/admin-bot/send-file' && method === 'POST') {
       const { chatId, filename, content, contentType, caption } = req.body || {}; if (!chatId || !content) return fail('required');
       try { let buf, ct = contentType || 'text/plain', fn = filename || 'file.txt'; if (typeof content === 'string' && content.startsWith('data:')) { const mp = content.split(';base64,'); if (mp.length === 2) { ct = mp[0].replace('data:', ''); const ext = ct.includes('jpeg') ? 'jpg' : ct.includes('png') ? 'png' : 'csv'; fn = 'receipt-' + Date.now().toString(36) + '.' + ext; buf = Buffer.from(mp[1], 'base64'); } else buf = Buffer.from(content); } else buf = Buffer.from(typeof content === 'string' ? content : JSON.stringify(content)); const fd = new FormData(); fd.append('chat_id', String(chatId)); fd.append('document', new Blob([buf], { type: ct }), fn); if (caption) fd.append('caption', caption); const r = await fetchTO('https://api.telegram.org/bot' + ENV.ADMIN_BOT_TOKEN + '/sendDocument', { method: 'POST', body: fd, timeout: 15000 }); const d = await r.json(); return ok({ sent: d.ok === true, description: d.description }); }
-      catch (e) { return ok({ sent: false, error: e.message }); }
+      catch (e: any) { return ok({ sent: false, error: e.message }); }
     }
     if (path === '/api/commission/calculate' && method === 'POST') {
       const { productId, price, vendorId, category } = req.body || {};
@@ -671,9 +674,9 @@ export default async function handler(req, res) {
       const { amount, email, firstName, lastName, phone, txRef, orderNumber } = req.body || {};
       if (!amount || !email || !phone) return fail('required');
       try { const cr = await fetchRetry('https://api.chapa.co/v1/transaction/initialize', { method: 'POST', timeout: 10000, headers: { 'Authorization': 'Bearer ' + ENV.CHAPA_SECRET_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ amount: String(amount), currency: 'ETB', email, first_name: firstName || 'Customer', last_name: lastName || '', phone, tx_ref: txRef, callback_url: ENV.BASE_URL + '/api/payment/verify', return_url: ENV.BASE_URL + '/confirmation/' + orderNumber, customization: { title: 'Smart Shop Order #' + orderNumber, description: 'Payment' } }) }); const cd = await cr.json(); if (cd.status === 'success' && cd.data?.checkout_url) return ok({ success: true, checkout_url: cd.data.checkout_url, tx_ref: txRef }); return ok({ success: false, error: cd.message || 'Failed' }); }
-      catch (e) { return ok({ success: false, error: e.message }); }
+      catch (e: any) { return ok({ success: false, error: e.message }); }
     }
-    if (path === '/api/payment/verify' && method === 'POST') { const { tx_ref } = req.body || {}; if (!tx_ref) return fail('required'); try { const vr = await fetchRetry('https://api.chapa.co/v1/transaction/verify/' + tx_ref, { headers: { 'Authorization': 'Bearer ' + ENV.CHAPA_SECRET_KEY }, timeout: 10000 }); const vd = await vr.json(); if (vd.status === 'success' && vd.data?.status === 'success') return ok({ status: 'completed', amount: vd.data.amount, reference: vd.data.reference || tx_ref, verified: true }); return ok({ status: 'failed', error: vd.message || 'Not completed', verified: false }); } catch (e) { return ok({ status: 'failed', error: e.message, verified: false }); } }
+    if (path === '/api/payment/verify' && method === 'POST') { const { tx_ref } = req.body || {}; if (!tx_ref) return fail('required'); try { const vr = await fetchRetry('https://api.chapa.co/v1/transaction/verify/' + tx_ref, { headers: { 'Authorization': 'Bearer ' + ENV.CHAPA_SECRET_KEY }, timeout: 10000 }); const vd = await vr.json(); if (vd.status === 'success' && vd.data?.status === 'success') return ok({ status: 'completed', amount: vd.data.amount, reference: vd.data.reference || tx_ref, verified: true }); return ok({ status: 'failed', error: vd.message || 'Not completed', verified: false }); } catch (e: any) { return ok({ status: 'failed', error: e.message, verified: false }); } }
     if (path === '/api/payment/initiate-telebirr' && method === 'POST') { const { amount, phone, orderNumber } = req.body || {}; if (!amount || !phone) return fail('required'); return ok({ success: true, deepLink: 'telebirr://pay?amount=' + amount + '&order=' + orderNumber, ussdCode: '*847#' + amount + '#' + orderNumber, message: 'Payment initiated via Telebirr.' }); }
     if (path === '/api/payment/transactions' && method === 'GET') { const { data: orders } = await supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(100); return ok({ transactions: (orders || []).map(o => ({ id: o.id, orderNumber: o.order_number, amount: o.total || 0, paymentMethod: o.payment_method || 'telebirr', status: o.status || 'pending', customerName: o.customer?.name || 'Unknown', date: o.created_at || o.date })) }); }
     if (path === '/api/tax/calculate' && method === 'POST') { const { productPrice, deliveryFee, commissionRate } = req.body || {}; const r = (commissionRate || 15) / 100; const bp = productPrice || 0, df = deliveryFee || 0; const ca = Math.round(bp * r), gf = Math.round(bp * 0.025), vc = Math.round(ca * 0.15), wht = Math.round(bp * 0.02); return ok({ basePrice: bp, deliveryFee: df, commissionRate: r, commissionAmount: ca, gatewayFee: gf, vatOnCommission: vc, withholdingTax: wht, vendorPayout: bp - ca - gf - wht, totalPaid: bp + df + vc, vatRate: 0.15, withholdingTaxRate: 0.02, totalTaxToRemit: vc + wht, shopRevenue: ca - gf }); }
@@ -687,16 +690,16 @@ export default async function handler(req, res) {
     if (path.startsWith('/api/products') || (path === '/api/' && method === 'GET')) {
       if (method === 'GET') {
         if (path === '/api/products' || path === '/api/') {
-          var { data } = await supabase.from('products').select('*').order('id', { ascending: false });
+          const { data } = await supabase.from('products').select('*').order('id', { ascending: false });
           return ok({ products: (data || []).map(norm) });
         }
         var id = parseInt(path.replace('/api/products/', ''));
         if (!isNaN(id)) {
-          var { data } = await supabase.from('products').select('*').eq('id', id).single();
+          const { data } = await supabase.from('products').select('*').eq('id', id).single();
           return ok({ product: data ? norm(data) : null });
         }
       }
-      if (method === 'POST') { var { data } = await supabase.from('products').insert(cln(req.body)).select().single(); return ok({ success: true, product: data }); }
+      if (method === 'POST') { const { data } = await supabase.from('products').insert(cln(req.body)).select().single(); return ok({ success: true, product: data }); }
       if (method === 'PUT') { await supabase.from('products').update(cln(req.body)).eq('id', pid(path)); return ok({ success: true }); }
       if (method === 'DELETE') { await supabase.from('products').delete().eq('id', pid(path)); return ok({ success: true }); }
     }
@@ -705,8 +708,8 @@ export default async function handler(req, res) {
     // SETTINGS
     // ================================================================
     if (path === '/api/settings') {
-      if (method === 'GET') { var { data: r } = await supabase.from('settings').select('*').single(); return ok({ success: true, settings: r?.data || r || {} }); }
-      if (method === 'PUT') { var { data: ex } = await supabase.from('settings').select('*').single(); if (ex) await supabase.from('settings').update({ data: { ...(ex.data || ex), ...req.body }, updated_at: new Date().toISOString() }).eq('id', ex.id); else await supabase.from('settings').insert({ data: req.body }); return ok({ success: true }); }
+      if (method === 'GET') { const { data: r } = await supabase.from('settings').select('*').single(); return ok({ success: true, settings: r?.data || r || {} }); }
+      if (method === 'PUT') { const { data: ex } = await supabase.from('settings').select('*').single(); if (ex) await supabase.from('settings').update({ data: { ...(ex.data || ex), ...req.body }, updated_at: new Date().toISOString() }).eq('id', ex.id); else await supabase.from('settings').insert({ data: req.body }); return ok({ success: true }); }
     }
 
     // ================================================================
@@ -718,15 +721,15 @@ export default async function handler(req, res) {
       var { valid, user: tgUser } = vrfy(initData);
       if (!valid && ENV.BOT_TOKEN) return fail('Invalid Telegram authentication', 401);
       if (!tgUser) return fail('No user data in initData');
-      var { data: existing } = await supabase.from('users').select('*').eq('telegram_id', tgUser.id).single();
+      const { data: existing } = await supabase.from('users').select('*').eq('telegram_id', tgUser.id).single();
       var now = new Date().toISOString();
       if (existing) {
         await supabase.from('users').update({ first_name: tgUser.first_name, last_name: tgUser.last_name || '', username: tgUser.username || '' }).eq('telegram_id', tgUser.id);
         var vendorStatus = '';
-        try { var vendors = await getV(); var found = vendors.find(function(v) { return v.telegram_id == tgUser.id; }); if (found) vendorStatus = found.status || ''; } catch(e) {}
+        try { var vendors = await getV(); var found = vendors.find(function(v) { return v.telegram_id == tgUser.id; }); if (found) vendorStatus = found.status || ''; } catch(e: any) {}
         return ok({ success: true, user: { telegramId: existing.telegram_id, firstName: existing.first_name || tgUser.first_name, lastName: existing.last_name || tgUser.last_name, username: existing.username || tgUser.username, languageCode: tgUser.language_code || 'en', photoUrl: tgUser.photo_url || null, phone: existing.phone || null, fullName: existing.full_name || null, city: existing.city || null, address: existing.address || null, profileComplete: !!(existing.full_name && existing.city && existing.address), vendorStatus: vendorStatus, firstSeen: existing.registered_at || now, lastSeen: now } });
             } else {
-        var { data: newUser } = await supabase.from('users').insert({ telegram_id: tgUser.id, first_name: tgUser.first_name, last_name: tgUser.last_name || '', username: tgUser.username || '', phone: '', registered_at: now }).select().single();
+        const { data: newUser } = await supabase.from('users').insert({ telegram_id: tgUser.id, first_name: tgUser.first_name, last_name: tgUser.last_name || '', username: tgUser.username || '', phone: '', registered_at: now }).select().single();
         return ok({ success: true, user: { telegramId: tgUser.id, firstName: tgUser.first_name, lastName: tgUser.last_name || '', username: tgUser.username || '', languageCode: tgUser.language_code || 'en', photoUrl: tgUser.photo_url || null, phone: null, fullName: null, city: null, address: null, profileComplete: false, vendorStatus: '', firstSeen: now, lastSeen: now } });
       }
     }
@@ -746,9 +749,9 @@ export default async function handler(req, res) {
     }
 
     if (path.startsWith('/api/auth/telegram/user/') && method === 'GET') {
-      var tid = pid(path);
+      const tid = pid(path);
       if (!tid) return fail('Invalid ID');
-      var { data } = await supabase.from('users').select('*').eq('telegram_id', tid).single();
+      const { data } = await supabase.from('users').select('*').eq('telegram_id', tid).single();
       if (!data) return fail('Not found', 404);
       var vs = '';
       try { var v = await getV(); var f = v.find(vv => vv.telegram_id == tid); if (f) vs = f.status || ''; } catch {}
@@ -762,15 +765,15 @@ export default async function handler(req, res) {
       var b = req.body || {}, tid = b.telegram_id || '';
       if (!tid) return ok({ success: false });
       var r = { success: true };
-      try { await supabase.from('users').upsert({ telegram_id: parseInt(tid), username: b.username || '', first_name: b.first_name || '', ...(b.phone ? { phone: b.phone } : {}) }, { onConflict: 'telegram_id' }); var { data: ur } = await supabase.from('users').select('*').eq('telegram_id', parseInt(tid)).single(); if (ur?.phone) r.phone = ur.phone; } catch {}
+      try { await supabase.from('users').upsert({ telegram_id: parseInt(tid), username: b.username || '', first_name: b.first_name || '', ...(b.phone ? { phone: b.phone } : {}) }, { onConflict: 'telegram_id' }); const { data: ur } = await supabase.from('users').select('*').eq('telegram_id', parseInt(tid)).single(); if (ur?.phone) r.phone = ur.phone; } catch {}
       try { var v = await getV(); var f = tid ? v.find(vv => vv.telegram_id == parseInt(tid)) : null; if (f) { r.vendor_status = f.status || 'pending'; r.vendor_id = f.id; r.vendor_name = f.name || ''; } else r.vendor_status = 'none'; } catch { r.vendor_status = 'none'; }
       return ok(r);
     }
 
     if (path === '/api/user/contact' && method === 'GET') {
-      var tid = new URLSearchParams(req.url?.split('?')[1] || '').get('telegram_id') || '';
+      const tid = new URLSearchParams(req.url?.split('?')[1] || '').get('telegram_id') || '';
       if (!tid) return ok({ phone: '' });
-      try { var { data } = await supabase.from('users').select('phone').eq('telegram_id', parseInt(tid)).single(); if (data?.phone) return ok({ phone: data.phone }); } catch {}
+      try { const { data } = await supabase.from('users').select('phone').eq('telegram_id', parseInt(tid)).single(); if (data?.phone) return ok({ phone: data.phone }); } catch {}
       return ok({ phone: '' });
     }
 
@@ -788,8 +791,8 @@ export default async function handler(req, res) {
     // REVIEWS
     // ================================================================
     if (path.startsWith('/api/reviews')) {
-      if (method === 'GET') { var pid2 = (req.url?.split('?')[1] || '').split('&').find(function(s) { return s.startsWith('productId='); })?.split('=')[1]; var q = supabase.from('reviews').select('*'); if (pid2) q = q.eq('product_id', parseInt(pid2)); var { data } = await q.order('created_at', { ascending: false }); return ok({ reviews: data || [] }); }
-      if (method === 'POST') { var { data } = await supabase.from('reviews').insert(req.body).select().single(); return ok({ success: true, review: data }); }
+      if (method === 'GET') { var pid2 = (req.url?.split('?')[1] || '').split('&').find(function(s) { return s.startsWith('productId='); })?.split('=')[1]; var q = supabase.from('reviews').select('*'); if (pid2) q = q.eq('product_id', parseInt(pid2)); const { data } = await q.order('created_at', { ascending: false }); return ok({ reviews: data || [] }); }
+      if (method === 'POST') { const { data } = await supabase.from('reviews').insert(req.body).select().single(); return ok({ success: true, review: data }); }
       if (method === 'DELETE') { await supabase.from('reviews').delete().eq('id', pid(path)); return ok({ success: true }); }
     }
 
@@ -802,8 +805,8 @@ export default async function handler(req, res) {
     // PRE-ORDERS
     // ================================================================
     if (path.startsWith('/api/pre-orders')) {
-      if (method === 'GET') { var { data } = await supabase.from('pre_orders').select('*'); return ok({ preOrders: data || [] }); }
-      if (method === 'POST') { var { data } = await supabase.from('pre_orders').insert(req.body).select().single(); return ok({ success: true, preOrder: data }); }
+      if (method === 'GET') { const { data } = await supabase.from('pre_orders').select('*'); return ok({ preOrders: data || [] }); }
+      if (method === 'POST') { const { data } = await supabase.from('pre_orders').insert(req.body).select().single(); return ok({ success: true, preOrder: data }); }
     }
 
     // ================================================================
@@ -816,7 +819,7 @@ export default async function handler(req, res) {
     // ================================================================
     if (path.startsWith('/api/tracking/')) {
       var on = path.replace('/api/tracking/', '');
-      if (method === 'GET') { var { data } = await supabase.from('orders').select('*').eq('order_number', on).single(); return ok({ success: true, tracking: data?.tracking || null }); }
+      if (method === 'GET') { const { data } = await supabase.from('orders').select('*').eq('order_number', on).single(); return ok({ success: true, tracking: data?.tracking || null }); }
       if (method === 'PUT') { await supabase.from('orders').update({ tracking: req.body }).eq('order_number', on); return ok({ success: true }); }
     }
 
@@ -825,7 +828,7 @@ export default async function handler(req, res) {
     // ================================================================
     if (path === '/api/commission/calculate' && method === 'POST') {
       var { productId, price, vendorId, category } = req.body || {};
-      var { data: sd } = await supabase.from('settings').select('*').single();
+      const { data: sd } = await supabase.from('settings').select('*').single();
       var s = sd?.data || {};
       var cr = s.vendorCommission || 10;
       var src = 'global';
@@ -834,7 +837,7 @@ export default async function handler(req, res) {
       return ok({ commissionRate: cr, commissionAmount: Math.round((price || 0) * cr / 100), vendorPayout: (price || 0) - Math.round((price || 0) * cr / 100), source: src, productPrice: price || 0 });
     }
 
-    if (path === '/api/commission/settings' && method === 'GET') { var { data: sd } = await supabase.from('settings').select('*').single(); var s = sd?.data || {}; return ok({ globalCommission: s.vendorCommission || 10, categoryCommission: s.categoryCommission || {}, vendorCommissionOverride: s.vendorCommissionOverride || {} }); }
+    if (path === '/api/commission/settings' && method === 'GET') { const { data: sd } = await supabase.from('settings').select('*').single(); var s = sd?.data || {}; return ok({ globalCommission: s.vendorCommission || 10, categoryCommission: s.categoryCommission || {}, vendorCommissionOverride: s.vendorCommissionOverride || {} }); }
 
     // ================================================================
     // PAYMENT
@@ -843,13 +846,13 @@ export default async function handler(req, res) {
       var { amount, email, firstName, lastName, phone, txRef, orderNumber } = req.body || {};
       if (!amount || !email || !phone) return fail('amount, email, and phone required');
       try {
-        var cr = await fetchRetry('https://api.chapa.co/v1/transaction/initialize', { method: 'POST', timeout: 10000,
+        const chapaRes = await fetchRetry('https://api.chapa.co/v1/transaction/initialize', { method: 'POST', timeout: 10000,
           headers: { 'Authorization': 'Bearer ' + ENV.CHAPA_SECRET_KEY, 'Content-Type': 'application/json' },
           body: JSON.stringify({ amount: String(amount), currency: 'ETB', email: email, first_name: firstName || 'Customer', last_name: lastName || '', phone: phone, tx_ref: txRef, callback_url: ENV.BASE_URL + '/api/payment/verify', return_url: ENV.BASE_URL + '/confirmation/' + orderNumber, customization: { title: 'Smart Shop Order #' + orderNumber, description: 'Payment' } }) });
-        var cd = await cr.json();
+        const cd = await chapaRes.json();
         if (cd.status === 'success' && cd.data?.checkout_url) return ok({ success: true, checkout_url: cd.data.checkout_url, tx_ref: txRef });
         return ok({ success: false, error: cd.message || 'Failed' });
-      } catch (e) { return ok({ success: false, error: e.message }); }
+      } catch (e: any) { return ok({ success: false, error: e?.message || e }); }
     }
 
     if (path === '/api/payment/verify' && method === 'POST') {
@@ -860,12 +863,12 @@ export default async function handler(req, res) {
         var vd = await vr.json();
         if (vd.status === 'success' && vd.data?.status === 'success') return ok({ status: 'completed', amount: vd.data.amount, reference: vd.data.reference || tx_ref, verified: true });
         return ok({ status: 'failed', error: vd.message || 'Not completed', verified: false });
-      } catch (e) { return ok({ status: 'failed', error: e.message, verified: false }); }
+      } catch (e: any) { return ok({ status: 'failed', error: e.message, verified: false }); }
     }
 
     if (path === '/api/payment/initiate-telebirr' && method === 'POST') { var { amount, phone, orderNumber } = req.body || {}; if (!amount || !phone) return fail('required'); return ok({ success: true, deepLink: 'telebirr://pay?amount=' + amount + '&order=' + orderNumber, ussdCode: '*847#' + amount + '#' + orderNumber, message: 'Payment initiated via Telebirr.' }); }
 
-    if (path === '/api/payment/transactions' && method === 'GET') { var { data: orders } = await supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(100); return ok({ transactions: (orders || []).map(function(o) { return { id: o.id, orderNumber: o.order_number, amount: o.total || 0, paymentMethod: o.payment_method || 'telebirr', status: o.status || 'pending', customerName: o.customer?.name || 'Unknown', date: o.created_at || o.date }; }) }); }
+    if (path === '/api/payment/transactions' && method === 'GET') { const { data: orders } = await supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(100); return ok({ transactions: (orders || []).map(function(o) { return { id: o.id, orderNumber: o.order_number, amount: o.total || 0, paymentMethod: o.payment_method || 'telebirr', status: o.status || 'pending', customerName: o.customer?.name || 'Unknown', date: o.created_at || o.date }; }) }); }
 
     // ================================================================
     // TAX
@@ -881,13 +884,13 @@ export default async function handler(req, res) {
     if (path === '/api/tax/receipt' && method === 'POST') {
       var { orderNumber } = req.body || {};
       if (!orderNumber) return fail('required');
-      var { data: order } = await supabase.from('orders').select('*').eq('order_number', orderNumber).single();
+      const { data: order } = await supabase.from('orders').select('*').eq('order_number', orderNumber).single();
       if (!order) return fail('Not found', 404);
       return ok({ success: true, receiptNumber: 'SS-' + new Date().getFullYear() + '-' + Math.floor(Math.random() * 90000 + 10000), orderNumber: order.order_number, generatedAt: new Date().toISOString() });
     }
 
     if (path === '/api/tax/monthly-report' && method === 'GET') {
-      var { data: orders } = await supabase.from('orders').select('*');
+      const { data: orders } = await supabase.from('orders').select('*');
       var total = (orders || []).reduce(function(s, o) { return s + (o.total || 0); }, 0);
       var cnt = (orders || []).length;
       var c = Math.round(total * 0.1), v = Math.round(c * 0.15), w = Math.round(total * 0.02);
@@ -1064,7 +1067,7 @@ export default async function handler(req, res) {
     // ================================================================
     return res.status(404).json({ error: 'Not found', path: path, method: method });
 
-  } catch (e) {
+  } catch (e: any) {
     logReq(method, path, 500, dur(start), ip, e.message);
     return res.status(500).json({ error: e.message || 'Internal server error' });
   }
