@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { toast } from '@/components/Toast';
 import { cn } from '@/lib/utils';
 import { useStore } from '@/stores/AppStore';
@@ -18,16 +17,11 @@ export default function AdminDeliveryTab() {
   var [search, setSearch] = useState('');
   var [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   var [selectedKYC, setSelectedKYC] = useState<any | null>(null);
-  var [mounted, setMounted] = useState(false);
   var [rejectingDriverId, setRejectingDriverId] = useState<number | null>(null);
   var [rejectingDriverName, setRejectingDriverName] = useState<string>('');
   var [rejectionReason, setRejectionReason] = useState<string>('');
   var [zoomImage, setZoomImage] = useState<string | null>(null);
   var [exporting, setExporting] = useState(false);
-
-  useEffect(function() {
-    setMounted(true);
-  }, []);
 
   function fetchAll() {
     setLoading(true);
@@ -40,7 +34,7 @@ export default function AdminDeliveryTab() {
 
   useEffect(fetchAll, []);
 
-  function approveDriver(id, name) {
+  function approveDriver(id: any, name: any) {
     fetch('/api/delivery/approve', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -55,7 +49,7 @@ export default function AdminDeliveryTab() {
     }).catch(function(e) { toast('Error: ' + e.message, 'error'); });
   }
 
-  function rejectDriver(id, name) {
+  function rejectDriver(id: any, name: any) {
     setRejectingDriverId(id);
     setRejectingDriverName(name);
     setRejectionReason('');
@@ -99,7 +93,7 @@ export default function AdminDeliveryTab() {
       });
   }
 
-  function removeDriver(id) {
+  function removeDriver(id: any) {
     setDeleteConfirmId(null);
     fetch('/api/delivery/drivers/' + id, { method: 'DELETE' })
       .then(function(r) { return r.json(); }).then(function(d) {
@@ -115,7 +109,7 @@ export default function AdminDeliveryTab() {
 
   var activeDeliveries = deliveries.filter(function(d) { return d.status !== 'delivered' && d.status !== 'failed' && d.status !== 'cancelled'; });
   
-  function getVehicleIcon(type) {
+  function getVehicleIcon(type: any) {
     var icons: Record<string, string> = { on_foot: '🚶', bicycle: '🚲', motorcycle: '🏍️', bajaj: '🛺' };
     return icons[type] || '🏍️';
   }
@@ -340,235 +334,232 @@ export default function AdminDeliveryTab() {
         </div>
       )}
 
-      {/* KYC Full Detailed Review Modal */}
-      {selectedKYC && mounted && typeof document !== 'undefined' && document.body && createPortal(
-        <>
-          <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm overflow-y-auto py-6" onClick={function() { setSelectedKYC(null); }}>
-            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 w-full max-w-lg mx-auto my-auto shadow-2xl relative" onClick={function(e) { e.stopPropagation(); }}>
-              <button className="absolute right-4 top-4 w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-sm" onClick={function() { setSelectedKYC(null); }}>✕</button>
-              
-              <div className="text-center mb-4 pb-3 border-b border-slate-100 dark:border-slate-800">
-                <span className="text-[10px] bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full font-bold uppercase tracking-wider">KYC identity verification</span>
-                <h3 className="text-base font-black mt-2 text-slate-900 dark:text-white">{selectedKYC.full_name_latin}</h3>
-                {selectedKYC.full_name_amharic && <p className="text-xs text-slate-400 mt-0.5">{selectedKYC.full_name_amharic}</p>}
-              </div>
+      {/* KYC Full Detailed Review Modal rendered fully inline to prevent React Portal early rendering/caching glitches */}
+      {selectedKYC && (
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm overflow-y-auto py-6" onClick={function() { setSelectedKYC(null); }}>
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 w-full max-w-lg mx-auto my-auto shadow-2xl relative" onClick={function(e) { e.stopPropagation(); }}>
+            <button className="absolute right-4 top-4 w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-sm" onClick={function() { setSelectedKYC(null); }}>✕</button>
+            
+            <div className="text-center mb-4 pb-3 border-b border-slate-100 dark:border-slate-800">
+              <span className="text-[10px] bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full font-bold uppercase tracking-wider">KYC identity verification</span>
+              <h3 className="text-base font-black mt-2 text-slate-900 dark:text-white">{selectedKYC.full_name_latin}</h3>
+              {selectedKYC.full_name_amharic && <p className="text-xs text-slate-400 mt-0.5">{selectedKYC.full_name_amharic}</p>}
+            </div>
 
-              <div className="space-y-4 max-h-[65vh] overflow-y-auto scrollbar-none pr-1">
-                {/* 1. Identity Previews */}
-                <div className="space-y-3 bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border">
-                  <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">📂 Uploaded Documents (Tap for Full Preview)</h4>
-                  
-                  {/* Selfie */}
+            <div className="space-y-4 max-h-[65vh] overflow-y-auto scrollbar-none pr-1">
+              {/* 1. Identity Previews */}
+              <div className="space-y-3 bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border">
+                <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">📂 Uploaded Documents (Tap for Full Preview)</h4>
+                
+                {/* Selfie */}
+                <div>
+                  <span className="text-[9px] font-bold text-slate-400 block mb-1">Driver Selfie / Recent Photo</span>
+                  {selectedKYC.fayda_selfie_url ? (
+                    <div className="relative group w-28 h-28 rounded-xl overflow-hidden border bg-white cursor-pointer shadow-sm" onClick={function(e) { e.stopPropagation(); setZoomImage(selectedKYC.fayda_selfie_url); }}>
+                      <img src={selectedKYC.fayda_selfie_url} alt="Selfie" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <span className="text-[8px] font-extrabold text-white bg-slate-900/80 px-2 py-1 rounded-full flex items-center gap-1">🔍 Zoom</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="w-28 h-28 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center text-center p-2">
+                      <Loader size={16} className="text-slate-300 mb-1 animate-pulse" />
+                      <span className="text-[8px] font-bold text-slate-400">No Photo Uploaded</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Fayda Front */}
                   <div>
-                    <span className="text-[9px] font-bold text-slate-400 block mb-1">Driver Selfie / Recent Photo</span>
-                    {selectedKYC.fayda_selfie_url ? (
-                      <div className="relative group w-28 h-28 rounded-xl overflow-hidden border bg-white cursor-pointer shadow-sm" onClick={function(e) { e.stopPropagation(); setZoomImage(selectedKYC.fayda_selfie_url); }}>
-                        <img src={selectedKYC.fayda_selfie_url} alt="Selfie" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                    <span className="text-[9px] font-bold text-slate-400 block mb-1">Fayda ID (Front)</span>
+                    {selectedKYC.fayda_id_front_url ? (
+                      <div className="relative group w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white cursor-pointer shadow-sm" onClick={function(e) { e.stopPropagation(); setZoomImage(selectedKYC.fayda_id_front_url); }}>
+                        <img src={selectedKYC.fayda_id_front_url} alt="Fayda Front" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                           <span className="text-[8px] font-extrabold text-white bg-slate-900/80 px-2 py-1 rounded-full flex items-center gap-1">🔍 Zoom</span>
                         </div>
                       </div>
                     ) : (
-                      <div className="w-28 h-28 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center text-center p-2">
-                        <Loader size={16} className="text-slate-300 mb-1 animate-pulse" />
-                        <span className="text-[8px] font-bold text-slate-400">No Photo Uploaded</span>
+                      <div className="w-full aspect-[1.6] rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center text-center">
+                        <Shield size={16} className="text-slate-300 mb-1" />
+                        <span className="text-[8px] font-bold text-slate-400">Missing Front ID</span>
                       </div>
                     )}
                   </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    {/* Fayda Front */}
-                    <div>
-                      <span className="text-[9px] font-bold text-slate-400 block mb-1">Fayda ID (Front)</span>
-                      {selectedKYC.fayda_id_front_url ? (
-                        <div className="relative group w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white cursor-pointer shadow-sm" onClick={function(e) { e.stopPropagation(); setZoomImage(selectedKYC.fayda_id_front_url); }}>
-                          <img src={selectedKYC.fayda_id_front_url} alt="Fayda Front" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <span className="text-[8px] font-extrabold text-white bg-slate-900/80 px-2 py-1 rounded-full flex items-center gap-1">🔍 Zoom</span>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="w-full aspect-[1.6] rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center text-center">
-                          <Shield size={16} className="text-slate-300 mb-1" />
-                          <span className="text-[8px] font-bold text-slate-400">Missing Front ID</span>
-                        </div>
-                      )}
-                    </div>
-                    {/* Fayda Back */}
-                    <div>
-                      <span className="text-[9px] font-bold text-slate-400 block mb-1">Fayda ID (Back)</span>
-                      {selectedKYC.fayda_id_back_url ? (
-                        <div className="relative group w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white cursor-pointer shadow-sm" onClick={function(e) { e.stopPropagation(); setZoomImage(selectedKYC.fayda_id_back_url); }}>
-                          <img src={selectedKYC.fayda_id_back_url} alt="Fayda Back" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <span className="text-[8px] font-extrabold text-white bg-slate-900/80 px-2 py-1 rounded-full flex items-center gap-1">🔍 Zoom</span>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="w-full aspect-[1.6] rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center text-center">
-                          <Shield size={16} className="text-slate-300 mb-1" />
-                          <span className="text-[8px] font-bold text-slate-400">Missing Back ID</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Parse Emergency ID images */}
-                  {(() => {
-                    const addrParts = (selectedKYC.emergency_address || '').split('::');
-                    const emFront = addrParts[1] || '';
-                    const emBack = addrParts[2] || '';
-                    return (
-                      <div className="space-y-2 mt-3 pt-3 border-t border-slate-200/50">
-                        <span className="text-[9px] font-bold text-slate-400 block">Emergency Contact ID Photos</span>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <span className="text-[8px] text-slate-400 block mb-0.5">ID Card (Front)</span>
-                            {emFront ? (
-                              <div className="relative group w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white cursor-pointer shadow-sm" onClick={function(e) { e.stopPropagation(); setZoomImage(emFront); }}>
-                                <img src={emFront} alt="Emergency Front" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                  <span className="text-[8px] font-extrabold text-white bg-slate-900/80 px-2 py-1 rounded-full flex items-center gap-1">🔍 Zoom</span>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="w-full aspect-[1.6] rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center text-center">
-                                <Shield size={14} className="text-slate-300 mb-1" />
-                                <span className="text-[8px] font-bold text-slate-400">Not Provided</span>
-                              </div>
-                            )}
-                          </div>
-                          <div>
-                            <span className="text-[8px] text-slate-400 block mb-0.5">ID Card (Back)</span>
-                            {emBack ? (
-                              <div className="relative group w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white cursor-pointer shadow-sm" onClick={function(e) { e.stopPropagation(); setZoomImage(emBack); }}>
-                                <img src={emBack} alt="Emergency Back" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                  <span className="text-[8px] font-extrabold text-white bg-slate-900/80 px-2 py-1 rounded-full flex items-center gap-1">🔍 Zoom</span>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="w-full aspect-[1.6] rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center text-center">
-                                <Shield size={14} className="text-slate-300 mb-1" />
-                                <span className="text-[8px] font-bold text-slate-400">Not Provided</span>
-                              </div>
-                            )}
-                          </div>
+                  {/* Fayda Back */}
+                  <div>
+                    <span className="text-[9px] font-bold text-slate-400 block mb-1">Fayda ID (Back)</span>
+                    {selectedKYC.fayda_id_back_url ? (
+                      <div className="relative group w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white cursor-pointer shadow-sm" onClick={function(e) { e.stopPropagation(); setZoomImage(selectedKYC.fayda_id_back_url); }}>
+                        <img src={selectedKYC.fayda_id_back_url} alt="Fayda Back" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <span className="text-[8px] font-extrabold text-white bg-slate-900/80 px-2 py-1 rounded-full flex items-center gap-1">🔍 Zoom</span>
                         </div>
                       </div>
-                    );
-                  })()}
-                </div>
-
-                {/* 2. Driver Onboarding Details */}
-                <div className="bg-white dark:bg-slate-900 border rounded-2xl p-4 space-y-2 text-xs">
-                  <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">📋 Personal & Profile Details</h4>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Fayda ID Number:</span>
-                    <span className="font-bold">{selectedKYC.fayda_id}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Phone:</span>
-                    <span className="font-bold">{selectedKYC.phone}</span>
-                  </div>
-                  {selectedKYC.email && (
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Email:</span>
-                      <span className="font-bold">{selectedKYC.email}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Vehicle Type:</span>
-                    <span className="font-bold capitalize">{selectedKYC.vehicle_type}</span>
-                  </div>
-                  {selectedKYC.license_plate && (
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">License Plate:</span>
-                      <span className="font-bold uppercase">{selectedKYC.license_plate}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Service Zones:</span>
-                    <span className="font-bold">
-                      {Array.isArray(selectedKYC.service_zones) 
-                        ? selectedKYC.service_zones.join(', ') 
-                        : (typeof selectedKYC.service_zones === 'string' 
-                          ? selectedKYC.service_zones 
-                          : 'None')}
-                    </span>
+                    ) : (
+                      <div className="w-full aspect-[1.6] rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center text-center">
+                        <Shield size={16} className="text-slate-300 mb-1" />
+                        <span className="text-[8px] font-bold text-slate-400">Missing Back ID</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* 3. Emergency Contact */}
-                <div className="bg-white dark:bg-slate-900 border rounded-2xl p-4 space-y-2 text-xs">
-                  <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">🆘 Emergency Contact Details</h4>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Contact Person:</span>
-                    <span className="font-bold">{selectedKYC.emergency_name}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Relationship:</span>
-                    <span className="font-bold">{selectedKYC.emergency_relationship}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Phone:</span>
-                    <span className="font-bold">{selectedKYC.emergency_phone}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Address:</span>
-                    <span className="font-bold">{(selectedKYC.emergency_address || '').split('::')[0]}</span>
-                  </div>
-                </div>
+                {/* Parse Emergency ID images */}
+                {(() => {
+                  const addrParts = (selectedKYC.emergency_address || '').split('::');
+                  const emFront = addrParts[1] || '';
+                  const emBack = addrParts[2] || '';
+                  return (
+                    <div className="space-y-2 mt-3 pt-3 border-t border-slate-200/50">
+                      <span className="text-[9px] font-bold text-slate-400 block">Emergency Contact ID Photos</span>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <span className="text-[8px] text-slate-400 block mb-0.5">ID Card (Front)</span>
+                          {emFront ? (
+                            <div className="relative group w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white cursor-pointer shadow-sm" onClick={function(e) { e.stopPropagation(); setZoomImage(emFront); }}>
+                              <img src={emFront} alt="Emergency Front" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                <span className="text-[8px] font-extrabold text-white bg-slate-900/80 px-2 py-1 rounded-full flex items-center gap-1">🔍 Zoom</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="w-full aspect-[1.6] rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center text-center">
+                              <Shield size={14} className="text-slate-300 mb-1" />
+                              <span className="text-[8px] font-bold text-slate-400">Not Provided</span>
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <span className="text-[8px] text-slate-400 block mb-0.5">ID Card (Back)</span>
+                          {emBack ? (
+                            <div className="relative group w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white cursor-pointer shadow-sm" onClick={function(e) { e.stopPropagation(); setZoomImage(emBack); }}>
+                              <img src={emBack} alt="Emergency Back" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                <span className="text-[8px] font-extrabold text-white bg-slate-900/80 px-2 py-1 rounded-full flex items-center gap-1">🔍 Zoom</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="w-full aspect-[1.6] rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center text-center">
+                              <Shield size={14} className="text-slate-300 mb-1" />
+                              <span className="text-[8px] font-bold text-slate-400">Not Provided</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
 
-                {/* 4. Payment */}
-                <div className="bg-white dark:bg-slate-900 border rounded-2xl p-4 space-y-2 text-xs">
-                  <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">💸 Payment & Financials</h4>
-                  {selectedKYC.telebirr_number && (
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Telebirr Number:</span>
-                      <span className="font-bold">{selectedKYC.telebirr_number}</span>
-                    </div>
-                  )}
-                  {selectedKYC.bank_name && (
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Bank Account:</span>
-                      <span className="font-bold">{selectedKYC.bank_name} - {selectedKYC.bank_account}</span>
-                    </div>
-                  )}
+              {/* 2. Driver Onboarding Details */}
+              <div className="bg-white dark:bg-slate-900 border rounded-2xl p-4 space-y-2 text-xs">
+                <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">📋 Personal & Profile Details</h4>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Fayda ID Number:</span>
+                  <span className="font-bold">{selectedKYC.fayda_id}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Phone:</span>
+                  <span className="font-bold">{selectedKYC.phone}</span>
+                </div>
+                {selectedKYC.email && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Email:</span>
+                    <span className="font-bold">{selectedKYC.email}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Vehicle Type:</span>
+                  <span className="font-bold capitalize">{selectedKYC.vehicle_type}</span>
+                </div>
+                {selectedKYC.license_plate && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">License Plate:</span>
+                    <span className="font-bold uppercase">{selectedKYC.license_plate}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Service Zones:</span>
+                  <span className="font-bold">
+                    {Array.isArray(selectedKYC.service_zones) 
+                      ? selectedKYC.service_zones.join(', ') 
+                      : (typeof selectedKYC.service_zones === 'string' 
+                        ? selectedKYC.service_zones 
+                        : 'None')}
+                  </span>
                 </div>
               </div>
 
-              {/* Action Buttons inside Modal */}
-              <div className="flex gap-2.5 mt-5 pt-3 border-t border-slate-100 dark:border-slate-800">
-                {selectedKYC.status !== 'approved' ? (
-                  <>
-                    <button 
-                      onClick={function() { rejectDriver(selectedKYC.id, selectedKYC.full_name_latin); }}
-                      className="flex-1 py-3 bg-red-500 text-white rounded-xl text-xs font-bold shadow hover:bg-red-600 transition-all flex items-center justify-center gap-1">
-                      ✕ Reject Application
-                    </button>
-                    <button 
-                      onClick={function() { approveDriver(selectedKYC.id, selectedKYC.full_name_latin); }}
-                      className="flex-1 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold shadow hover:shadow-lg transition-all flex items-center justify-center gap-1">
-                      ✓ Approve & Verify
-                    </button>
-                  </>
-                ) : (
-                  <button 
-                    onClick={function() { setDeleteConfirmId(selectedKYC.id); setSelectedKYC(null); }}
-                    className="w-full py-3 bg-red-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1 hover:bg-red-600 transition-all">
-                     Suspend Driver Account
-                  </button>
+              {/* 3. Emergency Contact */}
+              <div className="bg-white dark:bg-slate-900 border rounded-2xl p-4 space-y-2 text-xs">
+                <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">🆘 Emergency Contact Details</h4>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Contact Person:</span>
+                  <span className="font-bold">{selectedKYC.emergency_name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Relationship:</span>
+                  <span className="font-bold">{selectedKYC.emergency_relationship}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Phone:</span>
+                  <span className="font-bold">{selectedKYC.emergency_phone}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Address:</span>
+                  <span className="font-bold">{(selectedKYC.emergency_address || '').split('::')[0]}</span>
+                </div>
+              </div>
+
+              {/* 4. Payment */}
+              <div className="bg-white dark:bg-slate-900 border rounded-2xl p-4 space-y-2 text-xs">
+                <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">💸 Payment & Financials</h4>
+                {selectedKYC.telebirr_number && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Telebirr Number:</span>
+                    <span className="font-bold">{selectedKYC.telebirr_number}</span>
+                  </div>
+                )}
+                {selectedKYC.bank_name && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Bank Account:</span>
+                    <span className="font-bold">{selectedKYC.bank_name} - {selectedKYC.bank_account}</span>
+                  </div>
                 )}
               </div>
             </div>
+
+            {/* Action Buttons inside Modal */}
+            <div className="flex gap-2.5 mt-5 pt-3 border-t border-slate-100 dark:border-slate-800">
+              {selectedKYC.status !== 'approved' ? (
+                <>
+                  <button 
+                    onClick={function() { rejectDriver(selectedKYC.id, selectedKYC.full_name_latin); }}
+                    className="flex-1 py-3 bg-red-500 text-white rounded-xl text-xs font-bold shadow hover:bg-red-600 transition-all flex items-center justify-center gap-1">
+                    ✕ Reject Application
+                  </button>
+                  <button 
+                    onClick={function() { approveDriver(selectedKYC.id, selectedKYC.full_name_latin); }}
+                    className="flex-1 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold shadow hover:shadow-lg transition-all flex items-center justify-center gap-1">
+                    ✓ Approve & Verify
+                  </button>
+                </>
+              ) : (
+                <button 
+                  onClick={function() { setDeleteConfirmId(selectedKYC.id); setSelectedKYC(null); }}
+                  className="w-full py-3 bg-red-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1 hover:bg-red-600 transition-all">
+                   Suspend Driver Account
+                </button>
+              )}
+            </div>
           </div>
-        </>,
-        document.body
+        </div>
       )}
 
-      {/* Rejection Reason Modal */}
-      {rejectingDriverId && mounted && typeof document !== 'undefined' && document.body && createPortal(
+      {/* Rejection Reason Modal rendered inline */}
+      {rejectingDriverId && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={function() { setRejectingDriverId(null); }}>
           <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 w-full max-w-sm shadow-2xl relative" onClick={function(e) { e.stopPropagation(); }}>
             <button className="absolute right-4 top-4 w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-sm" onClick={function() { setRejectingDriverId(null); }}>✕</button>
@@ -601,12 +592,11 @@ export default function AdminDeliveryTab() {
               </div>
             </div>
           </div>
-        </div>,
-        document.body
+        </div>
       )}
 
-      {/* Full-Screen Image Zoom Modal rendered inside a React Portal with complete event stopPropagation */}
-      {zoomImage && mounted && typeof document !== 'undefined' && document.body && createPortal(
+      {/* Full-Screen Image Zoom Modal rendered fully inline to prevent React Portal sibling layer and early mounting glitches */}
+      {zoomImage && (
         <div 
           className="fixed inset-0 z-[99999] bg-black flex flex-col items-center justify-center p-4 animate-scaleIn" 
           onClick={function(e) { e.stopPropagation(); setZoomImage(null); }}
@@ -632,8 +622,7 @@ export default function AdminDeliveryTab() {
           <div className="mt-5 text-center text-xs text-white/50 font-semibold select-none">
             Tap anywhere outside or click ✕ to close the full preview
           </div>
-        </div>,
-        document.body
+        </div>
       )}
     </div>
   );
