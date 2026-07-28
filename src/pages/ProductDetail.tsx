@@ -36,6 +36,17 @@ export default function ProductDetail() {
   const [durationHours, setDurationHours] = useState(24);
   const [creating, setCreating] = useState(false);
 
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCustomImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   useEffect(() => {
     if (product?.id) {
       getActiveDealsForProduct(product.id).then(setActiveDeals).catch(console.error);
@@ -43,6 +54,7 @@ export default function ProductDetail() {
   }, [product?.id]);
 
   const handleCreateGroupBuy = async () => {
+    if (!product) return;
     if (!store.telegramId) {
       toast('🚪 Please log in via Telegram first!', 'error');
       return;
