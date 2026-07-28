@@ -14,6 +14,36 @@ const VEHICLE_TYPES = [
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const HOURS = ['Morning (6-12)', 'Afternoon (12-5)', 'Evening (5-9)', 'Night (9-12)'];
 
+function compressImage(base64Str: string, maxWidth: number = 800): Promise<string> {
+  return new Promise((resolve) => {
+    if (!base64Str || !base64Str.startsWith('data:image')) {
+      resolve(base64Str);
+      return;
+    }
+    const img = new Image();
+    img.src = base64Str;
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
+      if (width > maxWidth) {
+        height = Math.round((height * maxWidth) / width);
+        width = maxWidth;
+      }
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { resolve(base64Str); return; }
+      ctx.drawImage(img, 0, 0, width, height);
+      const compressed = canvas.toDataURL('image/jpeg', 0.7); // 70% quality jpeg
+      resolve(compressed);
+    };
+    img.onerror = () => {
+      resolve(base64Str);
+    };
+  });
+}
+
 export default function DriverRegister() {
   var nav = useNavigate();
   var store = useStore();
@@ -130,12 +160,21 @@ export default function DriverRegister() {
     if (!agreeTerms) { toast('Please agree to the terms', 'error'); return; }
     
     setSubmitting(true);
-    
-    var ls: any = {};
-    try { ls = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
-    var tgId = ls.telegramId || '';
+    toast('⏳ Compressing photos for fast upload...', 'info');
     
     try {
+      const [cFront, cBack, cSelfie, cEmFront, cEmBack] = await Promise.all([
+        compressImage(faydaFrontImage),
+        compressImage(faydaBackImage),
+        compressImage(driverSelfieImage),
+        compressImage(emergencyIdFrontImage),
+        compressImage(emergencyIdBackImage)
+      ]);
+      
+      var ls: any = {};
+      try { ls = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
+      var tgId = ls.telegramId || '';
+      
       var res = await fetch('/api/delivery/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -146,9 +185,9 @@ export default function DriverRegister() {
           phone: phone.trim(),
           email: email.trim(),
           fayda_id: faydaId.trim(),
-          fayda_front_image: faydaFrontImage,
-          fayda_back_image: faydaBackImage,
-          driver_selfie: driverSelfieImage,
+          fayda_front_image: cFront,
+          fayda_back_image: cBack,
+          driver_selfie: cSelfie,
           vehicle_type: vehicleType,
           license_plate: licensePlate.trim(),
           service_zones: zones,
@@ -158,7 +197,7 @@ export default function DriverRegister() {
           emergency_phone: emergencyPhone.trim(),
           emergency_relationship: emergencyRelation || 'Other',
           emergency_address: emergencyAddress.trim(),
-          emergency_id_image: emergencyIdFrontImage + '::' + emergencyIdBackImage,
+          emergency_id_image: cEmFront + '::' + cEmBack,
           telebirr_number: telebirr.trim(),
           bank_name: bankName.trim(),
           bank_account: bankAccount.trim(),
@@ -175,7 +214,7 @@ export default function DriverRegister() {
         toast('Error: ' + (d.error || 'Submission failed'), 'error');
         setSubmitting(false);
       }
-    } catch(e) {
+    } catch(e: any) {
       toast('Error: ' + e.message, 'error');
       setSubmitting(false);
     }
