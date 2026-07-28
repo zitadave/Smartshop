@@ -217,7 +217,7 @@ export default function Home() {
         <div className="grid grid-cols-4 gap-2">
           {[
             { icon: String.fromCodePoint(128700), label: "Photo Studio", href: "/photo-studio" },
-            { icon: String.fromCodePoint(129309), label: "Group Buy", href: "/shop" },
+            { icon: String.fromCodePoint(129309), label: "Group Buy", href: "/my-group-deals" },
             { icon: String.fromCodePoint(128230), label: "My Subs", href: "/subscriptions" },
             { icon: String.fromCodePoint(127775), label: "Rewards", href: "/loyalty" },
           ].map((f, i) => (
