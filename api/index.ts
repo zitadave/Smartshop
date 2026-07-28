@@ -229,9 +229,23 @@ export default async function handler(req: any, res: any) {
       }
       if (path === '/api/delivery/applications' && method === 'GET') { const { data, error } = await supabase.from('delivery_personnel').select('*').in('status', ['pending_fayda', 'pending_review']).order('joined_at', { ascending: false }); if (error) return fail(error.message, 500); return ok({ applications: data || [] }); }
       if (path === '/api/delivery/approve' && method === 'POST') {
-        const { driver_id } = req.body || {}; if (!driver_id) return fail('driver_id required');
-        const { data, error } = await supabase.from('delivery_personnel').update({ status: 'approved', fayda_verified_at: new Date().toISOString() }).eq('id', driver_id).select().single();
-        if (error) return fail(error.message); if (data?.telegram_id) tg(ENV.VENDOR_BOT_TOKEN, data.telegram_id, '🎉 *Approved!* You can now start delivering.');
+        const b = req.body || {};
+        const driver_id = b.driver_id || b.id;
+        if (!driver_id) return fail('driver_id required');
+        const finalStatus = b.status || 'approved';
+        const { data, error } = await supabase.from('delivery_personnel').update({ 
+          status: finalStatus, 
+          fayda_verified_at: finalStatus === 'approved' ? new Date().toISOString() : null,
+          rejection_reason: b.reason || null
+        }).eq('id', driver_id).select().single();
+        if (error) return fail(error.message); 
+        if (data?.telegram_id) {
+          if (finalStatus === 'approved') {
+            tg(ENV.VENDOR_BOT_TOKEN, data.telegram_id, '🎉 *Approved!* You can now start delivering.');
+          } else if (finalStatus === 'rejected') {
+            tg(ENV.VENDOR_BOT_TOKEN, data.telegram_id, '❌ *Application Declined.* Rejection reason: ' + (b.reason || 'Application does not meet requirements'));
+          }
+        }
         return ok({ success: true, driver: data });
       }
       if (path === '/api/delivery/available' && method === 'GET') { const { data, error } = await supabase.from('deliveries').select('*').eq('status', 'pending').order('created_at', { ascending: false }); if (error) return fail(error.message, 500); return ok({ deliveries: data || [] }); }
