@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { joinGroupDeal, shareToTelegram, calculateGroupPrice, parseSerializedName, type GroupDeal } from '@/lib/groupBuying';
 import { useStore } from '@/stores/AppStore';
-import { ArrowLeft, Users, Share2, Tag, Clock, CheckCircle, ArrowRight, ShoppingCart, MessageCircle, Star, Sparkles, AlertCircle, Sparkle, Heart } from 'lucide-react';
+import { ArrowLeft, Users, Share2, Tag, Clock, CheckCircle, ArrowRight, ShoppingCart, MessageCircle, Star, Sparkles, AlertCircle, Sparkle, Heart, Flame, ShieldCheck, HeartHandshake, Compass } from 'lucide-react';
 import { toast } from '@/components/Toast';
 import { formatPrice } from '@/lib/utils';
 
@@ -33,6 +33,42 @@ function StarRating({ rating, size = 14 }: { rating: number; size?: number }) {
   );
 }
 
+// Overlapping visual avatars roster stack
+function AvatarStack({ members }: { members: any[] }) {
+  const displayLimit = 4;
+  const list = members.slice(0, displayLimit);
+  const extraCount = Math.max(0, members.length - displayLimit);
+  
+  const bgColors = [
+    'bg-gradient-to-br from-blue-400 to-indigo-500 text-white',
+    'bg-gradient-to-br from-purple-400 to-pink-500 text-white',
+    'bg-gradient-to-br from-emerald-400 to-green-500 text-white',
+    'bg-gradient-to-br from-orange-400 to-red-500 text-white',
+  ];
+
+  return (
+    <div className="flex items-center">
+      <div className="flex -space-x-2.5 overflow-hidden">
+        {list.map((m, i) => (
+          <div 
+            key={i} 
+            className={`inline-block h-8 w-8 rounded-full ring-2 ring-white dark:ring-slate-900 font-extrabold flex items-center justify-center text-[10px] shadow-sm ${bgColors[i % bgColors.length]}`}>
+            {m.full_name?.charAt(0).toUpperCase() || 'U'}
+          </div>
+        ))}
+        {extraCount > 0 && (
+          <div className="inline-block h-8 w-8 rounded-full ring-2 ring-white dark:ring-slate-900 bg-slate-100 text-slate-500 font-bold flex items-center justify-center text-[10px] shadow-sm">
+            +{extraCount}
+          </div>
+        )}
+      </div>
+      <span className="text-[10px] text-slate-400 font-bold ml-2.5 flex items-center gap-1">
+        🔥 Joined by {members.length} peers
+      </span>
+    </div>
+  );
+}
+
 export default function GroupDealView() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
@@ -53,6 +89,8 @@ export default function GroupDealView() {
   const [reviewText, setReviewText] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
   const [productReviews, setProductReviews] = useState<any[]>([]);
+  
+  const formRef = useRef<HTMLDivElement>(null);
 
   const loadDeal = () => {
     if (!token) return;
@@ -204,7 +242,6 @@ export default function GroupDealView() {
         toast('⭐ Review submitted successfully!', 'success');
         setReviewText('');
         setShowReviewModal(false);
-        // Reload reviews list
         fetch(`/api/reviews?productId=${deal.product_id}`)
           .then(r => r.json())
           .then(res => setProductReviews(res.reviews || []));
@@ -291,7 +328,6 @@ export default function GroupDealView() {
     ? Math.round((deal.current_members / targetCount) * 100)
     : Math.round((deal.current_members / deal.max_members) * 100);
 
-  // Progressive discount levels for display
   const tiers = [
     { count: 1, discount: 0, label: 'Start' },
     { count: 2, discount: 5, label: '5% Off' },
@@ -301,25 +337,25 @@ export default function GroupDealView() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-24">
+    <div className="min-h-screen bg-slate-100 dark:bg-slate-950 pb-28">
       
       {/* 1. Large Hero Product Image on Top (Full Product Page Style) */}
       {deal.product_image && (
-        <div className="relative aspect-square w-full bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 overflow-hidden cursor-zoom-in group" onClick={() => setShowZoom(true)}>
+        <div className="relative aspect-square w-full bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 overflow-hidden cursor-zoom-in group shadow-md" onClick={() => setShowZoom(true)}>
           <img src={deal.product_image} alt={parsedName} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
           
-          {/* Floating Back Button */}
-          <button onClick={() => navigate(-1)} className="absolute top-4 left-4 z-20 p-2.5 rounded-full bg-black/40 backdrop-blur-md text-white hover:bg-black/60 transition-colors shadow">
-            <ArrowLeft size={18} />
+          {/* Floating Back Button (Glassmorphic) */}
+          <button onClick={() => navigate(-1)} className="absolute top-4 left-4 z-20 p-3 rounded-full bg-white/40 dark:bg-black/40 backdrop-blur-md text-slate-800 dark:text-white hover:bg-white/60 dark:hover:bg-black/60 transition-all shadow-md">
+            <ArrowLeft size={16} />
           </button>
 
-          {/* Floating Badge */}
-          <span className="absolute top-4 right-4 z-20 px-3 py-1.5 rounded-xl text-[10px] font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 shadow-md flex items-center gap-1">
-            <Sparkle size={12} className="animate-spin" /> {isTargetModel ? 'TARGET LOCK' : 'PROGRESSIVE'} DEAL
+          {/* Floating Campaign Badge (Neumorphic) */}
+          <span className="absolute top-4 right-4 z-20 px-3.5 py-1.5 rounded-2xl text-[10px] font-black text-white bg-gradient-to-r from-emerald-500 to-green-600 shadow-lg flex items-center gap-1 backdrop-blur-sm">
+            <Sparkle size={12} className="animate-spin text-white" /> {isTargetModel ? 'TARGET LOCK' : 'PROGRESSIVE'}
           </span>
 
-          <span className="absolute bottom-3 right-3 bg-black/60 text-white rounded px-2.5 py-1 text-[9px] font-bold backdrop-blur-sm">
-            View Full Screen 🔍
+          <span className="absolute bottom-3 right-3 bg-black/60 text-white rounded-xl px-3 py-1.5 text-[9px] font-bold backdrop-blur-sm shadow flex items-center gap-1">
+            Tap to Zoom 🔍
           </span>
         </div>
       )}
@@ -327,49 +363,62 @@ export default function GroupDealView() {
       <div className="max-w-lg mx-auto p-4 space-y-4">
         
         {/* Product Details Section (Tied directly under the image) */}
-        <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-800">
-          <div className="flex justify-between items-start">
-            <span className="text-[9px] bg-green-100 text-green-700 px-2.5 py-0.5 rounded-full font-bold">
-              🛒 ACTIVE DEAL
+        <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/40 dark:border-slate-800">
+          <div className="flex justify-between items-center mb-3">
+            <span className="text-[9px] bg-emerald-500 text-white px-3 py-1 rounded-full font-black tracking-wider uppercase shadow-sm">
+              🏷️ {isTargetModel ? 'TARGET BUY' : 'MAHIBER BUY'}
             </span>
             {/* Cumulative star rating small trigger */}
-            <div className="flex items-center gap-1 text-[10px] text-slate-500">
+            <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-slate-800 px-2.5 py-1 rounded-xl border border-slate-100 dark:border-slate-800">
               <StarRating rating={cumulativeStats.avg} size={11} />
-              <span className="font-bold text-slate-700 dark:text-slate-300">{cumulativeStats.avg}</span>
-              <span>({cumulativeStats.total})</span>
+              <span className="text-slate-800 dark:text-slate-200 mt-0.5">{cumulativeStats.avg}</span>
+              <span className="text-slate-400 font-medium">({cumulativeStats.total})</span>
             </div>
           </div>
-          <h2 className="font-black text-slate-800 dark:text-white text-lg mt-2.5 leading-tight">{parsedName}</h2>
           
+          <h2 className="font-black text-slate-800 dark:text-white text-base leading-snug">{parsedName}</h2>
+          
+          {/* Real-time peer avatar stack inside header card */}
+          {deal.group_deal_members && deal.group_deal_members.length > 0 && (
+            <div className="mt-3.5 pb-3.5 border-b border-slate-100 dark:border-slate-800">
+              <AvatarStack members={deal.group_deal_members} />
+            </div>
+          )}
+
           <div className="flex items-baseline gap-2.5 mt-3.5">
             <span className="text-3xl font-black text-green-600">Br {deal.group_price.toLocaleString()}</span>
             <span className="text-sm text-slate-400 line-through">Br {deal.regular_price.toLocaleString()}</span>
+            {savings > 0 && (
+              <span className="text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-extrabold ml-1.5">
+                -{Math.round((savings / deal.regular_price) * 100)}%
+              </span>
+            )}
           </div>
 
           {savings > 0 && (
-            <div className="text-xs text-emerald-500 font-semibold mt-1.5 flex items-center gap-1">
+            <div className="text-xs text-emerald-500 font-bold mt-1.5 flex items-center gap-1">
               🎉 Saving Br {savings.toLocaleString()} compared to retail!
             </div>
           )}
 
           {/* Native Product Description */}
           {matchedProduct && (matchedProduct.description || matchedProduct.descriptionEn) && (
-            <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-500 leading-relaxed">
+            <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
               <h4 className="font-bold text-slate-700 dark:text-slate-300 mb-1.5">📋 Product Description</h4>
-              <p className="line-clamp-4">{matchedProduct.description || matchedProduct.descriptionEn}</p>
+              <p className="line-clamp-4 leading-relaxed">{matchedProduct.description || matchedProduct.descriptionEn}</p>
             </div>
           )}
         </div>
 
         {/* Campaign Model Status Alert */}
         {isTargetModel && (
-          <div className={`p-4 rounded-2xl border flex items-start gap-3 shadow-sm ${isUnlocked ? 'bg-emerald-50 border-emerald-100 text-emerald-800 animate-bounce' : 'bg-amber-50 border-amber-100 text-amber-800'}`}>
+          <div className={`p-4 rounded-3xl border flex items-start gap-3 shadow-[0_8px_30px_rgb(0,0,0,0.04)] ${isUnlocked ? 'bg-emerald-500 border-emerald-400 text-white animate-bounce' : 'bg-amber-50 border-amber-100 text-amber-800'}`}>
             <div className="text-2xl">{isUnlocked ? '🔓' : '🔒'}</div>
-            <div>
-              <h4 className="text-xs font-bold uppercase tracking-wide">
+            <div className="flex-1">
+              <h4 className="text-xs font-black uppercase tracking-wider">
                 {isUnlocked ? '🎉 CAMPAIGN UNLOCKED!' : '🔒 TARGET LOCK CAMPAIGN'}
               </h4>
-              <p className="text-[10px] opacity-90 mt-0.5 leading-relaxed">
+              <p className="text-[10px] opacity-90 mt-0.5 leading-relaxed font-medium">
                 {isUnlocked 
                   ? `Congratulations! Target of ${targetCount} members met. Locked price of Br ${deal.group_price.toLocaleString()} is active!` 
                   : `Need ${targetCount - deal.current_members} more members to unlock the massive discount of Br ${deal.group_price.toLocaleString()}!`}
@@ -380,24 +429,24 @@ export default function GroupDealView() {
 
         {/* Campaign Description & Preferences */}
         {(description || (color && color !== 'Any') || (size && size !== 'Any')) && (
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-800">
-            <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-1.5">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/30 dark:border-slate-800">
+            <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-2.5 flex items-center gap-1.5">
               📝 Campaign Specifications
             </h3>
             {description && (
-              <p className="text-xs text-slate-500 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl mb-2.5 leading-relaxed italic">
+              <p className="text-xs text-slate-500 bg-slate-50 dark:bg-slate-800/40 p-3 rounded-2xl mb-2.5 leading-relaxed italic">
                 "{description}"
               </p>
             )}
             <div className="flex flex-wrap gap-2.5">
               {color && color !== 'Any' && (
-                <span className="text-[10px] bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full font-bold border border-blue-100">
-                  🎨 Color Preference: {color}
+                <span className="text-[10px] bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400 px-3 py-1 rounded-full font-bold border border-blue-100/30">
+                  🎨 Color: {color}
                 </span>
               )}
               {size && size !== 'Any' && (
-                <span className="text-[10px] bg-purple-50 text-purple-600 px-2.5 py-1 rounded-full font-bold border border-purple-100">
-                  📏 Size Preference: {size}
+                <span className="text-[10px] bg-purple-50 text-purple-600 dark:bg-purple-950/40 dark:text-purple-400 px-3 py-1 rounded-full font-bold border border-purple-100/30">
+                  📏 Size: {size}
                 </span>
               )}
             </div>
@@ -406,12 +455,12 @@ export default function GroupDealView() {
 
         {/* Discount Stepper Tracker (Only for Progressive Model) */}
         {!isTargetModel ? (
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-800">
-            <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-1.5">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/30 dark:border-slate-800">
+            <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-3.5 flex items-center gap-1.5">
               📈 Progressive Discounts (መሃበር ቅናሽ)
             </h3>
             <div className="relative flex justify-between items-center px-1">
-              <div className="absolute left-0 right-0 top-3 h-1 bg-slate-100 -z-0 rounded" />
+              <div className="absolute left-0 right-0 top-3 h-1 bg-slate-100 dark:bg-slate-800 -z-0 rounded" />
               <div 
                 className="absolute left-0 h-1 bg-gradient-to-r from-green-400 to-green-500 -z-0 rounded" 
                 style={{ width: `${Math.min(100, (deal.current_members / 10) * 100)}%` }} 
@@ -437,12 +486,12 @@ export default function GroupDealView() {
           </div>
         ) : (
           /* Target Progress Bar (For Model B) */
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-800">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/30 dark:border-slate-800">
             <div className="flex justify-between items-center mb-1.5 text-xs">
               <span className="font-bold text-slate-700 dark:text-slate-300">👥 Target Group Progress</span>
               <span className="font-bold text-emerald-600">{progressPercent}% Filled</span>
             </div>
-            <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden relative border border-slate-200/50">
+            <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden relative border border-slate-200/30 dark:border-slate-800">
               <div 
                 className="h-full bg-gradient-to-r from-green-400 to-emerald-500 rounded-full transition-all duration-500 animate-pulse" 
                 style={{ width: `${Math.min(100, progressPercent)}%` }} 
@@ -455,7 +504,7 @@ export default function GroupDealView() {
         )}
 
         {/* Members List */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-800">
+        <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/30 dark:border-slate-800">
           <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-1.5">
             👥 Group Members ({deal.group_deal_members?.length || 0})
           </h3>
@@ -463,7 +512,7 @@ export default function GroupDealView() {
             {deal.group_deal_members?.map((m: any, idx: number) => {
               const isCreator = m.telegram_id === deal.creator_telegram_id;
               return (
-                <div key={idx} className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
+                <div key={idx} className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
                   <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300 font-bold flex items-center justify-center text-xs">
                     {m.full_name?.charAt(0).toUpperCase() || 'U'}
                   </div>
@@ -474,7 +523,7 @@ export default function GroupDealView() {
                     <p className="text-[9px] text-slate-400">Joined {new Date(m.joined_at || deal.created_at).toLocaleDateString()}</p>
                   </div>
                   {m.paid && (
-                    <span className="text-[9px] bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-full font-medium">
+                    <span className="text-[9px] bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-full font-medium border border-emerald-200/30">
                       ✓ Paid
                     </span>
                   )}
@@ -484,84 +533,86 @@ export default function GroupDealView() {
           </div>
         </div>
 
-        {/* Join / Share Action Form */}
-        {!joined ? (
-          store.profile?.phone ? (
-            /* Automatic One-Tap Joining for Logged In Users */
-            <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-800 text-center">
-              <h3 className="font-bold text-slate-800 dark:text-slate-200 text-sm mb-1">One-Tap Instant Join ⚡</h3>
-              <p className="text-[10px] text-slate-400 mb-4">You are logged in as <strong>{store.profile.name}</strong>. Tap below to join instantly!</p>
-              <button 
-                onClick={handleJoin}
-                disabled={joining}
-                className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl font-bold text-sm shadow-md hover:shadow-lg hover:scale-[1.01] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 animate-pulse">
-                {joining ? 'Joining Campaign...' : '🤝 Tap to Instant Join Group'}
-              </button>
-            </div>
-          ) : (
-            /* Manual Registration Form for Desktop / Guest Users */
-            <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-800">
-              <h2 className="font-bold text-slate-800 dark:text-slate-200 text-sm mb-1.5">🤝 Join This Group Deal</h2>
-              <p className="text-[10px] text-slate-400 mb-4">Enter your billing info to join and unlock the group price.</p>
-              <div className="space-y-3">
-                <input 
-                  placeholder="Your Full Name (ለማን እንደሚላክ)" 
-                  value={name} 
-                  onChange={e => setName(e.target.value)}
-                  className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none focus:border-green-400 transition-colors bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200" 
-                />
-                <input 
-                  placeholder="Phone Number (ስልክ ቁጥር)" 
-                  value={phone} 
-                  onChange={e => setPhone(e.target.value)}
-                  className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none focus:border-green-400 transition-colors bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200" 
-                />
+        {/* Join / Share Action Form (Only visible inline if sticky bottom is off-screen) */}
+        <div ref={formRef}>
+          {!joined ? (
+            store.profile?.phone ? (
+              /* Automatic One-Tap Joining for Logged In Users */
+              <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/30 dark:border-slate-800 text-center">
+                <h3 className="font-bold text-slate-800 dark:text-white text-sm mb-1">One-Tap Instant Join ⚡</h3>
+                <p className="text-[10px] text-slate-400 mb-4">You are logged in as <strong>{store.profile.name}</strong>. Tap below to join instantly!</p>
                 <button 
                   onClick={handleJoin}
                   disabled={joining}
-                  className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3.5 rounded-xl font-bold text-xs shadow-md hover:shadow-lg transition-all active:scale-95 flex items-center justify-center gap-1.5 disabled:opacity-50">
-                  {joining ? 'Joining Group...' : '🤝 Join Group Buy'}
+                  className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl font-bold text-sm shadow-md hover:shadow-lg hover:scale-[1.01] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 animate-pulse">
+                  {joining ? 'Joining Campaign...' : '🤝 Tap to Instant Join Group'}
                 </button>
               </div>
-            </div>
-          )
-        ) : (
-          /* Locked/Unlocked Cart Actions for Joined Members */
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-100 dark:border-slate-800 shadow-sm text-center space-y-3">
-            <div className="w-10 h-10 bg-green-100 dark:bg-green-950 text-green-600 rounded-full flex items-center justify-center mx-auto border border-green-200 dark:border-green-800">
-              <CheckCircle size={22} />
-            </div>
-            <h3 className="font-bold text-slate-800 dark:text-white text-sm">Campaign Active!</h3>
-            
-            {isTargetModel && !isUnlocked ? (
-              <div className="bg-amber-50 dark:bg-amber-950/20 p-3 rounded-xl border border-amber-100 dark:border-amber-900/30 text-[10px] text-amber-700 dark:text-amber-400 text-left">
-                ⚠️ <strong>Note:</strong> Since this is a Target Lock deal, you can add this product to your cart now at the discounted group price, but your order will only be completed once the target group size of <strong>{targetCount} members</strong> is fully met!
+            ) : (
+              /* Manual Registration Form for Desktop / Guest Users */
+              <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/30 dark:border-slate-800">
+                <h2 className="font-bold text-slate-800 dark:text-white text-sm mb-1.5">🤝 Join This Group Deal</h2>
+                <p className="text-[10px] text-slate-400 mb-4">Enter your billing info to join and unlock the group price.</p>
+                <div className="space-y-3">
+                  <input 
+                    placeholder="Your Full Name (ለማን እንደሚላክ)" 
+                    value={name} 
+                    onChange={e => setName(e.target.value)}
+                    className="w-full p-3.5 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs outline-none focus:border-green-400 transition-colors bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200" 
+                  />
+                  <input 
+                    placeholder="Phone Number (ስልክ ቁጥር)" 
+                    value={phone} 
+                    onChange={e => setPhone(e.target.value)}
+                    className="w-full p-3.5 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs outline-none focus:border-green-400 transition-colors bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200" 
+                  />
+                  <button 
+                    onClick={handleJoin}
+                    disabled={joining}
+                    className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3.5 rounded-2xl font-bold text-xs shadow-md hover:shadow-lg transition-all active:scale-95 flex items-center justify-center gap-1.5 disabled:opacity-50">
+                    {joining ? 'Joining Group...' : '🤝 Join Group Buy'}
+                  </button>
+                </div>
               </div>
-            ) : null}
+            )
+          ) : (
+            /* Locked/Unlocked Cart Actions for Joined Members */
+            <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200/30 dark:border-slate-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)] text-center space-y-3">
+              <div className="w-10 h-10 bg-green-100 dark:bg-green-950 text-green-600 rounded-full flex items-center justify-center mx-auto border border-green-200 dark:border-green-800">
+                <CheckCircle size={22} />
+              </div>
+              <h3 className="font-bold text-slate-800 dark:text-white text-sm">Campaign Active!</h3>
+              
+              {isTargetModel && !isUnlocked ? (
+                <div className="bg-amber-50 dark:bg-amber-950/20 p-3 rounded-xl border border-amber-100 dark:border-amber-900/30 text-[10px] text-amber-700 dark:text-amber-400 text-left">
+                  ⚠️ <strong>Note:</strong> Since this is a Target Lock deal, you can add this product to your cart now at the discounted group price, but your order will only be completed once the target group size of <strong>{targetCount} members</strong> is fully met!
+                </div>
+              ) : null}
 
-            <div className="flex gap-2 pt-1">
+              <div className="flex gap-2 pt-1">
+                <button 
+                  onClick={handleAddToCart}
+                  className="flex-1 py-3 border border-slate-200 dark:border-slate-800 rounded-2xl text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center justify-center gap-1">
+                  <ShoppingCart size={14} /> Add to Cart
+                </button>
+                <button 
+                  onClick={handleCheckoutNow}
+                  className="flex-1 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl text-xs font-bold shadow-md hover:shadow-lg flex items-center justify-center gap-1">
+                  ⚡ Checkout Now
+                </button>
+              </div>
+
               <button 
-                onClick={handleAddToCart}
-                className="flex-1 py-3 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center justify-center gap-1">
-                <ShoppingCart size={14} /> Add to Cart
-              </button>
-              <button 
-                onClick={handleCheckoutNow}
-                className="flex-1 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg flex items-center justify-center gap-1">
-                ⚡ Checkout Now
+                onClick={handleShareUniversal}
+                className="w-full py-3.5 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl font-semibold shadow-sm hover:shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5">
+                <Share2 size={14} /> Share Invite Link with Friends
               </button>
             </div>
-
-            <button 
-              onClick={handleShareUniversal}
-              className="w-full py-3.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-xs font-semibold shadow-sm hover:shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5">
-              <Share2 size={14} /> Share Invite Link with Friends
-            </button>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Ratings, Breakdown Bars & Reviews section (High Industry Level) */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-800">
+        <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/30 dark:border-slate-800">
           <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-50 dark:border-slate-800">
             <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
               <MessageCircle size={14} /> Product Ratings & Reviews
@@ -636,6 +687,45 @@ export default function GroupDealView() {
           </div>
         </div>
 
+      </div>
+
+      {/* 5. GORGEOUS STICKY BOTTOM ACTION BAR (Conversion Optimized UX) */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-t border-slate-200/50 dark:border-slate-800/50 p-4 shadow-lg animate-slideUp flex items-center justify-between gap-4 max-w-lg mx-auto rounded-t-3xl">
+        <div className="flex flex-col">
+          <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Group Price</span>
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-xl font-black text-green-600">Br {deal.group_price.toLocaleString()}</span>
+            <span className="text-[10px] text-slate-400 line-through">Br {deal.regular_price.toLocaleString()}</span>
+          </div>
+        </div>
+        
+        <div className="flex-1 max-w-[240px]">
+          {!joined ? (
+            store.profile?.phone ? (
+              <button 
+                onClick={handleJoin}
+                disabled={joining}
+                className="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl text-xs font-black shadow-md hover:shadow-lg hover:scale-[1.01] active:scale-95 transition-all flex items-center justify-center gap-1">
+                ⚡ Instant Join
+              </button>
+            ) : (
+              <button 
+                onClick={() => {
+                  formRef.current?.scrollIntoView({ behavior: 'smooth' });
+                  toast('👇 Fill details below to join group', 'info');
+                }}
+                className="w-full py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-2xl text-xs font-black shadow-md hover:shadow-lg flex items-center justify-center gap-1">
+                🤝 Join Group
+              </button>
+            )
+          ) : (
+            <button 
+              onClick={handleCheckoutNow}
+              className="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl text-xs font-black shadow-md hover:shadow-lg hover:scale-[1.01] active:scale-95 transition-all flex items-center justify-center gap-1.5 animate-pulse">
+              <ShoppingCart size={13} /> Checkout Now
+            </button>
+          )}
+        </div>
       </div>
 
       {/* FULL-SCREEN IMAGE LIGHTBOX MODAL */}
