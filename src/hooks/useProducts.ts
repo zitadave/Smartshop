@@ -18,7 +18,7 @@ export function useProducts() {
     if (search.trim()) {
       const q = search.toLowerCase().trim();
       result = result.filter(
-        p => p.name.toLowerCase().includes(q) || p.nameEn.toLowerCase().includes(q)
+        p => (p.name || '').toLowerCase().includes(q) || (p.nameEn || p.name || '').toLowerCase().includes(q)
       );
     }
 
