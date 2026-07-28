@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Search, Users, Tag, Clock, CheckCircle, XCircle, Eye, Trash2, RefreshCw, ChevronRight, Share2 } from 'lucide-react';
 
 interface GroupDeal {
@@ -13,6 +14,7 @@ export default function AdminGroupBuyTab() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
 
   const load = () => {
     setLoading(true);
@@ -81,13 +83,44 @@ export default function AdminGroupBuyTab() {
                   <span className="text-[10px] text-slate-400"><Clock size={10} className="inline" /> Expires {new Date(deal.expires_at).toLocaleDateString()}</span>
                   <div className="flex gap-1">
                     <button onClick={() => navigator.clipboard.writeText(`https://t.me/smart_shopping_et_bot?start=group_${deal.share_token}`)} className="p-1.5 rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-100"><Share2 size={14} /></button>
-                    <button onClick={() => { if (confirm('Delete this group deal?')) fetch(`/api/group-deals/${deal.id}`, { method: 'DELETE' }).then(load); }} className="p-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100"><Trash2 size={14} /></button>
+                    <button onClick={() => setConfirmDeleteId(deal.id)} className="p-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100"><Trash2 size={14} /></button>
                   </div>
                 </div>
               </div>
             );
           })}
         </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {confirmDeleteId !== null && createPortal(
+        <>
+          <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm" onClick={() => setConfirmDeleteId(null)} />
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[110] bg-white rounded-2xl border p-6 w-full max-w-sm shadow-2xl text-center">
+            <div className="text-3xl mb-2">⚠️</div>
+            <h3 className="text-sm font-bold text-slate-900 mb-2">Delete Group Deal</h3>
+            <p className="text-xs text-slate-500 mb-4">Are you sure you want to delete this group buy deal campaign? This will remove all nested group members as well.</p>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setConfirmDeleteId(null)}
+                className="flex-1 py-2.5 border rounded-xl text-xs font-semibold text-slate-600">
+                Cancel
+              </button>
+              <button 
+                onClick={() => {
+                  fetch(`/api/group-deals/${confirmDeleteId}`, { method: 'DELETE' })
+                    .then(() => {
+                      setConfirmDeleteId(null);
+                      load();
+                    });
+                }}
+                className="flex-1 py-2.5 bg-red-500 text-white rounded-xl text-xs font-bold shadow-md hover:bg-red-600">
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </>,
+        document.body
       )}
     </div>
   );

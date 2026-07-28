@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 import { useStore } from '@/stores/AppStore';
 import { formatPrice, cn, generateId } from '@/lib/utils';
 import { productsApi, ordersApi } from '@/lib/api';
@@ -898,6 +899,7 @@ function VendorPromotionsView() {
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
   const [groupProductId, setGroupProductId] = useState("");
   const [groupPrice, setGroupPrice] = useState("");
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
 
   const loadGroupDeals = () => {
     setLoadingDeals(true);
@@ -1138,7 +1140,7 @@ function VendorPromotionsView() {
                     <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-50 dark:border-slate-800 text-[9px] text-slate-400">
                       <span>Expires: {new Date(deal.expires_at || Date.now()).toLocaleDateString()}</span>
                       <button 
-                        onClick={() => { if (confirm('Cancel this group-buy campaign?')) fetch(`/api/group-deals/${deal.id}`, { method: 'DELETE' }).then(loadGroupDeals); }}
+                        onClick={() => setConfirmDeleteId(deal.id)}
                         className="px-2 py-1 bg-red-50 text-red-500 dark:bg-red-950/20 dark:text-red-400 rounded-lg font-bold">
                         Delete
                       </button>
@@ -1150,9 +1152,10 @@ function VendorPromotionsView() {
           )}
 
           {/* Creation Modal */}
-          {showCreateGroupModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setShowCreateGroupModal(false)}>
-              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 w-full max-w-sm mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
+          {showCreateGroupModal && createPortal(
+            <>
+              <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm" onClick={() => setShowCreateGroupModal(false)} />
+              <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[110] bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 w-full max-w-sm shadow-2xl">
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">🚀 Create Group Buy Special</h3>
                 <div className="space-y-3">
                   <div>
@@ -1194,7 +1197,41 @@ function VendorPromotionsView() {
                   </div>
                 </div>
               </div>
-            </div>
+            </>,
+            document.body
+          )}
+
+          {/* Delete Confirmation Modal */}
+          {confirmDeleteId !== null && createPortal(
+            <>
+              <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm" onClick={() => setConfirmDeleteId(null)} />
+              <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[110] bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 w-full max-w-sm shadow-2xl text-center">
+                <div className="text-3xl mb-2">⚠️</div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-2">Cancel Campaign</h3>
+                <p className="text-xs text-slate-500 mb-4">Are you sure you want to cancel and delete this group-buy campaign? This action cannot be undone.</p>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => setConfirmDeleteId(null)}
+                    className="flex-1 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400">
+                    No, Keep
+                  </button>
+                  <button 
+                    onClick={() => {
+                      fetch(`/api/group-deals/${confirmDeleteId}`, { method: 'DELETE' })
+                        .then(() => {
+                          toast('🗑️ Campaign deleted successfully', 'success');
+                          setConfirmDeleteId(null);
+                          loadGroupDeals();
+                        })
+                        .catch(err => toast(err.message, 'error'));
+                    }}
+                    className="flex-1 py-2.5 bg-red-500 text-white rounded-xl text-xs font-bold shadow-md hover:bg-red-600">
+                    Yes, Delete
+                  </button>
+                </div>
+              </div>
+            </>,
+            document.body
           )}
         </div>
       )}
