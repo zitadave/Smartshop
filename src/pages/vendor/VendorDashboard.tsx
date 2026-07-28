@@ -877,10 +877,11 @@ function VendorNotificationsView() {
 }
 
 function VendorPromotionsView() {
-  const [tab, setTab] = useState<"request" | "active" | "slots">("request");
+  const [tab, setTab] = useState<"request" | "active" | "groupbuys" | "slots">("request");
   const store = useStore();
   const { products } = store;
   const vendorProducts = products.filter(p => p.vendorId === 1 || !p.vendorId);
+  const vendorName = vendorProducts[0]?.vendorName || 'My Store';
   const [promos, setPromos] = useState<any[]>(() => {
     try { return JSON.parse(localStorage.getItem("ss_promotions_data") || "{\"requests\":[]}").requests || []; }
     catch { return []; }
@@ -890,6 +891,75 @@ function VendorPromotionsView() {
     try { return JSON.parse(localStorage.getItem("ss_promotions_data") || "{\"slots\":[]}").slots || []; }
     catch { return []; }
   });
+
+  // Group Buy states
+  const [groupDeals, setGroupDeals] = useState<any[]>([]);
+  const [loadingDeals, setLoadingDeals] = useState(false);
+  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
+  const [groupProductId, setGroupProductId] = useState("");
+  const [groupPrice, setGroupPrice] = useState("");
+
+  const loadGroupDeals = () => {
+    setLoadingDeals(true);
+    fetch('/api/group-deals')
+      .then(r => r.json())
+      .then(d => {
+        const allDeals = d.deals || [];
+        const filtered = allDeals.filter((deal: any) => 
+          vendorProducts.some(p => p.id === deal.product_id)
+        );
+        setGroupDeals(filtered);
+        setLoadingDeals(false);
+      })
+      .catch(err => {
+        console.error('Error loading group deals:', err);
+        setLoadingDeals(false);
+      });
+  };
+
+  useEffect(() => {
+    loadGroupDeals();
+  }, [products]);
+
+  const createVendorGroupBuy = async () => {
+    if (!groupProductId) { toast("❌ Please select a product", "error"); return; }
+    const product = vendorProducts.find(p => String(p.id) === groupProductId);
+    if (!product) { toast("❌ Product not found", "error"); return; }
+    const price = Number(groupPrice);
+    if (price <= 0 || price >= product.price) {
+      toast("❌ Invalid group price (must be greater than 0 and less than original price)", "error");
+      return;
+    }
+    
+    try {
+      const res = await fetch('/api/group-deals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          product_id: product.id,
+          product_name: product.nameEn || product.name,
+          product_image: product.image,
+          regular_price: product.price,
+          group_price: price,
+          creator_telegram_id: 1, 
+          creator_name: vendorName + " (Shop Special)",
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast("🎉 Group buy campaign published successfully!", "success");
+        setShowCreateGroupModal(false);
+        setGroupProductId("");
+        setGroupPrice("");
+        loadGroupDeals();
+      } else {
+        toast(data.error || "Failed to publish campaign", "error");
+      }
+    } catch (e: any) {
+      toast(e.message || "An error occurred", "error");
+    }
+  };
+
   // Modal state for promotion request
   const [showModal, setShowModal] = useState(false);
   const [reqType, setReqType] = useState<"discount" | "flashdeal" | "bogo">("discount");
@@ -949,7 +1019,7 @@ function VendorPromotionsView() {
       <p className="text-[10px] text-slate-500">Create promotions to boost your sales. Commission is always on original price.</p></div>
 
       <div className="flex gap-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl p-0.5 w-fit">
-        {[["request","✍️ Request"],["active","✅ Active"],["slots","💎 Slots"]].map(([t, l]) => (
+        {[["request","✍️ Request"],["active","✅ Active"],["groupbuys","🤝 Group Buys"],["slots","💎 Slots"]].map(([t, l]) => (
           <button key={t} className={cn("px-3 py-1.5 rounded-lg text-[9px] font-semibold transition-all", tab === t ? "bg-white dark:bg-slate-700 shadow-sm" : "text-slate-500")}
             onClick={() => setTab(t as any)}>{l}</button>
         ))}
@@ -991,6 +1061,141 @@ function VendorPromotionsView() {
               ))}
             </div>
           }
+        </div>
+      )}
+
+      {tab === "active" && (
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-x-hidden">
+          <div className="p-4 border-b border-slate-100 dark:border-slate-800"><h3 className="text-sm font-bold text-slate-900 dark:text-white">Your Promotions ({vendorPromos.length})</h3></div>
+          {vendorPromos.length === 0 ? <p className="text-center py-8 text-xs text-slate-400">No promotions yet. Create one above!</p> :
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
+              {[...vendorPromos].sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()).map((p, i) => (
+                <div key={p.id || i} className="p-3 flex items-center gap-3">
+                  <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs",
+                    p.type === "flashdeal" ? "bg-orange-500" : p.type === "bogo" ? "bg-purple-500" : "bg-blue-500")}>{p.type === "bogo" ? "🎁" : p.type === "flashdeal" ? "⚡" : "🏷️"}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[10px] font-semibold truncate text-slate-800 dark:text-slate-200">{p.productName}</div>
+                    <div className="text-[8px] text-slate-400">-{p.discountPercent}% · Original: {formatPrice(p.originalPrice)}</div>
+                  </div>
+                  <span className={cn("text-[9px] px-2 py-0.5 rounded font-semibold",
+                    p.status === "approved" ? "bg-emerald-100 text-emerald-700" : p.status === "rejected" ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-700")}>{p.status}</span>
+                </div>
+              ))}
+            </div>
+          }
+        </div>
+      )}
+
+      {tab === "groupbuys" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] text-slate-500">Launch curated group-buy specials to move bulk stock and gain viral exposure.</p>
+            <button 
+              onClick={() => setShowCreateGroupModal(true)}
+              className="px-3.5 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-[10px] font-bold shadow hover:shadow-md transition-all flex items-center gap-1">
+              🚀 Start Group Buy Campaign
+            </button>
+          </div>
+
+          {loadingDeals ? (
+            <div className="text-center py-8 text-slate-400">Loading active campaigns...</div>
+          ) : groupDeals.length === 0 ? (
+            <div className="text-center py-10 bg-white dark:bg-slate-900 border rounded-2xl p-6">
+              <Users size={36} className="mx-auto text-slate-200 mb-2" />
+              <h4 className="text-xs font-bold text-slate-700 dark:text-white">No Active Group Buys</h4>
+              <p className="text-[9px] text-slate-400 mt-1 mb-4">Click "Start Group Buy Campaign" to create a merchant-curated deal on your products!</p>
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 gap-3">
+              {groupDeals.map((deal) => {
+                const progress = Math.round((deal.current_members / (deal.max_members || 10)) * 100);
+                return (
+                  <div key={deal.id} className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+                    <div>
+                      <div className="flex justify-between items-start gap-2">
+                        <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 line-clamp-1">{deal.product_name}</h4>
+                        <span className={`text-[8px] px-2 py-0.5 rounded-full font-bold uppercase ${deal.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                          {deal.status}
+                        </span>
+                      </div>
+                      <div className="flex items-baseline gap-2 mt-1.5">
+                        <span className="text-sm font-extrabold text-green-600">Br {deal.group_price.toLocaleString()}</span>
+                        <span className="text-[10px] text-slate-400 line-through">Br {deal.regular_price.toLocaleString()}</span>
+                      </div>
+
+                      {/* Progress bar */}
+                      <div className="mt-3">
+                        <div className="flex justify-between text-[9px] text-slate-400 mb-1">
+                          <span>👤 {deal.current_members} joined</span>
+                          <span>{progress}% filled</span>
+                        </div>
+                        <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                          <div className="h-full bg-gradient-to-r from-green-400 to-green-500 rounded-full" style={{ width: `${progress}%` }} />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-50 dark:border-slate-800 text-[9px] text-slate-400">
+                      <span>Expires: {new Date(deal.expires_at || Date.now()).toLocaleDateString()}</span>
+                      <button 
+                        onClick={() => { if (confirm('Cancel this group-buy campaign?')) fetch(`/api/group-deals/${deal.id}`, { method: 'DELETE' }).then(loadGroupDeals); }}
+                        className="px-2 py-1 bg-red-50 text-red-500 dark:bg-red-950/20 dark:text-red-400 rounded-lg font-bold">
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Creation Modal */}
+          {showCreateGroupModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setShowCreateGroupModal(false)}>
+              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 w-full max-w-sm mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">🚀 Create Group Buy Special</h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Select Product</label>
+                    <select 
+                      className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200 outline-none" 
+                      value={groupProductId} 
+                      onChange={e => {
+                        setGroupProductId(e.target.value);
+                        const product = vendorProducts.find(p => String(p.id) === e.target.value);
+                        if (product) setGroupPrice(String(Math.round(product.price * 0.85))); // default 15% off
+                      }}>
+                      <option value="">Choose product...</option>
+                      {vendorProducts.map(p => (
+                        <option key={p.id} value={String(p.id)}>{p.nameEn} — {formatPrice(p.price)}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Special Group Price (Br)</label>
+                    <input 
+                      type="number" 
+                      className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200 outline-none" 
+                      value={groupPrice} 
+                      onChange={e => setGroupPrice(e.target.value)} 
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => setShowCreateGroupModal(false)}
+                      className="flex-1 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400">
+                      Cancel
+                    </button>
+                    <button 
+                      onClick={createVendorGroupBuy}
+                      className="flex-1 py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold">
+                      Publish Campaign
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
