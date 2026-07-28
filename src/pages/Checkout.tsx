@@ -63,40 +63,62 @@ export default function Checkout() {
  const chapaEnabled = settings?.chapaTestMode !== false;
 
  useEffect(() => {
- if ('geolocation' in navigator) {
- navigator.geolocation.getCurrentPosition(
- async (pos) => {
- try {
- const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`);
- const data = await res.json();
- const addr = data.address || {};
- const detectedCity = addr.city || addr.town || addr.county || addr.state || addr.village || '';
- // Normalize city names to match our dropdown
- const normalizedCities: Record<string, string> = {
- 'addis ababa': 'Addis Ababa', 'addis': 'Addis Ababa',
- 'bahir dar': 'Bahir Dar', 'adar': 'Bahir Dar',
- 'nazret': 'Adama', 'nazareth': 'Adama', 'adama': 'Adama',
- 'awasa': 'Hawassa', 'awassa': 'Hawassa', 'hawassa': 'Hawassa',
- 'gonder': 'Gondar', 'gondar': 'Gondar',
- 'mekele': 'Mekelle', 'mekelle': 'Mekelle',
- 'dir dawa': 'Dire Dawa', 'dire dawa': 'Dire Dawa',
- 'jima': 'Jimma', 'jimma': 'Jimma',
- };
- const key = detectedCity.toLowerCase().trim();
- const finalCity = normalizedCities[key] || detectedCity;
- if (finalCity) {
- setCity(finalCity);
- setLocationDetected(true);
- }
- const full = [addr.road, addr.suburb, addr.city_district, addr.neighbourhood].filter(Boolean).join(', ');
- if (full || detectedCity) {
- const addressStr = full ? full + (detectedCity ? ', ' + detectedCity : '') : detectedCity;
- setAddress(addressStr);
- }
- } catch {}
- }, () => {}, { timeout: 5000 }
- );
- }
+   let watchId: number | null = null;
+   
+   const successCallback = async (pos: GeolocationPosition) => {
+     try {
+       const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`);
+       const data = await res.json();
+       const addr = data.address || {};
+       const detectedCity = addr.city || addr.town || addr.county || addr.state || addr.village || '';
+       // Normalize city names to match our dropdown
+       const normalizedCities: Record<string, string> = {
+         'addis ababa': 'Addis Ababa', 'addis': 'Addis Ababa',
+         'bahir dar': 'Bahir Dar', 'adar': 'Bahir Dar',
+         'nazret': 'Adama', 'nazareth': 'Adama', 'adama': 'Adama',
+         'awasa': 'Hawassa', 'awassa': 'Hawassa', 'hawassa': 'Hawassa',
+         'gonder': 'Gondar', 'gondar': 'Gondar',
+         'mekele': 'Mekelle', 'mekelle': 'Mekelle',
+         'dir dawa': 'Dire Dawa', 'dire dawa': 'Dire Dawa',
+         'jima': 'Jimma', 'jimma': 'Jimma',
+       };
+       const key = detectedCity.toLowerCase().trim();
+       const finalCity = normalizedCities[key] || detectedCity;
+       if (finalCity) {
+         setCity(finalCity);
+         setLocationDetected(true);
+       }
+       const full = [addr.road, addr.suburb, addr.city_district, addr.neighbourhood].filter(Boolean).join(', ');
+       if (full || detectedCity) {
+         const addressStr = full ? full + (detectedCity ? ', ' + detectedCity : '') : detectedCity;
+         setAddress(addressStr);
+       }
+     } catch {}
+   };
+
+   const errorCallback = (err: GeolocationPositionError) => {
+     console.warn('Geolocation error:', err.message);
+   };
+
+   if ('geolocation' in navigator) {
+     navigator.geolocation.getCurrentPosition(successCallback, errorCallback, {
+       enableHighAccuracy: true,
+       timeout: 5000,
+       maximumAge: 0
+     });
+     
+     watchId = navigator.geolocation.watchPosition(successCallback, errorCallback, {
+       enableHighAccuracy: true,
+       timeout: 10000,
+       maximumAge: 0
+     });
+   }
+
+   return () => {
+     if (watchId !== null) {
+       navigator.geolocation.clearWatch(watchId);
+     }
+   };
  }, []);
 
  const applyPromo = () => {
