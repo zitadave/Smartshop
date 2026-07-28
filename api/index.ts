@@ -203,7 +203,7 @@ export default async function handler(req: any, res: any) {
           fayda_id: b.fayda_id || 'TEMP-' + Date.now(),
           fayda_id_front_url: b.fayda_front_image || '',
           fayda_id_back_url: b.fayda_back_image || '',
-          fayda_selfie_url: b.fayda_front_image || '',
+          fayda_selfie_url: b.driver_selfie || '',
           vehicle_type: b.vehicle_type || 'motorcycle', 
           license_plate: b.license_plate || '',
           telegram_id: b.telegram_id || null,
