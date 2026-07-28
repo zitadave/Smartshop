@@ -254,7 +254,14 @@ export default async function handler(req: any, res: any) {
         const pr: Record<string, any> = { on_foot: { b: 15, pk: 5, mx: 2 }, bicycle: { b: 20, pk: 7, mx: 4 }, motorcycle: { b: 30, pk: 10, mx: 10 }, bajaj: { b: 40, pk: 15, mx: 15 } };
         const p = pr[vt] || pr.motorcycle; let mx = p.mx; let bf = p.b, pk = p.pk;
         if (b.zone_id) { const { data: z } = await supabase.from('delivery_zones').select('*').eq('id', b.zone_id).single(); if (z) { bf = z.base_fee || p.b; pk = z.per_km_fee || p.pk; mx = Math.min(mx, z.max_distance_km || mx); } }
-        const ed = Math.min(dist, mx); const fee = Math.max(20, Math.round(bf + ed * pk)); const cm = Math.round(fee * 0.2);
+        const ed = Math.min(dist, mx); const fee = Math.max(20, Math.round(bf + ed * pk));
+        
+        // Fetch dynamic delivery commission
+        const { data: sd } = await supabase.from('settings').select('*').single();
+        const s = sd?.data || {};
+        const delCommRate = (s.deliveryCommission || 20) / 100;
+        const cm = Math.round(fee * delCommRate);
+        
         return ok({ fee, commission: cm, driver_payout: fee - cm, base_fee: bf, per_km_fee: pk, distance_km: ed, max_distance_km: mx, vehicle_type: vt });
       }
       if (path === '/api/delivery/register' && method === 'POST') {
@@ -417,13 +424,43 @@ export default async function handler(req: any, res: any) {
       if (path.startsWith('/api/delivery/history/') && method === 'GET') { const { data, error } = await supabase.from('deliveries').select('*').eq('driver_id', pid(path)).order('created_at', { ascending: false }); if (error) return fail(error.message, 500); return ok({ deliveries: data || [] }); }
       if (path === '/api/delivery/create' && method === 'POST') {
         const b = req.body || {}; if (!b.pickup_address || !b.delivery_address) return fail('pickup_address and delivery_address required');
-        const fee = b.fee || 0;
-        const commission = Math.round(fee * 0.2);
-        const payout = fee - commission;
+        
+        // Fetch global settings to get dynamic delivery commission percentage
+        const { data: sd } = await supabase.from('settings').select('*').single();
+        const s = sd?.data || {};
+        const delCommRate = (s.deliveryCommission || 20) / 100;
+        
+        const passedFee = b.fee != null ? b.fee : 0;
+        let finalFee = passedFee;
+        let commission = 0;
+        let payout = 0;
+        
+        if (passedFee === 0) {
+          // Subsidized Free Delivery Model: Compute standard fee based on vehicle & distance metrics
+          const vt = b.vehicle_type || 'motorcycle';
+          const pr: Record<string, any> = { 
+            on_foot: { b: 15, pk: 5, mx: 2 }, 
+            bicycle: { b: 20, pk: 7, mx: 4 }, 
+            motorcycle: { b: 30, pk: 10, mx: 10 }, 
+            bajaj: { b: 40, pk: 15, mx: 15 } 
+          };
+          const p = pr[vt] || pr.motorcycle;
+          const ed = Math.min(b.distance_km || 1, p.mx);
+          const standardFee = Math.max(20, Math.round(p.b + ed * p.pk));
+          
+          // Driver gets full net payout of standard fee, platform subsidizes the rest (negative commission)
+          payout = standardFee - Math.round(standardFee * delCommRate);
+          commission = 0 - payout; // Negative platform commission (subsidy logged in ledger!)
+          finalFee = 0; // Customer paid 0 delivery fee
+        } else {
+          // Paid Delivery Model
+          commission = Math.round(passedFee * delCommRate);
+          payout = passedFee - commission;
+        }
 
         const { data, error } = await supabase.from('deliveries').insert({
           order_number: b.order_number || 'DEL-' + Date.now().toString(36).toUpperCase(), status: 'pending',
-          item_count: b.item_count || 0, fee: fee, distance_km: b.distance_km || 0,
+          item_count: b.item_count || 0, fee: finalFee, distance_km: b.distance_km || 0,
           platform_commission: commission,
           driver_payout: payout,
           pickup_address: b.pickup_address, delivery_address: b.delivery_address, no_contact: b.no_contact || false,
