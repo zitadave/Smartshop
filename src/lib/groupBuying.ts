@@ -159,3 +159,15 @@ export function shareToTelegram(deal: GroupDeal): void {
     navigator.clipboard.writeText(`https://t.me/smart_shopping_et_bot?start=group_${deal.shareToken}`);
   }
 }
+
+// ── Parse serialized custom group buy attributes ─────────────
+export function parseSerializedName(rawName: string): { name: string; description: string; color: string; size: string } {
+  if (!rawName) return { name: '', description: '', color: '', size: '' };
+  const parts = rawName.split('::');
+  return {
+    name: parts[0] || '',
+    description: parts[1] || '',
+    color: parts[2] || '',
+    size: parts[3] || '',
+  };
+}

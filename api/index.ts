@@ -295,6 +295,9 @@ export default async function handler(req, res) {
         product_id: b.product_id, product_name: b.product_name, product_image: b.product_image || '',
         regular_price: b.regular_price, group_price: b.group_price || b.regular_price,
         creator_telegram_id: b.creator_telegram_id, share_token: token, current_members: 1,
+        min_members: b.min_members || b.minMembers || 2,
+        max_members: b.max_members || b.maxMembers || 10,
+        expires_at: b.expires_at || b.expiresAt || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
       }).select().single();
       if (error) return fail(error.message);
       // Auto-add creator as first member
