@@ -357,43 +357,58 @@ export default function AdminDeliveryTab() {
                   <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">📂 Uploaded Documents (Tap for Full Preview)</h4>
                   
                   {/* Selfie */}
-                  {selectedKYC.fayda_selfie_url && (
-                    <div>
-                      <span className="text-[9px] font-bold text-slate-400 block mb-1">Driver Selfie / Recent Photo</span>
+                  <div>
+                    <span className="text-[9px] font-bold text-slate-400 block mb-1">Driver Selfie / Recent Photo</span>
+                    {selectedKYC.fayda_selfie_url ? (
                       <div className="relative group w-28 h-28 rounded-xl overflow-hidden border bg-white cursor-pointer shadow-sm" onClick={function() { setZoomImage(selectedKYC.fayda_selfie_url); }}>
                         <img src={selectedKYC.fayda_selfie_url} alt="Selfie" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                           <span className="text-[8px] font-extrabold text-white bg-slate-900/80 px-2 py-1 rounded-full flex items-center gap-1">🔍 Zoom</span>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    ) : (
+                      <div className="w-28 h-28 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center text-center p-2">
+                        <Loader size={16} className="text-slate-300 mb-1 animate-pulse" />
+                        <span className="text-[8px] font-bold text-slate-400">No Photo Uploaded</span>
+                      </div>
+                    )}
+                  </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     {/* Fayda Front */}
-                    {selectedKYC.fayda_id_front_url && (
-                      <div>
-                        <span className="text-[9px] font-bold text-slate-400 block mb-1">Fayda ID (Front)</span>
+                    <div>
+                      <span className="text-[9px] font-bold text-slate-400 block mb-1">Fayda ID (Front)</span>
+                      {selectedKYC.fayda_id_front_url ? (
                         <div className="relative group w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white cursor-pointer shadow-sm" onClick={function() { setZoomImage(selectedKYC.fayda_id_front_url); }}>
                           <img src={selectedKYC.fayda_id_front_url} alt="Fayda Front" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                             <span className="text-[8px] font-extrabold text-white bg-slate-900/80 px-2 py-1 rounded-full flex items-center gap-1">🔍 Zoom</span>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      ) : (
+                        <div className="w-full aspect-[1.6] rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center text-center">
+                          <Shield size={16} className="text-slate-300 mb-1" />
+                          <span className="text-[8px] font-bold text-slate-400">Missing Front ID</span>
+                        </div>
+                      )}
+                    </div>
                     {/* Fayda Back */}
-                    {selectedKYC.fayda_id_back_url && (
-                      <div>
-                        <span className="text-[9px] font-bold text-slate-400 block mb-1">Fayda ID (Back)</span>
+                    <div>
+                      <span className="text-[9px] font-bold text-slate-400 block mb-1">Fayda ID (Back)</span>
+                      {selectedKYC.fayda_id_back_url ? (
                         <div className="relative group w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white cursor-pointer shadow-sm" onClick={function() { setZoomImage(selectedKYC.fayda_id_back_url); }}>
                           <img src={selectedKYC.fayda_id_back_url} alt="Fayda Back" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                             <span className="text-[8px] font-extrabold text-white bg-slate-900/80 px-2 py-1 rounded-full flex items-center gap-1">🔍 Zoom</span>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      ) : (
+                        <div className="w-full aspect-[1.6] rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center text-center">
+                          <Shield size={16} className="text-slate-300 mb-1" />
+                          <span className="text-[8px] font-bold text-slate-400">Missing Back ID</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Parse Emergency ID images */}
@@ -401,38 +416,45 @@ export default function AdminDeliveryTab() {
                     const addrParts = (selectedKYC.emergency_address || '').split('::');
                     const emFront = addrParts[1] || '';
                     const emBack = addrParts[2] || '';
-                    if (emFront || emBack) {
-                      return (
-                        <div className="space-y-2 mt-3 pt-3 border-t border-slate-200/50">
-                          <span className="text-[9px] font-bold text-slate-400 block">Emergency Contact ID Photos</span>
-                          <div className="grid grid-cols-2 gap-3">
-                            {emFront && (
-                              <div>
-                                <span className="text-[8px] text-slate-400 block mb-0.5">ID Card (Front)</span>
-                                <div className="relative group w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white cursor-pointer shadow-sm" onClick={function() { setZoomImage(emFront); }}>
-                                  <img src={emFront} alt="Emergency Front" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                    <span className="text-[8px] font-extrabold text-white bg-slate-900/80 px-2 py-1 rounded-full flex items-center gap-1">🔍 Zoom</span>
-                                  </div>
+                    return (
+                      <div className="space-y-2 mt-3 pt-3 border-t border-slate-200/50">
+                        <span className="text-[9px] font-bold text-slate-400 block">Emergency Contact ID Photos</span>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <span className="text-[8px] text-slate-400 block mb-0.5">ID Card (Front)</span>
+                            {emFront ? (
+                              <div className="relative group w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white cursor-pointer shadow-sm" onClick={function() { setZoomImage(emFront); }}>
+                                <img src={emFront} alt="Emergency Front" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                  <span className="text-[8px] font-extrabold text-white bg-slate-900/80 px-2 py-1 rounded-full flex items-center gap-1">🔍 Zoom</span>
                                 </div>
                               </div>
+                            ) : (
+                              <div className="w-full aspect-[1.6] rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center text-center">
+                                <Shield size={14} className="text-slate-300 mb-1" />
+                                <span className="text-[8px] font-bold text-slate-400">Not Provided</span>
+                              </div>
                             )}
-                            {emBack && (
-                              <div>
-                                <span className="text-[8px] text-slate-400 block mb-0.5">ID Card (Back)</span>
-                                <div className="relative group w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white cursor-pointer shadow-sm" onClick={function() { setZoomImage(emBack); }}>
-                                  <img src={emBack} alt="Emergency Back" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                    <span className="text-[8px] font-extrabold text-white bg-slate-900/80 px-2 py-1 rounded-full flex items-center gap-1">🔍 Zoom</span>
-                                  </div>
+                          </div>
+                          <div>
+                            <span className="text-[8px] text-slate-400 block mb-0.5">ID Card (Back)</span>
+                            {emBack ? (
+                              <div className="relative group w-full aspect-[1.6] rounded-xl overflow-hidden border bg-white cursor-pointer shadow-sm" onClick={function() { setZoomImage(emBack); }}>
+                                <img src={emBack} alt="Emergency Back" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                  <span className="text-[8px] font-extrabold text-white bg-slate-900/80 px-2 py-1 rounded-full flex items-center gap-1">🔍 Zoom</span>
                                 </div>
+                              </div>
+                            ) : (
+                              <div className="w-full aspect-[1.6] rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center text-center">
+                                <Shield size={14} className="text-slate-300 mb-1" />
+                                <span className="text-[8px] font-bold text-slate-400">Not Provided</span>
                               </div>
                             )}
                           </div>
                         </div>
-                      );
-                    }
-                    return null;
+                      </div>
+                    );
                   })()}
                 </div>
 
@@ -584,7 +606,7 @@ export default function AdminDeliveryTab() {
       {/* Full-Screen Image Zoom Modal rendered inline for absolute maximum z-index overlay robustness */}
       {zoomImage && (
         <div 
-          className="fixed inset-0 z-[99999] bg-black flex flex-col items-center justify-center p-4" 
+          className="fixed inset-0 z-[99999] bg-black flex flex-col items-center justify-center p-4 animate-scaleIn" 
           onClick={function() { setZoomImage(null); }}
         >
           <button 
@@ -601,7 +623,7 @@ export default function AdminDeliveryTab() {
             <img 
               src={zoomImage} 
               alt="Full Preview" 
-              className="max-w-[90vw] max-h-[80vh] object-contain select-none rounded-lg" 
+              className="max-w-[90vw] max-h-[80vh] object-contain select-none rounded-lg animate-scaleIn" 
             />
           </div>
           
