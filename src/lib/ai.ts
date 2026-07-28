@@ -130,7 +130,7 @@ export function searchProducts(products: Product[], query: string): Product[] {
   if (parsed.keywords.length > 0) {
     results = results.filter(p =>
       parsed.keywords.some(kw =>
-        p.nameEn.toLowerCase().includes(kw) || p.name.toLowerCase().includes(kw) || p.descriptionEn.toLowerCase().includes(kw)
+        (p.nameEn || '').toLowerCase().includes(kw) || (p.name || '').toLowerCase().includes(kw) || (p.descriptionEn || p.description || '').toLowerCase().includes(kw)
       )
     );
   }
@@ -138,8 +138,8 @@ export function searchProducts(products: Product[], query: string): Product[] {
   // Sort by relevance — exact matches first
   if (parsed.keywords.length > 0) {
     results.sort((a, b) => {
-      const aScore = parsed.keywords.filter(kw => a.nameEn.toLowerCase().includes(kw)).length;
-      const bScore = parsed.keywords.filter(kw => b.nameEn.toLowerCase().includes(kw)).length;
+      const aScore = parsed.keywords.filter(kw => (a.nameEn || '').toLowerCase().includes(kw)).length;
+      const bScore = parsed.keywords.filter(kw => (b.nameEn || '').toLowerCase().includes(kw)).length;
       return bScore - aScore;
     });
   }
