@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { toast } from '@/components/Toast';
 import { cn } from '@/lib/utils';
 import { Bike, CheckCircle, XCircle, Trash2, RefreshCw, Search, Loader, MapPin, Phone, DollarSign, Star, ChevronRight, Clock, Shield } from 'lucide-react';
@@ -216,7 +217,7 @@ export default function AdminDeliveryTab() {
                       </div>
                       <div className="flex items-center gap-1.5">
                         <span className={'px-1.5 py-0.5 rounded text-[8px] font-semibold ' + statusColor}>{d.status}</span>
-                        <button className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600" onClick={function() { setDeleteConfirmId(d.id); }} title="Suspend"><Trash2 size={11} /></button>
+                        <button className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600" onClick={function(e) { e.stopPropagation(); setDeleteConfirmId(d.id); }} title="Suspend"><Trash2 size={11} /></button>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 mt-1.5 text-[8px] text-slate-400">
@@ -400,7 +401,13 @@ export default function AdminDeliveryTab() {
                   )}
                   <div className="flex justify-between">
                     <span className="text-slate-400">Service Zones:</span>
-                    <span className="font-bold">{selectedKYC.service_zones?.join(', ') || 'None'}</span>
+                    <span className="font-bold">
+                      {Array.isArray(selectedKYC.service_zones) 
+                        ? selectedKYC.service_zones.join(', ') 
+                        : (typeof selectedKYC.service_zones === 'string' 
+                          ? selectedKYC.service_zones 
+                          : 'None')}
+                    </span>
                   </div>
                 </div>
 
