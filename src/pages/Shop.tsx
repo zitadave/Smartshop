@@ -10,6 +10,7 @@ import { CardSkeleton } from '@/components/ui/Skeletons';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { CATEGORIES, SORT_OPTIONS } from '@/types';
 import { cn } from '@/lib/utils';
+import { toast } from '@/components/Toast';
 import { Search, X, Filter, ArrowUp, Sparkles, RefreshCw, Mic, Loader2 } from 'lucide-react';
 import type { Product, CategoryId, SortMode } from '@/types';
 
