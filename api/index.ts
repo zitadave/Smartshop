@@ -76,8 +76,6 @@ async function setIdem(k: string, s: string, r: any) {
 }
 function gON() { return 'ETH-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase(); }
 
-function gON() { return 'ETH-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase(); }
-
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -199,8 +197,8 @@ async function createDeliveryForOrder(on: string, lat?: number, lng?: number) {
         const dLat = parseFloat(d.current_lat);
         const dLng = parseFloat(d.current_lng);
         
-        const distToPickup = calculateDistance(dLat, dLng, finalPickupLat, finalPickupLng);
-        const distToDropoff = calculateDistance(dLat, dLng, finalDropoffLat, finalDropoffLng);
+        const distToPickup = calculateDistance(dLat, dLng, finalPickupLat as number, finalPickupLng as number);
+        const distToDropoff = calculateDistance(dLat, dLng, finalDropoffLat as number, finalDropoffLng as number);
         const minDistance = Math.min(distToPickup, distToDropoff);
 
         // Dynamic proximity matching within cascading radius of 7.0km (extending up to 15.0km fallback)
