@@ -17,9 +17,24 @@ export function useProducts() {
 
     if (search.trim()) {
       const q = search.toLowerCase().trim();
-      result = result.filter(
-        p => (p.name || '').toLowerCase().includes(q) || (p.nameEn || p.name || '').toLowerCase().includes(q)
-      );
+      const searchTokens = q.split(/\s+/).filter(token => token.length > 1);
+      
+      result = result.filter(p => {
+        const nameAm = (p.name || '').toLowerCase();
+        const nameEn = (p.nameEn || p.name || '').toLowerCase();
+        const desc = (p.description || '').toLowerCase();
+        const descEn = (p.descriptionEn || '').toLowerCase();
+        
+        if (nameAm.includes(q) || nameEn.includes(q)) return true;
+        
+        const matchToken = (token: string) => {
+          return nameAm.includes(token) || 
+                 nameEn.includes(token) || 
+                 desc.includes(token) || 
+                 descEn.includes(token);
+        };
+        return searchTokens.some(matchToken);
+      });
     }
 
     switch (sort) {
