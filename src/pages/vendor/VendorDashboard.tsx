@@ -1817,8 +1817,8 @@ function VendorSubscriptionsView() {
       )}
 
       {/* Creation Modal */}
-      {showModal && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowModal(false)}>
+      {showModal && createPortal(
+        <div className="fixed inset-0 z-[140] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowModal(false)}>
           <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 w-full max-w-lg shadow-2xl relative max-h-[90vh] overflow-y-auto scrollbar-none" onClick={e => e.stopPropagation()}>
             <button className="absolute right-4 top-4 w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-slate-400 hover:text-slate-600 text-sm" onClick={() => setShowModal(false)}>✕</button>
             
@@ -1939,12 +1939,13 @@ function VendorSubscriptionsView() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Delete Confirmation Modal */}
-      {planToDelete !== null && (
-        <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setPlanToDelete(null)}>
+      {planToDelete !== null && createPortal(
+        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setPlanToDelete(null)}>
           <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 w-full max-w-sm shadow-2xl relative text-center animate-scaleIn" onClick={e => e.stopPropagation()}>
             <span className="text-3xl block mb-2">⚠️</span>
             <h3 className="text-sm font-black text-slate-900 dark:text-white mb-2">Delete Subscription Plan</h3>
@@ -1964,7 +1965,8 @@ function VendorSubscriptionsView() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
