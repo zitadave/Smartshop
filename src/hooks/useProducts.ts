@@ -17,7 +17,36 @@ export function useProducts() {
 
     if (search.trim()) {
       const q = search.toLowerCase().trim();
-      const searchTokens = q.split(/\s+/).filter(token => token.length > 1);
+      const rawTokens = q.split(/\s+/).filter(token => token.length > 1);
+      
+      // Bilingual bidirectional translation dictionary
+      const translationMap: Record<string, string> = {
+        'ወተት': 'milk', 'milk': 'ወተት',
+        'እንቁላል': 'egg', 'egg': 'እንቁላል', 'eggs': 'እንቁላል',
+        'ዳቦ': 'bread', 'bread': 'ዳቦ',
+        'ውሃ': 'water', 'water': 'ውሃ',
+        'ቡና': 'coffee', 'coffee': 'ቡና',
+        'ማር': 'honey', 'honey': 'ማር',
+        'ስኳር': 'sugar', 'sugar': 'ስኳር',
+        'ዘይት': 'oil', 'oil': 'ዘይት',
+        'እንጀራ': 'injera', 'injera': 'እንጀራ',
+        'ቲማቲም': 'tomato', 'tomato': 'ቲማቲም',
+        'ሳሙና': 'soap', 'soap': 'ሳሙና',
+        'ጆሮ': 'headphone', 'headphone': 'ጆሮ', 'headphones': 'ጆሮ',
+        'ስልክ': 'phone', 'phone': 'ስልክ',
+        'ኮምፒውተር': 'computer', 'computer': 'ኮምፒውተር',
+        'ልብስ': 'clothes', 'clothing': 'ልብስ', 'clothes': 'ልብስ',
+        'ጫማ': 'shoes', 'shoes': 'ጫማ', 'shoe': 'ጫማ'
+      };
+
+      // Bidirectional Translation Expansion
+      const searchTokens = [...rawTokens];
+      rawTokens.forEach(token => {
+        const trans = translationMap[token];
+        if (trans && !searchTokens.includes(trans)) {
+          searchTokens.push(trans);
+        }
+      });
       
       result = result.filter(p => {
         const nameAm = (p.name || '').toLowerCase();
@@ -25,6 +54,7 @@ export function useProducts() {
         const desc = (p.description || '').toLowerCase();
         const descEn = (p.descriptionEn || '').toLowerCase();
         
+        // If the complete original query matches, keep it
         if (nameAm.includes(q) || nameEn.includes(q)) return true;
         
         const matchToken = (token: string) => {
