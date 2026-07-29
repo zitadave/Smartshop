@@ -43,8 +43,7 @@ export default function PhotoStudio() {
   // Auto-render edited results on canvas
   useEffect(() => {
     if (!result) return;
-    const img = new Image();
-    img.src = result.processedUrl;
+    const img = new window.Image();
     img.onload = () => {
       const canvas = canvasRef.current;
       if (!canvas) return;
@@ -103,6 +102,7 @@ export default function PhotoStudio() {
         ctx.restore();
       }
     };
+    img.src = result.processedUrl;
   }, [result, brightness, contrast, saturation, textOverlay, textColor, textPosition, fontSize, aspectRatio]);
 
   const handleFile = async (f: File) => {
