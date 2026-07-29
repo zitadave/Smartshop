@@ -109,45 +109,68 @@ export default function SubscriptionShop() {
         </div>
 
         {/* Plans Grid */}
-        <div className="grid grid-cols-1 gap-3">
+        <div className="grid grid-cols-1 gap-4">
           {filteredPlans.map(plan => {
             const isSubscribed = mySubs.some(s => s.planId === plan.id && s.status === 'active');
             return (
               <div key={plan.id}
-                className={`bg-white rounded-2xl p-4 shadow-sm border-2 transition-all cursor-pointer hover:shadow-md ${isSubscribed ? 'border-green-300' : 'border-transparent'}`}
+                className={`bg-white dark:bg-slate-900 rounded-3xl p-5 border transition-all duration-300 cursor-pointer hover:shadow-xl hover:border-slate-300 dark:hover:border-slate-700 hover:-translate-y-0.5 active:scale-[0.99] relative flex flex-col gap-4 ${
+                  isSubscribed 
+                    ? 'border-emerald-500 dark:border-emerald-500 shadow-md shadow-emerald-500/5 bg-emerald-50/5 dark:bg-emerald-950/5' 
+                    : 'border-slate-200/80 dark:border-slate-800/80 shadow-sm'
+                }`}
                 onClick={() => { setSelectedPlan(plan); setQuantity(plan.minQuantity); }}>
+                
                 <div className="flex gap-4 items-start">
-                  <div className="w-16 h-16 flex-shrink-0 rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-800 bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center">
+                  <div className="w-20 h-20 flex-shrink-0 rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-800 bg-gradient-to-br from-indigo-50 to-blue-100 dark:from-slate-800 dark:to-slate-850 flex items-center justify-center shadow-inner">
                     {plan.image ? (
                       <img src={plan.image} className="w-full h-full object-cover" alt={plan.name} />
                     ) : (
-                      <span className="text-3xl">{plan.emoji}</span>
+                      <span className="text-4xl">{plan.emoji}</span>
                     )}
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="font-bold text-slate-800">{plan.name} <span className="text-xs text-slate-400 font-normal">{plan.nameAmharic}</span></h3>
-                        <p className="text-xs text-slate-400">{plan.description}</p>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <span className="text-[9px] font-extrabold uppercase tracking-widest text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/30 px-2 py-0.5 rounded-full border border-indigo-100 dark:border-indigo-900/50">{plan.category}</span>
+                        <h3 className="font-extrabold text-slate-800 dark:text-slate-100 text-sm mt-1.5 flex items-baseline gap-1.5 truncate">
+                          {plan.name}
+                          {plan.nameAmharic && <span className="text-xs text-slate-400 font-normal truncate">({plan.nameAmharic})</span>}
+                        </h3>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-normal line-clamp-2">{plan.description}</p>
                       </div>
-                      {isSubscribed && <span className="text-xs bg-green-100 text-green-600 px-2 py-1 rounded-full font-medium">✅ Active</span>}
+                      
+                      {isSubscribed && (
+                        <span className="flex items-center gap-1 text-[10px] bg-emerald-100/80 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 px-2.5 py-1 rounded-full font-bold flex-shrink-0 border border-emerald-200/50">
+                          🟢 Active
+                        </span>
+                      )}
                     </div>
-                    <div className="flex gap-3 mt-2 flex-wrap">
-                      {plan.dailyPrice > 0 && <PriceChip label="Daily" price={plan.dailyPrice} unit={plan.unitLabel} />}
-                      {plan.weeklyPrice > 0 && <PriceChip label="Weekly" price={plan.weeklyPrice} unit={plan.unitLabel} />}
-                      {plan.biweeklyPrice !== undefined && plan.biweeklyPrice > 0 && <PriceChip label="Bi-weekly" price={plan.biweeklyPrice} unit={plan.unitLabel} />}
-                      {plan.monthlyPrice > 0 && <PriceChip label="Monthly" price={plan.monthlyPrice} unit={plan.unitLabel} />}
-                    </div>
-                    {plan.tags.length > 0 && (
-                      <div className="flex gap-1 mt-2">
-                        {plan.tags.map((t, i) => (
-                          <span key={i} className={`text-[10px] px-2 py-0.5 rounded-full ${t === 'popular' ? 'bg-orange-100 text-orange-600' : t === 'essential' ? 'bg-green-100 text-green-600' : 'bg-purple-100 text-purple-600'}`}>
-                            {t === 'popular' ? '🔥 Popular' : t === 'essential' ? '⚡ Essential' : t === 'premium' ? '💎 Premium' : t}
-                          </span>
-                        ))}
-                      </div>
-                    )}
                   </div>
+                </div>
+
+                <div className="border-t border-slate-100/80 dark:border-slate-800/60 pt-3 flex flex-wrap gap-2.5 items-center justify-between">
+                  <div className="flex gap-2.5 flex-wrap">
+                    {plan.dailyPrice > 0 && <PriceChip label="Daily" price={plan.dailyPrice} unit={plan.unitLabel} />}
+                    {plan.weeklyPrice > 0 && <PriceChip label="Weekly" price={plan.weeklyPrice} unit={plan.unitLabel} />}
+                    {plan.biweeklyPrice !== undefined && plan.biweeklyPrice > 0 && <PriceChip label="Bi-weekly" price={plan.biweeklyPrice} unit={plan.unitLabel} />}
+                    {plan.monthlyPrice > 0 && <PriceChip label="Monthly" price={plan.monthlyPrice} unit={plan.unitLabel} />}
+                  </div>
+
+                  {plan.tags.length > 0 && (
+                    <div className="flex gap-1 flex-shrink-0">
+                      {plan.tags.map((t, i) => (
+                        <span key={i} className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                          t === 'popular' ? 'bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 border-amber-200/50' :
+                          t === 'essential' ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 border-emerald-200/50' :
+                          'bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 border-indigo-200/50'
+                        }`}>
+                          {t === 'popular' ? '🔥 Popular' : t === 'essential' ? '⚡ Essential' : t}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -264,10 +287,10 @@ export default function SubscriptionShop() {
 
 function PriceChip({ label, price, unit }: { label: string; price: number; unit: string }) {
   return (
-    <div className="bg-blue-50 rounded-lg px-2.5 py-1.5 text-center min-w-[70px]">
-      <div className="text-[10px] text-blue-500 font-medium">{label}</div>
-      <div className="text-sm font-bold text-slate-800">Br {price.toLocaleString()}</div>
-      <div className="text-[9px] text-slate-400">/{unit}</div>
+    <div className="bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60 rounded-xl px-3 py-1.5 text-left transition-all hover:bg-slate-100 dark:hover:bg-slate-850 flex flex-col justify-center min-w-[75px]">
+      <span className="text-[7.5px] uppercase tracking-widest text-slate-400 font-extrabold">{label}</span>
+      <span className="text-xs font-black text-slate-800 dark:text-slate-100 mt-0.5">Br {price.toLocaleString()}</span>
+      <span className="text-[8px] text-slate-400">/{unit}</span>
     </div>
   );
 }
