@@ -1,22 +1,40 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/stores/AppStore';
-import { cn } from '@/lib/utils';
+import { cn, formatPrice } from '@/lib/utils';
 import { SpinWheel, StreakBadge, MysteryBox } from '@/components/game/SpinWheel';
 import { checkStreak, claimStreakReward, getStreak, getSpinData } from '@/lib/game';
 import { toast } from '@/components/Toast';
-import { Gift, Flame, Sparkles, Trophy, ArrowLeft, Coins } from 'lucide-react';
+import { haptic } from '@/lib/confetti';
+import { Gift, Flame, Sparkles, Trophy, ArrowLeft, Coins, Tag, Copy, CheckCircle } from 'lucide-react';
+
+const REWARD_STORE_ITEMS = [
+  { id: 'free_del', label: '🚚 Express Free Delivery', desc: 'Saves Br 80 on delivery fees', cost: 50, discount: 80, codePrefix: 'LOYAL-FREE' },
+  { id: 'br_100', label: '💰 Br 100 Discount', desc: 'Br 100 off any purchase', cost: 150, discount: 100, codePrefix: 'LOYAL-100' },
+  { id: 'br_250', label: '💎 Br 250 Discount', desc: 'Br 250 off any purchase', cost: 300, discount: 250, codePrefix: 'LOYAL-250' },
+  { id: 'br_500', label: '👑 Br 500 Mega Coupon', desc: 'Br 500 off any purchase', cost: 550, discount: 500, codePrefix: 'LOYAL-500' },
+];
 
 export default function Loyalty() {
   const navigate = useNavigate();
   const store = useStore();
-  const { loyaltyPoints, addToWallet, addNotification, settings } = store;
+  const { loyaltyPoints, addNotification, settings } = store;
   const streak = checkStreak();
   const spinData = getSpinData();
   const [streakClaimed, setStreakClaimed] = useState(getStreak().claimed);
   const [showConversion, setShowConversion] = useState(false);
   const [convertAmount, setConvertAmount] = useState(100);
   const [mysteryBoxes, setMysteryBoxes] = useState(3);
+  
+  // Custom coupons state
+  const [myCoupons, setMyCoupons] = useState<any[]>([]);
+
+  useEffect(() => {
+    try {
+      const c = JSON.parse(localStorage.getItem('ss_game_coupons') || '[]');
+      setMyCoupons(c);
+    } catch {}
+  }, []);
 
   const gameSettings = (settings as any)?.gameSettings || {};
   const segments = (settings as any)?.wheelSegments || null;
@@ -35,6 +53,8 @@ export default function Loyalty() {
       localStorage.setItem('ss_loyalty', String(newPts));
       useStore.setState({ loyaltyPoints: newPts });
     }
+    // Reload local coupons
+    try { setMyCoupons(JSON.parse(localStorage.getItem('ss_game_coupons') || '[]')); } catch {}
   };
 
   const handleMysteryWin = (prize: string, value: number) => {
@@ -51,6 +71,7 @@ export default function Loyalty() {
       useStore.setState({ loyaltyPoints: newPts });
       setStreakClaimed(true);
       toast(`🔥 Streak reward: ${bonus} points!`, 'success');
+      haptic('success');
     } else {
       toast('Already claimed today!', 'info');
     }
@@ -65,15 +86,56 @@ export default function Loyalty() {
       const newPoints = loyaltyPoints - convertAmount;
       localStorage.setItem('ss_loyalty', String(newPoints));
       useStore.setState({ loyaltyPoints: newPoints });
-      addToWallet(cashValue, 'conversion');
+      store.addToWallet(cashValue, 'conversion');
       addNotification('💰', `Converted ${convertAmount} points to Br ${cashValue}!`);
       toast(`💰 Converted! Br ${cashValue} in your wallet!`, 'success');
+      haptic('success');
       setShowConversion(false);
     }
   };
 
+  const handleRedeemCoupon = (item: typeof REWARD_STORE_ITEMS[0]) => {
+    if (loyaltyPoints < item.cost) {
+      toast(`❌ Not enough points. You need ${item.cost} points!`, 'error');
+      haptic('error');
+      return;
+    }
+
+    const confirmRedeem = window.confirm(`Redeem ${item.cost} points for "${item.label}" coupon?`);
+    if (!confirmRedeem) return;
+
+    const newPoints = loyaltyPoints - item.cost;
+    localStorage.setItem('ss_loyalty', String(newPoints));
+    useStore.setState({ loyaltyPoints: newPoints });
+
+    // Generate unique code
+    const randCode = item.codePrefix + '-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+    
+    // Save to coupons
+    const coupons = JSON.parse(localStorage.getItem('ss_game_coupons') || '[]');
+    coupons.unshift({
+      code: randCode,
+      discount: item.discount,
+      source: 'loyalty',
+      claimed: false,
+      expiresAt: Date.now() + 15 * 86400000, // 15 days validity
+    });
+    localStorage.setItem('ss_game_coupons', JSON.stringify(coupons));
+    setMyCoupons(coupons);
+
+    toast(`🎟️ Redeemed! Code ${randCode} is now in your coupons list.`, 'success');
+    addNotification('🎟️', `Redeemed ${item.cost} points for Br ${item.discount} coupon!`);
+    haptic('success');
+  };
+
+  const handleCopyCode = (code: string) => {
+    navigator.clipboard.writeText(code);
+    toast('📋 Code copied to clipboard!', 'success');
+    haptic('light');
+  };
+
   return (
-    <div className="pb-8 animate-fadeUp">
+    <div className="pb-12 animate-fadeUp">
       {/* Header */}
       <div className="sticky top-14 z-10 bg-gradient-to-b from-primary/5 to-transparent backdrop-blur-xl px-4 pt-4 pb-3 border-b border-border/40">
         <div className="flex items-center gap-3">
@@ -86,13 +148,13 @@ export default function Loyalty() {
             </div>
             <div>
               <h2 className="text-base font-bold">Loyalty & Rewards</h2>
-              <p className="text-[9px] text-muted-foreground/60">Play, earn, convert to cash</p>
+              <p className="text-[9px] opacity-75">Play, earn, redeem store coupons</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="px-4 space-y-3 mt-3">
+      <div className="px-4 space-y-4 mt-3">
         {/* Balance Card */}
         <div className="p-4 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-2xl text-white shadow-xl">
           <div className="flex items-center justify-between">
@@ -101,8 +163,8 @@ export default function Loyalty() {
               <div className="text-2xl font-extrabold">{loyaltyPoints} pts</div>
               <p className="text-[9px] opacity-70 mt-0.5">≈ Br {Math.round(loyaltyPoints * conversionRate)}</p>
             </div>
-            <button className="px-4 py-2 bg-white/20 rounded-xl text-[10px] font-bold hover:bg-white/30 transition-colors" onClick={() => setShowConversion(true)}>
-              <Coins size={14} className="inline mr-1" />Convert
+            <button className="px-4 py-2 bg-white/20 rounded-xl text-[10px] font-bold hover:bg-white/30 transition-all flex items-center gap-1" onClick={() => setShowConversion(true)}>
+              <Coins size={14} />Convert Cash
             </button>
           </div>
           <div className="h-1.5 bg-white/20 rounded-full mt-3 overflow-hidden">
@@ -121,6 +183,74 @@ export default function Loyalty() {
             </div>
           </div>
         </div>
+
+        {/* Reward Store / Redeem Coupons */}
+        <div className="p-4 bg-card rounded-2xl border border-border/60 shadow-sm space-y-3">
+          <div className="flex items-center gap-2 border-b pb-2">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center"><Tag size={16} className="text-white" /></div>
+            <div>
+              <h3 className="text-sm font-bold">🎟️ Rewards Store</h3>
+              <p className="text-[9px] text-muted-foreground/60">Redeem points for store shopping coupons</p>
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            {REWARD_STORE_ITEMS.map(item => {
+              const canAfford = loyaltyPoints >= item.cost;
+              return (
+                <div key={item.id} className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-800/40 border dark:border-slate-800 rounded-xl gap-2">
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-slate-800 dark:text-slate-200">{item.label}</div>
+                    <div className="text-[8.5px] text-slate-400 truncate">{item.desc}</div>
+                  </div>
+                  <button 
+                    onClick={() => handleRedeemCoupon(item)}
+                    className={`px-3 py-1.5 rounded-lg text-[9px] font-bold transition-all flex-shrink-0 ${canAfford ? 'bg-emerald-500 text-white shadow hover:scale-105 active:scale-95' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed'}`}
+                  >
+                    🪙 {item.cost} Pts
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Saved Coupons List */}
+        {myCoupons.length > 0 && (
+          <div className="p-4 bg-card rounded-2xl border border-border/60 shadow-sm space-y-3">
+            <div className="flex items-center gap-2 border-b pb-2">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center"><Tag size={16} className="text-white" /></div>
+              <div>
+                <h3 className="text-sm font-bold">🎟️ Your Saved Coupons ({myCoupons.filter(c => !c.claimed).length} active)</h3>
+                <p className="text-[9px] text-muted-foreground/60">Use these promo codes on checkout to save cash</p>
+              </div>
+            </div>
+            
+            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+              {myCoupons.map((c, idx) => (
+                <div key={idx} className={cn('flex items-center justify-between p-2.5 border rounded-xl gap-2 transition-all', c.claimed ? 'bg-slate-100/40 dark:bg-slate-900/30 border-slate-100 opacity-60' : 'bg-indigo-50/20 dark:bg-indigo-950/10 border-indigo-100/50')}>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono text-xs font-bold tracking-wider text-indigo-600 dark:text-indigo-400">{c.code}</span>
+                      {c.claimed && <span className="text-[7.5px] bg-slate-200 text-slate-600 px-1 rounded">Used</span>}
+                      {!c.claimed && c.expiresAt < Date.now() && <span className="text-[7.5px] bg-red-100 text-red-600 px-1 rounded">Expired</span>}
+                    </div>
+                    <div className="text-[8.5px] text-slate-400 mt-0.5">Value: <strong className="text-slate-700 dark:text-slate-300">Br {c.discount}</strong> · Source: {c.source}</div>
+                  </div>
+                  {!c.claimed && c.expiresAt > Date.now() && (
+                    <button 
+                      onClick={() => handleCopyCode(c.code)}
+                      className="p-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 transition-colors"
+                      title="Copy Code"
+                    >
+                      <Copy size={12} />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Streak */}
         <div className="p-4 bg-card rounded-2xl border border-border/60 shadow-sm">

@@ -131,9 +131,33 @@ export default function Checkout() {
  }, []);
 
  const applyPromo = () => {
- if (promoCode.toUpperCase() === 'WELCOME10') { setPromoApplied(true); setPromoDiscount(Math.round(total * 0.1)); toast('10% off applied!', 'success'); }
- else if (promoCode.toUpperCase() === 'FREE50') { setPromoApplied(true); setPromoDiscount(50); toast('Br 50 off applied!', 'success'); }
- else toast('Invalid promo code', 'error');
+   const codeUpper = promoCode.trim().toUpperCase();
+   if (codeUpper === 'WELCOME10') { 
+     setPromoApplied(true); 
+     setPromoDiscount(Math.round(total * 0.1)); 
+     toast('10% off applied!', 'success'); 
+     return;
+   }
+   if (codeUpper === 'FREE50') { 
+     setPromoApplied(true); 
+     setPromoDiscount(50); 
+     toast('Br 50 off applied!', 'success'); 
+     return;
+   }
+
+   try {
+     const coupons = JSON.parse(localStorage.getItem('ss_game_coupons') || '[]');
+     const coupon = coupons.find((c: any) => c.code === codeUpper && !c.claimed && c.expiresAt > Date.now());
+     if (coupon) {
+       setPromoApplied(true);
+       setPromoDiscount(coupon.discount || 0);
+       toast(`✅ Coupon applied! Br ${coupon.discount || 0} discount.`, 'success');
+     } else {
+       toast('Invalid or expired promo code', 'error');
+     }
+   } catch {
+     toast('Invalid promo code', 'error');
+   }
  };
 
  const finalTotal = total - promoDiscount;
@@ -168,6 +192,15 @@ export default function Checkout() {
  const d = await res.json();
  if (d.success) addLoyaltyPoints(points);
  } catch { addLoyaltyPoints(points); }
+
+ // If a dynamic coupon was used, mark it as claimed!
+ if (promoApplied) {
+   try {
+     const coupons = JSON.parse(localStorage.getItem('ss_game_coupons') || '[]');
+     const updated = coupons.map((c: any) => c.code === promoCode.trim().toUpperCase() ? { ...c, claimed: true } : c);
+     localStorage.setItem('ss_game_coupons', JSON.stringify(updated));
+   } catch {}
+ }
 
  const fulfillment = createFulfillment({ orderNumber: orderNum, items: order.items, total: order.total, customer: order.customer, createdAt: order.createdAt, status: order.status });
  upsertFulfillment(fulfillment);

@@ -40,24 +40,46 @@ export function SpinWheel({ onWin, segments: customSegments, adminSettings }: Sp
     if (!available || spinning) return;
     setSpinning(true);
 
-    const result = spin();
-    const segAngle = 360 / segments.length;
-    const prizeIndex = segments.findIndex(s => s.label.includes(result.prize) || s.label.includes(String(result.value)));
-    const target = prizeIndex >= 0 ? prizeIndex : Math.floor(Math.random() * segments.length);
+    const sData = getSpinData();
+    const today = new Date().toDateString();
+    localStorage.setItem('ss_game_spin', JSON.stringify({
+      lastSpin: today,
+      spinsToday: sData.lastSpin === today ? sData.spinsToday + 1 : 1,
+      totalSpins: (sData.totalSpins || 0) + 1,
+    }));
 
+    const target = Math.floor(Math.random() * segments.length);
+    const result = segments[target];
+
+    const segAngle = 360 / segments.length;
     const fullSpins = (3 + Math.floor(Math.random() * 3)) * 360;
     const finalAngle = fullSpins + (360 - target * segAngle - segAngle / 2);
     setRotation(prev => prev + finalAngle);
 
     setTimeout(() => {
       setSpinning(false);
-      setAvailable(canSpin());
-      if (result.prize !== 'Try Again!') {
-        onWin(result.prize, result.value);
-        toast(`🎉 You won ${result.emoji} ${result.prize}!`, 'success');
+      setAvailable(false);
+      
+      const prizeValue = result.value || 0;
+      const prizeLabel = result.label || 'Try Again';
+
+      if (prizeValue > 0) {
+        const codes = JSON.parse(localStorage.getItem('ss_game_coupons') || '[]');
+        const couponCode = 'SPIN-' + Date.now().toString(36).toUpperCase();
+        codes.push({
+          code: couponCode,
+          discount: prizeValue,
+          source: 'spin',
+          claimed: false,
+          expiresAt: Date.now() + 7 * 86400000,
+        });
+        localStorage.setItem('ss_game_coupons', JSON.stringify(codes));
+        toast(`🎉 You won a coupon: ${prizeLabel}! Code: ${couponCode}`, 'success');
       } else {
-        toast('🔄 Try again tomorrow!', 'info');
+        toast(`🎉 Result: ${prizeLabel}!`, 'success');
       }
+      
+      onWin(prizeLabel, prizeValue);
     }, 2500);
   }, [available, spinning, onWin, segments]);
 
@@ -80,7 +102,7 @@ export function SpinWheel({ onWin, segments: customSegments, adminSettings }: Sp
           {segments.map((seg, i) => {
             const angle = (360 / segments.length) * i;
             const endAngle = angle + 360 / segments.length;
-            const midAngle = ((angle + endAngle) / 2) * (Math.PI / 180);
+            const midAngle = (((angle + endAngle) / 2) - 90) * (Math.PI / 180);
             const x1 = 100 + 85 * Math.cos((angle - 90) * (Math.PI / 180));
             const y1 = 100 + 85 * Math.sin((angle - 90) * (Math.PI / 180));
             const x2 = 100 + 85 * Math.cos((endAngle - 90) * (Math.PI / 180));
@@ -95,7 +117,7 @@ export function SpinWheel({ onWin, segments: customSegments, adminSettings }: Sp
                 <text x={textX} y={textY} textAnchor="middle" dominantBaseline="middle"
                   fill={fontColor} fontSize={fontSize}
                   transform={`rotate(${angle + 360 / segments.length / 2}, ${textX}, ${textY})`}>
-                  {displayLabel(seg).substring(0, 3)}
+                  {displayLabel(seg).substring(0, 8)}
                 </text>
               </g>
             );
