@@ -69,25 +69,25 @@ export default function SubscriptionsPage() {
   const totalDaily = activeSubs.filter(s => s.frequency === 'daily').reduce((s, sub) => s + (sub.price || 0), 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
-      <div className="max-w-lg mx-auto p-4 pb-24">
+    <div className="min-h-screen bg-background text-foreground pb-24">
+      <div className="max-w-lg mx-auto p-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <button onClick={() => navigate(-1)} className="text-slate-600"><ArrowLeft size={20} /></button>
+            <button onClick={() => navigate(-1)} className="text-muted-foreground hover:text-foreground transition-colors"><ArrowLeft size={18} /></button>
             <div>
-              <h1 className="text-2xl font-bold text-slate-800">📦 My Subscriptions</h1>
-              <p className="text-xs text-slate-400">Manage your regular deliveries</p>
+              <h1 className="text-2xl font-black text-foreground">📦 My Subscriptions</h1>
+              <p className="text-xs text-muted-foreground mt-0.5">Manage your regular deliveries</p>
             </div>
           </div>
           <button onClick={() => navigate('/subscription-shop')}
-            className="bg-blue-500 text-white px-4 py-2 rounded-xl text-sm font-medium shadow-lg hover:shadow-xl transition-all flex items-center gap-1">
-            <ShoppingBag size={16} /> + New
+            className="bg-primary text-primary-foreground px-4 py-2 rounded-xl text-xs font-bold shadow-lg shadow-primary/25 hover:shadow-xl transition-all flex items-center gap-1">
+            <ShoppingBag size={14} /> + New
           </button>
         </div>
 
         {/* Stats Card */}
         {activeSubs.length > 0 && (
-          <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl p-4 text-white mb-4 shadow-lg">
+          <div className="bg-gradient-to-br from-primary to-primary/90 rounded-2xl p-4 text-primary-foreground mb-4 shadow-lg shadow-primary/10">
             <div className="grid grid-cols-3 gap-3 text-center">
               <div>
                 <div className="text-2xl font-bold">{activeSubs.length}</div>

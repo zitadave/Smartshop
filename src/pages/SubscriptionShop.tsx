@@ -72,23 +72,23 @@ export default function SubscriptionShop() {
     setSubscribing(false);
   };
 
-  if (loading) return <div className="p-8 text-center text-slate-400">Loading plans...</div>;
+  if (loading) return <div className="p-8 text-center text-muted-foreground bg-background min-h-screen flex items-center justify-center">Loading plans...</div>;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+    <div className="min-h-screen bg-background text-foreground pb-24">
       <div className="max-w-lg mx-auto p-4">
-        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-600 mb-4">
-          <ArrowLeft size={20} /> Back
+        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4 transition-colors font-semibold text-sm">
+          <ArrowLeft size={18} /> Back
         </button>
 
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-2xl font-bold text-slate-800">📦 Subscriptions</h1>
-            <p className="text-sm text-slate-500">Daily, weekly & monthly deliveries</p>
+            <h1 className="text-2xl font-black text-foreground">📦 Subscriptions</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">Daily, weekly & monthly deliveries</p>
           </div>
           {mySubs.length > 0 && (
             <button onClick={() => navigate('/subscriptions')}
-              className="text-xs bg-blue-100 text-blue-600 px-3 py-2 rounded-lg font-medium">
+              className="text-xs bg-primary/10 text-primary px-3 py-2 rounded-xl font-bold border border-primary/20 shadow-sm hover:bg-primary/20 transition-all">
               My Subs ({mySubs.length})
             </button>
           )}
@@ -97,12 +97,12 @@ export default function SubscriptionShop() {
         {/* Categories */}
         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none mb-4">
           <button onClick={() => setCategory('all')}
-            className={`px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap transition-all ${category === 'all' ? 'bg-blue-500 text-white shadow-lg' : 'bg-white text-slate-600 shadow-sm'}`}>
+            className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${category === 'all' ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25' : 'bg-card text-muted-foreground border border-border/60 hover:text-foreground'}`}>
             🎯 All
           </button>
           {Object.keys(grouped).map(cat => (
             <button key={cat} onClick={() => setCategory(cat)}
-              className={`px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap transition-all ${category === cat ? 'bg-blue-500 text-white shadow-lg' : 'bg-white text-slate-600 shadow-sm'}`}>
+              className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${category === cat ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25' : 'bg-card text-muted-foreground border border-border/60 hover:text-foreground'}`}>
               {cat === 'dairy' ? '🥛' : cat === 'bakery' ? '🍞' : cat === 'drinks' ? '💧' : '📦'} {cat}
             </button>
           ))}
@@ -212,41 +212,41 @@ export default function SubscriptionShop() {
                   return (
                     <button key={f} disabled={disabled}
                       onClick={() => setFrequency(f)}
-                      className={`p-3 rounded-xl text-center transition-all ${isActive ? 'bg-blue-500 text-white shadow-lg ring-2 ring-blue-300' : disabled ? 'bg-slate-50 text-slate-300' : 'bg-slate-50 text-slate-700 hover:bg-blue-50'}`}>
+                      className={`p-3 rounded-xl text-center transition-all border ${isActive ? 'bg-primary text-primary-foreground border-primary shadow-lg ring-4 ring-primary/10' : disabled ? 'bg-muted/40 text-muted-foreground/30 border-transparent' : 'bg-card text-foreground border-border/60 hover:bg-muted/30'}`}>
                       <div className="text-xs font-bold capitalize">{f === 'daily' ? '🗓 Daily' : f === 'weekly' ? '📅 Weekly' : f === 'biweekly' ? '📅 Bi-weekly' : '📆 Monthly'}</div>
-                      {!disabled && <div className="text-lg font-bold mt-1">Br {price.toLocaleString()}</div>}
-                      {disc > 0 && <div className="text-[10px] mt-1 font-medium text-green-500">-{disc}% off</div>}
+                      {!disabled && <div className="text-sm font-black mt-1">Br {price.toLocaleString()}</div>}
+                      {disc > 0 && <div className="text-[9px] mt-1 font-bold text-emerald-500 dark:text-emerald-400">-{disc}% off</div>}
                     </button>
                   );
                 })}
               </div>
 
               {/* Quantity Selector */}
-              <div className="bg-slate-50 rounded-xl p-4 mb-4">
+              <div className="bg-card border border-border/60 rounded-2xl p-4 mb-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium">Quantity</span>
-                  <span className="text-sm text-slate-400">{selectedPlan.unit} × {selectedPlan.unitLabel}</span>
+                  <span className="text-sm font-bold text-foreground">Quantity</span>
+                  <span className="text-xs text-muted-foreground">{selectedPlan.unit} × {selectedPlan.unitLabel}</span>
                 </div>
                 <div className="flex items-center justify-center gap-6">
                   <button onClick={() => setQuantity(Math.max(selectedPlan.minQuantity, quantity - 1))}
                     disabled={quantity <= selectedPlan.minQuantity}
-                    className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center disabled:opacity-30">
-                    <Minus size={18} />
+                    className="w-10 h-10 rounded-full bg-background border border-border flex items-center justify-center disabled:opacity-30 hover:bg-muted/50 active:scale-95 transition-all text-foreground shadow-sm">
+                    <Minus size={16} />
                   </button>
-                  <span className="text-2xl font-bold w-12 text-center">{quantity}</span>
+                  <span className="text-2xl font-black w-12 text-center text-foreground">{quantity}</span>
                   <button onClick={() => setQuantity(Math.min(selectedPlan.maxQuantity, quantity + 1))}
                     disabled={quantity >= selectedPlan.maxQuantity}
-                    className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center disabled:opacity-30">
-                    <Plus size={18} />
+                    className="w-10 h-10 rounded-full bg-background border border-border flex items-center justify-center disabled:opacity-30 hover:bg-muted/50 active:scale-95 transition-all text-foreground shadow-sm">
+                    <Plus size={16} />
                   </button>
                 </div>
               </div>
 
               {/* Total Price */}
-              <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-4 text-white mb-4">
+              <div className="bg-gradient-to-br from-primary to-primary/95 text-primary-foreground rounded-2xl p-4 mb-4 shadow-lg shadow-primary/15 border border-primary/20">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm opacity-90">Total {formatFrequency(frequency)}:</span>
-                  <span className="text-2xl font-bold">Br {getPlanPrice(selectedPlan, frequency, quantity).toLocaleString()}</span>
+                  <span className="text-xs opacity-90 font-bold uppercase tracking-wider">Total {formatFrequency(frequency)}:</span>
+                  <span className="text-2xl font-black">Br {getPlanPrice(selectedPlan, frequency, quantity).toLocaleString()}</span>
                 </div>
                 <div className="text-xs opacity-75 mt-1">
                   ×{quantity} {selectedPlan.unit}{selectedPlan.unitLabel} · Deliveries every {frequency === 'daily' ? 'morning' : frequency === 'weekly' ? 'week' : 'month'}
@@ -255,14 +255,14 @@ export default function SubscriptionShop() {
 
               {/* Delivery Address */}
               <div className="space-y-3 mb-4">
-                <div className="flex items-center gap-2 text-slate-700 border p-3 rounded-xl">
-                  <MapPin size={16} className="text-blue-500 flex-shrink-0" />
+                <div className="flex items-center gap-2 bg-card border border-border/80 p-3 rounded-xl">
+                  <MapPin size={16} className="text-primary flex-shrink-0" />
                   <input placeholder="Delivery address (required)" value={address} onChange={e => setAddress(e.target.value)}
-                    className="flex-1 text-sm outline-none bg-transparent" />
+                    className="flex-1 text-sm outline-none bg-transparent text-foreground placeholder:text-muted-foreground/60" />
                 </div>
-                <div className="flex items-center gap-2 text-slate-400 border p-3 rounded-xl">
-                  <Clock size={16} className="text-slate-400 flex-shrink-0" />
-                  <select className="flex-1 text-sm outline-none bg-transparent text-slate-600">
+                <div className="flex items-center gap-2 bg-card border border-border/80 p-3 rounded-xl">
+                  <Clock size={16} className="text-muted-foreground flex-shrink-0" />
+                  <select className="flex-1 text-sm outline-none bg-transparent text-foreground">
                     <option>07:00 - 09:00 Morning</option>
                     <option>09:00 - 12:00 Late Morning</option>
                     <option>14:00 - 17:00 Afternoon</option>
@@ -273,10 +273,10 @@ export default function SubscriptionShop() {
 
               {/* Subscribe Button */}
               <button onClick={handleSubscribe} disabled={subscribing || !address.trim()}
-                className="w-full py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+                className="w-full py-4 bg-gradient-to-r from-primary to-primary/95 text-primary-foreground rounded-2xl font-bold text-lg shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
                 {subscribing ? '⏳ Subscribing...' : `✅ Subscribe Now`}
               </button>
-              <p className="text-xs text-slate-400 text-center mt-2">First delivery tomorrow morning. Cancel anytime.</p>
+              <p className="text-xs text-muted-foreground text-center mt-2">First delivery tomorrow morning. Cancel anytime.</p>
             </div>
           </div>
         )}
