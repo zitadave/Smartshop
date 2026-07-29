@@ -53,6 +53,7 @@ export default function OrderFulfillment() {
           total: order.total || 0,
           customer: order.customer || { name: '', phone: '', city: '' },
           createdAt: order.createdAt || new Date().toISOString(),
+          status: order.status
         }));
       }
     });

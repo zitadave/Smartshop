@@ -132,6 +132,7 @@ export function createFulfillment(order: {
   total: number;
   customer: { name: string; phone: string; city: string };
   createdAt: string;
+  status?: string;
 }): OrderFulfillment {
   // Group items by vendor
   const vendorMap = new Map<number, VendorFulfillment>();
@@ -152,13 +153,15 @@ export function createFulfillment(order: {
     vf.subtotal += item.price * item.quantity;
   });
 
+  const initialStatus: FulfillmentStatus = order.status === 'pending_approval' ? 'pending_payment' : 'confirmed';
+
   return {
     orderNumber: order.orderNumber,
-    status: 'confirmed',
+    status: initialStatus,
     events: [{
       id: generateId(),
-      status: 'confirmed',
-      label: 'Order Placed',
+      status: initialStatus,
+      label: initialStatus === 'pending_payment' ? 'Order Placed (Awaiting Payment)' : 'Order Placed',
       timestamp: order.createdAt || new Date().toISOString(),
       actor: 'customer',
       note: `Order placed by ${order.customer.name}`,

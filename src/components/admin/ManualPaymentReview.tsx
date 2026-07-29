@@ -6,7 +6,8 @@ import { useState, useEffect } from 'react';
 import { formatPrice, cn } from '@/lib/utils';
 import { sendAdminTelegram, sendFileToTelegram } from '@/lib/adminNotifier';
 import { toast } from '@/components/Toast';
-import { Check, X, Search, RefreshCw, Banknote, Clock, Edit3, Plus, Trash2, Save, ExternalLink, FileText, Image as ImageIcon, Copy } from 'lucide-react';
+import { useStore } from '@/stores/AppStore';
+import { Check, X, Search, RefreshCw, Banknote, Clock, Edit3, Plus, Trash2, Save, ExternalLink, FileText, ImageIcon, Copy } from 'lucide-react';
 
 interface ManualPayment {
   id: string;
@@ -93,13 +94,82 @@ export default function ManualPaymentReview() {
     return true;
   });
 
-  const approve = (id: string) => {
+  const approve = async (id: string) => {
     const updated = payments.map(p => p.id === id ? { ...p, status: 'approved' as const, reviewedAt: new Date().toISOString(), reviewedBy: 'admin' } : p);
     savePayments(updated);
     setPayments(updated);
     const p = updated.find(x => x.id === id);
-    toast(`✅ Payment approved for ${p?.orderNumber}!`, 'success');
-    sendAdminTelegram(`✅ <b>Manual Payment Approved</b>\n\nOrder: ${p?.orderNumber}\nCustomer: ${p?.customerName}\nAmount: ${formatPrice(p?.amount || 0)}\nThe order has been confirmed.`);
+    if (!p) return;
+
+    toast(`✅ Payment approved for ${p.orderNumber}!`, 'success');
+    sendAdminTelegram(`✅ <b>Manual Payment Approved</b>\n\nOrder: ${p.orderNumber}\nCustomer: ${p.customerName}\nAmount: ${formatPrice(p.amount || 0)}\nThe order has been confirmed.`);
+
+    // 1. Update the order's status to 'confirmed' inside Supabase!
+    fetch(`/api/orders/${p.orderNumber}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'confirmed' })
+    }).catch(err => console.error('Failed to sync order approval with backend:', err));
+
+    // 2. Update the local ss_orders array so changes reflect instantly for customer & admin
+    try {
+      const storedOrders = JSON.parse(localStorage.getItem('ss_orders') || '[]');
+      const updatedOrders = storedOrders.map((o: any) => o.orderNumber === p.orderNumber ? { ...o, status: 'confirmed' } : o);
+      localStorage.setItem('ss_orders', JSON.stringify(updatedOrders));
+      
+      // Update local React AppStore state
+      const { orders, setProducts } = useStore.getState();
+      const storeOrder = orders.find((o: any) => o.orderNumber === p.orderNumber);
+      if (storeOrder) {
+        storeOrder.status = 'confirmed';
+      }
+    } catch (e: any) {
+      console.error('Local orders sync failed:', e.message);
+    }
+
+    // 3. Update the local ss_fulfillments status to 'confirmed'
+    try {
+      const storedFulfillments = JSON.parse(localStorage.getItem('ss_fulfillments') || '[]');
+      const updatedFulfillments = storedFulfillments.map((f: any) => {
+        if (f.orderNumber === p.orderNumber) {
+          const event = {
+            id: Math.random().toString(36).substring(2),
+            status: 'confirmed',
+            label: 'Confirmed',
+            timestamp: new Date().toISOString(),
+            actor: 'admin',
+            note: 'Manual bank transfer verified and approved by admin'
+          };
+          return {
+            ...f,
+            status: 'confirmed',
+            events: [...f.events, event]
+          };
+        }
+        return f;
+      });
+      localStorage.setItem('ss_fulfillments', JSON.stringify(updatedFulfillments));
+    } catch (e: any) {
+      console.error('Fulfillment sync failed:', e.message);
+    }
+
+    // 4. Send Telegram notification to the customer chat!
+    try {
+      const storedOrders = JSON.parse(localStorage.getItem('ss_orders') || '[]');
+      const targetOrder = storedOrders.find((o: any) => o.orderNumber === p.orderNumber);
+      const tid = targetOrder?.customer?.telegram_id || targetOrder?.customer?.telegramId || targetOrder?.telegramId || targetOrder?.telegram_id;
+      if (tid) {
+        fetch('/api/vendor/notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            telegramId: String(tid),
+            type: 'order',
+            message: `Your payment of Br ${p.amount} for order #${p.orderNumber} has been approved by admin! We are preparing your order.`
+          })
+        }).catch(() => {});
+      }
+    } catch {}
   };
 
   const reject = (id: string) => {
@@ -108,8 +178,72 @@ export default function ManualPaymentReview() {
     savePayments(updated);
     setPayments(updated);
     const p = updated.find(x => x.id === id);
-    toast(`❌ Payment rejected for ${p?.orderNumber}`, 'info');
-    sendAdminTelegram(`❌ <b>Manual Payment Rejected</b>\n\nOrder: ${p?.orderNumber}\nCustomer: ${p?.customerName}\nAmount: ${formatPrice(p?.amount || 0)}${reason ? '\nReason: ' + reason : ''}`);
+    if (!p) return;
+
+    toast(`❌ Payment rejected for ${p.orderNumber}`, 'info');
+    sendAdminTelegram(`❌ <b>Manual Payment Rejected</b>\n\nOrder: ${p.orderNumber}\nCustomer: ${p.customerName}\nAmount: ${formatPrice(p.amount || 0)}${reason ? '\nReason: ' + reason : ''}`);
+
+    // 1. Update the order's status to 'cancelled' inside Supabase!
+    fetch(`/api/orders/${p.orderNumber}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'cancelled' })
+    }).catch(err => console.error('Failed to sync order rejection with backend:', err));
+
+    // 2. Update local ss_orders array
+    try {
+      const storedOrders = JSON.parse(localStorage.getItem('ss_orders') || '[]');
+      const updatedOrders = storedOrders.map((o: any) => o.orderNumber === p.orderNumber ? { ...o, status: 'cancelled' } : o);
+      localStorage.setItem('ss_orders', JSON.stringify(updatedOrders));
+      
+      const { orders } = useStore.getState();
+      const storeOrder = orders.find((o: any) => o.orderNumber === p.orderNumber);
+      if (storeOrder) {
+        storeOrder.status = 'cancelled';
+      }
+    } catch {}
+
+    // 3. Update local ss_fulfillments status to 'cancelled'
+    try {
+      const storedFulfillments = JSON.parse(localStorage.getItem('ss_fulfillments') || '[]');
+      const updatedFulfillments = storedFulfillments.map((f: any) => {
+        if (f.orderNumber === p.orderNumber) {
+          const event = {
+            id: Math.random().toString(36).substring(2),
+            status: 'cancelled',
+            label: 'Cancelled',
+            timestamp: new Date().toISOString(),
+            actor: 'admin',
+            note: 'Manual bank transfer rejected by admin' + (reason ? ': ' + reason : '')
+          };
+          return {
+            ...f,
+            status: 'cancelled',
+            events: [...f.events, event]
+          };
+        }
+        return f;
+      });
+      localStorage.setItem('ss_fulfillments', JSON.stringify(updatedFulfillments));
+    } catch {}
+
+    // 4. Send Telegram notification to the customer chat!
+    try {
+      const storedOrders = JSON.parse(localStorage.getItem('ss_orders') || '[]');
+      const targetOrder = storedOrders.find((o: any) => o.orderNumber === p.orderNumber);
+      const tid = targetOrder?.customer?.telegram_id || targetOrder?.customer?.telegramId || targetOrder?.telegramId || targetOrder?.telegram_id;
+      if (tid) {
+        fetch('/api/vendor/notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            telegramId: String(tid),
+            type: 'order',
+            message: `Your payment for order #${p.orderNumber} has been rejected by admin.${reason ? ' Reason: ' + reason : ''}`
+          })
+        }).catch(() => {});
+      }
+    } catch {}
   };
 
   const addBank = () => {

@@ -169,7 +169,7 @@ export default function Checkout() {
  if (d.success) addLoyaltyPoints(points);
  } catch { addLoyaltyPoints(points); }
 
- const fulfillment = createFulfillment({ orderNumber: orderNum, items: order.items, total: order.total, customer: order.customer, createdAt: order.createdAt });
+ const fulfillment = createFulfillment({ orderNumber: orderNum, items: order.items, total: order.total, customer: order.customer, createdAt: order.createdAt, status: order.status });
  upsertFulfillment(fulfillment);
  addOrder(order);
 
