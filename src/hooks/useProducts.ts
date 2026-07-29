@@ -2,6 +2,61 @@ import { useMemo, useCallback, useState } from 'react';
 import { useStore } from '@/stores/AppStore';
 import type { CategoryId, SortMode } from '@/types';
 
+export function normalizeAmharicPhonetics(text: string): string {
+  let result = text.toLowerCase();
+  
+  const homophones: Record<string, string> = {
+    'ሐ': 'ሀ', 'ኀ': 'ሀ', 'ኃ': 'ሀ', 'ኅ': 'ሀ', 'ሃ': 'ሀ', 'ሓ': 'ሀ',
+    'ሑ': 'ሁ', 'ኁ': 'ሁ',
+    'ሒ': 'ሂ', 'ኂ': 'ሂ',
+    'ሔ': 'ሄ', 'ኄ': 'ሄ',
+    'ሕ': 'ህ', 'ኅ': 'ህ',
+    'ሖ': 'ሆ', 'ኆ': 'ሆ',
+    'ሠ': 'ሰ', 'ሡ': 'ሱ', 'ሢ': 'ሲ', 'ሣ': 'ሳ', 'ሤ': 'ሴ', 'ሥ': 'ስ', 'ሦ': 'ሶ',
+    'ዓ': 'አ', 'ዑ': 'ኡ', 'ዒ': 'ኢ', 'ዔ': 'ኤ', 'ዕ': 'እ', 'ዖ': 'ኦ',
+    'ፀ': 'ጸ', 'ፁ': 'ጹ', 'ፂ': 'ጺ', 'ፃ': 'ጻ', 'ፄ': 'ጼ', 'ፅ': 'ጽ', 'ፆ': 'ጾ'
+  };
+
+  for (const [key, value] of Object.entries(homophones)) {
+    result = result.replace(new RegExp(key, 'g'), value);
+  }
+
+  return result;
+}
+
+export function stripStopWords(text: string): string {
+  const amharicStopWords = [
+    'እባክህ', 'እባክሽ', 'እባካችሁ', 'እባካችው',
+    'እፈልጋለሁ', 'እፈልጋታለሁ', 'እፈልገዋለሁ', 'እፈልጋለኹ',
+    'እፈልጋለን', 'ፈልጌ', 'ፈልጌ ነበር', 'ነበር',
+    'የለህም', 'የለሽም', 'የለም', 'የላችሁም',
+    'አለ', 'አለሽ', 'አላቸው', 'አለው',
+    'እባክዎን', 'እባክዎትን', 'እባኮትን',
+    'እስኪ', 'እስቲ', 'የሆነ', 'የሆኑ', 'ጋር', 'ውስጥ'
+  ];
+  
+  const englishStopWords = [
+    'please', 'want', 'i want', 'looking for', 'look for',
+    'i need', 'need', 'would like', 'do you have', 'is there',
+    'any', 'some', 'for', 'with', 'in', 'have', 'has', 'get',
+    'give', 'me', 'the', 'a', 'an', 'about', 'around'
+  ];
+
+  let cleaned = text.toLowerCase().trim();
+
+  amharicStopWords.forEach(word => {
+    const regex = new RegExp(`\\b${word}\\b|${word}`, 'g');
+    cleaned = cleaned.replace(regex, '');
+  });
+
+  englishStopWords.forEach(word => {
+    const regex = new RegExp(`\\b${word}\\b`, 'g');
+    cleaned = cleaned.replace(regex, '');
+  });
+
+  return cleaned.replace(/\s+/g, ' ').trim();
+}
+
 export function useProducts() {
   const { products } = useStore();
   const [search, setSearch] = useState('');
@@ -16,7 +71,12 @@ export function useProducts() {
     }
 
     if (search.trim()) {
-      const q = search.toLowerCase().trim();
+      const originalQuery = search.toLowerCase().trim();
+      // 1. Strip stop words
+      const queryCleaned = stripStopWords(originalQuery);
+      // 2. Normalize phonetics for Amharic spelling resilience!
+      const q = normalizeAmharicPhonetics(queryCleaned || originalQuery);
+      
       const rawTokens = q.split(/\s+/).filter(token => token.length > 1);
       
       // Bilingual bidirectional translation dictionary
@@ -24,7 +84,7 @@ export function useProducts() {
         'ወተት': 'milk', 'milk': 'ወተት',
         'እንቁላል': 'egg', 'egg': 'እንቁላል', 'eggs': 'እንቁላል',
         'ዳቦ': 'bread', 'bread': 'ዳቦ',
-        'ውሃ': 'water', 'water': 'ውሃ',
+        'ውሃ': 'water', 'water': 'ውሃ', 'ውኃ': 'water',
         'ቡና': 'coffee', 'coffee': 'ቡና',
         'ማር': 'honey', 'honey': 'ማር',
         'ስኳር': 'sugar', 'sugar': 'ስኳር',
@@ -49,12 +109,11 @@ export function useProducts() {
       });
       
       result = result.filter(p => {
-        const nameAm = (p.name || '').toLowerCase();
-        const nameEn = (p.nameEn || p.name || '').toLowerCase();
-        const desc = (p.description || '').toLowerCase();
-        const descEn = (p.descriptionEn || '').toLowerCase();
+        const nameAm = normalizeAmharicPhonetics(p.name || '');
+        const nameEn = normalizeAmharicPhonetics(p.nameEn || p.name || '');
+        const desc = normalizeAmharicPhonetics(p.description || '');
+        const descEn = normalizeAmharicPhonetics(p.descriptionEn || '');
         
-        // If the complete original query matches, keep it
         if (nameAm.includes(q) || nameEn.includes(q)) return true;
         
         const matchToken = (token: string) => {

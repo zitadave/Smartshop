@@ -1,7 +1,7 @@
 import { useCallback, useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '@/stores/AppStore';
-import { useProducts } from '@/hooks/useProducts';
+import { useProducts, stripStopWords } from '@/hooks/useProducts';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useCart } from '@/hooks/useCart';
 import { useButtonAnimation, useWishlistAnimation } from '@/hooks/useAnimations';
@@ -65,29 +65,41 @@ export default function Shop() {
         recognition.onresult = async (event: any) => {
           const spokenText = event.results[0][0].transcript;
           console.log('[SPEECH] Transcribed text:', spokenText);
-          setSearch(spokenText);
+          
+          const purified = stripStopWords(spokenText);
+          if (!purified) {
+            setSearch(spokenText);
+            return;
+          }
+          setSearch(purified);
           
           try {
-            const isAmharic = /[\u1200-\u137F]/.test(spokenText);
+            const isAmharic = /[\u1200-\u137F]/.test(purified);
             const pair = isAmharic ? 'am|en' : 'en|am';
             
-            // Translate universally via public free MyMemory Translation API
-            const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(spokenText)}&langpair=${pair}`);
-            if (res.ok) {
-              const d = await res.json();
-              const translated = d.responseData?.translatedText;
-              if (translated && translated.toLowerCase() !== spokenText.toLowerCase()) {
-                setSearch(spokenText + ' ' + translated);
-                toast(`🎙️ Voice Search: "${spokenText}" (expanded: "${translated}")`, 'success');
-              } else {
-                toast(`🎙️ Voice Search: "${spokenText}"`, 'success');
+            const cacheKey = `ss_trans_${purified.replace(/\s+/g, '_')}_${pair}`;
+            let translated = localStorage.getItem(cacheKey);
+
+            if (!translated) {
+              const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(purified)}&langpair=${pair}`);
+              if (res.ok) {
+                const d = await res.json();
+                translated = d.responseData?.translatedText;
+                if (translated) {
+                  localStorage.setItem(cacheKey, translated);
+                }
               }
+            }
+
+            if (translated && translated.toLowerCase() !== purified.toLowerCase()) {
+              setSearch(purified + ' ' + translated);
+              toast(`🎙️ Search: "${purified}" (expanded: "${translated}")`, 'success');
             } else {
-              toast(`🎙️ Voice Search: "${spokenText}"`, 'success');
+              toast(`🎙️ Search: "${purified}"`, 'success');
             }
           } catch (err) {
             console.warn('Free Translation API failed:', err);
-            toast(`🎙️ Voice Search: "${spokenText}"`, 'success');
+            toast(`🎙️ Search: "${purified}"`, 'success');
           }
         };
 
@@ -106,20 +118,31 @@ export default function Shop() {
 
   const translateTypedQuery = async () => {
     if (!search.trim()) return;
+    const purified = stripStopWords(search);
     try {
-      const isAmharic = /[\u1200-\u137F]/.test(search);
+      const isAmharic = /[\u1200-\u137F]/.test(purified);
       const pair = isAmharic ? 'am|en' : 'en|am';
-      toast('✨ Translating search query...', 'info');
-      const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(search)}&langpair=${pair}`);
-      if (res.ok) {
-        const d = await res.json();
-        const translated = d.responseData?.translatedText;
-        if (translated && translated.toLowerCase() !== search.toLowerCase()) {
-          setSearch(search + ' ' + translated);
-          toast(`✨ Search expanded with: "${translated}"`, 'success');
-        } else {
-          toast('✨ Query is already translated.', 'info');
+      
+      const cacheKey = `ss_trans_${purified.replace(/\s+/g, '_')}_${pair}`;
+      let translated = localStorage.getItem(cacheKey);
+
+      if (!translated) {
+        toast('✨ Translating search query...', 'info');
+        const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(purified)}&langpair=${pair}`);
+        if (res.ok) {
+          const d = await res.json();
+          translated = d.responseData?.translatedText;
+          if (translated) {
+            localStorage.setItem(cacheKey, translated);
+          }
         }
+      }
+
+      if (translated && translated.toLowerCase() !== purified.toLowerCase()) {
+        setSearch(purified + ' ' + translated);
+        toast(`✨ Search expanded with: "${translated}"`, 'success');
+      } else {
+        toast('✨ Query is already translated.', 'info');
       }
     } catch {
       toast('❌ Translation failed.', 'error');
