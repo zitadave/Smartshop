@@ -174,7 +174,8 @@ export default function Checkout() {
 
  const orderNum = generateOrderNumber();
  setOrderNumber(orderNum);
- const points = Math.floor(grandTotal / 10);
+ const pointsEarnRate = settings?.gameSettings?.pointsEarnRate || 10;
+ const points = Math.floor(grandTotal * (pointsEarnRate / 100));
  setRewardPoints(points);
 
  const order: any = {

@@ -1712,11 +1712,49 @@ function AdminSettings() {
 
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
         <h3 className="text-sm font-bold mb-3 flex items-center gap-2"><Gamepad2 size={16} /> Game & Loyalty Settings</h3>
-        <div className="grid sm:grid-cols-3 gap-3 mb-4">
+        <div className="grid sm:grid-cols-4 gap-3 mb-4">
           <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Min Points for Cash</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={gameSettings.minPointsForCash || 100} onChange={e => updateGameSetting('minPointsForCash', Number(e.target.value))} /></div>
           <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Conversion Rate (pts→Br)</label><input type="number" step="0.1" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={gameSettings.pointsToCashRate || 0.5} onChange={e => updateGameSetting('pointsToCashRate', Number(e.target.value))} /></div>
           <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Daily Spins</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={gameSettings.spinsPerDay || 1} onChange={e => updateGameSetting('spinsPerDay', Number(e.target.value))} /></div>
+          <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Purchase Points Earn Rate (%)</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={gameSettings.pointsEarnRate || 10} onChange={e => updateGameSetting('pointsEarnRate', Number(e.target.value))} /></div>
         </div>
+        
+        <h4 className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">🎟️ Reward Store Coupons</h4>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl text-xs">
+          <div>
+            <label className="text-[8.5px] font-semibold text-slate-400 block">Free Delivery Cost (Pts)</label>
+            <input type="number" className="w-full mt-1 p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-transparent" value={gameSettings.freeDelCost || 50} onChange={e => updateGameSetting('freeDelCost', Number(e.target.value))} />
+          </div>
+          <div>
+            <label className="text-[8.5px] font-semibold text-slate-400 block">Free Delivery Value (Br)</label>
+            <input type="number" className="w-full mt-1 p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-transparent" value={gameSettings.freeDelVal || 80} onChange={e => updateGameSetting('freeDelVal', Number(e.target.value))} />
+          </div>
+          <div>
+            <label className="text-[8.5px] font-semibold text-slate-400 block">Br 100 Coupon Cost (Pts)</label>
+            <input type="number" className="w-full mt-1 p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-transparent" value={gameSettings.br100Cost || 150} onChange={e => updateGameSetting('br100Cost', Number(e.target.value))} />
+          </div>
+          <div>
+            <label className="text-[8.5px] font-semibold text-slate-400 block">Br 100 Coupon Value (Br)</label>
+            <input type="number" className="w-full mt-1 p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-transparent" value={gameSettings.br100Val || 100} onChange={e => updateGameSetting('br100Val', Number(e.target.value))} />
+          </div>
+          <div>
+            <label className="text-[8.5px] font-semibold text-slate-400 block">Br 250 Coupon Cost (Pts)</label>
+            <input type="number" className="w-full mt-1 p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-transparent" value={gameSettings.br250Cost || 300} onChange={e => updateGameSetting('br250Cost', Number(e.target.value))} />
+          </div>
+          <div>
+            <label className="text-[8.5px] font-semibold text-slate-400 block">Br 250 Coupon Value (Br)</label>
+            <input type="number" className="w-full mt-1 p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-transparent" value={gameSettings.br250Val || 250} onChange={e => updateGameSetting('br250Val', Number(e.target.value))} />
+          </div>
+          <div>
+            <label className="text-[8.5px] font-semibold text-slate-400 block">Br 500 Coupon Cost (Pts)</label>
+            <input type="number" className="w-full mt-1 p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-transparent" value={gameSettings.br500Cost || 550} onChange={e => updateGameSetting('br500Cost', Number(e.target.value))} />
+          </div>
+          <div>
+            <label className="text-[8.5px] font-semibold text-slate-400 block">Br 500 Coupon Value (Br)</label>
+            <input type="number" className="w-full mt-1 p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-transparent" value={gameSettings.br500Val || 500} onChange={e => updateGameSetting('br500Val', Number(e.target.value))} />
+          </div>
+        </div>
+
         <div className="grid sm:grid-cols-3 gap-3 mb-4 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
           <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Wheel Font Size</label><input type="number" className="w-full mt-1 p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-transparent" value={gameSettings.wheelFontSize || 20} onChange={e => updateGameSetting('wheelFontSize', Number(e.target.value))} /></div>
           <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Wheel Font Color</label><input type="color" className="w-full mt-1 h-9 rounded-lg cursor-pointer border-0" value={gameSettings.wheelFontColor || '#ffffff'} onChange={e => updateGameSetting('wheelFontColor', e.target.value)} /></div>
