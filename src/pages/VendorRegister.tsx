@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/stores/AppStore';
 import { toast } from '@/components/Toast';
-import { ArrowLeft, Store, Save, Smartphone, Mail, FileText, Store as StoreIcon } from 'lucide-react';
+import { ArrowLeft, Store, Save, Smartphone, Mail, FileText, Store as StoreIcon, Loader } from 'lucide-react';
 
 export default function VendorRegister() {
   var nav = useNavigate();
@@ -13,6 +13,32 @@ export default function VendorRegister() {
   var [storeEmail, setStoreEmail] = useState('');
   var [storeDesc, setStoreDesc] = useState('');
   var [submitting, setSubmitting] = useState(false);
+
+  var [storeLat, setStoreLat] = useState<number | null>(null);
+  var [storeLng, setStoreLng] = useState<number | null>(null);
+  var [detectingLocation, setDetectingLocation] = useState(false);
+
+  function detectStoreLocation() {
+    if (!navigator.geolocation) {
+      toast('❌ GPS Location not supported on this browser.', 'error');
+      return;
+    }
+    setDetectingLocation(true);
+    toast('🔍 Capturing exact storefront/pickup GPS coordinates...', 'info');
+    navigator.geolocation.getCurrentPosition(
+      function(pos) {
+        setStoreLat(pos.coords.latitude);
+        setStoreLng(pos.coords.longitude);
+        setDetectingLocation(false);
+        toast('✅ Location mapped successfully! (' + pos.coords.latitude.toFixed(4) + ', ' + pos.coords.longitude.toFixed(4) + ')', 'success');
+      },
+      function(err) {
+        setDetectingLocation(false);
+        toast('❌ GPS Error: Please allow location permissions to register.', 'error');
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  }
 
   // Auto-fill phone from Telegram (read-only)
   useEffect(function() {
@@ -26,6 +52,7 @@ export default function VendorRegister() {
   async function submit() {
     if (!storeName.trim()) { toast('Store name is required', 'error'); return; }
     if (!storePhone.trim()) { toast('Phone number is required', 'error'); return; }
+    if (storeLat === null || storeLng === null) { toast('📍 Set Default Pickup Base is required. Please map your storefront location!', 'error'); return; }
     setSubmitting(true);
     
     var ls: any = {};
@@ -36,7 +63,16 @@ export default function VendorRegister() {
       var res = await fetch('/api/vendors/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: storeName.trim(), phone: storePhone.trim(), email: storeEmail.trim(), description: storeDesc.trim(), status: 'pending', telegram_id: tgId || '' })
+        body: JSON.stringify({ 
+          name: storeName.trim(), 
+          phone: storePhone.trim(), 
+          email: storeEmail.trim(), 
+          description: storeDesc.trim(), 
+          status: 'pending', 
+          telegram_id: tgId || '',
+          lat: storeLat,
+          lng: storeLng
+        })
       });
       var d = await res.json();
       if (d && d.vendor && d.vendor.id) {
@@ -95,6 +131,22 @@ export default function VendorRegister() {
               </label>
               <input className={'w-full mt-1.5 p-3 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 transition-all ' + (darkMode ? 'bg-slate-700 border-slate-600 text-white placeholder:text-slate-400' : 'bg-white border-slate-200 text-slate-900')}
                 placeholder="vendor@email.com" value={storeEmail} onChange={function(e) { setStoreEmail(e.target.value); }} />
+            </div>
+
+            <div>
+              <label className={'text-[10px] font-bold uppercase tracking-wider ' + (darkMode ? 'text-slate-400' : 'text-slate-500')}>
+                📍 Storefront / Pickup GPS Location *
+              </label>
+              <button 
+                type="button"
+                className={'w-full mt-1.5 p-3.5 border rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ' + 
+                  (storeLat !== null ? 'bg-emerald-500/10 border-emerald-500 text-emerald-500' : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-emerald-500')}
+                onClick={detectStoreLocation}
+                disabled={detectingLocation}
+              >
+                {detectingLocation ? <Loader size={14} className="animate-spin" /> : '📍'}
+                {storeLat !== null ? `Mapped (${storeLat.toFixed(4)}, ${storeLng?.toFixed(4)})` : 'Set Default Pickup Base'}
+              </button>
             </div>
 
             <div>

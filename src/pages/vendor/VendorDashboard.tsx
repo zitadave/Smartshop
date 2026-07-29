@@ -4,6 +4,8 @@ import { createPortal } from 'react-dom';
 import { useStore } from '@/stores/AppStore';
 import { formatPrice, cn, generateId } from '@/lib/utils';
 import { productsApi, ordersApi } from '@/lib/api';
+import { haptic } from '@/lib/confetti';
+import { toast } from '@/components/Toast';
 import {
   Store, Package, ShoppingCart, TrendingUp, Settings, LogOut, Menu, X,
   BarChart3, Plus, Edit3, Eye, Save, Tag, DollarSign, Star, ClipboardList,
@@ -14,7 +16,6 @@ import {
   Layers, Sparkles, Target, Zap, Gift, Percent, Box, RotateCcw,
   Heart, Share2, ChevronDown, MessageCircle, Video, ExternalLink, Loader
 } from 'lucide-react';
-import { toast } from '@/components/Toast';
 import { parseSerializedName } from '@/lib/groupBuying';
 import ProductStudio from '@/components/admin/ProductStudio';
 
@@ -635,6 +636,58 @@ function VendorAnalyticsView({ products, stats, revenueHistory }: { products: an
 function VendorOrdersView({ orders }: { orders: any[] }) {
   const [statusFilter, setStatusFilter] = useState('all');
   const filtered = statusFilter === 'all' ? orders : orders.filter(o => o.status === statusFilter);
+
+  const handleAcceptOrder = (orderNumber: string) => {
+    if (!navigator.geolocation) {
+      toast('❌ GPS Location not supported on this browser.', 'error');
+      return;
+    }
+
+    toast('🔍 Capturing exact pickup GPS coordinates...', 'info');
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+
+        try {
+          const res = await fetch(`/api/orders/${orderNumber}/status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'processing', lat, lng })
+          });
+          const d = await res.json();
+          if (d.success) {
+            toast(`✅ Order accept confirmed! Pickup base established at (${lat.toFixed(4)}, ${lng.toFixed(4)}). Nearby couriers alerted!`, 'success');
+            haptic('success');
+            window.location.reload();
+          } else {
+            toast('Error accepting: ' + (d.error || 'Server error'), 'error');
+          }
+        } catch (err: any) {
+          toast('Error: ' + err.message, 'error');
+        }
+      },
+      async (err) => {
+        toast('⚠️ Location permission denied. Proceeding with your default home base pickup location...', 'warning');
+        try {
+          const res = await fetch(`/api/orders/${orderNumber}/status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'processing' })
+          });
+          const d = await res.json();
+          if (d.success) {
+            toast(`✅ Order accept confirmed! Utilizing default pickup base. Nearby couriers alerted!`, 'success');
+            haptic('success');
+            window.location.reload();
+          }
+        } catch (e: any) {
+          toast('Error: ' + e.message, 'error');
+        }
+      },
+      { enableHighAccuracy: true, timeout: 6000 }
+    );
+  };
   return (
     <div className="animate-fadeUp">
       <div className="flex items-center justify-between mb-4">
@@ -681,6 +734,17 @@ function VendorOrdersView({ orders }: { orders: any[] }) {
                 </div>
               </div>
               <div className="text-[9px] text-slate-400 mt-2 ml-12 truncate">{o.items?.map((it: any) => it.name + ' ×' + it.quantity).join(', ')}</div>
+              
+              {o.status === 'confirmed' && (
+                <div className="mt-3 flex justify-end">
+                  <button 
+                    onClick={() => handleAcceptOrder(o.orderNumber)}
+                    className="px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-green-600 hover:shadow-md hover:shadow-emerald-500/15 text-white rounded-lg text-[9px] font-bold transition-all active:scale-[0.97]"
+                  >
+                    📦 Accept & Summon Courier
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>

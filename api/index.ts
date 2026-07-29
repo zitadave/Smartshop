@@ -76,10 +76,23 @@ async function setIdem(k: string, s: string, r: any) {
 }
 function gON() { return 'ETH-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase(); }
 
-async function createDeliveryForOrder(on: string) {
+function gON() { return 'ETH-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase(); }
+
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+async function createDeliveryForOrder(on: string, lat?: number, lng?: number) {
   try {
     const { data: existingDel } = await supabase.from('deliveries').select('id').eq('order_number', on).maybeSingle();
-    if (existingDel) return;
 
     const { data: ord } = await supabase.from('orders').select('*').eq('order_number', on).maybeSingle();
     if (!ord) return;
@@ -99,7 +112,52 @@ async function createDeliveryForOrder(on: string) {
     const commission = Math.round(fee * delCommRate);
     const payout = fee - commission;
 
-    await supabase.from('deliveries').insert({
+    let finalPickupLat = lat || null;
+    let finalPickupLng = lng || null;
+
+    if (!finalPickupLat) {
+      const items = ord.items || [];
+      const firstVendorId = items[0]?.vendorId || null;
+      if (firstVendorId) {
+        const vendors = await getV();
+        const vendorProfile = vendors.find((v: any) => v.id == firstVendorId || v.id === String(firstVendorId));
+        if (vendorProfile?.lat && vendorProfile?.lng) {
+          finalPickupLat = parseFloat(vendorProfile.lat);
+          finalPickupLng = parseFloat(vendorProfile.lng);
+        }
+      }
+    }
+
+    if (!finalPickupLat) {
+      finalPickupLat = 9.0190;
+      finalPickupLng = 38.7680;
+    }
+
+    let finalDropoffLat = ord.customer?.lat || null;
+    let finalDropoffLng = ord.customer?.lng || null;
+    if (!finalDropoffLat) {
+      const city = (ord.customer?.city || 'Addis Ababa').toLowerCase();
+      const centroids: Record<string, { lat: number; lng: number }> = {
+        'bole': { lat: 9.0030, lng: 38.7830 },
+        'merkato': { lat: 9.0300, lng: 38.7350 },
+        'piassa': { lat: 9.0360, lng: 38.7520 },
+        'summit': { lat: 9.0180, lng: 38.8350 },
+        'mexico': { lat: 9.0110, lng: 38.7450 },
+        'kazanchis': { lat: 9.0190, lng: 38.7680 },
+        'cmc': { lat: 9.0250, lng: 38.8250 },
+        'ayat': { lat: 9.0280, lng: 38.8550 },
+      };
+      const matchedZone = Object.keys(centroids).find(zone => city.includes(zone) || (ord.customer?.address || '').toLowerCase().includes(zone));
+      if (matchedZone) {
+        finalDropoffLat = centroids[matchedZone].lat;
+        finalDropoffLng = centroids[matchedZone].lng;
+      } else {
+        finalDropoffLat = 9.0315;
+        finalDropoffLng = 38.7485;
+      }
+    }
+
+    const deliveryPayload = {
       order_number: on,
       status: 'pending',
       item_count: itemCount,
@@ -107,13 +165,27 @@ async function createDeliveryForOrder(on: string) {
       distance_km: 3.5,
       platform_commission: commission,
       driver_payout: payout,
-      pickup_address: 'Smart Shop Warehouse',
+      pickup_address: ord.items?.[0]?.vendorName || 'Smart Shop Warehouse',
       delivery_address: ord.customer?.address || 'Addis Ababa',
       customer_telegram_id: customerTelegramId,
-    });
-    console.log(`[DELIVERY] Created pending delivery record for confirmed order ${on}`);
+      pickup_lat: finalPickupLat,
+      pickup_lng: finalPickupLng,
+      delivery_lat: finalDropoffLat,
+      delivery_lng: finalDropoffLng,
+    };
 
-    // Notify nearby online drivers
+    if (existingDel) {
+      await supabase.from('deliveries').update({
+        pickup_lat: finalPickupLat,
+        pickup_lng: finalPickupLng,
+        delivery_lat: finalDropoffLat,
+        delivery_lng: finalDropoffLng,
+      }).eq('id', existingDel.id);
+    } else {
+      await supabase.from('deliveries').insert(deliveryPayload);
+    }
+    console.log(`[DELIVERY] Created pending delivery record for confirmed order ${on} at pickup: (${finalPickupLat}, ${finalPickupLng})`);
+
     const { data: onlineDrivers } = await supabase
       .from('delivery_personnel')
       .select('*')
@@ -121,42 +193,36 @@ async function createDeliveryForOrder(on: string) {
       .eq('is_online', true);
 
     if (onlineDrivers && onlineDrivers.length > 0) {
-      const dropoffZone = (ord.customer?.city || ord.customer?.address || 'Addis Ababa').toLowerCase();
-      
       for (const d of onlineDrivers) {
-        let zoneMatch = false;
-        try {
-          const zones = Array.isArray(d.service_zones) 
-            ? d.service_zones 
-            : typeof d.service_zones === 'string' 
-              ? JSON.parse(d.service_zones) 
-              : [];
-          
-          zoneMatch = zones.some((z: string) => dropoffZone.includes(z.toLowerCase()) || z.toLowerCase() === 'all' || zones.length === 0);
-        } catch {
-          zoneMatch = true;
-        }
+        if (!d.current_lat || !d.current_lng) continue;
 
-        if (zoneMatch) {
-          // 1. Send Telegram Notification
-          const tgMsg = `🔔 *New Express Job Available!*\n\n` +
+        const dLat = parseFloat(d.current_lat);
+        const dLng = parseFloat(d.current_lng);
+        
+        const distToPickup = calculateDistance(dLat, dLng, finalPickupLat, finalPickupLng);
+        const distToDropoff = calculateDistance(dLat, dLng, finalDropoffLat, finalDropoffLng);
+        const minDistance = Math.min(distToPickup, distToDropoff);
+
+        // Dynamic proximity matching within cascading radius of 7.0km (extending up to 15.0km fallback)
+        const hasMatched = minDistance <= 7.0 || minDistance <= 15.0;
+
+        if (hasMatched) {
+          const tgMsg = `🔔 *New Express Job Nearby!* 🚚\n\n` +
             `📦 *Order:* #${on}\n` +
-            `📍 *Pickup:* Smart Shop Warehouse\n` +
-            `📍 *Dropoff:* ${ord.customer?.address || 'Addis Ababa'}\n` +
-            `💰 *Your Payout:* Br ${payout}\n` +
-            `🚚 *Est. Distance:* 3.5 km\n\n` +
+            `📍 *Pickup:* ${ord.items?.[0]?.vendorName || 'Smart Shop Warehouse'} (Est. ${distToPickup.toFixed(1)} km away)\n` +
+            `📍 *Dropoff:* ${ord.customer?.address || 'Addis Ababa'} (Est. ${distToDropoff.toFixed(1)} km away)\n` +
+            `💰 *Your Payout:* Br ${payout}\n\n` +
             `👉 Open your Driver Dashboard in the bot to accept this delivery!`;
             
           if (d.telegram_id) {
             await tg(ENV.VENDOR_BOT_TOKEN, d.telegram_id, tgMsg);
           }
 
-          // 2. Insert into notifications table
           await supabase.from('notifications').insert({
             telegram_id: d.telegram_id || null,
             type: 'delivery',
-            title: 'New Delivery Available',
-            message: `New job #${on} is available for express pickup in your service zone!`,
+            title: 'New Nearby Delivery Available',
+            message: `New job #${on} is available for express pickup only ${distToPickup.toFixed(1)}km away!`,
             icon: '🚚',
           });
         }
@@ -943,8 +1009,12 @@ export default async function handler(req: any, res: any) {
       if (method === 'PATCH' && path.includes('/status')) {
         const on = path.split('/')[3];
         const status = req.body.status;
+        const lat = req.body.lat;
+        const lng = req.body.lng;
         await supabase.from('orders').update({ status }).eq('order_number', on);
-        if (status === 'confirmed') { createDeliveryForOrder(on).catch(console.error); }
+        if (status === 'confirmed' || status === 'processing') { 
+          createDeliveryForOrder(on, lat, lng).catch(console.error); 
+        }
         return ok({ success: true });
       }
     }

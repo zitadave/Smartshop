@@ -205,20 +205,59 @@ export default function DriverDashboard() {
     var newStatus = !isOnline;
     haptic('light');
 
-    fetch('/api/delivery/online', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ driver_id: driverId, is_online: newStatus })
-    }).then(function(r) { return r.json(); }).then(function(d) {
-      if (d.success) {
-        setIsOnline(newStatus);
-        var stored = JSON.parse(localStorage.getItem('ss_driver_profile') || '{}');
-        stored.is_online = newStatus;
-        localStorage.setItem('ss_driver_profile', JSON.stringify(stored));
-        toast(newStatus ? '🟢 active Radar: You are online!' : '🔴 Offline: Radar turned off', 'success');
-        haptic('success');
+    if (newStatus) {
+      if (!navigator.geolocation) {
+        toast('❌ GPS Location not supported on this browser.', 'error');
+        return;
       }
-    }).catch(function() {});
+      navigator.geolocation.getCurrentPosition(
+        function(pos) {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          
+          fetch('/api/delivery/online', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ driver_id: driverId, is_online: newStatus })
+          }).then(function(r) { return r.json(); }).then(function(d) {
+            if (d.success) {
+              setIsOnline(newStatus);
+              var stored = JSON.parse(localStorage.getItem('ss_driver_profile') || '{}');
+              stored.is_online = newStatus;
+              localStorage.setItem('ss_driver_profile', JSON.stringify(stored));
+              toast('🟢 Active Radar: You are online!', 'success');
+              haptic('success');
+              
+              fetch('/api/delivery/location', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ driver_id: driverId, lat, lng })
+              }).catch(function() {});
+            }
+          });
+        },
+        function(err) {
+          toast('📍 GPS Permission Required: Please turn on location permissions to go online and receive nearby jobs!', 'error');
+          haptic('error');
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    } else {
+      fetch('/api/delivery/online', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ driver_id: driverId, is_online: newStatus })
+      }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.success) {
+          setIsOnline(newStatus);
+          var stored = JSON.parse(localStorage.getItem('ss_driver_profile') || '{}');
+          stored.is_online = newStatus;
+          localStorage.setItem('ss_driver_profile', JSON.stringify(stored));
+          toast('🔴 Offline: Radar turned off', 'success');
+          haptic('success');
+        }
+      });
+    }
   }
 
   function acceptDelivery(deliveryId: number) {
