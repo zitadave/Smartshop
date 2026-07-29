@@ -1586,14 +1586,23 @@ function VendorSubscriptionsView() {
   const loadPlans = () => {
     setLoading(true);
     fetch('/api/subscription-plans')
-      .then(r => r.json())
+      .then(async r => {
+        if (!r.ok) {
+          const text = await r.text();
+          throw new Error(`Server error (${r.status}): ${text || r.statusText}`);
+        }
+        return r.json();
+      })
       .then(d => {
         // Filter plans by vendor_id
         const filtered = ((d && d.plans) || []).filter((p: any) => p && (p.vendor_id == vendorId || p.vendor_name === vendorName));
         setPlans(filtered);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch((err: any) => {
+        console.error('loadPlans failed:', err);
+        setLoading(false);
+      });
   };
 
   useEffect(() => {
@@ -1631,10 +1640,16 @@ function VendorSubscriptionsView() {
         isActive: true,
       })
     })
-      .then(r => r.json())
+      .then(async r => {
+        if (!r.ok) {
+          const text = await r.text();
+          throw new Error(`Server error (${r.status}): ${text || r.statusText}`);
+        }
+        return r.json();
+      })
       .then(d => {
         setSaving(false);
-        if (d.success) {
+        if (d && d.success) {
           toast('🎉 Subscription plan created successfully!', 'success');
           setShowModal(false);
           // Reset form
@@ -1665,9 +1680,15 @@ function VendorSubscriptionsView() {
   const executeDeletePlan = () => {
     if (planToDelete === null) return;
     fetch('/api/subscription-plans/' + planToDelete, { method: 'DELETE' })
-      .then(r => r.json())
+      .then(async r => {
+        if (!r.ok) {
+          const text = await r.text();
+          throw new Error(`Server error (${r.status}): ${text || r.statusText}`);
+        }
+        return r.json();
+      })
       .then(d => {
-        if (d.success) {
+        if (d && d.success) {
           toast('🗑️ Subscription plan deleted', 'info');
           loadPlans();
         } else {
