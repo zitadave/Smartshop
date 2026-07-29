@@ -19,6 +19,7 @@ export default function OrderDetail() {
   const [showPinModal, setShowPinModal] = useState(false);
   const [pinInput, setPinInput] = useState('');
   const [verifying, setVerifying] = useState(false);
+  const [serverOrder, setServerOrder] = useState<any>(null);
 
   useEffect(() => {
     if (!orderNumber) return;
@@ -31,6 +32,34 @@ export default function OrderDetail() {
       })
       .catch(err => console.error('Failed to load tracking data:', err));
   }, [orderNumber]);
+
+  const foundOrder = orders.find(ord => ord.orderNumber === orderNumber);
+  const foundPreOrder = preOrders.find(po => po.orderNumber === orderNumber);
+
+  useEffect(() => {
+    if (!orderNumber || foundOrder || foundPreOrder) return;
+    fetch(`/api/orders/${orderNumber}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d && d.success && d.order) {
+          setServerOrder(d.order);
+        }
+      })
+      .catch(err => console.error('Failed to load order:', err));
+  }, [orderNumber, foundOrder, foundPreOrder]);
+
+  const normalizeOrder = (o: any) => {
+    if (!o) return o;
+    return {
+      ...o,
+      orderNumber: o.orderNumber || o.order_number,
+      order_number: o.order_number || o.orderNumber,
+      paymentMethod: o.paymentMethod || o.payment_method,
+      payment_method: o.payment_method || o.paymentMethod,
+      createdAt: o.createdAt || o.created_at,
+      created_at: o.created_at || o.createdAt,
+    };
+  };
 
   const handleConfirmReceipt = () => {
     if (!deliveryData || !pinInput.trim()) return;
@@ -64,10 +93,7 @@ export default function OrderDetail() {
       });
   };
 
-  const foundOrder = orders.find(ord => ord.orderNumber === orderNumber);
-  const foundPreOrder = preOrders.find(po => po.orderNumber === orderNumber);
-
-  let orderData = foundOrder;
+  let orderData = foundOrder || (serverOrder ? normalizeOrder(serverOrder) : null);
   if (!orderData && foundPreOrder) {
     orderData = {
       orderNumber: foundPreOrder.orderNumber,

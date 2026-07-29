@@ -566,13 +566,55 @@ function AdminProducts() {
 // =============================================
 // 3. ORDERS
 // =============================================
+const normalizeOrder = (o: any) => {
+  if (!o) return o;
+  return {
+    ...o,
+    orderNumber: o.orderNumber || o.order_number,
+    order_number: o.order_number || o.orderNumber,
+    paymentMethod: o.paymentMethod || o.payment_method,
+    payment_method: o.payment_method || o.paymentMethod,
+    createdAt: o.createdAt || o.created_at,
+    created_at: o.created_at || o.createdAt,
+  };
+};
+
 function AdminOrders() {
   const [orders, setOrders] = useState<any[]>([]);
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
   const [statusFilter, setStatusFilter] = useState('');
   const fetchOrders = () => {
-    ordersApi.list().then(d => setOrders(d?.orders || [])).catch(() => {});
-    try { const l = JSON.parse(localStorage.getItem('ss_orders') || '[]'); setOrders(prev => [...l, ...prev].slice(0, 100)); } catch {}
+    ordersApi.list()
+      .then(d => {
+        const serverOrders = (d?.orders || []).map(normalizeOrder);
+        setOrders(prev => {
+          const merged = [...serverOrders];
+          try {
+            const local = JSON.parse(localStorage.getItem('ss_orders') || '[]');
+            local.forEach((lo: any) => {
+              const nlo = normalizeOrder(lo);
+              if (!merged.find(so => so.orderNumber === nlo.orderNumber)) {
+                merged.push(nlo);
+              }
+            });
+          } catch {}
+          return merged.slice(0, 100);
+        });
+      })
+      .catch(() => {});
+    try {
+      const l = JSON.parse(localStorage.getItem('ss_orders') || '[]');
+      setOrders(prev => {
+        const local = l.map(normalizeOrder);
+        const merged = [...local];
+        prev.forEach((po: any) => {
+          if (!merged.find(lo => lo.orderNumber === po.orderNumber)) {
+            merged.push(po);
+          }
+        });
+        return merged.slice(0, 100);
+      });
+    } catch {}
   };
   useEffect(fetchOrders, []);
   const updateStatus = async (n: string, s: string) => { await ordersApi.updateStatus(n, s); setOrders(orders.map(o => o.orderNumber === n ? { ...o, status: s } : o)); };

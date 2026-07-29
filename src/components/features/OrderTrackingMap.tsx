@@ -87,15 +87,13 @@ export default function OrderTrackingMap({ orderNumber, compact }: OrderTracking
 
   // Dynamic Map renderer
   useEffect(() => {
-    if (!mapLoaded || !delivery) return;
+    if (!mapLoaded) return;
 
     const L = (window as any).L;
     if (!L) return;
 
-    const dLat = delivery.driver?.current_lat || 9.03;
-    const dLng = delivery.driver?.current_lng || 38.74;
-    const cLat = delivery.delivery_lat || 9.0315;
-    const cLng = delivery.delivery_lng || 38.7485;
+    const cLat = delivery?.delivery_lat || 9.0315;
+    const cLng = delivery?.delivery_lng || 38.7485;
 
     const container = L.DomUtil.get('leaflet-map');
     if (container) {
@@ -106,18 +104,11 @@ export default function OrderTrackingMap({ orderNumber, compact }: OrderTracking
       const map = L.map('leaflet-map', {
         zoomControl: false,
         attributionControl: false
-      }).setView([dLat, dLng], 14);
+      });
 
       L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
         maxZoom: 19
       }).addTo(map);
-
-      const motorIcon = L.divIcon({
-        className: 'custom-motor-icon',
-        html: `<div class="w-8 h-8 rounded-full bg-indigo-600 border-2 border-white flex items-center justify-center shadow-lg"><span class="text-sm">🏍️</span></div>`,
-        iconSize: [32, 32],
-        iconAnchor: [16, 16]
-      });
 
       const homeIcon = L.divIcon({
         className: 'custom-home-icon',
@@ -126,18 +117,34 @@ export default function OrderTrackingMap({ orderNumber, compact }: OrderTracking
         iconAnchor: [16, 16]
       });
 
-      const driverMarker = L.marker([dLat, dLng], { icon: motorIcon }).addTo(map);
       const customerMarker = L.marker([cLat, cLng], { icon: homeIcon }).addTo(map);
 
-      L.polyline([[dLat, dLng], [cLat, cLng]], {
-        color: '#6366F1',
-        weight: 3,
-        opacity: 0.85,
-        dashArray: '8, 8'
-      }).addTo(map);
+      const hasDriver = !!(delivery?.driver);
+      if (hasDriver) {
+        const dLat = delivery.driver.current_lat || 9.03;
+        const dLng = delivery.driver.current_lng || 38.74;
 
-      const group = new L.featureGroup([driverMarker, customerMarker]);
-      map.fitBounds(group.getBounds().pad(0.15));
+        const motorIcon = L.divIcon({
+          className: 'custom-motor-icon',
+          html: `<div class="w-8 h-8 rounded-full bg-indigo-600 border-2 border-white flex items-center justify-center shadow-lg"><span class="text-sm">🏍️</span></div>`,
+          iconSize: [32, 32],
+          iconAnchor: [16, 16]
+        });
+
+        const driverMarker = L.marker([dLat, dLng], { icon: motorIcon }).addTo(map);
+
+        L.polyline([[dLat, dLng], [cLat, cLng]], {
+          color: '#6366F1',
+          weight: 3,
+          opacity: 0.85,
+          dashArray: '8, 8'
+        }).addTo(map);
+
+        const group = new L.featureGroup([driverMarker, customerMarker]);
+        map.fitBounds(group.getBounds().pad(0.15));
+      } else {
+        map.setView([cLat, cLng], 15);
+      }
 
       return () => {
         map.remove();
@@ -178,29 +185,37 @@ export default function OrderTrackingMap({ orderNumber, compact }: OrderTracking
     cancelled: 'Delivery cancelled'
   };
 
-  const statusText = delivery ? (statusLabels[delivery.status] || delivery.status) : (liveStatus || 'Order in transit');
+  const statusText = delivery ? (statusLabels[delivery.status] || delivery.status) : (
+    order?.status === 'pending_approval' ? 'Awaiting manual payment approval' :
+    order?.status === 'pending_payment' ? 'Awaiting payment transfer details' :
+    order?.status === 'confirmed' ? 'Payment confirmed, processing order' :
+    order?.status === 'processing' ? 'Order being prepared' :
+    'Order received'
+  );
 
-  // Dynamically map timeline steps based on backend DB status
+  // Dynamically map timeline steps based on backend DB status or order status
   const getDynamicTimeline = (): TimelineStep[] => {
-    if (!delivery) return DEFAULT_TIMELINE;
-
-    const s = delivery.status;
-    const isProcessed = s !== 'pending';
-    const isInTransit = ['picked_up', 'in_transit', 'arrived', 'delivered'].includes(s);
-    const isOutForDelivery = ['arrived', 'delivered'].includes(s);
-    const isDelivered = s === 'delivered';
+    const isPlaced = true;
+    const isAwaitingApproval = order?.status === 'pending_approval';
+    const isAwaitingPayment = order?.status === 'pending_payment';
+    const isConfirmed = order?.status === 'confirmed' || order?.status === 'processing' || order?.status === 'shipped' || order?.status === 'delivered' || order?.status === 'completed';
+    const isProcessing = order?.status === 'processing' || order?.status === 'shipped' || order?.status === 'delivered' || order?.status === 'completed';
+    const isInTransit = order?.status === 'shipped' || order?.status === 'delivered' || order?.status === 'completed';
+    const isDelivered = order?.status === 'delivered' || order?.status === 'completed';
 
     const formatTime = (isoString?: string) => {
       if (!isoString) return 'Pending';
       return new Date(isoString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
+    const placedTime = order?.createdAt ? formatTime(order.createdAt) : 'Today';
+
     return [
-      { label: 'Order Placed', time: formatTime(delivery.created_at || order.createdAt), completed: true, icon: '📋' },
-      { label: 'Processing', time: isProcessed ? formatTime(delivery.assigned_at) : 'Pending', completed: isProcessed, icon: '📦' },
-      { label: 'In Transit', time: isInTransit ? formatTime(delivery.picked_up_at || delivery.assigned_at) : 'Pending', completed: isInTransit, icon: '🚚' },
-      { label: 'Out for Delivery', time: isOutForDelivery ? formatTime(delivery.in_transit_at) : 'Pending', completed: isOutForDelivery, icon: '🚚' },
-      { label: 'Delivered', time: isDelivered ? formatTime(delivery.delivered_at) : 'Pending', completed: isDelivered, icon: '🏠' },
+      { label: 'Order Placed', time: placedTime, completed: true, icon: '📋' },
+      { label: isAwaitingApproval ? 'Payment Review' : isAwaitingPayment ? 'Awaiting Payment' : 'Confirmed', time: isConfirmed ? 'Completed' : isAwaitingApproval ? 'Reviewing' : 'Pending', completed: isConfirmed, icon: '💳' },
+      { label: 'Processing', time: isProcessing ? 'Completed' : 'Pending', completed: isProcessing, icon: '📦' },
+      { label: 'In Transit', time: isInTransit ? 'Shipped' : 'Pending', completed: isInTransit, icon: '🚚' },
+      { label: 'Delivered', time: isDelivered ? 'Delivered' : 'Pending', completed: isDelivered, icon: '🏠' },
     ];
   };
 
@@ -241,26 +256,54 @@ export default function OrderTrackingMap({ orderNumber, compact }: OrderTracking
         )}
 
         {/* Driver overlay card */}
-        <div className="absolute bottom-3 left-3 right-3 bg-slate-950/80 backdrop-blur-md border border-slate-800 rounded-xl p-2.5 text-white flex items-center justify-between shadow-lg z-[1000]">
-          <div>
-            <div className="flex items-center gap-1.5">
-              <Navigation size={11} className="text-indigo-400 animate-pulse" />
-              <span className="font-extrabold text-[10px] text-slate-100">{driverName}</span>
-              <span className="text-[8px] bg-slate-800 text-slate-300 px-1.5 py-0.2 rounded font-bold uppercase">{vehicleType}</span>
+        <div className="absolute bottom-3 left-3 right-3 bg-slate-950/90 backdrop-blur-md border border-slate-800 rounded-xl p-2.5 text-white flex items-center justify-between shadow-lg z-[1000]">
+          {hasLiveDriver ? (
+            <>
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <Navigation size={11} className="text-indigo-400 animate-pulse" />
+                  <span className="font-extrabold text-[10px] text-slate-100">{driverName}</span>
+                  <span className="text-[8px] bg-slate-800 text-slate-300 px-1.5 py-0.2 rounded font-bold uppercase">{vehicleType}</span>
+                </div>
+                <div className="text-[8px] text-slate-400 mt-1 flex items-center gap-2">
+                  <span>Plate: <strong className="text-slate-200">{licensePlate}</strong></span>
+                  <span className="w-1 h-1 rounded-full bg-emerald-500" />
+                  <span className="text-[8px] text-emerald-400 font-bold">GPS Linked</span>
+                </div>
+              </div>
+              <a 
+                href={`tel:${driverPhone}`}
+                className="px-3 py-1.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg text-[9px] font-bold flex items-center gap-1 shadow-md transition-all active:scale-[0.95]"
+              >
+                <Phone size={10} /> Call
+              </a>
+            </>
+          ) : (
+            <div className="w-full text-center py-0.5">
+              <div className="flex items-center justify-center gap-1.5 text-[10px] font-bold text-slate-200">
+                <Loader className="animate-spin text-indigo-400" size={10} />
+                {order?.status === 'pending_approval' ? (
+                  <span>Awaiting Payment Approval</span>
+                ) : order?.status === 'pending_payment' ? (
+                  <span>Awaiting Payment Submission</span>
+                ) : order?.status === 'processing' ? (
+                  <span>Vendor Preparing Package</span>
+                ) : (
+                  <span>Securing Express Courier...</span>
+                )}
+              </div>
+              <p className="text-[8px] text-slate-400 mt-1">
+                {order?.status === 'pending_approval' ? (
+                  "Your manual bank transfer is currently being verified by our finance team."
+                ) : order?.status === 'pending_payment' ? (
+                  "Please submit your payment receipt details in the Manual Payment section."
+                ) : order?.status === 'processing' ? (
+                  "The store is packaging your items. We will assign a driver shortly."
+                ) : (
+                  "We are searching for the nearest online express delivery partner."
+                )}
+              </p>
             </div>
-            <div className="text-[8px] text-slate-400 mt-1 flex items-center gap-2">
-              <span>Plate: <strong className="text-slate-200">{licensePlate}</strong></span>
-              {hasLiveDriver && <span className="w-1 h-1 rounded-full bg-emerald-500" />}
-              {hasLiveDriver && <span className="text-[8px] text-emerald-400 font-bold">GPS Linked</span>}
-            </div>
-          </div>
-          {hasLiveDriver && (
-            <a 
-              href={`tel:${driverPhone}`}
-              className="px-3 py-1.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg text-[9px] font-bold flex items-center gap-1 shadow-md transition-all active:scale-[0.95]"
-            >
-              <Phone size={10} /> Call
-            </a>
           )}
         </div>
       </div>

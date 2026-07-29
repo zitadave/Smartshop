@@ -76,6 +76,47 @@ async function setIdem(k: string, s: string, r: any) {
 }
 function gON() { return 'ETH-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase(); }
 
+async function createDeliveryForOrder(on: string) {
+  try {
+    const { data: existingDel } = await supabase.from('deliveries').select('id').eq('order_number', on).maybeSingle();
+    if (existingDel) return;
+
+    const { data: ord } = await supabase.from('orders').select('*').eq('order_number', on).maybeSingle();
+    if (!ord) return;
+
+    const itemCount = ord.items?.reduce((acc: number, it: any) => acc + (it.quantity || 1), 0) || 0;
+    const fee = ord.delivery || 0;
+    const customerTelegramId = ord.telegram_id || ord.telegramId || ord.customer?.telegram_id || ord.customer?.telegramId || null;
+    
+    let delCommRate = 0.20;
+    try {
+      const { data: sd } = await supabase.from('settings').select('*').single();
+      if (sd?.data?.deliveryCommission) {
+        delCommRate = sd.data.deliveryCommission / 100;
+      }
+    } catch {}
+
+    const commission = Math.round(fee * delCommRate);
+    const payout = fee - commission;
+
+    await supabase.from('deliveries').insert({
+      order_number: on,
+      status: 'pending',
+      item_count: itemCount,
+      fee: fee,
+      distance_km: 3.5,
+      platform_commission: commission,
+      driver_payout: payout,
+      pickup_address: 'Smart Shop Warehouse',
+      delivery_address: ord.customer?.address || 'Addis Ababa',
+      customer_telegram_id: customerTelegramId,
+    });
+    console.log(`[DELIVERY] Created pending delivery record for confirmed order ${on}`);
+  } catch (err: any) {
+    console.error(`[DELIVERY CREATION ERROR] for order ${on}:`, err.message);
+  }
+}
+
 
 // ===== BOT COMMANDS DEFINITION =====
 const BOT_COMMANDS = [
@@ -820,11 +861,18 @@ export default async function handler(req: any, res: any) {
         }
         const { data: order, error: oe } = await supabase.from('orders').insert({ ...req.body, order_number: on }).select().single();
         if (oe) { for (const item of items) { if (item.productId) await supabase.rpc('increment_stock', { row_id: item.productId, qty: item.quantity || 1 }); } return fail(oe.message); }
+        if (order && order.status === 'confirmed') { createDeliveryForOrder(on).catch(console.error); }
         if (ik) await setIdem(ik, 'completed', order); return ok({ success: true, order });
       }
       if (method === 'GET') { const on = path.replace('/api/orders/', '').split('/')[0]; const { data } = await supabase.from('orders').select('*').eq('order_number', on).single(); return ok({ success: true, order: data }); }
       if (method === 'POST' && path.includes('/cancel')) { const on = path.split('/')[3]; const { data: order } = await supabase.from('orders').select('*').eq('order_number', on).single(); if (order?.items) { for (const item of order.items) { if (item.productId) await supabase.rpc('increment_stock', { row_id: item.productId, qty: item.quantity || 1 }); } } await supabase.from('orders').update({ status: 'cancelled' }).eq('order_number', on); return ok({ success: true }); }
-      if (method === 'PATCH' && path.includes('/status')) { const on = path.split('/')[3]; await supabase.from('orders').update({ status: req.body.status }).eq('order_number', on); return ok({ success: true }); }
+      if (method === 'PATCH' && path.includes('/status')) {
+        const on = path.split('/')[3];
+        const status = req.body.status;
+        await supabase.from('orders').update({ status }).eq('order_number', on);
+        if (status === 'confirmed') { createDeliveryForOrder(on).catch(console.error); }
+        return ok({ success: true });
+      }
     }
 
 
@@ -1149,6 +1197,7 @@ export default async function handler(req: any, res: any) {
           const { data: order } = await supabase.from('orders').select('*').eq('order_number', orderNumber).single();
           if (order) {
             await supabase.from('orders').update({ status: 'confirmed', payment_verified_at: new Date().toISOString() }).eq('order_number', orderNumber);
+            createDeliveryForOrder(orderNumber).catch(console.error);
             if (order.customer?.telegram_id || order.telegram_id) {
               const tid = order.customer?.telegram_id || order.telegram_id;
               const successMsg = `🎉 *Payment Confirmed!* \n\nThank you, your payment of *Br ${paidAmt}* for order *#${orderNumber}* has been verified successfully! \n\nWe are preparing your package for express dispatch.`;
