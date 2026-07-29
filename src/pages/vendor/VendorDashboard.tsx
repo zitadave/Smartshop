@@ -18,7 +18,7 @@ import { toast } from '@/components/Toast';
 import { parseSerializedName } from '@/lib/groupBuying';
 import ProductStudio from '@/components/admin/ProductStudio';
 
-type VendorTab = 'dashboard' | 'products' | 'storefront' | 'analytics' | 'orders' | 'reviews' | 'inventory' | 'payouts' | 'notifications' | 'promotions' ;
+type VendorTab = 'dashboard' | 'products' | 'storefront' | 'analytics' | 'orders' | 'reviews' | 'inventory' | 'payouts' | 'notifications' | 'promotions' | 'subscriptions';
 
 export default function VendorDashboard() {
   const [tab, setTab] = useState<VendorTab>('dashboard');
@@ -111,6 +111,7 @@ export default function VendorDashboard() {
             { id: 'notifications' as VendorTab, icon: Bell, label: 'Notifications', badge: 0 },
             { id: 'promotions' as VendorTab, icon: Gift, label: 'Promotions' },
             { id: 'payouts' as VendorTab, icon: Wallet, label: 'Payouts' },
+            { id: 'subscriptions' as VendorTab, icon: Clock, label: 'Subscriptions' },
             
           ] as const).map(item => {
             const Icon = item.icon;
@@ -152,6 +153,7 @@ export default function VendorDashboard() {
           {tab === 'notifications' && <VendorNotificationsView />}
           {tab === 'promotions' && <VendorPromotionsView />}
           {tab === 'payouts' && <VendorPayoutsView stats={stats} />}
+          {tab === 'subscriptions' && <VendorSubscriptionsView />}
           
         </div>
       </main>
@@ -1468,6 +1470,287 @@ function VendorPromotionsView() {
             <div className="flex gap-2 mt-4">
               <button className="flex-1 py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold hover:shadow-lg disabled:opacity-50" onClick={submitRequest} disabled={!selProduct || !selDiscount}>Submit Request</button>
               <button className="px-4 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-500 hover:bg-slate-50" onClick={() => setShowModal(false)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function VendorSubscriptionsView() {
+  const [plans, setPlans] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Form states
+  const [name, setName] = useState('');
+  const [nameAmharic, setNameAmharic] = useState('');
+  const [emoji, setEmoji] = useState('📦');
+  const [description, setDescription] = useState('');
+  const [category, setCategory] = useState('general');
+  const [unitLabel, setUnitLabel] = useState('pc');
+  const [dailyPrice, setDailyPrice] = useState('');
+  const [weeklyPrice, setWeeklyPrice] = useState('');
+  const [monthlyPrice, setMonthlyPrice] = useState('');
+  const [image, setImage] = useState('');
+
+  // Read vendor info
+  const vendorProfile = (() => {
+    try { return JSON.parse(localStorage.getItem('ss_vendor_store') || '{}'); } catch { return {}; }
+  })();
+  const vendorId = vendorProfile.id || 1;
+  const vendorName = vendorProfile.name || 'Smart Shop';
+
+  const loadPlans = () => {
+    setLoading(true);
+    fetch('/api/subscription-plans')
+      .then(r => r.json())
+      .then(d => {
+        // Filter plans by vendor_id
+        const filtered = (d.plans || []).filter((p: any) => p.vendor_id == vendorId || p.vendor_name === vendorName);
+        setPlans(filtered);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  };
+
+  useEffect(loadPlans, [vendorId, vendorName]);
+
+  const submitPlan = () => {
+    if (!name.trim()) { toast('Please enter a subscription plan name', 'error'); return; }
+    setSaving(true);
+    
+    fetch('/api/subscription-plans', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name,
+        name_amharic: nameAmharic,
+        emoji,
+        description,
+        category,
+        unit: '1',
+        unit_label: unitLabel,
+        daily_price: parseInt(dailyPrice) || null,
+        weekly_price: parseInt(weeklyPrice) || null,
+        monthly_price: parseInt(monthlyPrice) || null,
+        vendor_id: vendorId,
+        vendor_name: vendorName,
+        image,
+        isActive: true,
+      })
+    })
+      .then(r => r.json())
+      .then(d => {
+        setSaving(false);
+        if (d.success) {
+          toast('🎉 Subscription plan created successfully!', 'success');
+          setShowModal(false);
+          // Reset form
+          setName('');
+          setNameAmharic('');
+          setEmoji('📦');
+          setDescription('');
+          setDailyPrice('');
+          setWeeklyPrice('');
+          setMonthlyPrice('');
+          setImage('');
+          loadPlans();
+        } else {
+          toast('Error: ' + (d.error || 'Failed to create plan'), 'error');
+        }
+      })
+      .catch(e => {
+        setSaving(false);
+        toast('Error: ' + e.message, 'error');
+      });
+  };
+
+  const deletePlan = (id: number) => {
+    if (!confirm('Are you sure you want to delete this subscription plan?')) return;
+    fetch('/api/subscription-plans/' + id, { method: 'DELETE' })
+      .then(r => r.json())
+      .then(d => {
+        if (d.success) {
+          toast('🗑️ Subscription plan deleted', 'info');
+          loadPlans();
+        }
+      });
+  };
+
+  return (
+    <div className="space-y-4 animate-scaleIn">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-base font-bold text-slate-800 dark:text-slate-100">📅 Subscription Goods (የደንበኝነት እቃዎች)</h2>
+          <p className="text-[10px] text-slate-500">Manage recurring products & delivery bundles</p>
+        </div>
+        <button 
+          onClick={() => setShowModal(true)}
+          className="px-3.5 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold shadow hover:shadow-lg transition-all"
+        >
+          ➕ Add Subscription Plan
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="text-center py-12"><Loader className="animate-spin text-emerald-500 mx-auto" size={24} /></div>
+      ) : plans.length === 0 ? (
+        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-8 text-center">
+          <Clock size={32} className="mx-auto mb-2 text-slate-300 animate-pulse" />
+          <p className="text-xs font-bold text-slate-500">No subscription plans created yet</p>
+          <p className="text-[9px] text-slate-400 mt-1">Create subscription goods (e.g. weekly groceries, diaper delivery packs) to get recurring monthly revenue!</p>
+        </div>
+      ) : (
+        <div className="grid sm:grid-cols-2 gap-3.5">
+          {plans.map((p: any) => (
+            <div key={p.id} className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm flex flex-col justify-between">
+              <div>
+                <div className="flex justify-between items-start">
+                  <div className="flex gap-2.5 items-center">
+                    <span className="text-2xl p-2 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border">{p.emoji || '📦'}</span>
+                    <div>
+                      <h3 className="text-xs font-black text-slate-800 dark:text-slate-100">{p.name}</h3>
+                      {p.name_amharic && <p className="text-[10px] text-slate-400 mt-0.5">{p.name_amharic}</p>}
+                    </div>
+                  </div>
+                  <span className="text-[8px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200/50">Active</span>
+                </div>
+                <p className="text-[9.5px] text-slate-500 dark:text-slate-400 mt-3 leading-relaxed line-clamp-2">{p.description || 'No description provided.'}</p>
+                
+                <div className="grid grid-cols-3 gap-2 border-t border-slate-100 dark:border-slate-800/80 pt-3 mt-3 text-center">
+                  {p.daily_price && (
+                    <div className="bg-slate-50 dark:bg-slate-800/40 p-1.5 rounded-xl border">
+                      <div className="text-[7px] text-slate-400 uppercase font-black">Daily</div>
+                      <div className="text-[10px] font-black text-emerald-500">Br {p.daily_price}</div>
+                    </div>
+                  )}
+                  {p.weekly_price && (
+                    <div className="bg-slate-50 dark:bg-slate-800/40 p-1.5 rounded-xl border">
+                      <div className="text-[7px] text-slate-400 uppercase font-black">Weekly</div>
+                      <div className="text-[10px] font-black text-emerald-500">Br {p.weekly_price}</div>
+                    </div>
+                  )}
+                  {p.monthly_price && (
+                    <div className="bg-slate-50 dark:bg-slate-800/40 p-1.5 rounded-xl border">
+                      <div className="text-[7px] text-slate-400 uppercase font-black">Monthly</div>
+                      <div className="text-[10px] font-black text-emerald-500">Br {p.monthly_price}</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-2 border-t border-slate-100 dark:border-slate-800/80 pt-3 mt-4">
+                <button 
+                  onClick={() => deletePlan(p.id)}
+                  className="flex-1 py-2 border border-red-200 hover:bg-red-50 text-red-500 dark:text-red-400 rounded-xl text-[9px] font-bold shadow-sm transition-all"
+                >
+                  🗑️ Delete Plan
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Creation Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowModal(false)}>
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 w-full max-w-lg shadow-2xl relative max-h-[90vh] overflow-y-auto scrollbar-none" onClick={e => e.stopPropagation()}>
+            <button className="absolute right-4 top-4 w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-slate-400 hover:text-slate-600 text-sm" onClick={() => setShowModal(false)}>✕</button>
+            
+            <div className="text-center mb-4 border-b border-slate-100 dark:border-slate-800/80 pb-3">
+              <span className="text-[9px] bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full font-black uppercase tracking-wider">Vendor Portal</span>
+              <h3 className="text-sm font-black mt-2 text-slate-900 dark:text-white">Create Subscription Plan</h3>
+              <p className="text-[10px] text-slate-500 mt-1">Configure recursive deliveries, units, and rates.</p>
+            </div>
+
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="text-[8px] text-slate-400 font-extrabold uppercase block mb-1">Plan Name (English) *</label>
+                  <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Weekly Organic Fruits Box" className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white outline-none" />
+                </div>
+                <div>
+                  <label className="text-[8px] text-slate-400 font-extrabold uppercase block mb-1">ስም (አማርኛ)</label>
+                  <input type="text" value={nameAmharic} onChange={e => setNameAmharic(e.target.value)} placeholder="ለምሳሌ፡ ሳምንታዊ የፍራፍሬ ሳጥን" className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white outline-none" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2.5">
+                <div>
+                  <label className="text-[8px] text-slate-400 font-extrabold uppercase block mb-1">Emoji Icon</label>
+                  <input type="text" value={emoji} onChange={e => setEmoji(e.target.value)} placeholder="🍎" className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white outline-none text-center text-lg font-bold" />
+                </div>
+                <div>
+                  <label className="text-[8px] text-slate-400 font-extrabold uppercase block mb-1">Category</label>
+                  <select value={category} onChange={e => setCategory(e.target.value)} className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-slate-50 dark:bg-slate-950 text-slate-850 dark:text-white outline-none">
+                    <option value="groceries">Groceries</option>
+                    <option value="baby">Baby Care</option>
+                    <option value="beauty">Beauty & Skin</option>
+                    <option value="general">General Pack</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[8px] text-slate-400 font-extrabold uppercase block mb-1">Unit Label</label>
+                  <input type="text" value={unitLabel} onChange={e => setUnitLabel(e.target.value)} placeholder="e.g. box, bottle" className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white outline-none" />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[8px] text-slate-400 font-extrabold uppercase block mb-1">Description</label>
+                <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Describe what items are included inside each recurring delivery..." rows={2} className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white outline-none resize-none" />
+              </div>
+
+              {/* Frequencies Rate Builder */}
+              <div className="bg-slate-50 dark:bg-slate-950/60 p-3.5 rounded-2xl border dark:border-slate-850 space-y-2">
+                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">💰 Pricing & Frequencies (Br)</span>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="text-[8px] text-slate-400 font-semibold uppercase">Daily Payout</label>
+                    <input type="number" value={dailyPrice} onChange={e => setDailyPrice(e.target.value)} placeholder="Optional" className="w-full mt-0.5 p-2 border rounded-xl text-xs bg-transparent outline-none font-bold text-emerald-500" />
+                  </div>
+                  <div>
+                    <label className="text-[8px] text-slate-400 font-semibold uppercase">Weekly Payout</label>
+                    <input type="number" value={weeklyPrice} onChange={e => setWeeklyPrice(e.target.value)} placeholder="e.g. 350" className="w-full mt-0.5 p-2 border rounded-xl text-xs bg-transparent outline-none font-bold text-emerald-500" />
+                  </div>
+                  <div>
+                    <label className="text-[8px] text-slate-400 font-semibold uppercase">Monthly Payout</label>
+                    <input type="number" value={monthlyPrice} onChange={e => setMonthlyPrice(e.target.value)} placeholder="e.g. 1200" className="w-full mt-0.5 p-2 border rounded-xl text-xs bg-transparent outline-none font-bold text-emerald-500" />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[8px] text-slate-400 font-extrabold uppercase block mb-1">Image URL</label>
+                <input type="text" value={image} onChange={e => setImage(e.target.value)} placeholder="https://images.unsplash.com/photo-..." className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-slate-50 dark:bg-slate-950 text-slate-850 dark:text-white outline-none" />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button 
+                  className="flex-1 py-3 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-500" 
+                  onClick={() => setShowModal(false)}
+                >
+                  Cancel
+                </button>
+                <button 
+                  className="flex-1 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-1"
+                  onClick={submitPlan}
+                  disabled={saving}
+                >
+                  {saving ? (
+                    <>
+                      <Loader size={12} className="animate-spin" /> Publishing...
+                    </>
+                  ) : (
+                    <>
+                      🚀 Publish Plan
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
