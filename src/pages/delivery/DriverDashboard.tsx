@@ -13,6 +13,19 @@ import {
 
 type Tab = 'available' | 'active' | 'history' | 'earnings';
 
+function getStatusColor(status: string): string {
+  const colors: Record<string, string> = {
+    pending: 'bg-amber-950/40 text-amber-400 border border-amber-500/20',
+    confirmed: 'bg-blue-950/40 text-blue-400 border border-blue-500/20',
+    preparing: 'bg-indigo-950/40 text-indigo-400 border border-indigo-500/20',
+    out_for_delivery: 'bg-purple-950/40 text-purple-400 border border-purple-500/20',
+    delivered: 'bg-emerald-950/40 text-emerald-400 border border-emerald-500/20',
+    failed: 'bg-rose-950/40 text-rose-400 border border-rose-500/20',
+    cancelled: 'bg-slate-950/40 text-slate-400 border border-slate-500/20',
+  };
+  return colors[status] || 'bg-slate-950/40 text-slate-400 border border-slate-500/20';
+}
+
 interface DailyEarning {
   day: string;
   amount: number;

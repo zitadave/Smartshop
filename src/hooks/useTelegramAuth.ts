@@ -179,7 +179,7 @@ export function useTelegramAuth() {
       const updated = { ...state.user, phone };
       persistAuth(updated);
       setState({ status: 'authenticated', user: updated, error: null });
-      setProfile(prev => ({ ...prev, phone }));
+      setProfile({ ...useStore.getState().profile, phone });
       hapticFeedback('notification', 'success');
       toast('✅ Phone verified!', 'success');
     } catch { toast('❌ Phone registration failed', 'error'); }

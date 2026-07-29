@@ -21,7 +21,7 @@ export default function Profile() {
   var [editPhone, setEditPhone] = useState('');
 
   // Read localStorage data
-  var ls = {};
+  var ls: any = {};
   try { ls = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
   var lsPhone = localStorage.getItem('ss_user_phone') || '';
   
@@ -120,7 +120,7 @@ export default function Profile() {
     toast('✅ Profile updated!', 'success');
   }
 
-  var engagementItems = [
+  var engagementItems: any[] = [
     { icon: '🏆', label: 'Loyalty & Rewards', desc: 'Earn points & rewards', onClick: function() { navigate('/loyalty'); } },
   ];
 
@@ -334,7 +334,7 @@ export default function Profile() {
   );
 }
 
-function MenuItem(props) {
+function MenuItem(props: any) {
   return (
     <div className="flex items-center gap-3 px-3 py-3 bg-card rounded-xl border border-border cursor-pointer hover:border-primary hover:shadow-sm transition-all" onClick={props.onClick}>
       <span className="text-lg w-7 text-center">{props.icon}</span>

@@ -5,7 +5,7 @@ export default defineConfig({
   timeout: 30000,
   retries: 1,
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'https://moonlit-kheer-826ac2.netlify.app',
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'https://smartshop.vercel.app',
     viewport: { width: 390, height: 844 }, // iPhone 14 Pro
     actionTimeout: 10000,
     screenshot: 'only-on-failure',

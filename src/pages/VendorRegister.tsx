@@ -28,7 +28,7 @@ export default function VendorRegister() {
     if (!storePhone.trim()) { toast('Phone number is required', 'error'); return; }
     setSubmitting(true);
     
-    var ls = {};
+    var ls: any = {};
     try { ls = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
     var tgId = ls.telegramId || '';
     
@@ -45,7 +45,7 @@ export default function VendorRegister() {
       localStorage.setItem('ss_vendor_status', 'pending');
       toast('Application submitted! Admin will review.', 'success');
       setTimeout(function() { nav('/profile'); }, 1500);
-    } catch(e) {
+    } catch(e: any) {
       toast('Error submitting: ' + e.message, 'error');
       setSubmitting(false);
     }

@@ -105,7 +105,7 @@ export default function AdminBotManager() {
     }
     queueNotification(n);
     refreshNotifs();
-    notifyDemo(type).then(sent => {
+    notifyDemo(type as any).then(sent => {
       if (sent) toast(`📨 ${n.title} sent to Telegram chat!`, 'success');
       else toast(`📨 ${n.title} queued locally (configure bot token + chat ID above to send to Telegram)`, 'info');
     });

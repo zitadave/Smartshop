@@ -10,7 +10,7 @@ export default function ProductAnalytics() {
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | 'all'>('all');
 
   // Calculate per-product analytics
-  const productStats = products.map(p => {
+  const productStats = products.map((p: any) => {
     const productOrders = orders.filter(o => o.items?.some((i: any) => i.id === p.id));
     const totalSold = p.soldCount || productOrders.reduce((s, o) => s + o.items.filter((i: any) => i.id === p.id).reduce((s2: number, i: any) => s2 + i.quantity, 0), 0);
     const revenue = totalSold * p.price;

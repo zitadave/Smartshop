@@ -247,9 +247,16 @@ export async function createSubscription(params: {
 
 // ── Get user's subscriptions ───────────────────────────────
 export async function getUserSubscriptions(telegramId: number): Promise<Subscription[]> {
-  const res = await fetch(`/api/subscriptions?telegram_id=${telegramId}`);
-  const data = await res.json();
-  return data.subscriptions || [];
+  try {
+    const res = await fetch(`/api/subscriptions?telegram_id=${telegramId}`);
+    if (res.ok) {
+      const data = await res.json();
+      return data.subscriptions || [];
+    }
+  } catch (e) {
+    console.error('Failed to fetch user subscriptions:', e);
+  }
+  return [];
 }
 
 // ── Update subscription ───────────────────────────────────
@@ -273,16 +280,45 @@ export async function cancelSubscription(id: number): Promise<{ success: boolean
 
 // ── Get delivery history for a subscription ────────────────
 export async function getDeliveryHistory(subscriptionId: number): Promise<SubscriptionDelivery[]> {
-  const res = await fetch(`/api/subscriptions/deliveries?subscription_id=${subscriptionId}`);
-  const data = await res.json();
-  return data.deliveries || [];
+  try {
+    const res = await fetch(`/api/subscriptions/deliveries?subscription_id=${subscriptionId}`);
+    if (res.ok) {
+      const data = await res.json();
+      const raw = data.deliveries || [];
+      return raw.map((d: any) => ({
+        id: d.id,
+        subscriptionId: d.subscription_id || d.subscriptionId,
+        planId: d.plan_id || d.planId,
+        telegramId: d.telegram_id || d.telegramId,
+        productName: d.product_name || d.productName,
+        quantity: d.quantity,
+        price: d.price,
+        deliveryAddress: d.delivery_address || d.deliveryAddress,
+        deliveryDate: d.delivery_date || d.deliveryDate,
+        status: d.status,
+        deliveredAt: d.delivered_at || d.deliveredAt,
+        notes: d.notes,
+        createdAt: d.created_at || d.createdAt,
+      }));
+    }
+  } catch (e) {
+    console.error('Failed to get delivery history:', e);
+  }
+  return [];
 }
 
 // ── Get vendor's subscription orders ──────────────────────
 export async function getVendorSubscriptionOrders(vendorId: number): Promise<Subscription[]> {
-  const res = await fetch(`/api/vendor/subscription-orders?vendor_id=${vendorId}`);
-  const data = await res.json();
-  return data.orders || [];
+  try {
+    const res = await fetch(`/api/vendor/subscription-orders?vendor_id=${vendorId}`);
+    if (res.ok) {
+      const data = await res.json();
+      return data.orders || [];
+    }
+  } catch (e) {
+    console.error('Failed to get vendor subscription orders:', e);
+  }
+  return [];
 }
 
 // ── Calculate savings compared to buying retail ────────────

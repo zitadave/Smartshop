@@ -12,7 +12,7 @@ import {
   generateIncomeStatement, generateBalanceSheet, generateCashFlowStatement,
   calculateRatios, getAccountBalance,
   getAuditLog, logAuditEvent, addControlAlert, getControlAlerts, resolveAlert,
-  generateProFormaInvoice, generateEntryNumber,
+  generateProFormaInvoice, generateEntryNumber, createExpenseJournalEntry, createSaleJournalEntry,
   type JournalEntry, type TrialBalanceLine, type FinancialStatement, type ControlAlert,
 } from '@/lib/accounting';
 
@@ -59,7 +59,7 @@ export default function SmartBooks() {
         </div>
       </div>
 
-      {tab === 'dashboard' && <SmartDashboard />}
+      {tab === 'dashboard' && <SmartDashboard setTab={setTab} />}
       {tab === 'accounts' && <ChartOfAccountsView />}
       {tab === 'journal' && <JournalView />}
       {tab === 'trial' && <TrialBalanceView />}
@@ -74,7 +74,7 @@ export default function SmartBooks() {
   );
 }
 
-function SmartDashboard() {
+function SmartDashboard({ setTab }: { setTab: (t: any) => void }) {
   const ratios = useMemo(() => calculateRatios(), []);
   const entries = useMemo(() => getJournalEntries(), []);
   const alerts = useMemo(() => getControlAlerts(true), []);

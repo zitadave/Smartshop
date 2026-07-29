@@ -139,7 +139,7 @@ export default function PayoutSystem() {
               <input type="number" className="p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" placeholder="Amount (Br)" id="payout-amount" />
               <button className="p-2.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold" onClick={() => {
                 const amount = Number((document.getElementById('payout-amount') as HTMLInputElement)?.value);
-                if (!selectedVendor || !amount) return alert('Select vendor and enter amount');
+                if (!selectedVendor || !amount) return toast('Select vendor and enter amount', 'error');
                 processPayout(selectedVendor.id, amount);
               }}>
                 Process Payout

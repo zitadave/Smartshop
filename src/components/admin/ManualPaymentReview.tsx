@@ -200,7 +200,7 @@ export default function ManualPaymentReview() {
                   {/* Right: Receipt (Image or Text) */}
                   <div>
                     {p.receiptImage ? (
-                      <div className="relative rounded-xl overflow-hidden border-2 border-indigo-200 dark:border-indigo-800 shadow-md cursor-pointer group h-36" onClick={() => setExpandedImage(p.receiptImage)}>
+                      <div className="relative rounded-xl overflow-hidden border-2 border-indigo-200 dark:border-indigo-800 shadow-md cursor-pointer group h-36" onClick={() => setExpandedImage(p.receiptImage || null)}>
                         <img src={p.receiptImage} className="w-full h-full object-contain bg-slate-50 dark:bg-slate-800" alt="Receipt screenshot" />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl">
                           <ExternalLink size={24} className="text-white" />

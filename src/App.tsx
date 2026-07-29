@@ -51,7 +51,7 @@ function TelegramBackButton() {
   const navigate = useNavigate();
   useEffect(function() {
     var tg = window.Telegram?.WebApp;
-    if (!tg) return;
+    if (!tg || !tg.BackButton) return;
     if (location.pathname === '/') tg.BackButton.hide();
     else { tg.BackButton.show(); tg.BackButton.onClick(function() { navigate(-1); }); }
     return function() { try { tg.BackButton.offClick(function() {}); } catch(e) {} };

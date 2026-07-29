@@ -18,6 +18,23 @@ export default function Tracking() {
     setRecentOrders(recent);
   }, [orders, orderTracking]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const orderNum = params.get('order') || params.get('id') || '';
+    if (orderNum) {
+      setSearch(orderNum);
+      const matched = orders.find(o => 
+        o.orderNumber?.toLowerCase().includes(orderNum.toLowerCase()) ||
+        o.customer?.phone?.includes(orderNum)
+      );
+      if (matched) {
+        setFound(matched);
+      } else {
+        setFound({ error: true });
+      }
+    }
+  }, [orders]);
+
   const lookup = () => {
     const order = orders.find(o => 
       o.orderNumber?.toLowerCase().includes(search.toLowerCase()) ||

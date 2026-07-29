@@ -1,76 +1,62 @@
-# 🏪 Smart Shop v3 — Cloudflare Native
+# 🏪 Smart Shop v3 — Vercel Native
 
-## 📋 Cloudflare Setup (Mobile-Friendly)
+## 📋 Vercel Setup (Mobile-Friendly & Automated)
 
 ### Step 1: Create Account
-1. Open **Chrome/Safari** on your phone
-2. Go to **https://dash.cloudflare.com/sign-up**
-3. Enter email + password → Verify email → Login
+1. Open **Chrome/Safari** on your device
+2. Go to **https://vercel.com/signup**
+3. Select **Continue with GitHub** and authorize your account.
 
-### Step 2: Deploy Frontend (No Code Needed)
-Since you're on mobile, use **Cloudflare Pages Direct Upload** from the GitHub repo:
+### Step 2: Deploy Frontend & Serverless API (All-in-One)
+Since we are using **Vercel**, both your high-performance Vite React frontend and Node.js serverless API are deployed instantly as a single cohesive unified app!
 
-1. Go to **https://github.com/zitadave/Smartshop**
-2. Click **"Actions"** tab → Enable workflows
-3. I'll add the workflow for auto-deploy when you're back on desktop
+1. Go to the **Vercel Dashboard** → Click **"Add New"** → **"Project"**
+2. Import the `Smartshop` repository from your GitHub.
+3. Configure the Project Settings:
+   - **Framework Preset**: select **Vite** or let Vercel auto-detect it.
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `dist`
+4. Add the following **Environment Variables** in the project settings:
+   - `VITE_API_URL`: `https://your-project-name.vercel.app/api`
+   - `SUPABASE_URL`: Your Supabase Project URL
+   - `SUPABASE_ANON_KEY`: Your Supabase Anon Key
+   - `TELEGRAM_BOT_TOKEN`: Your Telegram Bot Token for notification dispatches
+5. Click **"Deploy"**!
 
-**Alternative: Deploy manually from mobile:**
-1. Cloudflare Dashboard → **Workers & Pages** → **Pages**
-2. Click **"Create"** → **"Connect to Git"**
-3. Authorize GitHub → Select `zitadave/Smartshop`
-3. Set **project name**: `smartshop`
-4. **Build command**: `cd smartshop-v2 && npm install && npm run build`
-5. **Build output**: `smartshop-v2/dist`
-6. **Environment variable**: `VITE_API_URL = https://smartshop-t75c.onrender.com`
-7. Click **"Save and Deploy"**
+Your application will be live in under 2 minutes at `https://your-project-name.vercel.app` 🎉
 
-Your frontend will be live in 2 minutes at: `https://smartshop.pages.dev` 🎉
-
-### Step 3: Connect to Your Render Backend
-Your Cloudflare frontend at `smartshop.pages.dev` will call your existing Render backend at `smartshop-t75c.onrender.com` for all API requests.
-
-### Step 4: (Optional) Deploy Workers API
-When you're ready:
-```bash
-cd workers/smartshop-api
-npm install
-npm run deploy
-```
+### Step 3: Serverless Cron Jobs (Bi-weekly & Daily Subscriptions)
+Vercel Hobby accounts restrict cron schedules to at most once per day. To accommodate daily subscription expirations, a serverless Cron Job is configured in `vercel.json` and runs every night at midnight to safely process renewals:
+- **Cron Endpoint:** `/api/cron/subscriptions`
+- **Schedule:** `"0 0 * * *"` (Daily at midnight)
 
 ---
 
 ## 🚀 What's Built
 
-### Frontend (`smartshop-v2/`) — Phase 1 ✅
+### Frontend & Serverless Backend — Unified Platform ✅
 - **Vite + React + shadcn/ui + Tailwind + TypeScript**
-- 14 pages: Home, Shop, Product, Cart, Wishlist, Orders, OrderDetail, Profile, Checkout, Confirmation, GiftCards, Compare, Tracking, Admin
-- 40+ features: AI Recs, Follow Shops, Price Alerts, Q&A, Invoices, Multi-Vendor Cart, etc.
-- 5 languages (Amharic, English, Oromoo, Tigrinya, Somali)
-- Dark mode, PWA installable
-- **Build size: 107KB gzipped**
-
-### Backend (`workers/smartshop-api/`) — Phase 2 ✅
-- **Cloudflare Workers + Supabase**
-- 20+ REST API endpoints (products, orders, vendors, settings, affiliates, upload, analytics, broadcast)
-- CORS headers, error handling, KV caching
+- **API Engine (`api/index.ts`)**: Built natively inside Node.js on Vercel's serverless edge.
+- **Pages**: Home, Shop, Product, Cart, Wishlist, Orders, OrderDetail, Profile, Checkout, Confirmation, GiftCards, Compare, Tracking, Admin, Vendor, Subscriptions
+- **40+ Core Features**: AI Recommendations, Follow Shops, Price Alerts, Q&A, Invoices, Multi-Vendor Cart, etc.
+- **5 Languages**: Amharic, English, Oromoo, Tigrinya, Somali
+- **Theme customizer** and mobile-responsive WebApp design.
 
 ### Admin Panel (`src/pages/admin/AdminPanel.tsx`) — Phase 3 ✅
 - **shadcn/ui design system**
 - 10 tabs: Dashboard, Products, Orders, Vendors, Marketplace, Coupons, Disputes, Subscriptions, Audit, Settings
-- Full CRUD for products, vendors, coupons
-- Commission rates control, marketplace management
-- Order lifecycle management
+- Full CRUD for products, vendors, coupons, and subscription goods.
+- Platform commission controller.
 
 ---
 
-## 💰 Cost: $0/month
+## 💰 Cost: $0/month (Hobby Friendly)
 
 | Layer | Service | Cost |
 |-------|---------|------|
-| Frontend | Cloudflare Pages | FREE (unlimited bandwidth) |
-| Backend | Render (until migrated) | $0 (existing) |
-| Backend | Cloudflare Workers (future) | FREE (100k req/day) |
-| Database | Supabase | FREE (500MB) |
+| Frontend | Vercel Platform | FREE (unlimited bandwidth) |
+| Backend | Vercel Serverless Functions | FREE (100k req/day) |
+| Database | Supabase DB | FREE (500MB) |
 | Images | Supabase Storage | FREE (1GB) |
 
 ---

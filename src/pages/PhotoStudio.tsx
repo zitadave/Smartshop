@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { processProductPhoto, uploadProductPhoto, type ProcessedPhoto } from '@/lib/photoStudio';
 import { Camera, Upload, Check, RefreshCw, Image } from 'lucide-react';
+import { toast } from '@/components/Toast';
 
 export default function PhotoStudio() {
   const [file, setFile] = useState<File | null>(null);
@@ -19,7 +20,7 @@ export default function PhotoStudio() {
       const processed = await processProductPhoto(f);
       setResult(processed);
     } catch (e: any) {
-      alert('Error: ' + e.message);
+      toast('Error: ' + e.message, 'error');
     }
     setProcessing(false);
   };
@@ -31,7 +32,7 @@ export default function PhotoStudio() {
       const urls = await uploadProductPhoto(result);
       setUploaded(true);
     } catch (e: any) {
-      alert('Upload error: ' + e.message);
+      toast('Upload error: ' + e.message, 'error');
     }
     setUploading(false);
   };

@@ -667,7 +667,7 @@ function AdminVendors() {
 
   var pendingApps = apiApps.filter(function(a) { return a.status === 'pending'; });
   var [deleteConfirmId, setDeleteConfirmId] = useState(null);
-  const approveVendorApp = function(id, name) {
+  const approveVendorApp = function(id: any, name: any) {
     fetch('/api/vendors/approve', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -679,11 +679,11 @@ function AdminVendors() {
       } else { toast('Error: ' + (d.error || 'unknown'), 'error'); }
     }).catch(function(e) { toast('Error: ' + e.message, 'error'); });
   };
-  const rejectVendorApp = function(id) {
+  const rejectVendorApp = function(id: any) {
     toast('❌ Vendor rejected.', 'info');
     window.location.reload();
   };
-  const confirmDelete = function(id) {
+  const confirmDelete = function(id: any) {
     setDeleteConfirmId(id);
   };
   const executeDelete = function() {
@@ -699,7 +699,7 @@ function AdminVendors() {
       } else { toast('Error: ' + (d.error || 'unknown'), 'error'); }
     }).catch(function(e) { toast('Error: ' + e.message, 'error'); });
   };
-  const toggleVendorStatus = function(id) {
+  const toggleVendorStatus = function(id: any) {
     toast('✅ Vendor status updated!', 'success');
     window.location.reload();
   };
@@ -819,7 +819,7 @@ function AdminVendors() {
                 <h3 className="text-sm font-bold">All Vendor Applications ({apiApps.length})</h3>
               </div>
               <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                {apiApps.sort(function(a,b) { return new Date(b.joined_at || b.appliedAt) - new Date(a.joined_at || a.appliedAt); }).map(function(a) {
+                {apiApps.sort(function(a,b) { return new Date(b.joined_at || b.appliedAt).getTime() - new Date(a.joined_at || a.appliedAt).getTime(); }).map(function(a) {
                   var badgeColor = a.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : a.status === 'paused' ? 'bg-amber-100 text-amber-700' : a.status === 'rejected' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700';
                   var badgeText = a.status === 'paused' ? 'Paused' : a.status.charAt(0).toUpperCase() + a.status.slice(1);
                   return (
@@ -1407,7 +1407,7 @@ function AdminThemes() {
 }
 
 function AdminSettings() {
-  const store = useStore(); const { settings, setSettings, darkMode, setDarkMode } = store;
+  const store = useStore(); const { setSettings, darkMode, setDarkMode } = store; const settings = store.settings as any;
   const [commission, setCommission] = useState(settings.vendorCommission || 10);
   const [delCommission, setDelCommission] = useState(settings.deliveryCommission || 20);
   const [deliveryFee, setDeliveryFee] = useState(settings.deliveryFee || 50);

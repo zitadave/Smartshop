@@ -60,7 +60,7 @@ export default function Checkout() {
  const [useTextReceipt, setUseTextReceipt] = useState(false);
  const fileRef = useRef<HTMLInputElement>(null);
 
- const chapaEnabled = settings?.chapaTestMode !== false;
+ const chapaEnabled = (settings as any)?.chapaTestMode !== false;
 
  useEffect(() => {
    let watchId: number | null = null;
@@ -144,10 +144,10 @@ export default function Checkout() {
  const points = Math.floor(grandTotal / 10);
  setRewardPoints(points);
 
- const order = {
+ const order: any = {
  orderNumber: orderNum,
  status: paymentMethod === 'bank' ? 'pending_approval' : 'confirmed',
- items: cart.map(i => ({ id: i.id, name: i.nameEn, quantity: i.qty, price: i.price, total: i.price * i.qty, vendorId: i.vendorId, vendorName: i.vendorName })),
+ items: cart.map(i => ({ id: i.id, name: i.nameEn, quantity: i.qty, price: i.price, total: i.price * i.qty, vendorId: i.vendorId || undefined, vendorName: i.vendorName })),
  total: grandTotal, subtotal: total, discount: promoDiscount, delivery: deliveryFee,
  paymentMethod: paymentMethod === 'chapa' ? 'chapa' : 'manual',
  customer: { name, phone, city, address, notes: '' },
@@ -243,9 +243,10 @@ export default function Checkout() {
  <div className={cn('rounded-xl p-3 text-[10px]', paymentMethod === 'bank' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700')}>
  {paymentMethod === 'bank' ? 'Your payment is being reviewed by admin. You will be notified once confirmed.' : 'Your payment has been processed. Your order is being prepared!'}
  </div>
- <div className="flex gap-2">
- <button className="flex-1 py-3 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors" onClick={() => { window.location.href = '/loyalty'; }}>View Rewards</button>
- <button className="flex-[2] py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-bold hover:shadow-lg transition-all" onClick={() => { window.location.href = '/shop'; }}>Back to Shop</button>
+ <div className="flex gap-2 flex-wrap">
+ <button className="flex-1 min-w-[100px] py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold hover:shadow-md transition-all flex items-center justify-center gap-1" onClick={() => { window.location.href = '/tracking?order=' + orderNumber; }}>🚚 Track Order</button>
+ <button className="flex-1 min-w-[100px] py-3 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors" onClick={() => { window.location.href = '/loyalty'; }}>View Rewards</button>
+ <button className="w-full py-3.5 bg-slate-900 text-white rounded-xl text-xs font-extrabold hover:shadow-lg transition-all" onClick={() => { window.location.href = '/shop'; }}>Back to Shop</button>
  </div>
  </div>
  </div>

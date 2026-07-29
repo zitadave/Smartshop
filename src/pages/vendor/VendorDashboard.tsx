@@ -9,10 +9,10 @@ import {
   BarChart3, Plus, Edit3, Eye, Save, Tag, DollarSign, Star, ClipboardList,
   Truck, RefreshCw, Camera, Link2, AlertTriangle, Trophy, Download,
   Users, Wallet, Filter, Search, Calendar, ArrowUp, ArrowDown, TrendingDown,
-  CheckCircle, Clock, Image, Trash2, Bell, ChevronRight, Activity,
+  CheckCircle, Clock, Trash2, Bell, ChevronRight, Activity,
   Globe, MapPin, Phone, Mail, Upload, Printer, FileText, Shield,
   Layers, Sparkles, Target, Zap, Gift, Percent, Box, RotateCcw,
-  Heart, Share2, ChevronDown, MessageCircle, Video, ExternalLink
+  Heart, Share2, ChevronDown, MessageCircle, Video, ExternalLink, Loader
 } from 'lucide-react';
 import { toast } from '@/components/Toast';
 import { parseSerializedName } from '@/lib/groupBuying';
@@ -24,7 +24,7 @@ function compressImage(base64Str: string, maxWidth: number = 800): Promise<strin
       resolve(base64Str);
       return;
     }
-    const img = new Image();
+    const img = new window.Image();
     img.src = base64Str;
     img.onload = () => {
       const canvas = document.createElement('canvas');
@@ -57,7 +57,7 @@ export default function VendorDashboard() {
   const store = useStore();
   const { products, orders } = store;
   const vendorId = 1;
-  const vendorProducts = products.filter(p => p.vendorId === vendorId || !p.vendorId);
+  const vendorProducts: any[] = products.filter(p => p.vendorId === vendorId || !p.vendorId);
   const vendorName = vendorProducts[0]?.vendorName || 'My Store';
 
   const stats = useMemo(() => {
@@ -133,16 +133,15 @@ export default function VendorDashboard() {
           {([
             { id: 'dashboard' as VendorTab, icon: Activity, label: 'Dashboard', badge: stats.pendingOrders },
             { id: 'products' as VendorTab, icon: Package, label: 'Products', badge: stats.outOfStock.length },
-            { id: 'storefront' as VendorTab, icon: Store, label: 'My Store' },
-            { id: 'analytics' as VendorTab, icon: TrendingUp, label: 'Analytics' },
+            { id: 'storefront' as VendorTab, icon: Store, label: 'My Store', badge: 0 },
+            { id: 'analytics' as VendorTab, icon: TrendingUp, label: 'Analytics', badge: 0 },
             { id: 'orders' as VendorTab, icon: ShoppingCart, label: 'Orders', badge: stats.pendingOrders },
             { id: 'reviews' as VendorTab, icon: Star, label: 'Reviews', badge: stats.totalReviews },
             { id: 'inventory' as VendorTab, icon: Box, label: 'Inventory', badge: stats.lowStock.length },
             { id: 'notifications' as VendorTab, icon: Bell, label: 'Notifications', badge: 0 },
-            { id: 'promotions' as VendorTab, icon: Gift, label: 'Promotions' },
-            { id: 'payouts' as VendorTab, icon: Wallet, label: 'Payouts' },
-            { id: 'subscriptions' as VendorTab, icon: Clock, label: 'Subscriptions' },
-            
+            { id: 'promotions' as VendorTab, icon: Gift, label: 'Promotions', badge: 0 },
+            { id: 'payouts' as VendorTab, icon: Wallet, label: 'Payouts', badge: 0 },
+            { id: 'subscriptions' as VendorTab, icon: Clock, label: 'Subscriptions', badge: 0 },
           ] as const).map(item => {
             const Icon = item.icon;
             const isActive = tab === item.id;
@@ -183,7 +182,11 @@ export default function VendorDashboard() {
           {tab === 'notifications' && <VendorNotificationsView />}
           {tab === 'promotions' && <VendorPromotionsView />}
           {tab === 'payouts' && <VendorPayoutsView stats={stats} />}
-          {tab === 'subscriptions' && <VendorSubscriptionsView />}
+          {tab === 'subscriptions' && (
+            <SubscriptionsErrorBoundary>
+              <VendorSubscriptionsView />
+            </SubscriptionsErrorBoundary>
+          )}
           
         </div>
       </main>
@@ -253,7 +256,7 @@ function VendorDashboardView({ products, stats, revenueHistory, onOpenStudio }: 
             <p className="text-xs text-slate-400 text-center py-4">✅ All products well stocked!</p>
           ) : (
             <div className="space-y-1.5">
-              {stats.lowStock.slice(0, 5).map(p => (
+              {stats.lowStock.slice(0, 5).map((p: any) => (
                 <div key={p.id} className="flex items-center gap-2.5 py-1.5 border-b border-slate-100 dark:border-slate-800 last:border-0">
                   <img src={p.image} className="w-8 h-8 rounded-lg object-cover" />
                   <div className="flex-1 min-w-0">
@@ -386,7 +389,7 @@ function VendorProductsView({ products, onOpenStudio }: { products: any[]; onOpe
 }
 
 // ===== STOREFRONT =====
-function VendorStorefrontView(_props) {
+function VendorStorefrontView(_props: any) {
   
   // File upload handlers
   function setupFileUploads() {
@@ -403,7 +406,7 @@ function VendorStorefrontView(_props) {
             sd2.logo = ev.target.result;
             localStorage.setItem('ss_vendor_store', JSON.stringify(sd2));
             window.location.reload();
-          } catch(ex) { alert('Error saving logo: ' + ex.message); }
+          } catch(ex: any) { toast('Error saving logo: ' + ex.message, 'error'); }
         };
         r.readAsDataURL(f);
       });
@@ -421,7 +424,7 @@ function VendorStorefrontView(_props) {
             sd2.banner = ev.target.result;
             localStorage.setItem('ss_vendor_store', JSON.stringify(sd2));
             window.location.reload();
-          } catch(ex) { alert('Error saving banner: ' + ex.message); }
+          } catch(ex: any) { toast('Error saving banner: ' + ex.message, 'error'); }
         };
         r.readAsDataURL(f);
       });
@@ -429,24 +432,24 @@ function VendorStorefrontView(_props) {
   }
   setTimeout(setupFileUploads, 100);
   function testTelegram() {
-    var tgId = document.getElementById('tg-id');
-    if (!tgId || !tgId.value.trim()) { alert('Please enter your Telegram ID first'); return; }
-    var btn = document.getElementById('tg-test-btn');
+    var tgId = document.getElementById('tg-id') as HTMLInputElement;
+    if (!tgId || !tgId.value.trim()) { toast('Please enter your Telegram ID first', 'error'); return; }
+    var btn = document.getElementById('tg-test-btn') as HTMLButtonElement;
     if (btn) { btn.disabled = true; btn.textContent = 'Sending...'; }
     fetch('/api/vendor/notify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ telegramId: tgId.value.trim(), type: 'test', message: 'Test notification from Smart Shop! Your Telegram ID is connected correctly.' })
     }).then(function(r) { return r.json(); }).then(function(d) {
-      if (d.success) { alert('Test message sent! Check your Telegram.'); }
+      if (d.success) { toast('Test message sent! Check your Telegram.', 'success'); }
       else {
         var msg = d.error || 'Unknown error';
         if (msg.indexOf('chat not found') >= 0) { msg = 'Chat not found! Message @smart_shopping_et_bot and type /start first (you already did this if you use the shop!).'; }
-        alert('Failed: ' + msg);
+        toast('Failed: ' + msg, 'error');
       }
       if (btn) { btn.disabled = false; btn.textContent = 'Test'; }
-    }).catch(function(err) {
-      alert('Error: ' + err.message);
+    }).catch(function(err: any) {
+      toast('Error: ' + err.message, 'error');
       if (btn) { btn.disabled = false; btn.textContent = 'Test'; }
     });
   }
@@ -458,10 +461,16 @@ try {
     if (el) el.remove();
     
   } catch(e) {}
-  var sd = {};
-  try { sd = JSON.parse(localStorage.getItem('ss_vendor_store') || '{}'); } catch(e) {}
-  var settingsData = {};
-  try { settingsData = JSON.parse(localStorage.getItem('ss_vendor_settings') || '{}'); } catch(e) {}
+  var sd: any = {};
+  try {
+    var parsed = JSON.parse(localStorage.getItem('ss_vendor_store') || '{}');
+    sd = parsed && typeof parsed === 'object' ? parsed : {};
+  } catch(e) {}
+  var settingsData: any = {};
+  try {
+    var parsedSettings = JSON.parse(localStorage.getItem('ss_vendor_settings') || '{}');
+    settingsData = parsedSettings && typeof parsedSettings === 'object' ? parsedSettings : {};
+  } catch(e) {}
   var nm = sd.name || (_props.vendorName || 'My Store');
   var tg = sd.tagline || 'Quality Products, Best Prices';
   var desc = sd.description || 'Welcome to our store!';
@@ -498,7 +507,7 @@ try {
           React.createElement('div', null, React.createElement('label', { className: 'text-[9px] font-semibold text-slate-400 uppercase tracking-wider' }, 'Address'), React.createElement('input', { id: 'inp-address', defaultValue: ad, className: 'w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200' })),
           React.createElement('div', null, React.createElement('label', { className: 'text-[9px] font-semibold text-slate-400 uppercase tracking-wider' }, 'Website'), React.createElement('input', { id: 'inp-website', defaultValue: site, className: 'w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-slate-800 dark:text-slate-200' }))
         ),
-        React.createElement('button', { onClick: function() { var f = document.getElementById('store-form'); if (!f) return; var d = {name: document.getElementById('inp-name').value, tagline: document.getElementById('inp-tagline').value, description: document.getElementById('inp-desc').value, email: document.getElementById('inp-email').value, phone: document.getElementById('inp-phone').value, address: document.getElementById('inp-address').value, website: document.getElementById('inp-website').value, facebook: document.getElementById('inp-fb').value, instagram: document.getElementById('inp-ig').value, twitter: document.getElementById('inp-tw').value, youtube: document.getElementById('inp-yt').value, banner: '', logo: '' }; localStorage.setItem('ss_vendor_store', JSON.stringify(d)); try { toast('Storefront saved!', 'success'); } catch(e) { alert('Saved!'); } }, className: 'w-full mt-4 py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold hover:shadow-lg' }, 'Save Storefront')
+        React.createElement('button', { onClick: function() { var f = document.getElementById('store-form'); if (!f) return; var d = {name: document.getElementById('inp-name').value, tagline: document.getElementById('inp-tagline').value, description: document.getElementById('inp-desc').value, email: document.getElementById('inp-email').value, phone: document.getElementById('inp-phone').value, address: document.getElementById('inp-address').value, website: document.getElementById('inp-website').value, facebook: document.getElementById('inp-fb').value, instagram: document.getElementById('inp-ig').value, twitter: document.getElementById('inp-tw').value, youtube: document.getElementById('inp-yt').value, banner: '', logo: '' }; localStorage.setItem('ss_vendor_store', JSON.stringify(d)); try { toast('Storefront saved!', 'success'); } catch(e: any) { console.log('Saved!'); } }, className: 'w-full mt-4 py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold hover:shadow-lg' }, 'Save Storefront')
       )
     ),
     // Settings Section
@@ -515,7 +524,7 @@ try {
           ),
           React.createElement('p', { className: 'text-[8px] text-slate-400 mt-1.5 leading-relaxed' }, 'Get your Telegram ID by messaging ', React.createElement('a', { href: 'https://t.me/userinfobot', target: '_blank', className: 'text-blue-500 underline' }, '@userinfobot'), ' on Telegram. Type /start to get your numeric ID. Then message ', React.createElement('a', { href: 'https://t.me/smart_shopping_et_bot', target: '_blank', className: 'text-blue-500 underline' }, '@smart_shopping_et_bot'), ' and type /start (you already did this as a customer!). Save your ID below and tap Test.')
         ),
-        React.createElement('button', { onClick: function() { var d = {name: document.getElementById('inp-name').value, email: document.getElementById('inp-email').value, phone: document.getElementById('inp-phone').value, bio: document.getElementById('inp-desc').value, notifications: document.getElementById('notif-email').checked, autoRestock: document.getElementById('notif-stock').checked}; d.telegramId = document.getElementById('tg-id') ? document.getElementById('tg-id').value : ''; localStorage.setItem('ss_vendor_settings', JSON.stringify(d)); try { toast('Settings saved!', 'success'); } catch(e) { alert('Saved!'); } }, className: 'mt-3 px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-[10px] font-bold' }, 'Save Settings')
+        React.createElement('button', { onClick: function() { var d = {name: document.getElementById('inp-name').value, email: document.getElementById('inp-email').value, phone: document.getElementById('inp-phone').value, bio: document.getElementById('inp-desc').value, notifications: document.getElementById('notif-email').checked, autoRestock: document.getElementById('notif-stock').checked}; d.telegramId = document.getElementById('tg-id') ? document.getElementById('tg-id').value : ''; localStorage.setItem('ss_vendor_settings', JSON.stringify(d)); try { toast('Settings saved!', 'success'); } catch(e: any) { console.log('Saved!'); } }, className: 'mt-3 px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-[10px] font-bold' }, 'Save Settings')
       ),
       React.createElement('div', { className: 'space-y-4' },
         React.createElement('div', { className: 'bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4' },
@@ -526,7 +535,7 @@ try {
         React.createElement('div', { className: 'bg-white dark:bg-slate-900 rounded-2xl border border-red-200 dark:border-red-900/30 p-4' },
           React.createElement('h3', { className: 'text-sm font-bold mb-2 text-red-600' }, 'Danger Zone'),
           React.createElement('p', { className: 'text-[9px] text-slate-500 mb-3' }, 'Disable your store from search results'),
-          React.createElement('button', { onClick: function() { try { toast('Store visibility toggled', 'info'); } catch(e) { alert('Toggled'); } }, className: 'px-4 py-2 border border-red-300 text-red-600 rounded-xl text-[10px] font-semibold' }, 'Pause Storefront')
+          React.createElement('button', { onClick: function() { try { toast('Store visibility toggled', 'info'); } catch(e: any) { console.log('Toggled'); } }, className: 'px-4 py-2 border border-red-300 text-red-600 rounded-xl text-[10px] font-semibold' }, 'Pause Storefront')
         )
       )
     )
@@ -933,6 +942,7 @@ function VendorPromotionsView() {
   const [groupProductId, setGroupProductId] = useState("");
   const [groupPrice, setGroupPrice] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [slotToBuy, setSlotToBuy] = useState<any | null>(null);
   
   const [groupDescription, setGroupDescription] = useState("");
   const [groupMinMembers, setGroupMinMembers] = useState(2);
@@ -1061,20 +1071,25 @@ function VendorPromotionsView() {
   };
 
   const buySlot = (slot: any) => {
-    if (!confirm("Purchase " + slot.name + " for Br " + slot.price + "?")) return;
+    setSlotToBuy(slot);
+  };
+
+  const executeBuySlot = () => {
+    if (!slotToBuy) return;
     const req = {
       id: "slot-req-" + Date.now(), vendorId: 1, vendorName: "My Store",
-      productId: 0, productName: "Featured Slot: " + slot.name,
+      productId: 0, productName: "Featured Slot: " + slotToBuy.name,
       type: "discount", discountPercent: 0, originalPrice: 0,
       startDate: new Date().toISOString(), endDate: new Date(Date.now() + 7 * 86400000).toISOString(),
       status: "pending", submittedAt: new Date().toISOString(),
-      featuredSlot: true, slotFee: slot.price,
+      featuredSlot: true, slotFee: slotToBuy.price,
     };
     const updated = [...promos, req];
     const allData = { requests: updated, priceFloors: [], slots };
     localStorage.setItem("ss_promotions_data", JSON.stringify(allData));
     setPromos(updated);
-    toast("✅ Slot purchase request submitted!", "success");
+    setSlotToBuy(null);
+    toast("✅ Slot purchased successfully! Under review.", "success");
   };
 
   return (
@@ -1504,6 +1519,33 @@ function VendorPromotionsView() {
           </div>
         </div>
       )}
+
+      {/* Slot Purchase Confirmation Modal */}
+      {slotToBuy && (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setSlotToBuy(null)}>
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 w-full max-w-sm shadow-2xl relative text-center animate-scaleIn" onClick={e => e.stopPropagation()}>
+            <span className="text-3xl block mb-2">💎</span>
+            <h3 className="text-sm font-black text-slate-900 dark:text-white mb-2">Purchase Featured Slot</h3>
+            <p className="text-[10px] text-slate-500 mb-4 leading-relaxed">
+              Are you sure you want to purchase the featured slot <strong>{slotToBuy.name}</strong> for <strong>Br {slotToBuy.price}</strong>?
+            </p>
+            <div className="flex gap-2">
+              <button 
+                className="flex-1 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-850" 
+                onClick={() => setSlotToBuy(null)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="flex-1 py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all" 
+                onClick={executeBuySlot}
+              >
+                Confirm Purchase
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1513,6 +1555,7 @@ function VendorSubscriptionsView() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [planToDelete, setPlanToDelete] = useState<number | null>(null);
 
   // Form states
   const [name, setName] = useState('');
@@ -1529,7 +1572,12 @@ function VendorSubscriptionsView() {
 
   // Read vendor info
   const vendorProfile = (() => {
-    try { return JSON.parse(localStorage.getItem('ss_vendor_store') || '{}'); } catch { return {}; }
+    try {
+      const parsed = JSON.parse(localStorage.getItem('ss_vendor_store') || '{}');
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+      return {};
+    }
   })();
   const vendorId = vendorProfile.id || 1;
   const vendorName = vendorProfile.name || 'Smart Shop';
@@ -1540,14 +1588,16 @@ function VendorSubscriptionsView() {
       .then(r => r.json())
       .then(d => {
         // Filter plans by vendor_id
-        const filtered = (d.plans || []).filter((p: any) => p.vendor_id == vendorId || p.vendor_name === vendorName);
+        const filtered = ((d && d.plans) || []).filter((p: any) => p && (p.vendor_id == vendorId || p.vendor_name === vendorName));
         setPlans(filtered);
         setLoading(false);
       })
       .catch(() => setLoading(false));
   };
 
-  useEffect(loadPlans, [vendorId, vendorName]);
+  useEffect(() => {
+    loadPlans();
+  }, [vendorId, vendorName]);
 
   const submitPlan = () => {
     if (!name.trim()) { toast('Please enter a subscription plan name', 'error'); return; }
@@ -1608,14 +1658,25 @@ function VendorSubscriptionsView() {
   };
 
   const deletePlan = (id: number) => {
-    if (!confirm('Are you sure you want to delete this subscription plan?')) return;
-    fetch('/api/subscription-plans/' + id, { method: 'DELETE' })
+    setPlanToDelete(id);
+  };
+
+  const executeDeletePlan = () => {
+    if (planToDelete === null) return;
+    fetch('/api/subscription-plans/' + planToDelete, { method: 'DELETE' })
       .then(r => r.json())
       .then(d => {
         if (d.success) {
           toast('🗑️ Subscription plan deleted', 'info');
           loadPlans();
+        } else {
+          toast('Error deleting subscription plan', 'error');
         }
+        setPlanToDelete(null);
+      })
+      .catch((e: any) => {
+        toast('Error: ' + e.message, 'error');
+        setPlanToDelete(null);
       });
   };
 
@@ -1858,6 +1919,68 @@ function VendorSubscriptionsView() {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      {planToDelete !== null && (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setPlanToDelete(null)}>
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 w-full max-w-sm shadow-2xl relative text-center animate-scaleIn" onClick={e => e.stopPropagation()}>
+            <span className="text-3xl block mb-2">⚠️</span>
+            <h3 className="text-sm font-black text-slate-900 dark:text-white mb-2">Delete Subscription Plan</h3>
+            <p className="text-[10px] text-slate-500 mb-4 leading-relaxed">Are you sure you want to delete this subscription plan? This action cannot be undone.</p>
+            <div className="flex gap-2">
+              <button 
+                className="flex-1 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-850" 
+                onClick={() => setPlanToDelete(null)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="flex-1 py-2.5 bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all" 
+                onClick={executeDeletePlan}
+              >
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
+}
+
+class SubscriptionsErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error: any }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error("Subscriptions Tab Error caught by Boundary:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 rounded-3xl p-6 text-center space-y-3">
+          <span className="text-4xl block">⚠️</span>
+          <h3 className="text-sm font-bold text-red-800 dark:text-red-400">Subscription Tab Error</h3>
+          <p className="text-[10px] text-red-600 dark:text-red-500 leading-relaxed max-w-xs mx-auto">
+            The subscription page failed to render: {this.state.error?.message || String(this.state.error)}
+          </p>
+          <button 
+            onClick={() => this.setState({ hasError: false, error: null })}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-all"
+          >
+            🔄 Try Reloading Tab
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
 }
