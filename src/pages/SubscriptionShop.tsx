@@ -117,8 +117,12 @@ export default function SubscriptionShop() {
                 className={`bg-white rounded-2xl p-4 shadow-sm border-2 transition-all cursor-pointer hover:shadow-md ${isSubscribed ? 'border-green-300' : 'border-transparent'}`}
                 onClick={() => { setSelectedPlan(plan); setQuantity(plan.minQuantity); }}>
                 <div className="flex gap-4 items-start">
-                  <div className="text-4xl w-16 h-16 flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl">
-                    {plan.emoji}
+                  <div className="w-16 h-16 flex-shrink-0 rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-800 bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center">
+                    {plan.image ? (
+                      <img src={plan.image} className="w-full h-full object-cover" alt={plan.name} />
+                    ) : (
+                      <span className="text-3xl">{plan.emoji}</span>
+                    )}
                   </div>
                   <div className="flex-1">
                     <div className="flex items-start justify-between">
@@ -155,6 +159,14 @@ export default function SubscriptionShop() {
                onClick={() => setSelectedPlan(null)}>
             <div className="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto"
                  onClick={e => e.stopPropagation()}>
+              
+              {/* Cover Banner if available */}
+              {selectedPlan.image && (
+                <div className="mb-4 aspect-[1.8] rounded-2xl overflow-hidden border border-slate-200/80 bg-white">
+                  <img src={selectedPlan.image} className="w-full h-full object-cover" alt="Plan Cover" />
+                </div>
+              )}
+
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <span className="text-3xl">{selectedPlan.emoji}</span>

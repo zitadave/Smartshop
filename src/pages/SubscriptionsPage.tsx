@@ -163,8 +163,12 @@ function SubCard({ sub, onToggle, onCancel, onExpand, expanded, deliveries, canc
     <div className="bg-white rounded-xl shadow-sm mb-2 overflow-hidden border border-slate-100">
       <div className="p-4">
         <div className="flex items-start gap-3">
-          <div className="text-3xl w-12 h-12 flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl flex-shrink-0">
-            {emoji}
+          <div className="w-12 h-12 flex-shrink-0 rounded-xl overflow-hidden border border-slate-100 bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center">
+            {emoji.startsWith('http') || emoji.startsWith('data:image') ? (
+              <img src={emoji} className="w-full h-full object-cover" alt={sub.productName} />
+            ) : (
+              <span className="text-3xl">{emoji}</span>
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between">
