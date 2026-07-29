@@ -56,7 +56,7 @@ export default function VendorDashboard() {
   const navigate = useNavigate();
   const store = useStore();
   const { products, orders } = store;
-  const vendorId = 1;
+  const vendorId = parseInt(localStorage.getItem('ss_vendor_app_id') || '') || 1;
   const vendorProducts: any[] = products.filter(p => p.vendorId === vendorId || !p.vendorId);
   const vendorName = vendorProducts[0]?.vendorName || 'My Store';
 
@@ -923,13 +923,14 @@ function VendorPromotionsView() {
   const [tab, setTab] = useState<"request" | "active" | "groupbuys" | "slots">("request");
   const store = useStore();
   const { products } = store;
-  const vendorProducts = products.filter(p => p.vendorId === 1 || !p.vendorId);
+  const vendorId = parseInt(localStorage.getItem('ss_vendor_app_id') || '') || 1;
+  const vendorProducts = products.filter(p => p.vendorId === vendorId || !p.vendorId);
   const vendorName = vendorProducts[0]?.vendorName || 'My Store';
   const [promos, setPromos] = useState<any[]>(() => {
     try { return JSON.parse(localStorage.getItem("ss_promotions_data") || "{\"requests\":[]}").requests || []; }
     catch { return []; }
   });
-  const vendorPromos = promos.filter(p => p.vendorId === 1);
+  const vendorPromos = promos.filter(p => p.vendorId === vendorId);
   const [slots, setSlots] = useState<any[]>(() => {
     try { return JSON.parse(localStorage.getItem("ss_promotions_data") || "{\"slots\":[]}").slots || []; }
     catch { return []; }
@@ -1056,7 +1057,7 @@ function VendorPromotionsView() {
     const start = new Date();
     const end = new Date(Date.now() + 7 * 86400000);
     const req = {
-      id: "req-" + Date.now(), vendorId: 1, vendorName: "My Store",
+      id: "req-" + Date.now(), vendorId, vendorName,
       productId: product.id, productName: product.nameEn,
       type: reqType, discountPercent: pct, originalPrice: product.price,
       startDate: start.toISOString(), endDate: end.toISOString(),
@@ -1077,7 +1078,7 @@ function VendorPromotionsView() {
   const executeBuySlot = () => {
     if (!slotToBuy) return;
     const req = {
-      id: "slot-req-" + Date.now(), vendorId: 1, vendorName: "My Store",
+      id: "slot-req-" + Date.now(), vendorId, vendorName,
       productId: 0, productName: "Featured Slot: " + slotToBuy.name,
       type: "discount", discountPercent: 0, originalPrice: 0,
       startDate: new Date().toISOString(), endDate: new Date(Date.now() + 7 * 86400000).toISOString(),
@@ -1579,7 +1580,7 @@ function VendorSubscriptionsView() {
       return {};
     }
   })();
-  const vendorId = vendorProfile.id || 1;
+  const vendorId = parseInt(localStorage.getItem('ss_vendor_app_id') || '') || vendorProfile.id || 1;
   const vendorName = vendorProfile.name || 'Smart Shop';
 
   const loadPlans = () => {
