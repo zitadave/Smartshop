@@ -362,10 +362,17 @@ export default async function handler(req: any, res: any) {
         if (!delivery_id || !status) return fail('delivery_id and status required'); if (!DSTAT.includes(status)) return fail('Invalid status');
         const ud: Record<string, any> = { status }; if (status === 'at_vendor' && item_count) ud.item_count_confirmed_at_vendor = item_count;
         if (status === 'picked_up') ud.picked_up_at = new Date().toISOString();
-        if (status === 'arrived') ud.delivery_pin = Math.floor(100000 + Math.random() * 900000).toString();
+        if (status === 'arrived') ud.delivery_pin = Math.floor(1000 + Math.random() * 9000).toString();
         if (status === 'delivered') ud.delivered_at = new Date().toISOString();
         const { data, error } = await supabase.from('deliveries').update(ud).eq('id', delivery_id).select().single();
         if (error) return fail(error.message);
+        
+        // Dispatch completion PIN dynamically to customer via Telegram chat on arrival!
+        if (status === 'arrived' && data && data.customer_telegram_id) {
+          const pinMsg = `📦 *Smart Shop Delivery Dispatch*\n\nYour order *#${data.order_number}* has arrived at your destination!\n\n🔑 Your Delivery Completion PIN is: *${data.delivery_pin}*\n\nPlease provide this PIN to your delivery driver, or tap *Confirm Receipt* on your order detail page inside the WebApp to confirm receipt yourself!`;
+          await tg(ENV.VENDOR_BOT_TOKEN, data.customer_telegram_id, pinMsg);
+        }
+
         if (status === 'delivered' && data) { 
           const dp = data.driver_payout || 0; 
           const c = data.platform_commission || Math.round((data.fee || 0) * 0.2); 
@@ -458,12 +465,24 @@ export default async function handler(req: any, res: any) {
           payout = passedFee - commission;
         }
 
+        // Retrieve dynamic customer telegram_id from order
+        let customerTelegramId = null;
+        if (b.order_number) {
+          try {
+            const { data: ord } = await supabase.from('orders').select('*').eq('order_number', b.order_number).single();
+            if (ord) {
+              customerTelegramId = ord.telegram_id || ord.telegramId || ord.customer?.telegram_id || ord.customer?.telegramId || null;
+            }
+          } catch {}
+        }
+
         const { data, error } = await supabase.from('deliveries').insert({
           order_number: b.order_number || 'DEL-' + Date.now().toString(36).toUpperCase(), status: 'pending',
           item_count: b.item_count || 0, fee: finalFee, distance_km: b.distance_km || 0,
           platform_commission: commission,
           driver_payout: payout,
           pickup_address: b.pickup_address, delivery_address: b.delivery_address, no_contact: b.no_contact || false,
+          customer_telegram_id: customerTelegramId,
         }).select().single();
         if (error) return fail(error.message); return ok({ success: true, delivery: data });
       }
