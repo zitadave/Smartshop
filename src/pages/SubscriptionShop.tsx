@@ -179,14 +179,14 @@ export default function SubscriptionShop() {
 
         {/* Subscribe Modal */}
         {selectedPlan && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center"
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4"
                onClick={() => setSelectedPlan(null)}>
-            <div className="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto"
+            <div className="bg-background text-foreground border border-border/80 rounded-3xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto shadow-2xl"
                  onClick={e => e.stopPropagation()}>
               
               {/* Cover Banner if available */}
               {selectedPlan.image && (
-                <div className="mb-4 aspect-[1.8] rounded-2xl overflow-hidden border border-slate-200/80 bg-white">
+                <div className="mb-4 aspect-[1.8] rounded-2xl overflow-hidden border border-border/80 bg-card">
                   <img src={selectedPlan.image} className="w-full h-full object-cover" alt="Plan Cover" />
                 </div>
               )}
@@ -195,11 +195,11 @@ export default function SubscriptionShop() {
                 <div className="flex items-center gap-3">
                   <span className="text-3xl">{selectedPlan.emoji}</span>
                   <div>
-                    <h2 className="text-xl font-bold">{selectedPlan.name}</h2>
-                    <p className="text-xs text-slate-400">{selectedPlan.description}</p>
+                    <h2 className="text-xl font-extrabold text-foreground">{selectedPlan.name}</h2>
+                    <p className="text-xs text-muted-foreground">{selectedPlan.description}</p>
                   </div>
                 </div>
-                <button onClick={() => setSelectedPlan(null)} className="text-slate-400 p-2">✕</button>
+                <button onClick={() => setSelectedPlan(null)} className="text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all rounded-full p-1.5">✕</button>
               </div>
 
               {/* Frequency Selector */}
