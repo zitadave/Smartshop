@@ -1412,6 +1412,8 @@ function AdminSettings() {
   const [delCommission, setDelCommission] = useState(settings.deliveryCommission || 20);
   const [deliveryFee, setDeliveryFee] = useState(settings.deliveryFee || 50);
   const [freeThreshold, setFreeThreshold] = useState(settings.freeDeliveryThreshold || 1000);
+  const [startTime, setStartTime] = useState(settings.deliveryStartTime || '02:00');
+  const [endTime, setEndTime] = useState(settings.deliveryEndTime || '20:00');
   const [priceAlertEnabled, setPriceAlertEnabled] = useState(settings.priceAlertEnabled !== false);
   const saveSetting = (key: string, val: any) => { const updated = { ...settings, [key]: val }; setSettings(updated as any); settingsApi.update(updated); };
   const gameSettings = (settings as any)?.gameSettings || {};
@@ -1432,13 +1434,15 @@ function AdminSettings() {
 
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
         <h3 className="text-sm font-bold mb-3">💰 Commission & Delivery</h3>
-        <div className="grid sm:grid-cols-4 gap-3">
+        <div className="grid sm:grid-cols-6 gap-3">
           <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Vendor Commission %</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={commission} onChange={e => setCommission(Number(e.target.value))} /></div>
           <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Delivery Commission %</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={delCommission} onChange={e => setDelCommission(Number(e.target.value))} /></div>
           <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Delivery Fee (Br)</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={deliveryFee} onChange={e => setDeliveryFee(Number(e.target.value))} /></div>
           <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Free Delivery Over</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={freeThreshold} onChange={e => setFreeThreshold(Number(e.target.value))} /></div>
+          <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Delivery Start</label><input type="time" className="w-full mt-1 p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-foreground font-semibold" value={startTime} onChange={e => setStartTime(e.target.value)} /></div>
+          <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Delivery End</label><input type="time" className="w-full mt-1 p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-foreground font-semibold" value={endTime} onChange={e => setEndTime(e.target.value)} /></div>
         </div>
-        <button className="mt-4 px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-bold" onClick={() => { saveSetting('vendorCommission', commission); saveSetting('deliveryCommission', delCommission); saveSetting('deliveryFee', deliveryFee); saveSetting('freeDeliveryThreshold', freeThreshold); toast('✅ Settings saved!', 'success'); notifySettingsChanged(`Vendor Comm: ${commission}%\nDelivery Comm: ${delCommission}%\nDelivery Fee: Br ${deliveryFee}\nFree Delivery: Br ${freeThreshold}`); }}>💾 Save Settings</button>
+        <button className="mt-4 px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-bold" onClick={() => { saveSetting('vendorCommission', commission); saveSetting('deliveryCommission', delCommission); saveSetting('deliveryFee', deliveryFee); saveSetting('freeDeliveryThreshold', freeThreshold); saveSetting('deliveryStartTime', startTime); saveSetting('deliveryEndTime', endTime); toast('✅ Settings saved!', 'success'); notifySettingsChanged(`Vendor Comm: ${commission}%\nDelivery Comm: ${delCommission}%\nDelivery Fee: Br ${deliveryFee}\nFree Delivery: Br ${freeThreshold}\nHours: ${startTime} - ${endTime}`); }}>💾 Save Settings</button>
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>

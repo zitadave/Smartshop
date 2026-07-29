@@ -233,7 +233,7 @@ export default function DriverDashboard() {
     fetch('/api/delivery/verify-pin', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: pinVerificationId, pin: verificationPinInput.trim() })
+      body: JSON.stringify({ delivery_id: pinVerificationId, pin: verificationPinInput.trim() })
     }).then(function(r) { return r.json(); }).then(function(d) {
       setVerifyingPin(false);
       if (d.verified) {

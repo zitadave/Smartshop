@@ -3,9 +3,11 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { fetchPlans, createSubscription, getUserSubscriptions, formatFrequency, getDiscountPercent, getPlanPrice, type SubscriptionPlan, type Subscription, type SubscriptionFrequency } from '@/lib/subscriptions';
 import { ArrowLeft, ShoppingCart, Check, Plus, Minus, Calendar, MapPin, Clock, CreditCard, ChevronRight, Bell, Package, TrendingDown } from 'lucide-react';
 import { toast } from '@/components/Toast';
+import { useStore } from '@/stores/AppStore';
 
 export default function SubscriptionShop() {
   const navigate = useNavigate();
+  const { settings } = useStore();
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [category, setCategory] = useState('all');
   const [loading, setLoading] = useState(true);
@@ -27,13 +29,22 @@ export default function SubscriptionShop() {
   const [useDetectedLocation, setUseDetectedLocation] = useState<boolean | null>(null);
   const [detectingLocation, setDetectingLocation] = useState(false);
 
+  const deliveryStartTime = (settings as any)?.deliveryStartTime || '02:00';
+  const deliveryEndTime = (settings as any)?.deliveryEndTime || '20:00';
+
   const isTimeValid = useMemo(() => {
     if (!isCustomTime) return true;
     const [h, m] = customTime.split(':').map(Number);
     const val = h + m / 60;
-    // Deliveries allowed between 02:00 AM (2.0) and 08:00 PM (20.0)
-    return val >= 2.0 && val <= 20.0;
-  }, [isCustomTime, customTime]);
+    
+    const [startH, startM] = deliveryStartTime.split(':').map(Number);
+    const startVal = startH + startM / 60;
+    
+    const [endH, endM] = deliveryEndTime.split(':').map(Number);
+    const endVal = endH + endM / 60;
+    
+    return val >= startVal && val <= endVal;
+  }, [isCustomTime, customTime, deliveryStartTime, deliveryEndTime]);
 
   // Auto-detect GPS location when modal is opened!
   useEffect(() => {
@@ -436,7 +447,7 @@ export default function SubscriptionShop() {
                       {!isTimeValid && (
                         <div className="p-2.5 bg-rose-500/10 border border-rose-500/20 rounded-xl text-[10px] text-rose-500 dark:text-rose-400 flex items-start gap-1.5 animate-scaleIn leading-relaxed">
                           <span className="text-xs">⚠️</span>
-                          <span><strong>Time Limit Restriction:</strong> Deliveries are only available from <strong>02:00 AM</strong> to <strong>08:00 PM</strong> (after 08:00 PM evening and before 02:00 AM morning are locked).</span>
+                          <span><strong>Time Limit Restriction:</strong> Deliveries are only available from <strong>{deliveryStartTime}</strong> to <strong>{deliveryEndTime}</strong> (outside these hours are locked by admin).</span>
                         </div>
                       )}
                     </div>
