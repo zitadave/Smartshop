@@ -1240,7 +1240,25 @@ export default async function handler(req: any, res: any) {
       if (!tid) return ok({ success: false });
       var r: Record<string, any> = { success: true };
       try { await supabase.from('users').upsert({ telegram_id: parseInt(tid), username: b.username || '', first_name: b.first_name || '', ...(b.phone ? { phone: b.phone } : {}) }, { onConflict: 'telegram_id' }); const { data: ur } = await supabase.from('users').select('*').eq('telegram_id', parseInt(tid)).single(); if (ur?.phone) r.phone = ur.phone; } catch {}
-      try { var v = await getV(); var f = tid ? v.find((vv: any) => vv.telegram_id == parseInt(tid)) : null; if (f) { r.vendor_status = f.status || 'pending'; r.vendor_id = f.id; r.vendor_name = f.name || ''; } else r.vendor_status = 'none'; } catch { r.vendor_status = 'none'; }
+      try { 
+        var v = await getV(); 
+        var f = null;
+        if (tid) {
+          f = v.find((vv: any) => vv.telegram_id == parseInt(tid));
+        }
+        if (!f && b.phone) {
+          f = v.find((vv: any) => vv.phone == b.phone);
+        }
+        if (f) { 
+          r.vendor_status = f.status || 'pending'; 
+          r.vendor_id = f.id; 
+          r.vendor_name = f.name || ''; 
+        } else {
+          r.vendor_status = 'none'; 
+        }
+      } catch { 
+        r.vendor_status = 'none'; 
+      }
       return ok(r);
     }
 
