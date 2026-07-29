@@ -62,11 +62,33 @@ export default function Shop() {
           setRecording(false);
         };
 
-        recognition.onresult = (event: any) => {
+        recognition.onresult = async (event: any) => {
           const spokenText = event.results[0][0].transcript;
           console.log('[SPEECH] Transcribed text:', spokenText);
           setSearch(spokenText);
-          toast(`🎙️ Voice Search: "${spokenText}"`, 'success');
+          
+          try {
+            const isAmharic = /[\u1200-\u137F]/.test(spokenText);
+            const pair = isAmharic ? 'am|en' : 'en|am';
+            
+            // Translate universally via public free MyMemory Translation API
+            const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(spokenText)}&langpair=${pair}`);
+            if (res.ok) {
+              const d = await res.json();
+              const translated = d.responseData?.translatedText;
+              if (translated && translated.toLowerCase() !== spokenText.toLowerCase()) {
+                setSearch(spokenText + ' ' + translated);
+                toast(`🎙️ Voice Search: "${spokenText}" (expanded: "${translated}")`, 'success');
+              } else {
+                toast(`🎙️ Voice Search: "${spokenText}"`, 'success');
+              }
+            } else {
+              toast(`🎙️ Voice Search: "${spokenText}"`, 'success');
+            }
+          } catch (err) {
+            console.warn('Free Translation API failed:', err);
+            toast(`🎙️ Voice Search: "${spokenText}"`, 'success');
+          }
         };
 
         recognition.start();
@@ -80,6 +102,28 @@ export default function Shop() {
 
   const stopRecording = () => {
     setRecording(false);
+  };
+
+  const translateTypedQuery = async () => {
+    if (!search.trim()) return;
+    try {
+      const isAmharic = /[\u1200-\u137F]/.test(search);
+      const pair = isAmharic ? 'am|en' : 'en|am';
+      toast('✨ Translating search query...', 'info');
+      const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(search)}&langpair=${pair}`);
+      if (res.ok) {
+        const d = await res.json();
+        const translated = d.responseData?.translatedText;
+        if (translated && translated.toLowerCase() !== search.toLowerCase()) {
+          setSearch(search + ' ' + translated);
+          toast(`✨ Search expanded with: "${translated}"`, 'success');
+        } else {
+          toast('✨ Query is already translated.', 'info');
+        }
+      }
+    } catch {
+      toast('❌ Translation failed.', 'error');
+    }
   };
 
   // Read search from navigation state (header search overlay)
@@ -123,9 +167,18 @@ export default function Shop() {
               disabled={recording}
             />
             {search && !recording && (
-              <button className="absolute right-10 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-foreground transition-colors p-0.5" onClick={() => setSearch('')} aria-label="Clear search">
-                <X size={15} />
-              </button>
+              <div className="absolute right-10 top-1/2 -translate-y-1/2 flex items-center gap-1.5 z-20">
+                <button 
+                  onClick={translateTypedQuery}
+                  className="text-muted-foreground/50 hover:text-primary p-0.5 transition-colors"
+                  title="Translate & Expand Search"
+                >
+                  <Sparkles size={14} className="text-amber-500 animate-pulse" />
+                </button>
+                <button className="text-muted-foreground/50 hover:text-foreground transition-colors p-0.5" onClick={() => setSearch('')} aria-label="Clear search">
+                  <X size={15} />
+                </button>
+              </div>
             )}
             <button 
               onClick={toggleRecording}
