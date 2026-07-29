@@ -19,6 +19,8 @@ export default function ProductDetail() {
   const product = store.products.find(p => p.id === Number(id));
   const { language, addToCart, toggleWishlist, isInWishlist, addRecentView, toggleFollowVendor, isFollowingVendor, togglePriceAlert, hasPriceAlert, settings } = store;
 
+  const isGroupBuyProduct = product?.tags?.includes?.('groupbuy') || product?.tags?.includes?.('GroupBuy') || product?.category === 'groupbuy';
+
   const [qty, setQty] = useState(1);
   const [galleryIdx, setGalleryIdx] = useState(0);
   const [zoom, setZoom] = useState(false);
@@ -301,8 +303,10 @@ export default function ProductDetail() {
             <span className="min-w-[28px] text-center font-bold text-sm">{qty}</span>
             <button className="w-9 h-9 rounded-md text-lg font-semibold flex items-center justify-center hover:bg-card transition-colors" onClick={() => setQty(Math.min(product.stockCount, qty + 1))}><Plus size={16} /></button>
           </div>
-          <div className="flex gap-1.5">
-          <button onClick={() => { 
+
+          {/* Independent Full-Width Group Buy Button Card (Only for compatible products!) */}
+          {isGroupBuyProduct && (
+            <button onClick={() => { 
               if (!store.telegramId) {
                 toast('🚪 Please log in via Telegram first!', 'error');
               } else {
@@ -310,18 +314,20 @@ export default function ProductDetail() {
                 setShowCreateGroup(true);
               }
             }}
-              className="flex-1 py-2.5 bg-gradient-to-r from-green-400 to-emerald-500 text-white rounded-xl text-sm font-medium shadow-lg hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2 mb-3">
-              <Users size={16} /> 🤝 Group Buy — Invite friends & save!
+              className="w-full py-3.5 bg-gradient-to-r from-emerald-400 via-green-500 to-teal-600 text-white rounded-2xl text-xs font-black shadow-lg shadow-emerald-500/10 hover:shadow-xl hover:shadow-emerald-500/20 transition-all active:scale-[0.99] flex items-center justify-center gap-2">
+              <Users size={15} /> 🤝 Start ማህበር ግዢ (Group Buy) & Save up to 30%!
             </button>
+          )}
 
-            <button className="flex-1 py-3 bg-primary text-white rounded-lg text-sm font-semibold hover:bg-primary/90 active:scale-95 transition-all flex items-center justify-center gap-1.5" onClick={() => { addToCart(product, qty); store.addNotification('🛒', `Added ${product.nameEn} to cart`); }}>
-              <ShoppingCart size={16} /> {t('addToCart', language)}
+          <div className="flex gap-1.5">
+            <button className="flex-1 py-3.5 bg-primary text-primary-foreground rounded-2xl text-xs font-bold hover:shadow-lg hover:shadow-primary/20 active:scale-[0.99] transition-all flex items-center justify-center gap-1.5" onClick={() => { addToCart(product, qty); store.addNotification('🛒', `Added ${product.nameEn} to cart`); }}>
+              <ShoppingCart size={15} /> {t('addToCart', language)}
             </button>
-            <button className={cn('py-3 px-4 rounded-lg border text-sm transition-all', wis ? 'bg-destructive/10 border-destructive/30 text-destructive' : 'border-border text-muted-foreground hover:bg-muted')} onClick={() => toggleWishlist(product)}>
+            <button className={cn('py-3.5 px-4 rounded-2xl border text-sm transition-all', wis ? 'bg-destructive/10 border-destructive/30 text-destructive' : 'border-border text-muted-foreground hover:bg-muted')} onClick={() => toggleWishlist(product)}>
               {wis ? '❤️' : '♡'}
             </button>
-            <button className="py-3 px-4 rounded-lg border border-border text-muted-foreground hover:bg-muted transition-all" onClick={() => { const text = `Check out ${product.nameEn} at Smart Shop! ${formatPrice(product.price)}`; if (navigator.share) navigator.share({ title: product.nameEn, text }); else navigator.clipboard.writeText(text + ' ' + window.location.href); }}>
-              <Share2 size={16} />
+            <button className="py-3.5 px-4 rounded-2xl border border-border text-muted-foreground hover:bg-muted transition-all" onClick={() => { const text = `Check out ${product.nameEn} at Smart Shop! ${formatPrice(product.price)}`; if (navigator.share) navigator.share({ title: product.nameEn, text }); else navigator.clipboard.writeText(text + ' ' + window.location.href); }}>
+              <Share2 size={15} />
             </button>
           </div>
 
