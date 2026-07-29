@@ -1414,6 +1414,12 @@ function AdminSettings() {
   const [freeThreshold, setFreeThreshold] = useState(settings.freeDeliveryThreshold || 1000);
   const [startTime, setStartTime] = useState(settings.deliveryStartTime || '02:00');
   const [endTime, setEndTime] = useState(settings.deliveryEndTime || '20:00');
+  const [catOverrides, setCatOverrides] = useState<Record<string, number>>(settings.categoryCommission || {});
+  const [vendOverrides, setVendOverrides] = useState<Record<string, number>>(settings.vendorCommissionOverride || {});
+  const [newCatKey, setNewCatKey] = useState('');
+  const [newCatVal, setNewCatVal] = useState('');
+  const [newVendKey, setNewVendorKey] = useState('');
+  const [newVendVal, setNewVendorVal] = useState('');
   const [priceAlertEnabled, setPriceAlertEnabled] = useState(settings.priceAlertEnabled !== false);
   const saveSetting = (key: string, val: any) => { const updated = { ...settings, [key]: val }; setSettings(updated as any); settingsApi.update(updated); };
   const gameSettings = (settings as any)?.gameSettings || {};
@@ -1428,6 +1434,32 @@ function AdminSettings() {
   const addWheelSegment = () => { saveSetting('wheelSegments', [...wheelSegments, { label: '🎁 New Prize', color: '#6366F1', value: 50 }]); };
   const removeWheelSegment = (idx: number) => { if (wheelSegments.length > 2) saveSetting('wheelSegments', wheelSegments.filter((_: any, i: number) => i !== idx)); };
 
+  const addCategoryOverride = () => {
+    if (!newCatKey.trim() || !newCatVal) return;
+    const updated = { ...catOverrides, [newCatKey.trim()]: Number(newCatVal) };
+    setCatOverrides(updated);
+    setNewCatKey('');
+    setNewCatVal('');
+  };
+  const removeCategoryOverride = (key: string) => {
+    const updated = { ...catOverrides };
+    delete updated[key];
+    setCatOverrides(updated);
+  };
+  
+  const addVendorOverride = () => {
+    if (!newVendKey.trim() || !newVendVal) return;
+    const updated = { ...vendOverrides, [newVendKey.trim()]: Number(newVendVal) };
+    setVendOverrides(updated);
+    setNewVendorKey('');
+    setNewVendorVal('');
+  };
+  const removeVendorOverride = (key: string) => {
+    const updated = { ...vendOverrides };
+    delete updated[key];
+    setVendOverrides(updated);
+  };
+
   return (
     <div className="animate-fadeUp space-y-4">
       <h2 className="text-lg font-bold flex items-center gap-2"><SettingsIcon size={20} /> Settings</h2>
@@ -1435,14 +1467,73 @@ function AdminSettings() {
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
         <h3 className="text-sm font-bold mb-3">💰 Commission & Delivery</h3>
         <div className="grid sm:grid-cols-6 gap-3">
-          <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Vendor Commission %</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={commission} onChange={e => setCommission(Number(e.target.value))} /></div>
-          <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Delivery Commission %</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={delCommission} onChange={e => setDelCommission(Number(e.target.value))} /></div>
-          <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Delivery Fee (Br)</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={deliveryFee} onChange={e => setDeliveryFee(Number(e.target.value))} /></div>
-          <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Free Delivery Over</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={freeThreshold} onChange={e => setFreeThreshold(Number(e.target.value))} /></div>
+          <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Vendor Commission %</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-foreground" value={commission} onChange={e => setCommission(Number(e.target.value))} /></div>
+          <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Delivery Commission %</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-foreground" value={delCommission} onChange={e => setDelCommission(Number(e.target.value))} /></div>
+          <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Delivery Fee (Br)</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-foreground" value={deliveryFee} onChange={e => setDeliveryFee(Number(e.target.value))} /></div>
+          <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Free Delivery Over</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-foreground" value={freeThreshold} onChange={e => setFreeThreshold(Number(e.target.value))} /></div>
           <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Delivery Start</label><input type="time" className="w-full mt-1 p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-foreground font-semibold" value={startTime} onChange={e => setStartTime(e.target.value)} /></div>
           <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Delivery End</label><input type="time" className="w-full mt-1 p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-foreground font-semibold" value={endTime} onChange={e => setEndTime(e.target.value)} /></div>
         </div>
-        <button className="mt-4 px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-bold" onClick={() => { saveSetting('vendorCommission', commission); saveSetting('deliveryCommission', delCommission); saveSetting('deliveryFee', deliveryFee); saveSetting('freeDeliveryThreshold', freeThreshold); saveSetting('deliveryStartTime', startTime); saveSetting('deliveryEndTime', endTime); toast('✅ Settings saved!', 'success'); notifySettingsChanged(`Vendor Comm: ${commission}%\nDelivery Comm: ${delCommission}%\nDelivery Fee: Br ${deliveryFee}\nFree Delivery: Br ${freeThreshold}\nHours: ${startTime} - ${endTime}`); }}>💾 Save Settings</button>
+
+        {/* Dynamic Overrides Board */}
+        <div className="grid sm:grid-cols-2 gap-4 mt-5 pt-4 border-t border-slate-100 dark:border-slate-800">
+          {/* Category Overrides */}
+          <div className="space-y-3">
+            <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">🏷️ Category Commission Overrides</h4>
+            <div className="flex gap-2">
+              <input type="text" placeholder="Category key (e.g. groceries)" value={newCatKey} onChange={e => setNewCatKey(e.target.value)} className="flex-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-foreground outline-none focus:border-indigo-500" />
+              <input type="number" placeholder="%" value={newCatVal} onChange={e => setNewCatVal(e.target.value)} className="w-16 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-center font-bold text-foreground outline-none focus:border-indigo-500" />
+              <button onClick={addCategoryOverride} className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-500/10">Add</button>
+            </div>
+            <div className="space-y-1 max-h-32 overflow-y-auto">
+              {Object.entries(catOverrides).map(([k, v]) => (
+                <div key={k} className="flex items-center justify-between text-xs p-2 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                  <span className="font-mono text-slate-500 dark:text-slate-400 font-bold">{k}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-extrabold text-indigo-600 dark:text-indigo-400">{v}%</span>
+                    <button onClick={() => removeCategoryOverride(k)} className="text-red-500 hover:text-red-600 font-bold px-1 text-xs">✕</button>
+                  </div>
+                </div>
+              ))}
+              {Object.keys(catOverrides).length === 0 && <p className="text-[10px] text-slate-400 dark:text-slate-500 italic">No category overrides configured.</p>}
+            </div>
+          </div>
+
+          {/* Vendor Overrides */}
+          <div className="space-y-3">
+            <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">🏪 Vendor Commission Overrides</h4>
+            <div className="flex gap-2">
+              <input type="number" placeholder="Vendor ID (e.g. 12)" value={newVendKey} onChange={e => setNewVendorKey(e.target.value)} className="flex-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-foreground outline-none focus:border-indigo-500" />
+              <input type="number" placeholder="%" value={newVendVal} onChange={e => setNewVendorVal(e.target.value)} className="w-16 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-center font-bold text-foreground outline-none focus:border-indigo-500" />
+              <button onClick={addVendorOverride} className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-500/10">Add</button>
+            </div>
+            <div className="space-y-1 max-h-32 overflow-y-auto">
+              {Object.entries(vendOverrides).map(([k, v]) => (
+                <div key={k} className="flex items-center justify-between text-xs p-2 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+                  <span className="font-mono text-slate-500 dark:text-slate-400 font-bold">Vendor #{k}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-extrabold text-indigo-600 dark:text-indigo-400">{v}%</span>
+                    <button onClick={() => removeVendorOverride(k)} className="text-red-500 hover:text-red-600 font-bold px-1 text-xs">✕</button>
+                  </div>
+                </div>
+              ))}
+              {Object.keys(vendOverrides).length === 0 && <p className="text-[10px] text-slate-400 dark:text-slate-500 italic">No vendor overrides configured.</p>}
+            </div>
+          </div>
+        </div>
+
+        <button className="mt-5 px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-xs font-bold hover:shadow-lg shadow-indigo-500/10 transition-all active:scale-[0.99]" onClick={() => { 
+          saveSetting('vendorCommission', commission); 
+          saveSetting('deliveryCommission', delCommission); 
+          saveSetting('deliveryFee', deliveryFee); 
+          saveSetting('freeDeliveryThreshold', freeThreshold); 
+          saveSetting('deliveryStartTime', startTime); 
+          saveSetting('deliveryEndTime', endTime); 
+          saveSetting('categoryCommission', catOverrides);
+          saveSetting('vendorCommissionOverride', vendOverrides);
+          toast('✅ Settings saved!', 'success'); 
+          notifySettingsChanged(`Vendor Comm: ${commission}%\nDelivery Comm: ${delCommission}%\nDelivery Fee: Br ${deliveryFee}\nFree Delivery: Br ${freeThreshold}\nHours: ${startTime} - ${endTime}`); 
+        }}>💾 Save Settings</button>
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>

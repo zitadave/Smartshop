@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '@/stores/AppStore';
 import { formatPrice, cn } from '@/lib/utils';
-import { MapPin, Truck, Package, CheckCircle, Clock, Navigation, Phone, Map as MapIcon, ChevronDown, ChevronUp } from 'lucide-react';
+import { MapPin, Truck, Package, CheckCircle, Clock, Navigation, Phone, Map as MapIcon, ChevronDown, ChevronUp, Loader } from 'lucide-react';
 
 interface OrderTrackingMapProps {
   orderNumber: string;
@@ -31,6 +31,24 @@ export default function OrderTrackingMap({ orderNumber, compact }: OrderTracking
   const [liveStatus, setLiveStatus] = useState<string>('');
   const [delivery, setDelivery] = useState<any>(null);
   const [loadingLive, setLoadingLive] = useState(true);
+  const [mapLoaded, setMapLoaded] = useState(false);
+
+  // Dynamic CDN loader for Leaflet
+  useEffect(() => {
+    if ((window as any).L) {
+      setMapLoaded(true);
+      return;
+    }
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    document.head.appendChild(link);
+
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    script.onload = () => setMapLoaded(true);
+    document.head.appendChild(script);
+  }, []);
 
   // Poll real-time backend driver coordinates & status
   useEffect(() => {
@@ -66,6 +84,66 @@ export default function OrderTrackingMap({ orderNumber, compact }: OrderTracking
     }, 15000);
     return () => clearInterval(interval);
   }, [delivery]);
+
+  // Dynamic Map renderer
+  useEffect(() => {
+    if (!mapLoaded || !delivery) return;
+
+    const L = (window as any).L;
+    if (!L) return;
+
+    const dLat = delivery.driver?.current_lat || 9.03;
+    const dLng = delivery.driver?.current_lng || 38.74;
+    const cLat = delivery.delivery_lat || 9.0315;
+    const cLng = delivery.delivery_lng || 38.7485;
+
+    const container = L.DomUtil.get('leaflet-map');
+    if (container) {
+      container._leaflet_id = null;
+    }
+
+    try {
+      const map = L.map('leaflet-map', {
+        zoomControl: false,
+        attributionControl: false
+      }).setView([dLat, dLng], 14);
+
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19
+      }).addTo(map);
+
+      const motorIcon = L.divIcon({
+        className: 'custom-motor-icon',
+        html: `<div class="w-8 h-8 rounded-full bg-indigo-600 border-2 border-white flex items-center justify-center shadow-lg"><span class="text-sm">🏍️</span></div>`,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16]
+      });
+
+      const homeIcon = L.divIcon({
+        className: 'custom-home-icon',
+        html: `<div class="w-8 h-8 rounded-full bg-rose-500 border-2 border-white flex items-center justify-center shadow-lg"><span class="text-sm">📍</span></div>`,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16]
+      });
+
+      const driverMarker = L.marker([dLat, dLng], { icon: motorIcon }).addTo(map);
+      const customerMarker = L.marker([cLat, cLng], { icon: homeIcon }).addTo(map);
+
+      L.polyline([[dLat, dLng], [cLat, cLng]], {
+        color: '#6366F1',
+        weight: 3,
+        opacity: 0.85,
+        dashArray: '8, 8'
+      }).addTo(map);
+
+      const group = new L.featureGroup([driverMarker, customerMarker]);
+      map.fitBounds(group.getBounds().pad(0.15));
+
+      return () => {
+        map.remove();
+      };
+    } catch {}
+  }, [mapLoaded, delivery]);
 
   if (!order) {
     return (
@@ -151,69 +229,19 @@ export default function OrderTrackingMap({ orderNumber, compact }: OrderTracking
       </div>
 
       {/* Map Visualization */}
-      <div className="relative bg-gradient-to-br from-slate-900 to-slate-950 rounded-2xl overflow-hidden h-52 border border-slate-800 shadow-inner">
-        {/* Grid lines for map effect */}
-        <div className="absolute inset-0 opacity-10" style={{
-          backgroundImage: `
-            linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)
-          `,
-          backgroundSize: '25px 20px'
-        }} />
-        
-        {/* Destination marker (Your location) */}
-        <div className="absolute bottom-10 right-10 flex flex-col items-center z-10">
-          <div className="relative">
-            <span className="absolute -inset-1 rounded-full bg-red-500/40 animate-ping" />
-            <div className="w-4.5 h-4.5 bg-red-500 rounded-full border-2 border-white shadow-lg flex items-center justify-center">
-              <MapPin size={10} className="text-white" />
-            </div>
-          </div>
-          <div className="w-0.5 h-3 bg-red-500/50" />
-          <div className="bg-slate-900/90 border border-slate-700 text-white text-[7px] font-black px-1.5 py-0.5 rounded shadow whitespace-nowrap">
-            📍 Your Location
-          </div>
-        </div>
+      <div className="relative rounded-2xl overflow-hidden h-52 border border-slate-800 shadow-inner bg-slate-950">
+        {/* Real Leaflet Map Container */}
+        <div id="leaflet-map" style={{ height: '100%', width: '100%', borderRadius: '1rem' }} />
 
-        {/* Live Driver marker - animated based on live coords */}
-        <div 
-          className="absolute flex flex-col items-center z-10 transition-all duration-1000 ease-out"
-          style={{
-            top: `${30 + (Math.sin(driverLat * 100) * 15)}%`,
-            left: `${35 + (Math.cos(driverLng * 100) * 15)}%`,
-          }}
-        >
-          <div className="relative">
-            <span className="absolute -inset-2 rounded-full bg-indigo-500/30 animate-pulse" />
-            <div className="w-6 h-6 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center">
-              <Truck size={12} className="text-white" />
-            </div>
+        {!mapLoaded && (
+          <div className="absolute inset-0 bg-slate-950 flex flex-col items-center justify-center text-[10px] text-slate-400 gap-2 z-10 rounded-2xl">
+            <Loader className="animate-spin text-indigo-500" size={16} />
+            <span>Loading high-precision street map...</span>
           </div>
-          <div className="mt-1 bg-indigo-600/95 border border-indigo-400 text-white text-[7px] font-extrabold px-1.5 py-0.5 rounded shadow whitespace-nowrap">
-            🏍️ Driver: {driverName}
-          </div>
-        </div>
-
-        {/* Dynamic route line path inside simulated viewport */}
-        <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 320 200">
-          <path
-            d="M 120 70 Q 160 40 240 130"
-            fill="none"
-            stroke="url(#route-gradient)"
-            strokeWidth="3.5"
-            strokeDasharray="8 6"
-            className="animate-[dash_10s_linear_infinite]"
-          />
-          <defs>
-            <linearGradient id="route-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#6366f1" />
-              <stop offset="100%" stopColor="#ec4899" />
-            </linearGradient>
-          </defs>
-        </svg>
+        )}
 
         {/* Driver overlay card */}
-        <div className="absolute bottom-3 left-3 right-3 bg-slate-950/80 backdrop-blur-md border border-slate-800 rounded-xl p-2.5 text-white flex items-center justify-between shadow-lg">
+        <div className="absolute bottom-3 left-3 right-3 bg-slate-950/80 backdrop-blur-md border border-slate-800 rounded-xl p-2.5 text-white flex items-center justify-between shadow-lg z-[1000]">
           <div>
             <div className="flex items-center gap-1.5">
               <Navigation size={11} className="text-indigo-400 animate-pulse" />

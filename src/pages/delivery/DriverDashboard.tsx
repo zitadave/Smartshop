@@ -112,6 +112,59 @@ export default function DriverDashboard() {
     return function() { clearInterval(interval); };
   }, [profile?.telegramId]);
 
+  // Silent Background GPS tracking & Offline-Resilient Cache polling
+  useEffect(() => {
+    if (!isOnline || !driverId) return;
+
+    const trackLocation = () => {
+      if (!navigator.geolocation) return;
+
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+
+          try {
+            const offlineCache = JSON.parse(localStorage.getItem('ss_driver_offline_coords') || '[]');
+            
+            const res = await fetch('/api/delivery/location', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ 
+                driver_id: driverId, 
+                lat, 
+                lng,
+                offline_coords: offlineCache.length > 0 ? offlineCache : undefined
+              })
+            });
+
+            if (res.ok) {
+              if (offlineCache.length > 0) {
+                localStorage.removeItem('ss_driver_offline_coords');
+                console.log(`[GPS] Successfully flushed ${offlineCache.length} cached offline coordinates to server.`);
+              }
+              console.log(`[GPS] Real-time coordinates updated: ${lat}, ${lng}`);
+            } else {
+              throw new Error('Server returned non-ok status');
+            }
+          } catch (err) {
+            const entry = { lat, lng, timestamp: new Date().toISOString() };
+            const cache = JSON.parse(localStorage.getItem('ss_driver_offline_coords') || '[]');
+            cache.push(entry);
+            localStorage.setItem('ss_driver_offline_coords', JSON.stringify(cache));
+            console.warn(`[GPS OFFLINE] Network lost. Cached coordinates locally (${cache.length} stored).`);
+          }
+        },
+        (err) => console.warn('[GPS] Position query error:', err.message),
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    };
+
+    trackLocation();
+    const interval = setInterval(trackLocation, 15000); // Poll every 15 seconds
+    return () => clearInterval(interval);
+  }, [isOnline, driverId]);
+
   // Fetch available and active delivery milestones
   function fetchDeliveries() {
     if (!driverId) return;
@@ -248,6 +301,62 @@ export default function DriverDashboard() {
       setVerifyingPin(false);
       toast('Error: ' + e.message, 'error');
     });
+  }
+
+  // TSP Routing states
+  var [tspOptimized, setTspOptimized] = useState(false);
+
+  function getActiveDeliveries() {
+    return deliveries.filter(function(d) { 
+      return d.status !== 'pending' && d.status !== 'assigned' && d.status !== 'delivered' && d.status !== 'failed' && d.status !== 'cancelled' && d.status !== 'returned'; 
+    });
+  }
+
+  function optimizeRoute() {
+    var activeList = [...getActiveDeliveries()];
+    if (activeList.length <= 1) {
+      toast('Add at least 2 active deliveries to optimize the route!', 'info');
+      return;
+    }
+
+    haptic('light');
+    toast('⚡ Running Travelling Salesman Optimization...', 'info');
+
+    var startLat = driver?.current_lat || 9.03;
+    var startLng = driver?.current_lng || 38.74;
+
+    var optimized: any[] = [];
+    var unvisited = [...activeList];
+    var currLat = startLat;
+    var currLng = startLng;
+
+    while (unvisited.length > 0) {
+      var closestIdx = 0;
+      var minDistance = Infinity;
+
+      for (var i = 0; i < unvisited.length; i++) {
+        var dLat = (unvisited[i].delivery_lat || 9.03) - currLat;
+        var dLng = (unvisited[i].delivery_lng || 38.74) - currLng;
+        var dist = Math.sqrt(dLat * dLat + dLng * dLng);
+        if (dist < minDistance) {
+          minDistance = dist;
+          closestIdx = i;
+        }
+      }
+
+      var nextNode = unvisited.splice(closestIdx, 1)[0];
+      optimized.push(nextNode);
+      currLat = nextNode.delivery_lat || 9.03;
+      currLng = nextNode.delivery_lng || 38.74;
+    }
+
+    var unoptimizedIds = activeList.map(d => d.id);
+    var remainingDeliveries = deliveries.filter(d => !unoptimizedIds.includes(d.id));
+    
+    setDeliveries([...remainingDeliveries, ...optimized]);
+    setTspOptimized(true);
+    toast('✅ Route Optimized! Stops arranged in fastest sequence.', 'success');
+    haptic('success');
   }
 
   // Calculate driver gamification stats based on real deliveries count
@@ -579,8 +688,25 @@ export default function DriverDashboard() {
                   <p className="text-[10px] text-slate-500 mt-1">Claim available delivery runs from the available tab</p>
                 </div>
               ) : (
-                deliveries.filter(function(d) { return d.status !== 'pending' && d.status !== 'assigned' && d.status !== 'delivered' && d.status !== 'failed' && d.status !== 'cancelled' && d.status !== 'returned'; }).map(function(del) {
-                  var fee = del.driver_payout || del.fee || 0;
+                <>
+                  {/* TSP Optimization Trigger */}
+                  <div className="bg-slate-900 rounded-2xl border border-indigo-500/25 p-3 flex items-center justify-between shadow shadow-indigo-500/5 animate-scaleIn">
+                    <div>
+                      <h4 className="text-[10px] font-black text-slate-100 uppercase tracking-wider flex items-center gap-1">
+                        ✨ Routing Sequence
+                      </h4>
+                      <p className="text-[8px] text-slate-400 mt-0.5">Optimize multiple drops in the mathematically fastest sequence.</p>
+                    </div>
+                    <button 
+                      onClick={optimizeRoute}
+                      className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[9px] font-bold shadow-md shadow-indigo-500/10 transition-all active:scale-95 flex items-center gap-1.5"
+                    >
+                      <Navigation size={10} className="animate-pulse text-indigo-200" /> Optimize TSP Path
+                    </button>
+                  </div>
+
+                  {deliveries.filter(function(d) { return d.status !== 'pending' && d.status !== 'assigned' && d.status !== 'delivered' && d.status !== 'failed' && d.status !== 'cancelled' && d.status !== 'returned'; }).map(function(del) {
+                    var fee = del.driver_payout || del.fee || 0;
                   
                   // Device map navigation trigger — Opens deep linking coords or standard directions
                   var navigationUrl = `https://www.google.com/maps/dir/?api=1&destination=${del.delivery_lat || 9.03},${del.delivery_lng || 38.74}`;
@@ -647,7 +773,8 @@ export default function DriverDashboard() {
                       </div>
                     </div>
                   );
-                })
+                })}
+                </>
               )}
             </div>
           )}

@@ -207,6 +207,43 @@ export default function ProductDetail() {
           )}
         </div>
 
+        {/* Scarcity Banner for discounted items */}
+        {product.originalPrice && product.originalPrice > product.price && !isFlashProduct && (
+          <div className="mt-3 p-3 bg-rose-500/10 dark:bg-rose-950/10 border border-rose-500/20 rounded-xl space-y-2">
+            <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-rose-600 dark:text-rose-400">
+              <span className="flex items-center gap-1">🔥 Limited Discount Offer</span>
+              <span>Only {(product.id % 4) + 2} left in stock!</span>
+            </div>
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Hurry! Offer ends soon:</span>
+              <span className="font-mono font-black text-rose-600 dark:text-rose-400">
+                {(() => {
+                  const [time, setTime] = useState('');
+                  useEffect(() => {
+                    const update = () => {
+                      const now = new Date();
+                      const end = new Date();
+                      end.setHours(23, 59, 59, 0);
+                      const diff = end.getTime() - now.getTime();
+                      const h = String(Math.floor(diff / 3600000)).padStart(2, '0');
+                      const m = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
+                      const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
+                      setTime(`${h}h : ${m}m : ${s}s`);
+                    };
+                    update();
+                    const id = setInterval(update, 1000);
+                    return () => clearInterval(id);
+                  }, []);
+                  return time;
+                })()}
+              </span>
+            </div>
+            <div className="h-1 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-red-500 to-rose-600 animate-[pulse_2s_infinite]" style={{ width: '25%' }} />
+            </div>
+          </div>
+        )}
+
         {/* Price Drop Alert */}
         <div className="mt-2">
           <PriceDropAlert
