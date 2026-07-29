@@ -28,8 +28,6 @@ export default function Shop() {
 
   // AI Voice-Note Ordering states
   const [recording, setRecording] = useState(false);
-  const [transcribing, setTranscribing] = useState(false);
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
 
   const toggleRecording = async () => {
     if (recording) {
@@ -51,7 +49,7 @@ export default function Shop() {
 
         recognition.onstart = () => {
           setRecording(true);
-          toast('🎙️ Listening... Speak your order', 'info');
+          toast('🎙️ Listening... Speak your search', 'info');
         };
 
         recognition.onerror = (event: any) => {
@@ -64,33 +62,11 @@ export default function Shop() {
           setRecording(false);
         };
 
-        recognition.onresult = async (event: any) => {
+        recognition.onresult = (event: any) => {
           const spokenText = event.results[0][0].transcript;
           console.log('[SPEECH] Transcribed text:', spokenText);
-          
-          setTranscribing(true);
-          toast(`🎙️ Matching "${spokenText}"...`, 'info');
-
-          try {
-            const res = await fetch('/api/ai/voice-order', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ text: spokenText })
-            });
-            const d = await res.json();
-            setTranscribing(false);
-            
-            if (d.success && d.product) {
-              toast(`🛒 Added to Cart: ${d.product.nameEn || d.product.name}!`, 'success');
-              cart.add(d.product);
-              setSearch(d.product.nameEn || d.product.name);
-            } else {
-              toast(`❌ No product matches "${spokenText}". Try another word!`, 'error');
-            }
-          } catch {
-            setTranscribing(false);
-            toast('❌ Voice ordering failed.', 'error');
-          }
+          setSearch(spokenText);
+          toast(`🎙️ Voice Search: "${spokenText}"`, 'success');
         };
 
         recognition.start();
@@ -103,7 +79,6 @@ export default function Shop() {
   };
 
   const stopRecording = () => {
-    // Handled automatically by the speech recognition onend / recognition.stop()
     setRecording(false);
   };
 
@@ -137,7 +112,7 @@ export default function Shop() {
             <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/50 transition-colors group-focus-within:text-primary" />
             <input
               type="text"
-              placeholder={recording ? "🎙️ Listening to voice order..." : transcribing ? "🎙️ Transcribing audio..." : "🔍 Search or tap mic to voice order..."}
+              placeholder={recording ? "🎙️ Listening... Speak your search query" : "🔍 Search or tap mic to voice search..."}
               className={cn("w-full pl-10 pr-12 py-3 rounded-2xl border bg-card/60 text-sm focus:outline-none focus:ring-2 focus:ring-ring/30 focus:bg-card transition-all duration-300 placeholder:text-muted-foreground/40 shadow-sm text-foreground",
                 recording ? "border-rose-500 ring-4 ring-rose-500/15 animate-pulse bg-rose-50/5 dark:bg-rose-950/5" : "border-border/60"
               )}
@@ -145,22 +120,21 @@ export default function Shop() {
               onChange={e => setSearch(e.target.value)}
               autoFocus
               aria-label="Search products"
-              disabled={recording || transcribing}
+              disabled={recording}
             />
-            {search && !recording && !transcribing && (
+            {search && !recording && (
               <button className="absolute right-10 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-foreground transition-colors p-0.5" onClick={() => setSearch('')} aria-label="Clear search">
                 <X size={15} />
               </button>
             )}
             <button 
               onClick={toggleRecording}
-              disabled={transcribing}
               className={cn("absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-all",
                 recording ? "text-rose-500 hover:text-rose-600 bg-rose-100 dark:bg-rose-950/40 animate-pulse scale-105" : "text-muted-foreground/50 hover:text-foreground hover:bg-muted/50"
               )}
               title="Voice Ordering"
             >
-              {transcribing ? <Loader2 size={15} className="animate-spin text-primary" /> : <Mic size={15} />}
+              <Mic size={15} />
             </button>
           </div>
         </div>
