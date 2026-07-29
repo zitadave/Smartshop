@@ -132,9 +132,10 @@ export default function SubscriptionShop() {
                       </div>
                       {isSubscribed && <span className="text-xs bg-green-100 text-green-600 px-2 py-1 rounded-full font-medium">✅ Active</span>}
                     </div>
-                    <div className="flex gap-3 mt-2">
+                    <div className="flex gap-3 mt-2 flex-wrap">
                       {plan.dailyPrice > 0 && <PriceChip label="Daily" price={plan.dailyPrice} unit={plan.unitLabel} />}
                       {plan.weeklyPrice > 0 && <PriceChip label="Weekly" price={plan.weeklyPrice} unit={plan.unitLabel} />}
+                      {plan.biweeklyPrice !== undefined && plan.biweeklyPrice > 0 && <PriceChip label="Bi-weekly" price={plan.biweeklyPrice} unit={plan.unitLabel} />}
                       {plan.monthlyPrice > 0 && <PriceChip label="Monthly" price={plan.monthlyPrice} unit={plan.unitLabel} />}
                     </div>
                     {plan.tags.length > 0 && (
@@ -179,17 +180,17 @@ export default function SubscriptionShop() {
               </div>
 
               {/* Frequency Selector */}
-              <div className="grid grid-cols-3 gap-2 mb-4">
-                {(['daily', 'weekly', 'monthly'] as SubscriptionFrequency[]).map(f => {
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                {(['daily', 'weekly', 'biweekly', 'monthly'] as SubscriptionFrequency[]).map(f => {
                   const price = getPlanPrice(selectedPlan, f, quantity);
                   const disc = getDiscountPercent(f);
                   const isActive = frequency === f;
-                  const disabled = f === 'daily' ? selectedPlan.dailyPrice <= 0 : f === 'weekly' ? selectedPlan.weeklyPrice <= 0 : selectedPlan.monthlyPrice <= 0;
+                  const disabled = f === 'daily' ? selectedPlan.dailyPrice <= 0 : f === 'weekly' ? selectedPlan.weeklyPrice <= 0 : f === 'biweekly' ? (selectedPlan.biweeklyPrice || 0) <= 0 : selectedPlan.monthlyPrice <= 0;
                   return (
                     <button key={f} disabled={disabled}
                       onClick={() => setFrequency(f)}
                       className={`p-3 rounded-xl text-center transition-all ${isActive ? 'bg-blue-500 text-white shadow-lg ring-2 ring-blue-300' : disabled ? 'bg-slate-50 text-slate-300' : 'bg-slate-50 text-slate-700 hover:bg-blue-50'}`}>
-                      <div className="text-xs font-bold capitalize">{f === 'daily' ? '🗓 Daily' : f === 'weekly' ? '📅 Weekly' : '📆 Monthly'}</div>
+                      <div className="text-xs font-bold capitalize">{f === 'daily' ? '🗓 Daily' : f === 'weekly' ? '📅 Weekly' : f === 'biweekly' ? '📅 Bi-weekly' : '📆 Monthly'}</div>
                       {!disabled && <div className="text-lg font-bold mt-1">Br {price.toLocaleString()}</div>}
                       {disc > 0 && <div className="text-[10px] mt-1 font-medium text-green-500">-{disc}% off</div>}
                     </button>

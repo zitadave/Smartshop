@@ -19,6 +19,7 @@ export interface SubscriptionPlan {
   unitLabel: string;
   dailyPrice: number;
   weeklyPrice: number;
+  biweeklyPrice?: number;
   monthlyPrice: number;
   vendorId?: number;
   vendorName: string;
@@ -156,27 +157,32 @@ export async function fetchPlans(category?: string, forceRefresh = false): Promi
     if (res.ok) {
       const data = await res.json();
       const rawPlans = data.plans || [];
-      plans = rawPlans.map((p: any) => ({
-        id: p.id,
-        name: p.name,
-        nameAmharic: p.nameAmharic || p.name_amharic || '',
-        emoji: p.emoji || '📦',
-        description: p.description || '',
-        category: p.category || 'general',
-        unit: p.unit || '1',
-        unitLabel: p.unitLabel || p.unit_label || 'pc',
-        dailyPrice: Number(p.dailyPrice !== undefined ? p.dailyPrice : (p.daily_price || 0)),
-        weeklyPrice: Number(p.weeklyPrice !== undefined ? p.weeklyPrice : (p.weekly_price || 0)),
-        monthlyPrice: Number(p.monthlyPrice !== undefined ? p.monthlyPrice : (p.monthly_price || 0)),
-        vendorId: p.vendorId || p.vendor_id || null,
-        vendorName: p.vendorName || p.vendor_name || 'Smart Shop',
-        image: p.image || '',
-        tags: p.tags || [],
-        isActive: p.isActive !== undefined ? p.isActive : (p.is_active !== false),
-        minQuantity: Number(p.minQuantity !== undefined ? p.minQuantity : (p.min_quantity || 1)),
-        maxQuantity: Number(p.maxQuantity !== undefined ? p.maxQuantity : (p.max_quantity || 10)),
-        createdAt: p.createdAt || p.created_at || '',
-      }));
+      plans = rawPlans.map((p: any) => {
+        const bwt = p.tags?.find?.((t: string) => t.startsWith?.('biweeklyPrice:'));
+        const parsedBiweekly = bwt ? parseInt(bwt.split(':')[1]) : 0;
+        return {
+          id: p.id,
+          name: p.name,
+          nameAmharic: p.nameAmharic || p.name_amharic || '',
+          emoji: p.emoji || '📦',
+          description: p.description || '',
+          category: p.category || 'general',
+          unit: p.unit || '1',
+          unitLabel: p.unitLabel || p.unit_label || 'pc',
+          dailyPrice: Number(p.dailyPrice !== undefined ? p.dailyPrice : (p.daily_price || 0)),
+          weeklyPrice: Number(p.weeklyPrice !== undefined ? p.weeklyPrice : (p.weekly_price || 0)),
+          biweeklyPrice: parsedBiweekly,
+          monthlyPrice: Number(p.monthlyPrice !== undefined ? p.monthlyPrice : (p.monthly_price || 0)),
+          vendorId: p.vendorId || p.vendor_id || null,
+          vendorName: p.vendorName || p.vendor_name || 'Smart Shop',
+          image: p.image || '',
+          tags: p.tags || [],
+          isActive: p.isActive !== undefined ? p.isActive : (p.is_active !== false),
+          minQuantity: Number(p.minQuantity !== undefined ? p.minQuantity : (p.min_quantity || 1)),
+          maxQuantity: Number(p.maxQuantity !== undefined ? p.maxQuantity : (p.max_quantity || 10)),
+          createdAt: p.createdAt || p.created_at || '',
+        };
+      });
     }
   } catch (e) {
     console.warn('Could not fetch subscription plans:', e);
