@@ -50,7 +50,7 @@ function TelegramBackButton() {
   const location = useLocation();
   const navigate = useNavigate();
   useEffect(function() {
-    var tg = window.Telegram?.WebApp;
+    var tg = (window as any).Telegram?.WebApp;
     if (!tg || !tg.BackButton) return;
     if (location.pathname === '/') tg.BackButton.hide();
     else { tg.BackButton.show(); tg.BackButton.onClick(function() { navigate(-1); }); }

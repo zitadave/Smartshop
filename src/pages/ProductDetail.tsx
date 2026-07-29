@@ -243,7 +243,16 @@ export default function ProductDetail() {
           ) : (
             <div className="flex items-center gap-2">
               <span>❌ {t('outOfStock', language)}</span>
-              <button className="px-2.5 py-1 bg-primary text-white rounded text-[9px] font-semibold" onClick={() => { const c = prompt('Enter phone to get notified:'); if (c) { store.addNotification('🔔', 'Notify me when back: ' + product.nameEn); } }}>🔔 Notify</button>
+              <button className="px-2.5 py-1 bg-primary text-primary-foreground rounded text-[9px] font-bold shadow-md shadow-primary/10 hover:shadow-lg transition-all" onClick={() => {
+                const phone = store.profile.phone || localStorage.getItem('ss_user_phone') || '';
+                if (phone) {
+                  store.addNotification('🔔', 'Notify me when back: ' + product.nameEn);
+                  toast('🔔 We will notify you at ' + phone + ' when back in stock!', 'success');
+                } else {
+                  store.addNotification('🔔', 'Notify me when back: ' + product.nameEn);
+                  toast('🔔 Stock notification registered for your account!', 'success');
+                }
+              }}>🔔 Notify</button>
             </div>
           )}
         </div>

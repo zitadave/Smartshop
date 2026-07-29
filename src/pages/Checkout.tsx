@@ -45,6 +45,9 @@ export default function Checkout() {
  const [city, setCity] = useState('');
  const [address, setAddress] = useState('');
  const [locationDetected, setLocationDetected] = useState(false);
+ const [detectedAddress, setDetectedAddress] = useState('');
+ const [useDetectedLocation, setUseDetectedLocation] = useState<boolean | null>(null);
+ const [detectingLocation, setDetectingLocation] = useState(false);
 
  const [promoCode, setPromoCode] = useState('');
  const [promoApplied, setPromoApplied] = useState(false);
@@ -67,6 +70,7 @@ export default function Checkout() {
    
    const successCallback = async (pos: GeolocationPosition) => {
      try {
+       setDetectingLocation(true);
        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`);
        const data = await res.json();
        const addr = data.address || {};
@@ -91,16 +95,21 @@ export default function Checkout() {
        const full = [addr.road, addr.suburb, addr.city_district, addr.neighbourhood].filter(Boolean).join(', ');
        if (full || detectedCity) {
          const addressStr = full ? full + (detectedCity ? ', ' + detectedCity : '') : detectedCity;
-         setAddress(addressStr);
+         setDetectedAddress(addressStr);
        }
-     } catch {}
+       setDetectingLocation(false);
+     } catch {
+       setDetectingLocation(false);
+     }
    };
 
    const errorCallback = (err: GeolocationPositionError) => {
      console.warn('Geolocation error:', err.message);
+     setDetectingLocation(false);
    };
 
    if ('geolocation' in navigator) {
+     setDetectingLocation(true);
      navigator.geolocation.getCurrentPosition(successCallback, errorCallback, {
        enableHighAccuracy: true,
        timeout: 5000,
@@ -299,7 +308,78 @@ export default function Checkout() {
  <option value="Dire Dawa">Dire Dawa</option>
  <option value="Jimma">Jimma</option>
  </select>
- <input className="p-2.5 border border-border rounded-xl text-xs bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30" placeholder="Address" value={address} onChange={e => setAddress(e.target.value)} />
+ <div className="flex flex-col gap-2">
+ {detectingLocation && (
+ <div className="flex items-center gap-2 p-2 bg-muted/40 rounded-xl border border-border/40 text-[10px] text-muted-foreground w-full">
+ <span className="w-3 h-3 border border-t-primary border-r-transparent rounded-full animate-spin flex-shrink-0" />
+ <span>Auto-detecting your location via GPS...</span>
+ </div>
+ )}
+ 
+ {detectedAddress && useDetectedLocation === null && (
+ <div className="bg-primary/5 dark:bg-primary/10 border border-primary/20 p-3 rounded-2xl space-y-2.5 animate-scaleIn w-full text-left">
+ <div className="flex gap-2">
+ <MapPin size={14} className="text-primary flex-shrink-0 mt-0.5" />
+ <div>
+ <div className="text-[9px] font-extrabold uppercase tracking-wider text-primary">📍 GPS Detected Address</div>
+ <p className="text-[11px] text-foreground font-medium mt-1 leading-normal">{detectedAddress}</p>
+ </div>
+ </div>
+ <div className="flex gap-2">
+ <button 
+ type="button"
+ onClick={() => {
+ setAddress(detectedAddress);
+ setUseDetectedLocation(true);
+ toast('📍 Address set to GPS location!', 'success');
+ }}
+ className="flex-1 py-1 bg-primary text-primary-foreground rounded-lg text-[9px] font-bold shadow hover:bg-primary/95 transition-all"
+ >
+ Yes, Deliver Here
+ </button>
+ <button 
+ type="button"
+ onClick={() => {
+ setUseDetectedLocation(false);
+ }}
+ className="px-2.5 py-1 border border-border/80 text-muted-foreground hover:text-foreground rounded-lg text-[9px] font-medium"
+ >
+ Enter Manually
+ </button>
+ </div>
+ </div>
+ )}
+
+ {useDetectedLocation === true && (
+ <div className="flex items-center justify-between p-2.5 bg-emerald-500/10 dark:bg-emerald-950/20 border border-emerald-500/20 rounded-xl text-[10px] text-emerald-600 dark:text-emerald-400 w-full">
+ <span className="flex items-center gap-1.5 font-medium">
+ <span>✅ Using dynamic GPS detected location</span>
+ </span>
+ <button 
+ type="button"
+ onClick={() => {
+ setAddress('');
+ setUseDetectedLocation(null);
+ }}
+ className="text-[8px] uppercase tracking-wider font-extrabold text-primary underline"
+ >
+ Change
+ </button>
+ </div>
+ )}
+
+ <input 
+ className="p-2.5 border border-border rounded-xl text-xs bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30" 
+ placeholder="Address" 
+ value={address} 
+ onChange={e => {
+ setAddress(e.target.value);
+ if (useDetectedLocation === true && e.target.value !== detectedAddress) {
+ setUseDetectedLocation(false);
+ }
+ }} 
+ />
+ </div>
  </div>
  </div>
  </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { fetchPlans, createSubscription, getUserSubscriptions, formatFrequency, getDiscountPercent, getPlanPrice, type SubscriptionPlan, type Subscription, type SubscriptionFrequency } from '@/lib/subscriptions';
 import { ArrowLeft, ShoppingCart, Check, Plus, Minus, Calendar, MapPin, Clock, CreditCard, ChevronRight, Bell, Package, TrendingDown } from 'lucide-react';
@@ -16,6 +16,61 @@ export default function SubscriptionShop() {
   const [subscribing, setSubscribing] = useState(false);
   const [tgId, setTgId] = useState(0);
   const [mySubs, setMySubs] = useState<Subscription[]>([]);
+
+  // Time selector states
+  const [isCustomTime, setIsCustomTime] = useState(false);
+  const [customTime, setCustomTime] = useState('08:00');
+  const [presetTime, setPresetTime] = useState('07:00 - 09:00 Morning');
+  
+  // Location detection states
+  const [detectedAddress, setDetectedAddress] = useState('');
+  const [useDetectedLocation, setUseDetectedLocation] = useState<boolean | null>(null);
+  const [detectingLocation, setDetectingLocation] = useState(false);
+
+  const isTimeValid = useMemo(() => {
+    if (!isCustomTime) return true;
+    const [h, m] = customTime.split(':').map(Number);
+    const val = h + m / 60;
+    // Deliveries allowed between 02:00 AM (2.0) and 08:00 PM (20.0)
+    return val >= 2.0 && val <= 20.0;
+  }, [isCustomTime, customTime]);
+
+  // Auto-detect GPS location when modal is opened!
+  useEffect(() => {
+    if (!selectedPlan) {
+      setDetectedAddress('');
+      setUseDetectedLocation(null);
+      return;
+    }
+    
+    setDetectingLocation(true);
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`);
+            if (res.ok) {
+              const data = await res.json();
+              const fullAddress = data.display_name || '';
+              if (fullAddress) {
+                setDetectedAddress(fullAddress);
+              }
+            }
+          } catch (e) {
+            console.error('Reverse geocode error:', e);
+          } finally {
+            setDetectingLocation(false);
+          }
+        },
+        () => {
+          setDetectingLocation(false);
+        },
+        { timeout: 8000 }
+      );
+    } else {
+      setDetectingLocation(false);
+    }
+  }, [selectedPlan]);
 
   useEffect(() => {
     const stored = localStorage.getItem('ss_profile');
@@ -60,6 +115,7 @@ export default function SubscriptionShop() {
         frequency,
         quantity,
         deliveryAddress: address,
+        deliveryTime: isCustomTime ? customTime : presetTime,
       });
       toast('✅ Subscribed! First delivery coming soon!', 'success');
       setSelectedPlan(null);
@@ -253,26 +309,143 @@ export default function SubscriptionShop() {
                 </div>
               </div>
 
+              {/* GPS Geolocation Auto-Detection Banner */}
+              <div className="mb-4 space-y-2">
+                {detectingLocation && (
+                  <div className="flex items-center gap-2 p-3 bg-muted/40 rounded-xl border border-border/40 text-xs text-muted-foreground">
+                    <span className="w-3 h-3 border border-t-primary border-r-transparent rounded-full animate-spin flex-shrink-0" />
+                    <span>Auto-detecting your location via GPS...</span>
+                  </div>
+                )}
+                
+                {detectedAddress && useDetectedLocation === null && (
+                  <div className="bg-primary/5 dark:bg-primary/10 border border-primary/20 p-3.5 rounded-2xl space-y-2.5 animate-scaleIn">
+                    <div className="flex gap-2">
+                      <MapPin size={16} className="text-primary flex-shrink-0 mt-0.5" />
+                      <div>
+                        <div className="text-[10px] font-extrabold uppercase tracking-wider text-primary">📍 GPS Detected Address</div>
+                        <p className="text-xs text-foreground font-medium mt-1 leading-normal">{detectedAddress}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => {
+                          setAddress(detectedAddress);
+                          setUseDetectedLocation(true);
+                          toast('📍 Address set to GPS location!', 'success');
+                        }}
+                        className="flex-1 py-1.5 bg-primary text-primary-foreground rounded-lg text-[10px] font-bold shadow hover:bg-primary/95 transition-all"
+                      >
+                        Yes, Deliver Here
+                      </button>
+                      <button 
+                        onClick={() => {
+                          setUseDetectedLocation(false);
+                        }}
+                        className="px-3 py-1.5 border border-border/80 text-muted-foreground hover:text-foreground rounded-lg text-[10px] font-medium"
+                      >
+                        Enter Manually
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {useDetectedLocation === true && (
+                  <div className="flex items-center justify-between p-3 bg-emerald-500/10 dark:bg-emerald-950/20 border border-emerald-500/20 rounded-xl text-xs text-emerald-600 dark:text-emerald-400">
+                    <span className="flex items-center gap-1.5 font-medium">
+                      <span>✅ Using dynamic GPS detected location</span>
+                    </span>
+                    <button 
+                      onClick={() => {
+                        setAddress('');
+                        setUseDetectedLocation(null);
+                      }}
+                      className="text-[9px] uppercase tracking-wider font-extrabold text-primary underline"
+                    >
+                      Change
+                    </button>
+                  </div>
+                )}
+              </div>
+
               {/* Delivery Address */}
               <div className="space-y-3 mb-4">
                 <div className="flex items-center gap-2 bg-card border border-border/80 p-3 rounded-xl">
                   <MapPin size={16} className="text-primary flex-shrink-0" />
-                  <input placeholder="Delivery address (required)" value={address} onChange={e => setAddress(e.target.value)}
-                    className="flex-1 text-sm outline-none bg-transparent text-foreground placeholder:text-muted-foreground/60" />
+                  <input 
+                    placeholder="Delivery address (required)" 
+                    value={address} 
+                    onChange={e => {
+                      setAddress(e.target.value);
+                      if (useDetectedLocation === true && e.target.value !== detectedAddress) {
+                        setUseDetectedLocation(false);
+                      }
+                    }}
+                    className="flex-1 text-sm outline-none bg-transparent text-foreground placeholder:text-muted-foreground/60" 
+                  />
                 </div>
-                <div className="flex items-center gap-2 bg-card border border-border/80 p-3 rounded-xl">
-                  <Clock size={16} className="text-muted-foreground flex-shrink-0" />
-                  <select className="flex-1 text-sm outline-none bg-transparent text-foreground">
-                    <option>07:00 - 09:00 Morning</option>
-                    <option>09:00 - 12:00 Late Morning</option>
-                    <option>14:00 - 17:00 Afternoon</option>
-                    <option>17:00 - 20:00 Evening</option>
-                  </select>
+
+                {/* Time Selection Header / Tabs */}
+                <div className="border border-border/60 rounded-2xl p-3.5 space-y-3 bg-card/50">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground">🕒 Delivery Time Preference</span>
+                    <div className="flex bg-muted/60 p-0.5 rounded-lg border border-border/20">
+                      <button 
+                        type="button"
+                        onClick={() => setIsCustomTime(false)}
+                        className={`px-2.5 py-1 rounded-md text-[9px] font-black transition-all ${!isCustomTime ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                      >
+                        Preset
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => setIsCustomTime(true)}
+                        className={`px-2.5 py-1 rounded-md text-[9px] font-black transition-all ${isCustomTime ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                      >
+                        Custom Time
+                      </button>
+                    </div>
+                  </div>
+
+                  {!isCustomTime ? (
+                    <div className="flex items-center gap-2 bg-card border border-border/85 p-2.5 rounded-xl">
+                      <Clock size={15} className="text-muted-foreground flex-shrink-0" />
+                      <select 
+                        value={presetTime}
+                        onChange={e => setPresetTime(e.target.value)}
+                        className="flex-1 text-xs outline-none bg-transparent text-foreground font-medium"
+                      >
+                        <option value="07:00 - 09:00 Morning">🌅 07:00 - 09:00 Morning</option>
+                        <option value="09:00 - 12:00 Late Morning">☀️ 09:00 - 12:00 Late Morning</option>
+                        <option value="14:00 - 17:00 Afternoon">🌆 14:00 - 17:00 Afternoon</option>
+                        <option value="17:00 - 20:00 Evening">🌃 17:00 - 20:00 Evening</option>
+                      </select>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 bg-card border border-border/85 p-2.5 rounded-xl">
+                        <Clock size={15} className="text-muted-foreground flex-shrink-0" />
+                        <input 
+                          type="time" 
+                          value={customTime}
+                          onChange={e => setCustomTime(e.target.value)}
+                          className="flex-1 text-xs outline-none bg-transparent text-foreground font-black"
+                        />
+                      </div>
+                      
+                      {!isTimeValid && (
+                        <div className="p-2.5 bg-rose-500/10 border border-rose-500/20 rounded-xl text-[10px] text-rose-500 dark:text-rose-400 flex items-start gap-1.5 animate-scaleIn leading-relaxed">
+                          <span className="text-xs">⚠️</span>
+                          <span><strong>Time Limit Restriction:</strong> Deliveries are only available from <strong>02:00 AM</strong> to <strong>08:00 PM</strong> (after 08:00 PM evening and before 02:00 AM morning are locked).</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Subscribe Button */}
-              <button onClick={handleSubscribe} disabled={subscribing || !address.trim()}
+              <button onClick={handleSubscribe} disabled={subscribing || !address.trim() || !isTimeValid}
                 className="w-full py-4 bg-gradient-to-r from-primary to-primary/95 text-primary-foreground rounded-2xl font-bold text-lg shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
                 {subscribing ? '⏳ Subscribing...' : `✅ Subscribe Now`}
               </button>

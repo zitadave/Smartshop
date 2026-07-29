@@ -51,6 +51,11 @@ export default function DriverDashboard() {
   var [cashoutPhone, setCashoutPhone] = useState('');
   var [cashoutLoading, setCashoutLoading] = useState(false);
 
+  // PIN Verification Modal states
+  var [pinVerificationId, setPinVerificationId] = useState<number | null>(null);
+  var [verificationPinInput, setVerificationPinInput] = useState('');
+  var [verifyingPin, setVerifyingPin] = useState(false);
+
   // Simulated daily earnings trend (7 days) for our custom CSS bar chart
   var [dailyEarnings, setDailyEarnings] = useState<DailyEarning[]>([
     { day: 'Mon', amount: 350 },
@@ -217,6 +222,32 @@ export default function DriverDashboard() {
       }
       haptic('success');
     }, 2500);
+  }
+
+  function handleVerifyPin() {
+    if (!pinVerificationId || !verificationPinInput.trim()) {
+      toast('Please enter the 4-digit verification PIN', 'error');
+      return;
+    }
+    setVerifyingPin(true);
+    fetch('/api/delivery/verify-pin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: pinVerificationId, pin: verificationPinInput.trim() })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      setVerifyingPin(false);
+      if (d.verified) {
+        toast('✅ PIN Verified! Mission completed.', 'success');
+        setPinVerificationId(null);
+        setVerificationPinInput('');
+        fetchDeliveries();
+      } else {
+        toast('❌ Incorrect verification PIN. Please ask customer.', 'error');
+      }
+    }).catch(function(e: any) {
+      setVerifyingPin(false);
+      toast('Error: ' + e.message, 'error');
+    });
   }
 
   // Calculate driver gamification stats based on real deliveries count
@@ -601,21 +632,8 @@ export default function DriverDashboard() {
                             else if (del.status === 'picked_up') triggerStatusUpdate(del.id, 'in_transit');
                             else if (del.status === 'in_transit') triggerStatusUpdate(del.id, 'arrived');
                             else if (del.status === 'arrived') {
-                              var pin = prompt('Enter 4-digit verification PIN provided by the customer to complete delivery:');
-                              if (pin) {
-                                fetch('/api/delivery/verify-pin', {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ id: del.id, pin: pin })
-                                }).then(function(r) { return r.json(); }).then(function(d) {
-                                  if (d.verified) {
-                                    toast('✅ PIN Verified! Mission completed.', 'success');
-                                    fetchDeliveries();
-                                  } else {
-                                    toast('❌ Incorrect verification PIN. Please ask customer.', 'error');
-                                  }
-                                }).catch(function() {});
-                              }
+                              setPinVerificationId(del.id);
+                              setVerificationPinInput('');
                             }
                           }}
                         >
@@ -772,6 +790,59 @@ export default function DriverDashboard() {
                   ) : (
                     <>
                       <Send size={11} /> Confirm Payout
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PIN VERIFICATION MODAL */}
+      {pinVerificationId !== null && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-fadeIn" onClick={function() { setPinVerificationId(null); }}>
+          <div className="bg-slate-900 rounded-3xl border border-emerald-500/20 p-6 w-full max-w-sm shadow-2xl relative animate-scaleIn" onClick={function(e) { e.stopPropagation(); }}>
+            <button className="absolute right-4 top-4 w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center font-bold text-slate-400 hover:text-slate-200 text-sm" onClick={function() { setPinVerificationId(null); }}>✕</button>
+            
+            <div className="text-center mb-5 border-b border-slate-800 pb-3">
+              <span className="text-[9px] bg-emerald-950/40 text-emerald-400 border border-emerald-500/20 px-3 py-1 rounded-full font-black uppercase tracking-wider">Security Control</span>
+              <h3 className="text-sm font-black mt-2 text-white">Complete Mission</h3>
+              <p className="text-[10px] text-slate-400 mt-1">Enter the 4-digit verification PIN provided by the customer to securely authorize delivery completion.</p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-[8px] text-slate-400 font-extrabold uppercase block mb-1">Customer Verification PIN</label>
+                <input 
+                  type="text" 
+                  maxLength={4}
+                  value={verificationPinInput} 
+                  onChange={function(e) { setVerificationPinInput(e.target.value.replace(/\D/g, '')); }}
+                  placeholder="e.g. 1234" 
+                  className="w-full p-3 border border-slate-800 rounded-xl text-center text-lg bg-slate-950 text-white outline-none focus:border-emerald-500 transition-colors font-black tracking-[1em] pl-[1.2em]"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button 
+                  className="flex-1 py-3 border border-slate-800 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-800" 
+                  onClick={function() { setPinVerificationId(null); }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  className="flex-1 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-1"
+                  onClick={handleVerifyPin}
+                  disabled={verifyingPin || verificationPinInput.length < 4}
+                >
+                  {verifyingPin ? (
+                    <>
+                      <Loader size={12} className="animate-spin" /> Verifying...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle size={12} /> Complete Mission
                     </>
                   )}
                 </button>
