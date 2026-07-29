@@ -112,6 +112,56 @@ async function createDeliveryForOrder(on: string) {
       customer_telegram_id: customerTelegramId,
     });
     console.log(`[DELIVERY] Created pending delivery record for confirmed order ${on}`);
+
+    // Notify nearby online drivers
+    const { data: onlineDrivers } = await supabase
+      .from('delivery_personnel')
+      .select('*')
+      .eq('status', 'approved')
+      .eq('is_online', true);
+
+    if (onlineDrivers && onlineDrivers.length > 0) {
+      const dropoffZone = (ord.customer?.city || ord.customer?.address || 'Addis Ababa').toLowerCase();
+      
+      for (const d of onlineDrivers) {
+        let zoneMatch = false;
+        try {
+          const zones = Array.isArray(d.service_zones) 
+            ? d.service_zones 
+            : typeof d.service_zones === 'string' 
+              ? JSON.parse(d.service_zones) 
+              : [];
+          
+          zoneMatch = zones.some((z: string) => dropoffZone.includes(z.toLowerCase()) || z.toLowerCase() === 'all' || zones.length === 0);
+        } catch {
+          zoneMatch = true;
+        }
+
+        if (zoneMatch) {
+          // 1. Send Telegram Notification
+          const tgMsg = `🔔 *New Express Job Available!*\n\n` +
+            `📦 *Order:* #${on}\n` +
+            `📍 *Pickup:* Smart Shop Warehouse\n` +
+            `📍 *Dropoff:* ${ord.customer?.address || 'Addis Ababa'}\n` +
+            `💰 *Your Payout:* Br ${payout}\n` +
+            `🚚 *Est. Distance:* 3.5 km\n\n` +
+            `👉 Open your Driver Dashboard in the bot to accept this delivery!`;
+            
+          if (d.telegram_id) {
+            await tg(ENV.VENDOR_BOT_TOKEN, d.telegram_id, tgMsg);
+          }
+
+          // 2. Insert into notifications table
+          await supabase.from('notifications').insert({
+            telegram_id: d.telegram_id || null,
+            type: 'delivery',
+            title: 'New Delivery Available',
+            message: `New job #${on} is available for express pickup in your service zone!`,
+            icon: '🚚',
+          });
+        }
+      }
+    }
   } catch (err: any) {
     console.error(`[DELIVERY CREATION ERROR] for order ${on}:`, err.message);
   }
@@ -314,6 +364,30 @@ export default async function handler(req: any, res: any) {
         if (b.telegram_id) {
           const { data } = await supabase.from('delivery_personnel').select('*').eq('telegram_id', b.telegram_id).maybeSingle();
           existingDriver = data;
+        }
+
+        // Check if phone is already used by another driver
+        if (b.phone) {
+          const { data: dupPhone } = await supabase
+            .from('delivery_personnel')
+            .select('id, full_name_latin')
+            .eq('phone', b.phone)
+            .maybeSingle();
+          if (dupPhone && (!existingDriver || dupPhone.id !== existingDriver.id)) {
+            return fail('A driver with this Phone number is already registered.', 409);
+          }
+        }
+
+        // Check if Fayda ID is already used by another driver
+        if (b.fayda_id) {
+          const { data: dupFayda } = await supabase
+            .from('delivery_personnel')
+            .select('id, full_name_latin')
+            .eq('fayda_id', b.fayda_id)
+            .maybeSingle();
+          if (dupFayda && (!existingDriver || dupFayda.id !== existingDriver.id)) {
+            return fail('A driver with this Fayda ID is already registered.', 409);
+          }
         }
 
         const payload = {

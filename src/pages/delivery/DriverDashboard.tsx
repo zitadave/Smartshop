@@ -172,7 +172,17 @@ export default function DriverDashboard() {
     fetch('/api/delivery/available')
       .then(function(r) { return r.json(); })
       .then(function(d) { 
-        if (d.deliveries) setDeliveries(d.deliveries); 
+        if (d.deliveries) {
+          setDeliveries(function(prev) {
+            const currentIds = prev.map(function(x) { return x.id; });
+            const newJobs = d.deliveries.filter(function(x) { return (x.status === 'pending' || x.status === 'assigned') && !currentIds.includes(x.id); });
+            if (newJobs.length > 0 && prev.length > 0) {
+              toast(`🔔 New express delivery job available! Order #${newJobs[0].order_number}`, 'info');
+              haptic('warning');
+            }
+            return d.deliveries;
+          });
+        }
       })
       .catch(function() {});
     

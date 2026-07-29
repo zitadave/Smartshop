@@ -118,6 +118,11 @@ export default function DriverRegister() {
       .then(function(d) {
         if (d.success && d.driver) {
           const dr = d.driver;
+          if (dr.status === 'approved' || dr.status === 'pending_review' || dr.status === 'pending_fayda') {
+            toast('✅ You are already registered! Opening dashboard...', 'success');
+            nav('/driver');
+            return;
+          }
           
           // Parse and populate driver name (Latin)
           const latinParts = (dr.full_name_latin || '').trim().split(/\s+/);
