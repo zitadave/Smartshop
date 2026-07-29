@@ -18,6 +18,36 @@ import { toast } from '@/components/Toast';
 import { parseSerializedName } from '@/lib/groupBuying';
 import ProductStudio from '@/components/admin/ProductStudio';
 
+function compressImage(base64Str: string, maxWidth: number = 800): Promise<string> {
+  return new Promise((resolve) => {
+    if (!base64Str || !base64Str.startsWith('data:image')) {
+      resolve(base64Str);
+      return;
+    }
+    const img = new Image();
+    img.src = base64Str;
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
+      if (width > maxWidth) {
+        height = Math.round((height * maxWidth) / width);
+        width = maxWidth;
+      }
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { resolve(base64Str); return; }
+      ctx.drawImage(img, 0, 0, width, height);
+      const compressed = canvas.toDataURL('image/jpeg', 0.7); // 70% quality jpeg
+      resolve(compressed);
+    };
+    img.onerror = () => {
+      resolve(base64Str);
+    };
+  });
+}
+
 type VendorTab = 'dashboard' | 'products' | 'storefront' | 'analytics' | 'orders' | 'reviews' | 'inventory' | 'payouts' | 'notifications' | 'promotions' | 'subscriptions';
 
 export default function VendorDashboard() {
@@ -1493,6 +1523,7 @@ function VendorSubscriptionsView() {
   const [unitLabel, setUnitLabel] = useState('pc');
   const [dailyPrice, setDailyPrice] = useState('');
   const [weeklyPrice, setWeeklyPrice] = useState('');
+  const [biweeklyPrice, setBiweeklyPrice] = useState('');
   const [monthlyPrice, setMonthlyPrice] = useState('');
   const [image, setImage] = useState('');
 
@@ -1522,6 +1553,12 @@ function VendorSubscriptionsView() {
     if (!name.trim()) { toast('Please enter a subscription plan name', 'error'); return; }
     setSaving(true);
     
+    // Store custom biweekly price inside the JSONB tags array
+    const tagsArray: string[] = [];
+    if (biweeklyPrice.trim()) {
+      tagsArray.push(`biweeklyPrice:${biweeklyPrice.trim()}`);
+    }
+    
     fetch('/api/subscription-plans', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1539,6 +1576,7 @@ function VendorSubscriptionsView() {
         vendor_id: vendorId,
         vendor_name: vendorName,
         image,
+        tags: tagsArray,
         isActive: true,
       })
     })
@@ -1555,6 +1593,7 @@ function VendorSubscriptionsView() {
           setDescription('');
           setDailyPrice('');
           setWeeklyPrice('');
+          setBiweeklyPrice('');
           setMonthlyPrice('');
           setImage('');
           loadPlans();
@@ -1605,42 +1644,80 @@ function VendorSubscriptionsView() {
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 gap-3.5">
-          {plans.map((p: any) => (
-            <div key={p.id} className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm flex flex-col justify-between">
-              <div>
-                <div className="flex justify-between items-start">
-                  <div className="flex gap-2.5 items-center">
-                    <span className="text-2xl p-2 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border">{p.emoji || '📦'}</span>
-                    <div>
-                      <h3 className="text-xs font-black text-slate-800 dark:text-slate-100">{p.name}</h3>
-                      {p.name_amharic && <p className="text-[10px] text-slate-400 mt-0.5">{p.name_amharic}</p>}
+          {plans.map((p: any) => {
+            // Retrieve biweekly price tag if present
+            const biweeklyTag = p.tags?.find?.((t: string) => t.startsWith?.('biweeklyPrice:'));
+            const biweeklyVal = biweeklyTag ? biweeklyTag.split(':')[1] : '';
+            return (
+              <div key={p.id} className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm flex flex-col justify-between">
+                <div>
+                  <div className="flex justify-between items-start">
+                    <div className="flex gap-2.5 items-center">
+                      <span className="text-2xl p-2 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border">{p.emoji || '📦'}</span>
+                      <div>
+                        <h3 className="text-xs font-black text-slate-800 dark:text-slate-100">{p.name}</h3>
+                        {p.name_amharic && <p className="text-[10px] text-slate-400 mt-0.5">{p.name_amharic}</p>}
+                      </div>
                     </div>
+                    <span className="text-[8px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200/50">Active</span>
                   </div>
-                  <span className="text-[8px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200/50">Active</span>
+                  
+                  {/* Custom preview of uploaded photo if available */}
+                  {p.image && (
+                    <div className="mt-3 aspect-[1.8] rounded-2xl overflow-hidden border border-slate-200/80 bg-white">
+                      <img src={p.image} className="w-full h-full object-cover" alt="Plan Cover" />
+                    </div>
+                  )}
+
+                  <p className="text-[9.5px] text-slate-500 dark:text-slate-400 mt-3 leading-relaxed line-clamp-2">{p.description || 'No description provided.'}</p>
+                  
+                  <div className="grid grid-cols-4 gap-1.5 border-t border-slate-100 dark:border-slate-800/80 pt-3 mt-3 text-center">
+                    {p.daily_price ? (
+                      <div className="bg-slate-50 dark:bg-slate-800/40 p-1.5 rounded-xl border">
+                        <div className="text-[6.5px] text-slate-400 uppercase font-black font-sans">Daily</div>
+                        <div className="text-[9.5px] font-black text-emerald-500 mt-0.5">Br {p.daily_price}</div>
+                      </div>
+                    ) : (
+                      <div className="bg-slate-50 dark:bg-slate-800/40 p-1.5 rounded-xl border opacity-50">
+                        <div className="text-[6.5px] text-slate-400 uppercase font-black">Daily</div>
+                        <div className="text-[9.5px] text-slate-400 mt-0.5">-</div>
+                      </div>
+                    )}
+                    {p.weekly_price ? (
+                      <div className="bg-slate-50 dark:bg-slate-800/40 p-1.5 rounded-xl border">
+                        <div className="text-[6.5px] text-slate-400 uppercase font-black">Weekly</div>
+                        <div className="text-[9.5px] font-black text-emerald-500 mt-0.5">Br {p.weekly_price}</div>
+                      </div>
+                    ) : (
+                      <div className="bg-slate-50 dark:bg-slate-800/40 p-1.5 rounded-xl border opacity-50">
+                        <div className="text-[6.5px] text-slate-400 uppercase font-black">Weekly</div>
+                        <div className="text-[9.5px] text-slate-400 mt-0.5">-</div>
+                      </div>
+                    )}
+                    {biweeklyVal ? (
+                      <div className="bg-slate-50 dark:bg-slate-800/40 p-1.5 rounded-xl border border-indigo-500/25">
+                        <div className="text-[6.5px] text-indigo-500 uppercase font-black">Bi-weekly</div>
+                        <div className="text-[9.5px] font-black text-indigo-500 mt-0.5">Br {biweeklyVal}</div>
+                      </div>
+                    ) : (
+                      <div className="bg-slate-50 dark:bg-slate-800/40 p-1.5 rounded-xl border opacity-50">
+                        <div className="text-[6.5px] text-slate-400 uppercase font-black">Bi-weekly</div>
+                        <div className="text-[9.5px] text-slate-400 mt-0.5">-</div>
+                      </div>
+                    )}
+                    {p.monthly_price ? (
+                      <div className="bg-slate-50 dark:bg-slate-800/40 p-1.5 rounded-xl border">
+                        <div className="text-[6.5px] text-slate-400 uppercase font-black">Monthly</div>
+                        <div className="text-[9.5px] font-black text-emerald-500 mt-0.5">Br {p.monthly_price}</div>
+                      </div>
+                    ) : (
+                      <div className="bg-slate-50 dark:bg-slate-800/40 p-1.5 rounded-xl border opacity-50">
+                        <div className="text-[6.5px] text-slate-400 uppercase font-black">Monthly</div>
+                        <div className="text-[9.5px] text-slate-400 mt-0.5">-</div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <p className="text-[9.5px] text-slate-500 dark:text-slate-400 mt-3 leading-relaxed line-clamp-2">{p.description || 'No description provided.'}</p>
-                
-                <div className="grid grid-cols-3 gap-2 border-t border-slate-100 dark:border-slate-800/80 pt-3 mt-3 text-center">
-                  {p.daily_price && (
-                    <div className="bg-slate-50 dark:bg-slate-800/40 p-1.5 rounded-xl border">
-                      <div className="text-[7px] text-slate-400 uppercase font-black">Daily</div>
-                      <div className="text-[10px] font-black text-emerald-500">Br {p.daily_price}</div>
-                    </div>
-                  )}
-                  {p.weekly_price && (
-                    <div className="bg-slate-50 dark:bg-slate-800/40 p-1.5 rounded-xl border">
-                      <div className="text-[7px] text-slate-400 uppercase font-black">Weekly</div>
-                      <div className="text-[10px] font-black text-emerald-500">Br {p.weekly_price}</div>
-                    </div>
-                  )}
-                  {p.monthly_price && (
-                    <div className="bg-slate-50 dark:bg-slate-800/40 p-1.5 rounded-xl border">
-                      <div className="text-[7px] text-slate-400 uppercase font-black">Monthly</div>
-                      <div className="text-[10px] font-black text-emerald-500">Br {p.monthly_price}</div>
-                    </div>
-                  )}
-                </div>
-              </div>
 
               <div className="flex gap-2 border-t border-slate-100 dark:border-slate-800/80 pt-3 mt-4">
                 <button 
@@ -1651,7 +1728,8 @@ function VendorSubscriptionsView() {
                 </button>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -1707,25 +1785,50 @@ function VendorSubscriptionsView() {
               {/* Frequencies Rate Builder */}
               <div className="bg-slate-50 dark:bg-slate-950/60 p-3.5 rounded-2xl border dark:border-slate-850 space-y-2">
                 <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">💰 Pricing & Frequencies (Br)</span>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-4 gap-1.5">
                   <div>
-                    <label className="text-[8px] text-slate-400 font-semibold uppercase">Daily Payout</label>
-                    <input type="number" value={dailyPrice} onChange={e => setDailyPrice(e.target.value)} placeholder="Optional" className="w-full mt-0.5 p-2 border rounded-xl text-xs bg-transparent outline-none font-bold text-emerald-500" />
+                    <label className="text-[8px] text-slate-400 font-semibold uppercase">Daily</label>
+                    <input type="number" value={dailyPrice} onChange={e => setDailyPrice(e.target.value)} placeholder="Opt." className="w-full mt-0.5 p-2 border rounded-xl text-xs bg-transparent outline-none font-bold text-emerald-500" />
                   </div>
                   <div>
-                    <label className="text-[8px] text-slate-400 font-semibold uppercase">Weekly Payout</label>
+                    <label className="text-[8px] text-slate-400 font-semibold uppercase">Weekly</label>
                     <input type="number" value={weeklyPrice} onChange={e => setWeeklyPrice(e.target.value)} placeholder="e.g. 350" className="w-full mt-0.5 p-2 border rounded-xl text-xs bg-transparent outline-none font-bold text-emerald-500" />
                   </div>
                   <div>
-                    <label className="text-[8px] text-slate-400 font-semibold uppercase">Monthly Payout</label>
+                    <label className="text-[8px] text-slate-400 font-semibold uppercase">Bi-weekly</label>
+                    <input type="number" value={biweeklyPrice} onChange={e => setBiweeklyPrice(e.target.value)} placeholder="e.g. 600" className="w-full mt-0.5 p-2 border rounded-xl text-xs bg-transparent outline-none font-bold text-indigo-500" />
+                  </div>
+                  <div>
+                    <label className="text-[8px] text-slate-400 font-semibold uppercase">Monthly</label>
                     <input type="number" value={monthlyPrice} onChange={e => setMonthlyPrice(e.target.value)} placeholder="e.g. 1200" className="w-full mt-0.5 p-2 border rounded-xl text-xs bg-transparent outline-none font-bold text-emerald-500" />
                   </div>
                 </div>
               </div>
 
-              <div>
-                <label className="text-[8px] text-slate-400 font-extrabold uppercase block mb-1">Image URL</label>
-                <input type="text" value={image} onChange={e => setImage(e.target.value)} placeholder="https://images.unsplash.com/photo-..." className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-slate-50 dark:bg-slate-950 text-slate-850 dark:text-white outline-none" />
+              {/* Cover Image Upload (Paste URL or local upload!) */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="text-[8px] text-slate-400 font-extrabold uppercase block mb-1">Image URL</label>
+                  <input type="text" value={image} onChange={e => setImage(e.target.value)} placeholder="https://images.unsplash.com/photo-..." className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-slate-50 dark:bg-slate-950 text-slate-850 dark:text-white outline-none" />
+                </div>
+                <div>
+                  <label className="text-[8px] text-slate-400 font-extrabold uppercase block mb-1">Or Upload Photo</label>
+                  <input type="file" accept="image/*" onChange={function(e) {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      toast('⏳ Compressing and loading photo...', 'info');
+                      const reader = new FileReader();
+                      reader.onloadend = async () => {
+                        const base64 = reader.result as string;
+                        // Compress the base64 image to keep it optimized!
+                        const compressed = await compressImage(base64, 600);
+                        setImage(compressed);
+                        toast('✅ Photo uploaded and ready!', 'success');
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }} className="w-full text-xs text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[8px] file:font-semibold file:bg-slate-100 dark:file:bg-slate-800 file:text-slate-700 dark:file:text-slate-300 cursor-pointer" />
+                </div>
               </div>
 
               <div className="flex gap-2 pt-2">

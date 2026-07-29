@@ -3,7 +3,7 @@
 // Stack: Supabase + Vercel Cron (FREE)
 // ============================================
 
-export type SubscriptionFrequency = 'daily' | 'weekly' | 'monthly';
+export type SubscriptionFrequency = 'daily' | 'weekly' | 'biweekly' | 'monthly';
 export type SubscriptionStatus = 'active' | 'paused' | 'cancelled';
 export type DeliveryStatus = 'pending' | 'out_for_delivery' | 'delivered' | 'failed' | 'cancelled';
 
@@ -83,13 +83,14 @@ export function getDiscountText(freq: SubscriptionFrequency): string {
   const discounts: Record<SubscriptionFrequency, { pct: number; label: string }> = {
     daily: { pct: 15, label: 'Save 15% daily' },
     weekly: { pct: 10, label: 'Save 10% weekly' },
+    biweekly: { pct: 8, label: 'Save 8% bi-weekly' },
     monthly: { pct: 5, label: 'Save 5% monthly' },
   };
   return discounts[freq]?.label || '';
 }
 
 export function getDiscountPercent(freq: SubscriptionFrequency): number {
-  return { daily: 15, weekly: 10, monthly: 5 }[freq] || 0;
+  return { daily: 15, weekly: 10, biweekly: 8, monthly: 5 }[freq] || 0;
 }
 
 // ── Calculate price for a plan at given frequency ──────────
@@ -97,7 +98,12 @@ export function getPlanPrice(plan: any, freq: SubscriptionFrequency, quantity = 
   const dailyPrice = plan.dailyPrice !== undefined ? plan.dailyPrice : (plan.daily_price || 0);
   const weeklyPrice = plan.weeklyPrice !== undefined ? plan.weeklyPrice : (plan.weekly_price || 0);
   const monthlyPrice = plan.monthlyPrice !== undefined ? plan.monthlyPrice : (plan.monthly_price || 0);
-  const basePrice = freq === 'daily' ? dailyPrice : freq === 'weekly' ? weeklyPrice : monthlyPrice;
+  
+  // Parse custom biweekly price from JSONB tags
+  const biweeklyTag = plan.tags?.find?.((t: string) => t.startsWith?.('biweeklyPrice:'));
+  const biweeklyPrice = biweeklyTag ? parseInt(biweeklyTag.split(':')[1]) : 0;
+
+  const basePrice = freq === 'daily' ? dailyPrice : freq === 'weekly' ? weeklyPrice : freq === 'biweekly' ? biweeklyPrice : monthlyPrice;
   return basePrice * quantity;
 }
 
@@ -106,6 +112,7 @@ export function formatFrequency(freq: SubscriptionFrequency): string {
   const labels: Record<SubscriptionFrequency, string> = {
     daily: 'በየቀኑ',
     weekly: 'በየሳምንቱ',
+    biweekly: 'በየሁለት ሳምንቱ',
     monthly: 'በየወሩ',
   };
   return labels[freq];
@@ -174,7 +181,6 @@ export async function fetchPlans(category?: string, forceRefresh = false): Promi
   } catch (e) {
     console.warn('Could not fetch subscription plans:', e);
   }
-  // Return empty array gracefully even if API fails
   
   // Cache result
   plansCache = { data: plans, expiry: Date.now() + 120000 };
@@ -195,13 +201,12 @@ export async function fetchPlansGrouped(): Promise<Record<string, SubscriptionPl
 // ── Get featured/popular plans for homepage ────────────────
 export async function fetchFeaturedPlans(limit = 6): Promise<SubscriptionPlan[]> {
   const all = await fetchPlans();
-  // Sort: popular first, then essential, then rest
   const score = (p: any) => {
     let s = 0;
     if (p.tags?.includes('popular')) s += 100;
     if (p.tags?.includes('essential')) s += 50;
     const dailyPrice = p.dailyPrice !== undefined ? p.dailyPrice : (p.daily_price || 0);
-    if (dailyPrice > 0) s += 30; // Daily plans are more engaging
+    if (dailyPrice > 0) s += 30;
     return s;
   };
   return all.sort((a, b) => score(b) - score(a)).slice(0, limit);
