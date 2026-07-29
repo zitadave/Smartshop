@@ -25,7 +25,7 @@ export default function SubscriptionShop() {
         if (p.telegramId) setTgId(p.telegramId);
       } catch {}
     }
-    fetchPlans().then(d => { setPlans(d); setLoading(false); });
+    fetchPlans('all', true).then(d => { setPlans(d); setLoading(false); });
     if (tgId) getUserSubscriptions(tgId).then(setMySubs);
   }, [tgId]);
 
