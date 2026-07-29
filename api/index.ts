@@ -893,6 +893,28 @@ export default async function handler(req: any, res: any) {
         return fail(err.message);
       }
     }
+    if (path === '/api/photo-studio/send-chat' && method === 'POST') {
+      const { telegramId, image, caption } = req.body || {};
+      if (!telegramId || !image) return fail('telegramId and image are required');
+      try {
+        const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
+        const buf = Buffer.from(base64Data, 'base64');
+        const fn = 'enhanced-product-' + Date.now().toString(36) + '.png';
+        const fd = new FormData();
+        fd.append('chat_id', String(telegramId));
+        fd.append('document', new Blob([buf], { type: 'image/png' }), fn);
+        if (caption) fd.append('caption', caption);
+        const r = await fetchTO('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/sendDocument', {
+          method: 'POST',
+          body: fd,
+          timeout: 20000
+        });
+        const d = await r.json();
+        return ok({ success: d.ok === true, description: d.description });
+      } catch (e: any) {
+        return fail(e.message, 500);
+      }
+    }
     if (path === '/api/admin-bot/send-file' && method === 'POST') {
       const { chatId, filename, content, contentType, caption } = req.body || {}; if (!chatId || !content) return fail('required');
       try { let buf, ct = contentType || 'text/plain', fn = filename || 'file.txt'; if (typeof content === 'string' && content.startsWith('data:')) { const mp = content.split(';base64,'); if (mp.length === 2) { ct = mp[0].replace('data:', ''); const ext = ct.includes('jpeg') ? 'jpg' : ct.includes('png') ? 'png' : 'csv'; fn = 'receipt-' + Date.now().toString(36) + '.' + ext; buf = Buffer.from(mp[1], 'base64'); } else buf = Buffer.from(content); } else buf = Buffer.from(typeof content === 'string' ? content : JSON.stringify(content)); const fd = new FormData(); fd.append('chat_id', String(chatId)); fd.append('document', new Blob([buf], { type: ct }), fn); if (caption) fd.append('caption', caption); const r = await fetchTO('https://api.telegram.org/bot' + ENV.ADMIN_BOT_TOKEN + '/sendDocument', { method: 'POST', body: fd, timeout: 15000 }); const d = await r.json(); return ok({ sent: d.ok === true, description: d.description }); }

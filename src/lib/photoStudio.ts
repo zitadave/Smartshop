@@ -129,7 +129,7 @@ export async function processProductPhoto(
     const remover = await getBgRemover();
     if (remover) {
       blobToProcess = await remover(file, {
-        model: 'medium',
+        model: 'small',
         output: { format: 'image/png', quality: 0.9 },
       });
     }
