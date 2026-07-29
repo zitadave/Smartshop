@@ -5,8 +5,23 @@
 
 const API_BASE = '';
 
-async function request<T = any>(path: string, options: RequestInit = {}): Promise<T> {
+interface CustomRequestInit extends RequestInit {
+  timeout?: number;
+  retries?: number;
+  backoffFactor?: number;
+}
+
+function generateUuid(): string {
+  return Math.random().toString(36).substring(2) + Date.now().toString(36);
+}
+
+async function request<T = any>(path: string, options: CustomRequestInit = {}): Promise<T> {
   const url = `${API_BASE}${path}`;
+  const method = options.method?.toUpperCase() || 'GET';
+  const retries = options.retries !== undefined ? options.retries : 3;
+  const timeoutLimit = options.timeout !== undefined ? options.timeout : 10000;
+  const backoffFactor = options.backoffFactor !== undefined ? options.backoffFactor : 300;
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string> || {}),
@@ -16,19 +31,58 @@ async function request<T = any>(path: string, options: RequestInit = {}): Promis
     delete headers['Content-Type'];
   }
 
-  const res = await fetch(url, { ...options, headers });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`API Error ${res.status}: ${text}`);
+  // Auto-inject unique Idempotency-Key for all mutating requests
+  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method) && !headers['Idempotency-Key']) {
+    headers['Idempotency-Key'] = generateUuid();
   }
 
-  const contentType = res.headers.get('content-type');
-  if (contentType && contentType.includes('application/json')) {
-    return res.json();
-  }
+  let attempt = 0;
+  while (true) {
+    attempt++;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutLimit);
 
-  return res as unknown as T;
+    try {
+      const res = await fetch(url, {
+        ...options,
+        headers,
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!res.ok) {
+        const text = await res.text();
+        if (res.status >= 500 && attempt < retries) {
+          throw new Error(`Server error ${res.status}: ${text}`);
+        }
+        throw new Error(`API Error ${res.status}: ${text}`);
+      }
+
+      const contentType = res.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        return res.json();
+      }
+
+      return res as unknown as T;
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+
+      const isTimeout = err.name === 'AbortError';
+      const isNetworkError = err.message?.includes('network') || err.message?.includes('failed to fetch');
+      const isServerError = err.message?.includes('Server error');
+
+      if ((isTimeout || isNetworkError || isServerError) && attempt < retries) {
+        const jitter = Math.random() * 100;
+        const delay = backoffFactor * Math.pow(2, attempt) + jitter;
+        console.warn(`Request to ${path} failed (Attempt ${attempt}/${retries}). Retrying in ${Math.round(delay)}ms... Error: ${err.message}`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+
+      throw err;
+    }
+  }
 }
 
 // ==================== PRODUCTS ====================

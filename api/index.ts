@@ -809,7 +809,7 @@ export default async function handler(req: any, res: any) {
     if (path.startsWith('/api/orders')) {
       if (method === 'GET' && (path === '/api/orders' || path === '/api/')) { const { data } = await supabase.from('orders').select('*').order('created_at', { ascending: false }); return ok({ orders: data || [] }); }
       if (method === 'POST' && (path === '/api/orders' || path === '/api/')) {
-        const ik = req.headers['x-idempotency-key'] || req.body.idempotencyKey || '';
+        const ik = req.headers['idempotency-key'] || req.headers['x-idempotency-key'] || req.body.idempotencyKey || '';
         if (ik) { const ex = await chkIdem(ik); if (ex) return ok({ success: true, order: ex.result, idempotent: true }); }
         const on = req.body.orderNumber || gON(); const items = req.body.items || [];
         for (const item of items) {
