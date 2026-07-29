@@ -17,7 +17,7 @@ export default function Shop() {
 
   const navigate = useNavigate();
   const location = useLocation();
-  const { toggleWishlist } = useStore();
+  const { toggleWishlist, language } = useStore();
   const { filtered, search, setSearch, category, setCategory, sort, setSort } = useProducts();
   const cart = useCart();
   const btnAnim = useButtonAnimation();
@@ -40,51 +40,70 @@ export default function Shop() {
 
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
-      const chunks: Blob[] = [];
-      recorder.ondataavailable = e => chunks.push(e.data);
-      recorder.onstop = async () => {
-        setTranscribing(true);
-        const audioBlob = new Blob(chunks, { type: 'audio/webm' });
-        const formData = new FormData();
-        formData.append('audio', audioBlob, 'voice.webm');
-        toast('🎙️ Transcribing and matching products...', 'info');
-        
-        try {
-          const res = await fetch('/api/ai/voice-order', {
-            method: 'POST',
-            body: formData,
-          });
-          const d = await res.json();
-          setTranscribing(false);
-          if (d.success && d.product) {
-            toast(`🛒 Added to Cart: ${d.product.nameEn || d.product.name}!`, 'success');
-            cart.add(d.product);
-            setSearch(d.product.nameEn || d.product.name);
-          } else {
-            toast('❌ Could not understand. Please try again.', 'error');
-          }
-        } catch {
-          setTranscribing(false);
-          toast('❌ Voice ordering failed.', 'error');
-        }
-      };
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       
-      setMediaRecorder(recorder);
-      recorder.start();
-      setRecording(true);
-    } catch {
-      toast('❌ Microphone access denied.', 'error');
+      if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognition.lang = language === 'am' ? 'am-ET' : 'en-US';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        recognition.onstart = () => {
+          setRecording(true);
+          toast('🎙️ Listening... Speak your order', 'info');
+        };
+
+        recognition.onerror = (event: any) => {
+          console.error('Speech recognition error:', event.error);
+          setRecording(false);
+          toast('❌ Voice recognition error: ' + event.error, 'error');
+        };
+
+        recognition.onend = () => {
+          setRecording(false);
+        };
+
+        recognition.onresult = async (event: any) => {
+          const spokenText = event.results[0][0].transcript;
+          console.log('[SPEECH] Transcribed text:', spokenText);
+          
+          setTranscribing(true);
+          toast(`🎙️ Matching "${spokenText}"...`, 'info');
+
+          try {
+            const res = await fetch('/api/ai/voice-order', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text: spokenText })
+            });
+            const d = await res.json();
+            setTranscribing(false);
+            
+            if (d.success && d.product) {
+              toast(`🛒 Added to Cart: ${d.product.nameEn || d.product.name}!`, 'success');
+              cart.add(d.product);
+              setSearch(d.product.nameEn || d.product.name);
+            } else {
+              toast(`❌ No product matches "${spokenText}". Try another word!`, 'error');
+            }
+          } catch {
+            setTranscribing(false);
+            toast('❌ Voice ordering failed.', 'error');
+          }
+        };
+
+        recognition.start();
+      } else {
+        toast('❌ Speech Recognition is not supported on this browser.', 'error');
+      }
+    } catch (err: any) {
+      toast('❌ Microphone access denied: ' + err.message, 'error');
     }
   };
 
   const stopRecording = () => {
-    if (mediaRecorder && recording) {
-      mediaRecorder.stop();
-      setRecording(false);
-      mediaRecorder.stream.getTracks().forEach(track => track.stop());
-    }
+    // Handled automatically by the speech recognition onend / recognition.stop()
+    setRecording(false);
   };
 
   // Read search from navigation state (header search overlay)
