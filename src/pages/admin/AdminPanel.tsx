@@ -38,7 +38,7 @@ import SmartBooks from '@/components/admin/SmartBooks';
 import ManualPaymentReview from '@/components/admin/ManualPaymentReview';
 import AdminPromotions from '@/components/admin/AdminPromotions';
 import ProductStudio from '@/components/admin/ProductStudio';
-import { sendAdminTelegram, notifyProductCreated, notifyProductUpdated, notifyProductDeleted, notifySettingsChanged, notifyVendorUpdated } from '@/lib/adminNotifier';
+import { sendAdminTelegram, notifyProductCreated, notifyProductUpdated, notifyProductDeleted, notifySettingsChanged, notifyVendorUpdated, sendFileToTelegram } from '@/lib/adminNotifier';
 import AdminDeliveryTab from './AdminDeliveryTab';
 import AdminGroupBuyTab from './AdminGroupBuyTab';
 import AdminSubscriptionsTab from './AdminSubscriptionsTab';
@@ -698,6 +698,35 @@ function AdminVendors() {
   const [storeName, setStoreName] = useState('');
   const [vendorPhone, setVendorPhone] = useState('');
   const [vendorEmail, setVendorEmail] = useState('');
+  
+  const [expandedAppId, setExpandedAppId] = useState<any>(null);
+  const [zoomImage, setZoomImage] = useState<string | null>(null);
+
+  const sendVendorDocsToTelegram = async (app: any) => {
+    toast('⏳ Sending vendor documents to Telegram...', 'info');
+    let sentCount = 0;
+    if (app.fayda_front_image) {
+      const ok = await sendFileToTelegram(app.fayda_front_image, `vendor-fayda-front-${app.id}.jpg`, {
+        contentType: 'image/jpeg',
+        caption: `🆔 Fayda Front for Vendor Application: ${app.full_name_latin || app.name || 'Vendor'}`,
+        silent: true,
+      });
+      if (ok) sentCount++;
+    }
+    if (app.fayda_back_image) {
+      const ok = await sendFileToTelegram(app.fayda_back_image, `vendor-fayda-back-${app.id}.jpg`, {
+        contentType: 'image/jpeg',
+        caption: `🆔 Fayda Back for Vendor Application: ${app.full_name_latin || app.name || 'Vendor'}`,
+        silent: true,
+      });
+      if (ok) sentCount++;
+    }
+    if (sentCount > 0) {
+      toast(`📎 Sent ${sentCount} Fayda ID documents successfully to your Telegram chat!`, 'success');
+    } else {
+      toast('❌ No documents found or failed to send.', 'error');
+    }
+  };
 
   // Fetch API data - ONLY source of truth, no localStorage merge
   useEffect(function() {
@@ -776,21 +805,83 @@ function AdminVendors() {
             <AlertTriangle size={15} /> Pending Vendor Applications ({pendingApps.length})
           </h3>
           {pendingApps.map(function(a) {
+            const isExpanded = expandedAppId === a.id;
             return (
-              <div key={a.id} className="flex items-center justify-between bg-white/50 dark:bg-slate-900/50 rounded-xl p-3 mb-2">
-                <div>
-                  <div className="text-xs font-semibold text-amber-800 dark:text-amber-300">{a.name || 'Unknown'}</div>
-                  <div className="text-[9px] text-amber-600">Phone: {a.phone || 'N/A'} · Telegram: {a.telegram_id || a.telegramId || 'N/A'}</div>
-                  <div className="text-[8px] text-amber-500">Applied: {new Date(a.joined_at || a.appliedAt).toLocaleDateString()}</div>
+              <div key={a.id} className="bg-white/70 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800/80 p-3.5 mb-2.5 transition-all">
+                <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap cursor-pointer" onClick={() => setExpandedAppId(isExpanded ? null : a.id)}>
+                  <div className="flex-1">
+                    <div className="text-xs font-bold text-slate-800 dark:text-slate-200">{a.name || 'Unknown Store'}</div>
+                    <div className="text-[9px] text-slate-500 mt-0.5">👤 Legal Name: <strong className="text-indigo-600 dark:text-indigo-400">{a.full_name_latin || 'Individual Seller'}</strong> · Phone: {a.phone || 'N/A'}</div>
+                    <div className="text-[8px] text-slate-400">Applied: {new Date(a.joined_at || a.appliedAt).toLocaleDateString()}</div>
+                  </div>
+                  <div className="flex gap-2 flex-shrink-0">
+                    <button className="px-2.5 py-1 bg-emerald-500 text-white rounded-lg text-[9px] font-bold hover:shadow-md transition-all flex items-center gap-1" onClick={function(e) { e.stopPropagation(); approveVendorApp(a.id, a.name); }}>
+                      <CheckCircle size={10} /> Approve
+                    </button>
+                    <button className="px-2.5 py-1 bg-red-500 text-white rounded-lg text-[9px] font-bold hover:shadow-md transition-all flex items-center gap-1" onClick={function(e) { e.stopPropagation(); rejectVendorApp(a.id); }}>
+                      <XCircle size={10} /> Reject
+                    </button>
+                  </div>
                 </div>
-                <div className="flex gap-2 flex-shrink-0">
-                  <button className="px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-[9px] font-bold hover:shadow-md transition-all" onClick={function() { approveVendorApp(a.id, a.name); }}>
-                    <CheckCircle size={12} className="inline mr-1" /> Approve
-                  </button>
-                  <button className="px-3 py-1.5 bg-red-500 text-white rounded-lg text-[9px] font-bold hover:shadow-md transition-all" onClick={function() { rejectVendorApp(a.id); }}>
-                    <XCircle size={12} className="inline mr-1" /> Reject
-                  </button>
-                </div>
+
+                {/* Expanded Detailed KYC & Photo Review Panel */}
+                {isExpanded && (
+                  <div className="mt-3.5 pt-3.5 border-t border-slate-200/50 dark:border-slate-800/50 space-y-3.5 animate-scaleIn text-left text-foreground">
+                    <div className="grid grid-cols-2 gap-3 text-[10px]">
+                      <div>
+                        <span className="text-slate-400 font-bold uppercase text-[8px] tracking-wider">Store Info</span>
+                        <div className="font-semibold text-slate-700 dark:text-slate-300 mt-1">Store: {a.name}</div>
+                        <div className="text-slate-500 mt-0.5">Description: {a.description || 'No description provided.'}</div>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 font-bold uppercase text-[8px] tracking-wider">KYC Verification</span>
+                        <div className="font-semibold text-slate-700 dark:text-slate-300 mt-1">👤 Legal (Amh): {a.full_name_amharic || 'N/A'}</div>
+                        <div className="text-slate-500 mt-0.5">🆔 Fayda ID: {a.fayda_id || 'N/A'}</div>
+                        <div className="text-slate-500 mt-0.5">🚻 Gender: {a.gender || 'Male'}</div>
+                        {a.lat && (
+                          <a href={`https://www.google.com/maps?q=${a.lat},${a.lng}`} target="_blank" rel="noreferrer" className="text-indigo-500 font-bold hover:underline mt-1 block">📍 GPS Location: {a.lat.toFixed(4)}, {a.lng.toFixed(4)}</a>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* KYC Document Thumbnails with Zoom */}
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div>
+                        <span className="text-slate-400 font-bold uppercase text-[8px] tracking-wider">Fayda Front ID</span>
+                        {a.fayda_front_image ? (
+                          <div className="relative group aspect-[1.6] rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-black cursor-pointer mt-1" onClick={() => setZoomImage(a.fayda_front_image)}>
+                            <img src={a.fayda_front_image} alt="Fayda Front" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[8px] text-white font-bold">🔍 Click to zoom</div>
+                          </div>
+                        ) : (
+                          <div className="aspect-[1.6] bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center text-[9px] text-slate-400 mt-1">No ID Image</div>
+                        )}
+                      </div>
+                      <div>
+                        <span className="text-slate-400 font-bold uppercase text-[8px] tracking-wider">Fayda Back ID</span>
+                        {a.fayda_back_image ? (
+                          <div className="relative group aspect-[1.6] rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-black cursor-pointer mt-1" onClick={() => setZoomImage(a.fayda_back_image)}>
+                            <img src={a.fayda_back_image} alt="Fayda Back" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[8px] text-white font-bold">🔍 Click to zoom</div>
+                          </div>
+                        ) : (
+                          <div className="aspect-[1.6] bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center text-[9px] text-slate-400 mt-1">No ID Image</div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Dispatch Documents Button */}
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => sendVendorDocsToTelegram(a)}
+                        className="flex-1 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl text-[9px] font-bold shadow transition-colors flex items-center justify-center gap-1"
+                      >
+                        📎 Send Documents to Admin Telegram Chat
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -918,6 +1009,18 @@ function AdminVendors() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* KYC Image Zoom Portal */}
+      {zoomImage && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-black/90 flex flex-col items-center justify-center p-4 backdrop-blur-md animate-fadeIn" onClick={() => setZoomImage(null)}>
+          <div className="max-w-lg w-full relative animate-scaleIn" onClick={(e) => e.stopPropagation()}>
+            <img src={zoomImage} alt="KYC Document Zoom" className="w-full max-h-[80vh] object-contain rounded-2xl border border-white/20 shadow-2xl" />
+            <button className="absolute -top-10 right-0 w-8 h-8 rounded-full bg-white/10 text-white flex items-center justify-center text-xs font-bold hover:bg-white/20 transition-all" onClick={() => setZoomImage(null)}>✕</button>
+            <div className="text-center text-white/70 text-[9px] mt-2 italic">Tap anywhere to close</div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

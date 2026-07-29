@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { sendFileToTelegram } from '@/lib/adminNotifier';
 import { toast } from '@/components/Toast';
 import { cn } from '@/lib/utils';
 import { useStore } from '@/stores/AppStore';
@@ -24,6 +25,61 @@ export default function AdminDeliveryTab() {
   var [rejectionReason, setRejectionReason] = useState<string>('');
   var [zoomImage, setZoomImage] = useState<string | null>(null);
   var [exporting, setExporting] = useState(false);
+
+  const sendDriverDocsToTelegram = async (d: any) => {
+    toast('⏳ Sending driver documents to Telegram...', 'info');
+    let sentCount = 0;
+    if (d.fayda_selfie_url) {
+      const ok = await sendFileToTelegram(d.fayda_selfie_url, `driver-selfie-${d.id}.jpg`, {
+        contentType: 'image/jpeg',
+        caption: `👤 Selfie for Driver Application: ${d.full_name_latin}`,
+        silent: true,
+      });
+      if (ok) sentCount++;
+    }
+    if (d.fayda_id_front_url) {
+      const ok = await sendFileToTelegram(d.fayda_id_front_url, `driver-fayda-front-${d.id}.jpg`, {
+        contentType: 'image/jpeg',
+        caption: `🆔 Fayda Front for Driver Application: ${d.full_name_latin}`,
+        silent: true,
+      });
+      if (ok) sentCount++;
+    }
+    if (d.fayda_id_back_url) {
+      const ok = await sendFileToTelegram(d.fayda_id_back_url, `driver-fayda-back-${d.id}.jpg`, {
+        contentType: 'image/jpeg',
+        caption: `🆔 Fayda Back for Driver Application: ${d.full_name_latin}`,
+        silent: true,
+      });
+      if (ok) sentCount++;
+    }
+
+    const addrParts = (d.emergency_address || '').split('::');
+    const emFront = addrParts[1] || '';
+    const emBack = addrParts[2] || '';
+    if (emFront) {
+      const ok = await sendFileToTelegram(emFront, `driver-emergency-front-${d.id}.jpg`, {
+        contentType: 'image/jpeg',
+        caption: `🆘 Emergency Front ID for Driver Application: ${d.full_name_latin}`,
+        silent: true,
+      });
+      if (ok) sentCount++;
+    }
+    if (emBack) {
+      const ok = await sendFileToTelegram(emBack, `driver-emergency-back-${d.id}.jpg`, {
+        contentType: 'image/jpeg',
+        caption: `🆘 Emergency Back ID for Driver Application: ${d.full_name_latin}`,
+        silent: true,
+      });
+      if (ok) sentCount++;
+    }
+
+    if (sentCount > 0) {
+      toast(`📎 Sent ${sentCount} driver verification documents successfully to your Telegram chat!`, 'success');
+    } else {
+      toast('❌ No documents found or failed to send.', 'error');
+    }
+  };
 
   useEffect(function() {
     setMounted(true);
@@ -535,6 +591,17 @@ export default function AdminDeliveryTab() {
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Telegram dispatch document trigger */}
+            <div className="mt-3.5 px-1">
+              <button
+                type="button"
+                onClick={() => sendDriverDocsToTelegram(selectedKYC)}
+                className="w-full py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl text-[9px] font-bold shadow transition-colors flex items-center justify-center gap-1"
+              >
+                📎 Send Documents to Admin Telegram Chat
+              </button>
             </div>
 
             {/* Action Buttons inside Modal */}

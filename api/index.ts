@@ -1029,7 +1029,32 @@ export default async function handler(req: any, res: any) {
       if (path === '/api/vendors/check-status' && method === 'GET') { const id = new URLSearchParams(req.url?.split('?')[1] || '').get('id') || ''; const ph = new URLSearchParams(req.url?.split('?')[1] || '').get('phone') || ''; try { const v = await getV(); if (id) { const f = v.find((vv: any) => vv.id == id || vv.id === id); return ok({ status: f?.status || 'none' }); } if (ph) { const f = v.find((vv: any) => vv.phone == ph); return ok({ status: f?.status || 'none' }); } } catch {} return ok({ status: 'none' }); }
       if (path === '/api/vendors/applications' && method === 'GET') { const v = await getV(); return ok({ applications: v }); }
       if (method === 'GET' && (path === '/api/vendors' || path === '/api/')) { const v = await getV(); return ok({ vendors: v || [] }); }
-      if (method === 'POST' && path === '/api/vendors/register') { const v = { id: Date.now(), ...req.body, status: 'pending', joined_at: new Date().toISOString() }; try { const vs = await getV(); vs.push(v); await setV(vs); } catch (e: any) { console.log('V:', e.message); } tg(ENV.ADMIN_BOT_TOKEN, ENV.adminChatId, '🆕 Vendor: ' + (req.body.name || '') + ' ' + (req.body.phone || '')); return ok({ success: true, vendor: v }); }
+      if (method === 'POST' && path === '/api/vendors/register') {
+        const b = req.body || {};
+        const vs = await getV();
+
+        const dupPhone = vs.find((v: any) => v.phone === b.phone && v.status !== 'rejected');
+        if (dupPhone) {
+          return fail('A vendor with this Phone number is already registered or pending review.', 409);
+        }
+
+        if (b.fayda_id) {
+          const dupFayda = vs.find((v: any) => v.fayda_id === b.fayda_id && v.status !== 'rejected');
+          if (dupFayda) {
+            return fail('A vendor with this Fayda ID is already registered.', 409);
+          }
+        }
+
+        const v = { id: Date.now(), ...b, status: 'pending', joined_at: new Date().toISOString() };
+        try {
+          vs.push(v);
+          await setV(vs);
+        } catch (e: any) {
+          console.log('V:', e.message);
+        }
+        tg(ENV.ADMIN_BOT_TOKEN, ENV.adminChatId, '🆕 *Vendor Application*:\n👤 ' + (b.full_name_latin || b.name || '') + '\n📞 ' + (b.phone || '') + '\n🆔 Fayda: ' + (b.fayda_id || 'N/A'));
+        return ok({ success: true, vendor: v });
+      }
       if (method === 'DELETE') { const vid = pid(path); try { let vs = await getV(); let dv: any = null; const f = vs.filter((v: any) => { if (v.id == vid || v.id === String(vid)) { dv = v; return false; } return true; }); await setV(f); if (dv?.telegram_id) tg(ENV.VENDOR_BOT_TOKEN, dv.telegram_id, '⚠️ Revoked.'); return ok({ success: true, deleted: true }); } catch (e: any) { return fail(e.message, 500); } }
       if (method === 'PUT') { const vid = pid(path); try { const vs = await getV(); const up = vs.map((v: any) => v.id == vid ? { ...v, ...req.body } : v); await setV(up); } catch {} const em = req.body.status === 'approved' ? '✅' : req.body.status === 'rejected' ? '❌' : '⏸️'; tg(ENV.ADMIN_BOT_TOKEN, ENV.adminChatId, em + ' Vendor ' + vid + ': ' + (req.body.status || 'updated')); return ok({ success: true }); }
     }
