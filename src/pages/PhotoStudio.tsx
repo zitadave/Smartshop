@@ -1,9 +1,9 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useStore } from '@/stores/AppStore';
 import { toast } from '@/components/Toast';
 import { 
   Camera, Upload, Check, RefreshCw, Send, Sliders, Type, Crop, Sparkles, 
-  Trash2, Heart, ExternalLink, HelpCircle, AlertTriangle
+  Trash2, Heart, ExternalLink, HelpCircle, AlertTriangle, Move, ZoomIn
 } from 'lucide-react';
 import { processProductPhoto, uploadProductPhoto, type ProcessedPhoto } from '@/lib/photoStudio';
 
@@ -15,6 +15,14 @@ export default function PhotoStudio() {
   const [processing, setProcessing] = useState(false);
   const [processStep, setProcessStep] = useState('');
   const [result, setResult] = useState<ProcessedPhoto | null>(null);
+  
+  // Custom AI Creative Style preset
+  const [aiStyle, setAiStyle] = useState<'studio' | 'sunset' | 'midnight'>('studio');
+  
+  // Interactive Closeup & Positioning states
+  const [zoom, setZoom] = useState(1.0);
+  const [posX, setPosX] = useState(0);
+  const [posY, setPosY] = useState(0);
   
   // Photo Editor states (shadcn design-aligned)
   const [activeTab, setActiveTab] = useState<'adjust' | 'text' | 'crop'>('adjust');
@@ -66,14 +74,62 @@ export default function PhotoStudio() {
       canvas.width = targetW;
       canvas.height = targetH;
 
-      // Draw and apply CSS GPU filters
       ctx.clearRect(0, 0, targetW, targetH);
       ctx.save();
-      ctx.filter = `brightness(${brightness}) contrast(${contrast}) saturate(${saturation})`;
-      ctx.drawImage(img, 0, 0, targetW, targetH);
-      ctx.restore();
 
-      // Render Text Overlay
+      // ── Step 1: Render Creative AI Background Style Presets ──
+      if (aiStyle === 'studio') {
+        // Solid Studio White (MIT Catalog Standard)
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, targetW, targetH);
+      } else if (aiStyle === 'sunset') {
+        // Warm Editorial Sunset Gradient
+        const gradient = ctx.createLinearGradient(0, 0, 0, targetH);
+        gradient.addColorStop(0, '#fef08a'); // Warm yellow
+        gradient.addColorStop(0.5, '#fed7aa'); // Orange peach
+        gradient.addColorStop(1, '#fecdd3'); // Soft rose
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, targetW, targetH);
+      } else if (aiStyle === 'midnight') {
+        // Cool Premium Cyber Midnight Gradient
+        const gradient = ctx.createLinearGradient(0, 0, 0, targetH);
+        gradient.addColorStop(0, '#0f172a'); // Deep slate
+        gradient.addColorStop(1, '#1e1b4b'); // Midnight indigo
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, targetW, targetH);
+      }
+
+      // ── Step 2: Apply GPU-Accelerated CSS Filters & Transformations ──
+      ctx.save();
+      
+      // Calculate dynamic active filters based on AI style + slider adjustments
+      let activeBrightness = brightness;
+      let activeContrast = contrast;
+      let activeSaturation = saturation;
+
+      if (aiStyle === 'sunset') {
+        activeBrightness *= 1.05;
+        activeContrast *= 0.95;
+        activeSaturation *= 1.25;
+      } else if (aiStyle === 'midnight') {
+        activeBrightness *= 0.92;
+        activeContrast *= 1.15;
+        activeSaturation *= 1.10;
+      }
+
+      ctx.filter = `brightness(${activeBrightness}) contrast(${activeContrast}) saturate(${activeSaturation})`;
+
+      // Translate context to center + position offsets, then scale (zoom)
+      ctx.translate(targetW / 2 + posX, targetH / 2 + posY);
+      ctx.scale(zoom, zoom);
+
+      // Draw product image centered
+      ctx.drawImage(img, -targetW / 2, -targetH / 2, targetW, targetH);
+      
+      ctx.restore(); // Restore filters & matrix
+      ctx.restore(); // Restore outer canvas save
+
+      // ── Step 3: Render Custom Text Overlay Watermarks ──
       if (textOverlay.trim()) {
         ctx.save();
         ctx.font = `bold ${fontSize}px sans-serif`;
@@ -103,7 +159,7 @@ export default function PhotoStudio() {
       }
     };
     img.src = result.processedUrl;
-  }, [result, brightness, contrast, saturation, textOverlay, textColor, textPosition, fontSize, aspectRatio]);
+  }, [result, brightness, contrast, saturation, textOverlay, textColor, textPosition, fontSize, aspectRatio, aiStyle, zoom, posX, posY]);
 
   const handleFile = async (f: File) => {
     setFile(f);
@@ -111,7 +167,6 @@ export default function PhotoStudio() {
     setResult(null);
     setUploaded(false);
 
-    // Multiphase progress simulation to guide the user elegantly
     setProcessStep('Initializing WASM AI Model (9.8MB)...');
     await new Promise(r => setTimeout(r, 1200));
     
@@ -135,7 +190,6 @@ export default function PhotoStudio() {
     if (!result || !canvasRef.current) return;
     setUploading(true);
     try {
-      // Convert current canvas state to WebP Blob for upload
       canvasRef.current.toBlob(async (blob) => {
         if (!blob) {
           setUploading(false);
@@ -162,7 +216,6 @@ export default function PhotoStudio() {
     setSendingChat(true);
     toast('⏳ Generating high-definition file...', 'info');
 
-    // Convert canvas directly to high-quality Base64 PNG
     const dataUrl = canvas.toDataURL('image/png', 1.0);
     const tgId = profile.telegramId || localStorage.getItem('ss_telegram_id');
 
@@ -179,7 +232,7 @@ export default function PhotoStudio() {
         body: JSON.stringify({
           telegramId: tgId,
           image: dataUrl,
-          caption: '✨ Photo edited beautifully via Smartshop WASM Photo Studio!'
+          caption: `✨ Photo generated via Smartshop AI Photo Studio!\n🎨 Style: ${aiStyle.toUpperCase()}\n🔍 Zoom: ${zoom}x`
         })
       });
       const d = await res.json();
@@ -257,10 +310,31 @@ export default function PhotoStudio() {
               </div>
             </div>
 
+            {/* Select AI Creative Style Presets */}
+            <div className="space-y-2">
+              <label className="text-[9px] font-extrabold uppercase tracking-wider text-muted-foreground block">🎨 Select AI Creative Background Style</label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: 'studio', label: 'Minimalist', desc: 'Solid White', bg: 'bg-white border' },
+                  { id: 'sunset', label: 'Warm Sunset', desc: 'Peach Rose', bg: 'bg-gradient-to-br from-yellow-100 to-rose-200' },
+                  { id: 'midnight', label: 'Cyber Midnight', desc: 'Dark Indigo', bg: 'bg-gradient-to-br from-slate-900 to-slate-950 text-white' }
+                ].map(s => (
+                  <button 
+                    key={s.id}
+                    onClick={() => setAiStyle(s.id as any)}
+                    className={`p-2.5 rounded-2xl border-2 text-left flex flex-col justify-between transition-all duration-300 h-16 ${s.bg} ${aiStyle === s.id ? 'border-primary ring-2 ring-primary/15 scale-[1.02]' : 'border-border/60'}`}
+                  >
+                    <span className="text-[10px] font-black leading-none">{s.label}</span>
+                    <span className="text-[7.5px] opacity-60 leading-none mt-1 font-bold">{s.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Editor Tool Tabs */}
             <div className="bg-card border border-border/80 rounded-3xl p-4 shadow-sm">
               <div className="flex bg-muted/60 p-0.5 rounded-xl border border-border/30 mb-4">
-                <button onClick={() => setActiveTab('adjust')} className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${activeTab === 'adjust' ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}><Sliders size={12} /> Adjust</button>
+                <button onClick={() => setActiveTab('adjust')} className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${activeTab === 'adjust' ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}><Sliders size={12} /> Transform</button>
                 <button onClick={() => setActiveTab('text')} className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${activeTab === 'text' ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}><Type size={12} /> Text</button>
                 <button onClick={() => setActiveTab('crop')} className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${activeTab === 'crop' ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}><Crop size={12} /> Aspect</button>
               </div>
@@ -269,16 +343,32 @@ export default function PhotoStudio() {
               {activeTab === 'adjust' && (
                 <div className="space-y-3.5">
                   <div className="space-y-1">
-                    <div className="flex justify-between text-[9px] font-extrabold uppercase tracking-wider text-muted-foreground"><span>Brightness</span><span className="text-primary font-bold">{Math.round(brightness * 100)}%</span></div>
-                    <input type="range" min="0.5" max="1.5" step="0.02" value={brightness} onChange={e => setBrightness(Number(e.target.value))} className="w-full h-1 bg-muted rounded-lg appearance-none cursor-pointer accent-primary" />
+                    <div className="flex justify-between text-[9px] font-extrabold uppercase tracking-wider text-muted-foreground"><span>🔍 Closeup / Zoom</span><span className="text-primary font-bold">{zoom.toFixed(2)}x</span></div>
+                    <input type="range" min="0.5" max="2.0" step="0.05" value={zoom} onChange={e => setZoom(Number(e.target.value))} className="w-full h-1 bg-muted rounded-lg appearance-none cursor-pointer accent-primary" />
                   </div>
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-[9px] font-extrabold uppercase tracking-wider text-muted-foreground"><span>Contrast</span><span className="text-primary font-bold">{Math.round(contrast * 100)}%</span></div>
-                    <input type="range" min="0.5" max="1.5" step="0.02" value={contrast} onChange={e => setContrast(Number(e.target.value))} className="w-full h-1 bg-muted rounded-lg appearance-none cursor-pointer accent-primary" />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[9px] font-extrabold uppercase tracking-wider text-muted-foreground"><span>↔️ Move X</span><span className="text-primary font-bold">{posX}px</span></div>
+                      <input type="range" min="-150" max="150" step="1" value={posX} onChange={e => setPosX(Number(e.target.value))} className="w-full h-1 bg-muted rounded-lg appearance-none cursor-pointer accent-primary" />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[9px] font-extrabold uppercase tracking-wider text-muted-foreground"><span>↕️ Move Y</span><span className="text-primary font-bold">{posY}px</span></div>
+                      <input type="range" min="-150" max="150" step="1" value={posY} onChange={e => setPosY(Number(e.target.value))} className="w-full h-1 bg-muted rounded-lg appearance-none cursor-pointer accent-primary" />
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-[9px] font-extrabold uppercase tracking-wider text-muted-foreground"><span>Saturation</span><span className="text-primary font-bold">{Math.round(saturation * 100)}%</span></div>
-                    <input type="range" min="0.0" max="2.0" step="0.05" value={saturation} onChange={e => setSaturation(Number(e.target.value))} className="w-full h-1 bg-muted rounded-lg appearance-none cursor-pointer accent-primary" />
+                  <div className="border-t border-slate-100 dark:border-slate-800 pt-3 mt-3 space-y-3.5">
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[9px] font-extrabold uppercase tracking-wider text-muted-foreground"><span>Brightness</span><span className="text-primary font-bold">{Math.round(brightness * 100)}%</span></div>
+                      <input type="range" min="0.5" max="1.5" step="0.02" value={brightness} onChange={e => setBrightness(Number(e.target.value))} className="w-full h-1 bg-muted rounded-lg appearance-none cursor-pointer accent-primary" />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[9px] font-extrabold uppercase tracking-wider text-muted-foreground"><span>Contrast</span><span className="text-primary font-bold">{Math.round(contrast * 100)}%</span></div>
+                      <input type="range" min="0.5" max="1.5" step="0.02" value={contrast} onChange={e => setContrast(Number(e.target.value))} className="w-full h-1 bg-muted rounded-lg appearance-none cursor-pointer accent-primary" />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[9px] font-extrabold uppercase tracking-wider text-muted-foreground"><span>Saturation</span><span className="text-primary font-bold">{Math.round(saturation * 100)}%</span></div>
+                      <input type="range" min="0.0" max="2.0" step="0.05" value={saturation} onChange={e => setSaturation(Number(e.target.value))} className="w-full h-1 bg-muted rounded-lg appearance-none cursor-pointer accent-primary" />
+                    </div>
                   </div>
                 </div>
               )}
@@ -361,7 +451,7 @@ export default function PhotoStudio() {
               </button>
             </div>
 
-            <button onClick={() => { setFile(null); setResult(null); setUploaded(false); }}
+            <button onClick={() => { setFile(null); setResult(null); setUploaded(false); setZoom(1.0); setPosX(0); setPosY(0); setAiStyle('studio'); }}
                     className="w-full py-2.5 text-xs text-muted-foreground hover:text-foreground font-semibold">
               🔄 Process Another Photo
             </button>
