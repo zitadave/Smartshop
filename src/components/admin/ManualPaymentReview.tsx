@@ -96,7 +96,7 @@ export default function ManualPaymentReview() {
             id: b.id,
             name: b.bank_name,
             account: b.account_number,
-            holder: b.account_holder
+            holder: b.account_name || b.account_holder
           }));
           setBankAccounts(mapped);
           saveBankAccounts(mapped);

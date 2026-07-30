@@ -1098,7 +1098,7 @@ export default async function handler(req: any, res: any) {
           const payload = accounts.map((a: any) => ({
             bank_name: a.name || a.bank_name,
             account_number: a.account || a.account_number,
-            account_holder: a.holder || a.account_holder,
+            account_name: a.holder || a.account_holder || a.account_name,
             active: true
           }));
           const { data, error } = await supabase.from('bank_accounts').insert(payload).select();
@@ -1117,7 +1117,7 @@ export default async function handler(req: any, res: any) {
         const { data, error } = await supabase.from('bank_accounts').insert({
           bank_name: b.bank_name,
           account_number: b.account_number,
-          account_holder: b.account_holder,
+          account_name: b.account_holder || b.account_name || b.holder,
           active: true
         }).select().single();
         if (error) return fail(error.message, 500);

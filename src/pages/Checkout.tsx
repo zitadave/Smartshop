@@ -41,7 +41,7 @@ export default function Checkout() {
                const mapped = d.bank_accounts.map((b: any) => ({
                  name: b.bank_name,
                  account: b.account_number,
-                 holder: b.account_holder
+                 holder: b.account_name || b.account_holder
                }));
                setBankAccounts(mapped);
                localStorage.setItem('ss_bank_accounts', JSON.stringify(mapped));
@@ -60,7 +60,7 @@ export default function Checkout() {
          const mapped = d.bank_accounts.map((b: any) => ({
            name: b.bank_name,
            account: b.account_number,
-           holder: b.account_holder
+           holder: b.account_name || b.account_holder
          }));
          setBankAccounts(mapped);
        } else {
