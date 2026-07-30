@@ -1073,6 +1073,22 @@ export default async function handler(req: any, res: any) {
     }
 
     // ── BANK ACCOUNTS ENDPOINTS (Dynamic Database Sync) ─────────
+    if (path === '/api/bank-accounts/diagnose' && method === 'GET') {
+      try {
+        const { data: insData, error: insError } = await supabase.from('bank_accounts').insert({
+          bank_name: 'Diag Bank',
+          account_number: '1234'
+        }).select();
+        
+        if (insError) return fail('Insert error: ' + insError.message, 500);
+        
+        await supabase.from('bank_accounts').delete().eq('bank_name', 'Diag Bank');
+        
+        return ok({ success: true, keys: insData && insData.length > 0 ? Object.keys(insData[0]) : [], data: insData });
+      } catch (err: any) {
+        return fail('Exception: ' + err.message, 500);
+      }
+    }
     if (path.startsWith('/api/bank-accounts')) {
       if (path === '/api/bank-accounts/bulk' && method === 'POST') {
         const b = req.body || {};
