@@ -1072,6 +1072,50 @@ export default async function handler(req: any, res: any) {
       if (method === 'PUT') { const vid = pid(path); try { const vs = await getV(); const up = vs.map((v: any) => v.id == vid ? { ...v, ...req.body } : v); await setV(up); } catch {} const em = req.body.status === 'approved' ? '✅' : req.body.status === 'rejected' ? '❌' : '⏸️'; tg(ENV.ADMIN_BOT_TOKEN, ENV.adminChatId, em + ' Vendor ' + vid + ': ' + (req.body.status || 'updated')); return ok({ success: true }); }
     }
 
+    // ── PAYOUTS ENDPOINTS (Dynamic Database Sync) ──────────────
+    if (path.startsWith('/api/payouts')) {
+      if (method === 'GET') {
+        const urlParams = new URLSearchParams(req.url?.split('?')[1] || '');
+        const vid = urlParams.get('vendorId');
+        let query = supabase.from('payouts').select('*').order('created_at', { ascending: false });
+        if (vid) {
+          query = query.eq('vendor_id', parseInt(vid));
+        }
+        const { data, error } = await query;
+        if (error) return fail(error.message, 500);
+        return ok({ payouts: data || [] });
+      }
+      if (method === 'POST') {
+        const b = req.body || {};
+        const { data, error } = await supabase.from('payouts').insert({
+          vendor_id: b.vendor_id || 0,
+          vendor_name: b.vendor_name || 'Stakeholder',
+          amount: b.amount,
+          commission_deducted: b.commission_deducted || 0,
+          payment_method: (b.payment_method || 'telebirr').toLowerCase(),
+          account_name: b.account_name || '',
+          account_number: b.account_number || '',
+          notes: b.notes || '',
+          status: 'pending'
+        }).select().single();
+        if (error) return fail(error.message, 500);
+        return ok({ success: true, payout: data });
+      }
+      if (method === 'PATCH') {
+        // e.g. /api/payouts/:id/status
+        const parts = path.split('/');
+        const id = parts[3];
+        const { status, notes } = req.body || {};
+        const { data, error } = await supabase.from('payouts').update({
+          status,
+          notes,
+          paid_at: status === 'paid' ? new Date().toISOString() : null
+        }).eq('id', parseInt(id)).select().single();
+        if (error) return fail(error.message, 500);
+        return ok({ success: true, payout: data });
+      }
+    }
+
 
     // ================================================================
     // ANALYTICS / USERS / AFFILIATES / REVIEWS / ETC
