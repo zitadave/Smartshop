@@ -1077,7 +1077,8 @@ export default async function handler(req: any, res: any) {
       try {
         const { data: insData, error: insError } = await supabase.from('bank_accounts').insert({
           bank_name: 'Diag Bank',
-          account_number: '1234'
+          account_number: '1234',
+          account_name: 'Diag Holder'
         }).select();
         
         if (insError) return fail('Insert error: ' + insError.message, 500);
