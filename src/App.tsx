@@ -9,6 +9,7 @@ import { getSampleBroadcasts, getSampleFlashDeals } from '@/lib/seed';
 import { isRunningInTelegram } from '@/lib/telegram';
 import Layout from '@/components/Layout';
 import ToastContainer from '@/components/Toast';
+import { applyThemeToDocument } from '@/components/features/ThemePicker';
 
 const Home = lazy(() => import('@/pages/Home'));
 const Shop = lazy(() => import('@/pages/Shop'));
@@ -73,6 +74,10 @@ function applySavedTheme() {
     var dark = JSON.parse(localStorage.getItem('ss_dark') || 'false');
     if (dark) document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
+    
+    const savedTheme = JSON.parse(localStorage.getItem('ss_theme') || '"default"');
+    const savedAccent = JSON.parse(localStorage.getItem('ss_accent') || 'null');
+    applyThemeToDocument(savedTheme, savedAccent || undefined);
   } catch(e) {}
 }
 

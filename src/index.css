@@ -42,6 +42,29 @@
   --color-ring: #5b9bd5;
 }
 
+/* Global Dark Mode Legibility Fixes */
+.dark input, 
+.dark select, 
+.dark textarea {
+  color: #f1f5f9 !important;
+  background-color: #1a2235 !important;
+  border-color: #1e2a45 !important;
+}
+.dark input::placeholder, 
+.dark textarea::placeholder {
+  color: #64748b !important;
+}
+.dark .text-slate-700,
+.dark .text-slate-800,
+.dark .text-slate-900,
+.dark .text-slate-950 {
+  color: #e2e8f0 !important;
+}
+.dark .text-slate-500,
+.dark .text-slate-600 {
+  color: #94a3b8 !important;
+}
+
 /* ===== PREMIUM DESIGN SYSTEM ===== */
 
 /* Typography */
