@@ -186,6 +186,7 @@ export default function Checkout() {
  paymentMethod: paymentMethod === 'chapa' ? 'chapa' : 'manual',
  customer: { name, phone, city, address, notes: '' },
  date: new Date().toLocaleDateString(), createdAt: new Date().toISOString(), currency: 'ETB', language,
+ referrer_code: localStorage.getItem('ss_referrer') || undefined,
  };
 
  try {

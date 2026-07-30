@@ -82,6 +82,14 @@ export default function App() {
   useEffect(function() { initSentry(); initAnalytics(); }, []);
   useEffect(function() { applySavedTheme(); }, []);
   useEffect(function() {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('ref');
+    if (ref) {
+      localStorage.setItem('ss_referrer', ref.trim().toUpperCase());
+      console.log(`[REFERRAL] Captured referrer code: ${ref}`);
+    }
+  }, []);
+  useEffect(function() {
     if (darkMode) document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
   }, [darkMode]);

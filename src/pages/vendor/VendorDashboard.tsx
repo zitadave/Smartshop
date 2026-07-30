@@ -49,7 +49,7 @@ function compressImage(base64Str: string, maxWidth: number = 800): Promise<strin
   });
 }
 
-type VendorTab = 'dashboard' | 'products' | 'storefront' | 'analytics' | 'orders' | 'reviews' | 'inventory' | 'payouts' | 'notifications' | 'promotions' | 'subscriptions';
+type VendorTab = 'dashboard' | 'products' | 'storefront' | 'analytics' | 'orders' | 'reviews' | 'inventory' | 'payouts' | 'notifications' | 'promotions' | 'subscriptions' | 'affiliates';
 
 export default function VendorDashboard() {
   const [tab, setTab] = useState<VendorTab>('dashboard');
@@ -143,6 +143,7 @@ export default function VendorDashboard() {
             { id: 'promotions' as VendorTab, icon: Gift, label: 'Promotions', badge: 0 },
             { id: 'payouts' as VendorTab, icon: Wallet, label: 'Payouts', badge: 0 },
             { id: 'subscriptions' as VendorTab, icon: Clock, label: 'Subscriptions', badge: 0 },
+            { id: 'affiliates' as VendorTab, icon: Users, label: 'Affiliates', badge: 0 },
           ] as const).map(item => {
             const Icon = item.icon;
             const isActive = tab === item.id;
@@ -183,6 +184,7 @@ export default function VendorDashboard() {
           {tab === 'notifications' && <VendorNotificationsView />}
           {tab === 'promotions' && <VendorPromotionsView />}
           {tab === 'payouts' && <VendorPayoutsView stats={stats} />}
+          {tab === 'affiliates' && <VendorAffiliatesView products={vendorProducts} orders={orders} />}
           {tab === 'subscriptions' && (
             <SubscriptionsErrorBoundary>
               <VendorSubscriptionsView />
@@ -2071,4 +2073,88 @@ class SubscriptionsErrorBoundary extends React.Component<{ children: React.React
 
     return this.props.children;
   }
+}
+
+function VendorAffiliatesView({ products, orders }: { products: any[]; orders: any[] }) {
+  const vendorProductIds = products.map(p => p.id);
+  const referredOrders = orders.filter((o: any) => {
+    const hasReferrer = !!(o.referrer_code || o.referrerCode);
+    const hasMyProduct = o.items?.some((it: any) => vendorProductIds.includes(it.id));
+    return hasReferrer && hasMyProduct;
+  });
+
+  let totalReferredSales = 0;
+  let totalCommissionDrag = 0;
+
+  referredOrders.forEach((o: any) => {
+    o.items?.forEach((it: any) => {
+      if (vendorProductIds.includes(it.id)) {
+        const itemVal = it.total || (it.price * it.quantity) || 0;
+        totalReferredSales += itemVal;
+        totalCommissionDrag += Math.round(itemVal * 0.1);
+      }
+    });
+  });
+
+  return (
+    <div className="animate-fadeUp space-y-4 text-left text-foreground">
+      <div>
+        <h2 className="text-lg font-bold flex items-center gap-2">🤝 Promoter Referral Analytics</h2>
+        <p className="text-[10px] text-slate-500 mt-0.5">Track how independent affiliate promoters are driving sales for your store products</p>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border p-4 text-center">
+          <div className="text-xl font-bold text-indigo-600">{referredOrders.length}</div>
+          <div className="text-[10px] text-slate-500 mt-0.5">Referred Sales</div>
+        </div>
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border p-4 text-center">
+          <div className="text-xl font-bold text-green-600">{formatPrice(totalReferredSales)}</div>
+          <div className="text-[10px] text-slate-500 mt-0.5">Referred Revenue</div>
+        </div>
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border p-4 text-center">
+          <div className="text-xl font-bold text-red-500">{formatPrice(totalCommissionDrag)}</div>
+          <div className="text-[10px] text-slate-500 mt-0.5">Commission Cost (10%)</div>
+        </div>
+      </div>
+
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border p-4">
+        <h3 className="text-xs font-bold mb-3 flex items-center gap-1.5">📋 Referred Order Audit</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="border-b text-slate-400 uppercase text-[8.5px] tracking-wider">
+                <th className="pb-2">Order #</th>
+                <th className="pb-2">Promoter</th>
+                <th className="pb-2">Items Sold</th>
+                <th className="pb-2">Net Sale</th>
+                <th className="pb-2 text-right">Comm Drag</th>
+              </tr>
+            </thead>
+            <tbody>
+              {referredOrders.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="text-center py-12 text-slate-400 text-xs italic">No promoter sales recorded for your products yet.</td>
+                </tr>
+              )}
+              {referredOrders.map((o: any) => {
+                const myItems = o.items?.filter((it: any) => vendorProductIds.includes(it.id)) || [];
+                const netSale = myItems.reduce((sum: number, it: any) => sum + (it.total || 0), 0);
+                const drag = Math.round(netSale * 0.1);
+                return (
+                  <tr key={o.orderNumber} className="border-b last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                    <td className="py-2.5 font-mono text-indigo-600 font-bold">{o.orderNumber}</td>
+                    <td className="py-2.5 font-mono text-slate-700 dark:text-slate-300 uppercase">{o.referrer_code || o.referrerCode || 'UNKNOWN'}</td>
+                    <td className="py-2.5 text-slate-500 max-w-[120px] truncate">{myItems.map((it: any) => it.name).join(', ')}</td>
+                    <td className="py-2.5 font-bold">{formatPrice(netSale)}</td>
+                    <td className="py-2.5 font-semibold text-red-500 text-right">{formatPrice(drag)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
 }

@@ -47,7 +47,7 @@ type Tab = 'overview' | 'products' | 'orders' | 'vendors' | 'delivery' | 'market
   | 'broadcast' | 'flashdeals' | 'preorders' | 'tracking' | 'themes' | 'coupons' 
   | 'settings' | 'alerts' | 'abandoned' | 'roles' | 'backup' 
   | 'bulkProducts' | 'analytics' | 'forecast' | 'activity' | 'security' | 'telegram' 
-  | 'fulfillment' | 'sla' | 'driver' | 'returns' | 'finance' | 'smartbooks' | 'promotions' | 'manualpayments';
+  | 'fulfillment' | 'sla' | 'driver' | 'returns' | 'finance' | 'smartbooks' | 'promotions' | 'manualpayments' | 'affiliates';
 
 export default function AdminLayout() {
   const [tab, setTab] = useState<Tab>('overview');
@@ -171,6 +171,7 @@ export default function AdminLayout() {
     { id: 'returns', icon: RotateCcw, label: 'Returns' },
     { id: 'finance', icon: Landmark, label: 'Finance & Tax' },
     { id: 'smartbooks', icon: BookOpen, label: 'Smart Books' },
+    { id: 'affiliates', icon: Users, label: 'Affiliates' },
   ];
 
   return (
@@ -223,7 +224,7 @@ export default function AdminLayout() {
           {(() => {
             const groups: { title: string; ids: Tab[] }[] = [
               { title: 'STORE', ids: ['overview', 'products', 'orders', 'vendors', 'delivery', 'marketplace', 'reviews'] },
-              { title: 'PROMOTION', ids: ['promotions', 'broadcast', 'flashdeals', 'preorders', 'coupons', 'tracking', 'themes'] },
+              { title: 'PROMOTION', ids: ['promotions', 'broadcast', 'flashdeals', 'preorders', 'coupons', 'tracking', 'themes', 'affiliates'] },
               { title: 'OPERATIONS', ids: ['subscriptions', 'groupbuy', 'manualpayments', 'alerts', 'abandoned', 'fulfillment', 'sla', 'driver', 'returns'] },
               { title: 'FINANCE', ids: ['finance', 'smartbooks', 'settings'] },
               { title: 'ADMIN', ids: ['roles', 'security', 'backup', 'telegram', 'activity'] },
@@ -286,6 +287,7 @@ export default function AdminLayout() {
           {tab === 'preorders' && <AdminPreOrders />}
           {tab === 'tracking' && <AdminTracking />}
           {tab === 'themes' && <AdminThemes />}
+          {tab === 'affiliates' && <AdminAffiliatesTab />}
           {tab === 'coupons' && <CouponAnalytics />}
           {tab === 'alerts' && <SmartAlerts />}
           {tab === 'abandoned' && <AbandonedCartRecovery />}
@@ -1815,6 +1817,131 @@ function AdminSettings() {
           <div className="space-y-3">
             <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Boxes per Purchase</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={gameSettings.boxesPerPurchase || 1} onChange={e => updateGameSetting('boxesPerPurchase', Number(e.target.value))} /></div>
             <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Max Prize (Br)</label><input type="number" className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent" value={gameSettings.maxBoxPrize || 1000} onChange={e => updateGameSetting('maxBoxPrize', Number(e.target.value))} /></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AdminAffiliatesTab() {
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    ordersApi.list()
+      .then(d => {
+        setOrders(d?.orders || []);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const referredOrders = orders.filter((o: any) => o.referrer_code || o.referrerCode);
+
+  const promoterGroups = referredOrders.reduce((acc: any, o: any) => {
+    const code = (o.referrer_code || o.referrerCode || 'UNKNOWN').toUpperCase();
+    if (!acc[code]) {
+      acc[code] = { code, count: 0, totalSales: 0, totalCommission: 0 };
+    }
+    acc[code].count += 1;
+    acc[code].totalSales += o.total || 0;
+    const comm = o.discount || Math.round((o.total || 0) * 0.1);
+    acc[code].totalCommission += comm;
+    return acc;
+  }, {} as Record<string, any>);
+
+  const promoters = Object.values(promoterGroups).sort((a: any, b: any) => b.totalSales - a.totalSales);
+
+  const totalSales = referredOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+  const totalCommission = referredOrders.reduce((sum, o) => sum + (o.discount || Math.round((o.total || 0) * 0.1)), 0);
+
+  if (loading) return <div className="text-center py-12"><Loader size={24} className="animate-spin mx-auto text-indigo-500" /></div>;
+
+  return (
+    <div className="animate-fadeUp space-y-4">
+      <div>
+        <h2 className="text-lg font-bold flex items-center gap-2">🤝 Affiliate Performance & Audits</h2>
+        <p className="text-[10px] text-slate-500 mt-0.5">Real-time program performance, referred transactions, and top promoters</p>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border p-4 text-center">
+          <div className="text-xl font-bold text-indigo-600">{referredOrders.length}</div>
+          <div className="text-[10px] text-slate-500 mt-0.5">Referred Orders</div>
+        </div>
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border p-4 text-center">
+          <div className="text-xl font-bold text-green-600">{formatPrice(totalSales)}</div>
+          <div className="text-[10px] text-slate-500 mt-0.5">Referred Sales Volume</div>
+        </div>
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border p-4 text-center">
+          <div className="text-xl font-bold text-amber-600">{formatPrice(totalCommission)}</div>
+          <div className="text-[10px] text-slate-500 mt-0.5">Commission Distributed</div>
+        </div>
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border p-4 text-center">
+          <div className="text-xl font-bold text-purple-600">{promoters.length}</div>
+          <div className="text-[10px] text-slate-500 mt-0.5">Active Promoters</div>
+        </div>
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-1 bg-white dark:bg-slate-900 rounded-2xl border p-4">
+          <h3 className="text-xs font-bold mb-3 flex items-center gap-1.5">🏆 Promoter Leaderboard</h3>
+          <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+            {promoters.length === 0 && (
+              <div className="text-center py-12 text-slate-400 text-xs italic">No promoter sales recorded yet.</div>
+            )}
+            {promoters.map((p: any, idx: number) => (
+              <div key={p.code} className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-800/40 border dark:border-slate-800 rounded-xl gap-2">
+                <div className="min-w-0 flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-slate-400">{idx + 1}</span>
+                  <div className="min-w-0">
+                    <span className="font-mono text-[10px] font-bold text-indigo-600 dark:text-indigo-400">{p.code}</span>
+                    <span className="block text-[8px] text-slate-400">{p.count} sales referred</span>
+                  </div>
+                </div>
+                <div className="text-right text-[10px]">
+                  <div className="font-bold text-slate-800 dark:text-slate-200">{formatPrice(p.totalSales)}</div>
+                  <div className="text-emerald-600 text-[8.5px] font-semibold">Comm: Br {p.totalCommission}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl border p-4">
+          <h3 className="text-xs font-bold mb-3 flex items-center gap-1.5">📋 Referred Orders Audit Log</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b text-slate-400 uppercase text-[8.5px] tracking-wider">
+                  <th className="pb-2">Order #</th>
+                  <th className="pb-2">Promoter</th>
+                  <th className="pb-2">Customer</th>
+                  <th className="pb-2">Total Sale</th>
+                  <th className="pb-2 text-right">Commission</th>
+                </tr>
+              </thead>
+              <tbody>
+                {referredOrders.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="text-center py-12 text-slate-400 text-xs italic">No referred sales audits available.</td>
+                  </tr>
+                )}
+                {referredOrders.slice(0, 50).map((o: any) => {
+                  const comm = o.discount || Math.round((o.total || 0) * 0.1);
+                  return (
+                    <tr key={o.orderNumber} className="border-b last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                      <td className="py-2.5 font-mono text-indigo-600 font-bold">{o.orderNumber}</td>
+                      <td className="py-2.5 font-mono text-slate-700 dark:text-slate-300 font-semibold uppercase">{o.referrer_code || o.referrerCode || 'UNKNOWN'}</td>
+                      <td className="py-2.5 text-slate-500">{o.customer?.name || 'Guest'}</td>
+                      <td className="py-2.5 font-bold">{formatPrice(o.total || 0)}</td>
+                      <td className="py-2.5 font-semibold text-emerald-600 text-right">{formatPrice(comm)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
