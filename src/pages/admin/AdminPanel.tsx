@@ -1755,10 +1755,31 @@ function AdminSettings() {
           </div>
         </div>
 
-        <div className="grid sm:grid-cols-3 gap-3 mb-4 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
-          <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Wheel Font Size</label><input type="number" className="w-full mt-1 p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-transparent" value={gameSettings.wheelFontSize || 20} onChange={e => updateGameSetting('wheelFontSize', Number(e.target.value))} /></div>
-          <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Wheel Font Color</label><input type="color" className="w-full mt-1 h-9 rounded-lg cursor-pointer border-0" value={gameSettings.wheelFontColor || '#ffffff'} onChange={e => updateGameSetting('wheelFontColor', e.target.value)} /></div>
-          <div><label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Show Emoji</label><label className="flex items-center gap-2 text-xs mt-2"><input type="checkbox" checked={gameSettings.wheelShowEmoji !== false} onChange={e => updateGameSetting('wheelShowEmoji', e.target.checked)} className="rounded" /> Show emoji on wheel</label></div>
+        <div className="grid sm:grid-cols-2 md:grid-cols-5 gap-3 mb-4 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl text-xs">
+          <div>
+            <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">Wheel Font Size</label>
+            <input type="number" className="w-full mt-1.5 p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-transparent" value={gameSettings.wheelFontSize || 20} onChange={e => updateGameSetting('wheelFontSize', Number(e.target.value))} />
+          </div>
+          <div>
+            <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">Wheel Font Color</label>
+            <input type="color" className="w-full mt-1.5 h-9 rounded-lg cursor-pointer border-0 bg-transparent" value={gameSettings.wheelFontColor || '#ffffff'} onChange={e => updateGameSetting('wheelFontColor', e.target.value)} />
+          </div>
+          <div>
+            <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">Text Position Radius ({gameSettings.wheelTextRadius || 55}px)</label>
+            <input type="range" min="30" max="80" className="w-full mt-3 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer" value={gameSettings.wheelTextRadius || 55} onChange={e => updateGameSetting('wheelTextRadius', Number(e.target.value))} />
+          </div>
+          <div>
+            <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">Text Direction (Orientation)</label>
+            <select className="w-full mt-1.5 p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-transparent text-foreground" value={gameSettings.wheelTextOrientation || 'radial'} onChange={e => updateGameSetting('wheelTextOrientation', e.target.value)}>
+              <option value="radial"> Radial Outward</option>
+              <option value="horizontal"> Flat Horizontal</option>
+              <option value="vertical"> Flat Vertical</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">Show Emoji</label>
+            <label className="flex items-center gap-2 text-xs mt-3"><input type="checkbox" checked={gameSettings.wheelShowEmoji !== false} onChange={e => updateGameSetting('wheelShowEmoji', e.target.checked)} className="rounded" /> Show emoji on wheel</label>
+          </div>
         </div>
         <h4 className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Wheel Segments ({wheelSegments.length || 10})</h4>
         <div className="space-y-1 max-h-48 overflow-y-auto">

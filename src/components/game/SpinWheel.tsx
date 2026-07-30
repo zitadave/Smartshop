@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { canSpin, spin, getSpinData, openMysteryBox } from '@/lib/game';
-import { RotateCcw, Gift, Sparkles, Box } from 'lucide-react';
+import { canSpin, getSpinData, openMysteryBox } from '@/lib/game';
+import { RotateCcw, Gift, Sparkles } from 'lucide-react';
 import { toast } from '@/components/Toast';
 import { cn } from '@/lib/utils';
 import { useStore } from '@/stores/AppStore';
 
-// Dynamic segments from admin settings
+// Default segments
 const DEFAULT_SEGMENTS = [
   { label: '🚚 Free Delivery', color: '#e53e3e', value: 0 },
   { label: '💰 Br 50 Off', color: '#dd6b20', value: 50 },
@@ -25,21 +25,64 @@ interface SpinWheelProps {
   adminSettings?: Record<string, any>;
 }
 
+// Autonomous Linguistic Segment Parser
+export const parsePrizeText = (label: string) => {
+  const clean = label.toLowerCase();
+  const numMatch = clean.match(/\d+/);
+  const parsedValue = numMatch ? parseInt(numMatch[0]) : 0;
+
+  if (clean.includes('pt') || clean.includes('point')) {
+    return { type: 'points', value: parsedValue };
+  }
+  if (clean.includes('free') && clean.includes('del')) {
+    return { type: 'free_delivery', value: 80 };
+  }
+  return { type: 'discount', value: parsedValue };
+};
+
+// Platform Protection: Weighted Odds Calculator
+export const getWeightedTargetIndex = (segments: any[]): number => {
+  const weights = segments.map(seg => {
+    const parsed = parsePrizeText(seg.label || '');
+    const val = parsed.value || 0;
+    
+    if (parsed.type === 'free_delivery') return 40; // High odds
+    if (val >= 100) return 1;       // High prizes (>= Br 100 or >= 100 Pts): 1 (Extremely Low ~1.5% chance)
+    if (val >= 50) return 5;        // Medium prizes: 5 (~7.5% chance)
+    if (val > 0) return 15;         // Small prizes: 15 (~22.5% chance)
+    return 45;                      // Freebies / Try Again: 45 (Highest odds! ~68.5% chance)
+  });
+
+  const totalWeight = weights.reduce((a, b) => a + b, 0);
+  let randomChoice = Math.random() * totalWeight;
+
+  for (let i = 0; i < segments.length; i++) {
+    randomChoice -= weights[i];
+    if (randomChoice <= 0) {
+      return i;
+    }
+  }
+  return segments.length - 1;
+};
+
 export function SpinWheel({ onWin, segments: customSegments, adminSettings }: SpinWheelProps) {
   const [spinning, setSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [available, setAvailable] = useState(canSpin());
   const segments = customSegments || DEFAULT_SEGMENTS;
 
-  // Apply admin font/color settings
+  // Apply admin customizable settings (distance offset + orientation + font/color)
   const fontSize = adminSettings?.wheelFontSize || 20;
   const fontColor = adminSettings?.wheelFontColor || '#ffffff';
   const showEmoji = adminSettings?.wheelShowEmoji !== false;
+  const textRadius = adminSettings?.wheelTextRadius || 55;
+  const orientation = adminSettings?.wheelTextOrientation || 'radial';
 
   const handleSpin = useCallback(() => {
     if (!available || spinning) return;
     setSpinning(true);
 
+    // Save spin data
     const sData = getSpinData();
     const today = new Date().toDateString();
     localStorage.setItem('ss_game_spin', JSON.stringify({
@@ -48,7 +91,8 @@ export function SpinWheel({ onWin, segments: customSegments, adminSettings }: Sp
       totalSpins: (sData.totalSpins || 0) + 1,
     }));
 
-    const target = Math.floor(Math.random() * segments.length);
+    // 1. Calculate weighted index based on reward sizes (Platform Protection!)
+    const target = getWeightedTargetIndex(segments);
     const result = segments[target];
 
     const segAngle = 360 / segments.length;
@@ -60,15 +104,24 @@ export function SpinWheel({ onWin, segments: customSegments, adminSettings }: Sp
       setSpinning(false);
       setAvailable(false);
       
-      const prizeValue = result.value || 0;
       const prizeLabel = result.label || 'Try Again';
+      const parsed = parsePrizeText(prizeLabel);
 
-      if (prizeValue > 0) {
+      if (parsed.type === 'points' && parsed.value > 0) {
+        // Automatically add loyalty points
+        const curPts = parseInt(localStorage.getItem('ss_loyalty') || '0');
+        const newPts = curPts + parsed.value;
+        localStorage.setItem('ss_loyalty', String(newPts));
+        useStore.setState({ loyaltyPoints: newPts });
+        toast(`🎉 Congratulations! You won ${parsed.value} Loyalty Points!`, 'success');
+      } else if (parsed.value > 0 || parsed.type === 'free_delivery') {
+        // Generate promo shopping coupon
+        const discountValue = parsed.type === 'free_delivery' ? 80 : parsed.value;
         const codes = JSON.parse(localStorage.getItem('ss_game_coupons') || '[]');
         const couponCode = 'SPIN-' + Date.now().toString(36).toUpperCase();
         codes.push({
           code: couponCode,
-          discount: prizeValue,
+          discount: discountValue,
           source: 'spin',
           claimed: false,
           expiresAt: Date.now() + 7 * 86400000,
@@ -76,10 +129,10 @@ export function SpinWheel({ onWin, segments: customSegments, adminSettings }: Sp
         localStorage.setItem('ss_game_coupons', JSON.stringify(codes));
         toast(`🎉 You won a coupon: ${prizeLabel}! Code: ${couponCode}`, 'success');
       } else {
-        toast(`🎉 Result: ${prizeLabel}!`, 'success');
+        toast(`🔄 Result: ${prizeLabel}! Try again tomorrow.`, 'info');
       }
       
-      onWin(prizeLabel, prizeValue);
+      onWin(prizeLabel, parsed.value);
     }, 2500);
   }, [available, spinning, onWin, segments]);
 
@@ -109,14 +162,27 @@ export function SpinWheel({ onWin, segments: customSegments, adminSettings }: Sp
             const y2 = 100 + 85 * Math.sin((endAngle - 90) * (Math.PI / 180));
             const largeArc = endAngle - angle > 180 ? 1 : 0;
             const path = `M 100 100 L ${x1} ${y1} A 85 85 0 ${largeArc} 1 ${x2} ${y2} Z`;
-            const textX = 100 + 55 * Math.cos(midAngle);
-            const textY = 100 + 55 * Math.sin(midAngle);
+            
+            // Custom text coordinate offset
+            const textX = 100 + textRadius * Math.cos(midAngle);
+            const textY = 100 + textRadius * Math.sin(midAngle);
+
+            // Compute dynamic rotation angle based on orientation settings
+            let rotateAngle = 0;
+            if (orientation === 'radial') {
+              rotateAngle = angle + (360 / segments.length / 2);
+            } else if (orientation === 'vertical') {
+              rotateAngle = 90;
+            } else {
+              rotateAngle = 0; // flat horizontal
+            }
+
             return (
               <g key={i}>
                 <path d={path} fill={seg.color} stroke="rgba(255,255,255,0.3)" strokeWidth="0.5" />
                 <text x={textX} y={textY} textAnchor="middle" dominantBaseline="middle"
                   fill={fontColor} fontSize={fontSize}
-                  transform={`rotate(${angle + 360 / segments.length / 2}, ${textX}, ${textY})`}>
+                  transform={`rotate(${rotateAngle}, ${textX}, ${textY})`}>
                   {displayLabel(seg).substring(0, 8)}
                 </text>
               </g>
