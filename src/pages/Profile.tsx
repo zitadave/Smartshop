@@ -224,7 +224,6 @@ export default function Profile() {
         <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider px-1 mb-1">Account</div>
         <MenuItem icon="✏️" label="Edit Profile" desc="Update your personal info" onClick={function() { openEdit(); }} />
         <MenuItem icon="📍" label="Saved Addresses" badge={savedAddresses.length} desc={savedAddresses.length + ' addresses'} onClick={function() { navigate('/addresses'); }} />
-        <MenuItem icon="💳" label="Payment Methods" badge={savedPayments.length} desc={savedPayments.length + ' methods'} onClick={function() { navigate('/payment-methods'); }} />
 
         <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider px-1 mt-4 mb-1">Shopping</div>
         <MenuItem icon="📦" label="My Orders" badge={ordCount} desc={ordCount + ' total orders'} onClick={function() { navigate('/orders'); }} />

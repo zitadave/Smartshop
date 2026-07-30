@@ -908,29 +908,92 @@ function VendorInventoryView({ products }: { products: any[] }) {
 
 // ===== PAYOUTS =====
 function VendorPayoutsView({ stats }: { stats: any }) {
+  const store = useStore();
+  const { orders, products, settings } = store;
+  const vendorId = parseInt(localStorage.getItem('ss_vendor_app_id') || '') || 1;
+
   const [payouts, setPayouts] = useState<any[]>(() => { try { return JSON.parse(localStorage.getItem('ss_vendor_payouts') || '[]'); } catch { return []; } });
-  const totalEarned = stats.revenue;
-  const commission = Math.round(totalEarned * 0.1);
-  const netEarned = totalEarned - commission;
+  
+  const [payoutMethod, setPayoutMethod] = useState(() => {
+    try {
+      const s = JSON.parse(localStorage.getItem('ss_vendor_settings') || '{}');
+      return s.payoutMethod || 'Telebirr';
+    } catch { return 'Telebirr'; }
+  });
+  const [payoutDetails, setPayoutDetails] = useState(() => {
+    try {
+      const s = JSON.parse(localStorage.getItem('ss_vendor_settings') || '{}');
+      return s.payoutDetails || '';
+    } catch { return ''; }
+  });
+  const [showBillingForm, setShowBillingForm] = useState(false);
+
+  // Dynamic calculations: scan all orders containing this vendor's items!
+  const vendorProductIds = products.filter(p => p.vendorId === vendorId || !p.vendorId).map(p => p.id);
+  const settingsData = useMemo(() => {
+    try { return JSON.parse(localStorage.getItem('ss_vendor_settings') || '{}'); } catch { return {}; }
+  }, []);
+  const customAffRate = settingsData.affiliateCommission || settings?.affiliateCommission || 10;
+
+  const { totalRevenue, platformFee, affiliateFee } = useMemo(() => {
+    let rev = 0;
+    let plat = 0;
+    let aff = 0;
+
+    orders.forEach((o: any) => {
+      const myItems = o.items?.filter((it: any) => vendorProductIds.includes(it.id)) || [];
+      if (myItems.length > 0) {
+        const orderVendorSales = myItems.reduce((s: number, it: any) => s + (it.total || 0), 0);
+        rev += orderVendorSales;
+        
+        plat += Math.round(orderVendorSales * 0.1);
+
+        if (o.referrer_code || o.referrerCode) {
+          aff += Math.round(orderVendorSales * (customAffRate / 100));
+        }
+      }
+    });
+
+    return { totalRevenue: rev, platformFee: plat, affiliateFee: aff };
+  }, [orders, vendorProductIds, customAffRate, settings]);
+
+  const netEarned = totalRevenue - platformFee - affiliateFee;
   const paidOut = payouts.filter(p => p.status === 'paid').reduce((s, p) => s + p.amount, 0);
   const pending = netEarned - paidOut;
+
+  const handleSaveBilling = () => {
+    try {
+      const s = JSON.parse(localStorage.getItem('ss_vendor_settings') || '{}');
+      s.payoutMethod = payoutMethod;
+      s.payoutDetails = payoutDetails;
+      localStorage.setItem('ss_vendor_settings', JSON.stringify(s));
+      toast('✅ Payout preferences saved!', 'success');
+      setShowBillingForm(false);
+    } catch {}
+  };
+
   const requestPayout = () => {
-    const p = { id: generateId(), amount: Math.max(0, pending), status: 'pending', requestedAt: new Date().toISOString(), method: 'Telebirr' };
+    if (!payoutDetails.trim()) {
+      toast('Please configure your payout billing details first!', 'error');
+      setShowBillingForm(true);
+      return;
+    }
+    const p = { id: generateId(), amount: Math.max(0, pending), status: 'pending', requestedAt: new Date().toISOString(), method: payoutMethod, details: payoutDetails };
     const updated = [p, ...payouts];
     localStorage.setItem('ss_vendor_payouts', JSON.stringify(updated));
     setPayouts(updated);
-    toast('✅ Payout requested!', 'success');
+    toast('✅ Payout requested! Admin has been notified.', 'success');
   };
 
   return (
-    <div className="animate-fadeUp space-y-4">
+    <div className="animate-fadeUp space-y-4 text-left">
       <div><h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"><Wallet size={20} className="text-emerald-500" /> Payouts</h2><p className="text-[10px] text-slate-500">Track your earnings and request withdrawals</p></div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: 'Total Revenue', val: formatPrice(totalEarned), icon: DollarSign, color: 'from-blue-500 to-blue-600' },
-          { label: 'Platform Fee (10%)', val: formatPrice(commission), icon: TrendingDown, color: 'from-amber-500 to-orange-600' },
-          { label: 'Net Earnings', val: formatPrice(netEarned), icon: Wallet, color: 'from-emerald-500 to-green-600' },
-          { label: 'Available', val: formatPrice(Math.max(0, pending)), icon: Clock, color: 'from-purple-500 to-violet-600' },
+          { label: 'Total Revenue', val: formatPrice(totalRevenue), icon: DollarSign, color: 'from-blue-500 to-blue-600' },
+          { label: 'Platform Fee (10%)', val: formatPrice(platformFee), icon: TrendingDown, color: 'from-slate-500 to-slate-600' },
+          { label: `Promoter Comm (${customAffRate}%)`, val: formatPrice(affiliateFee), icon: Users, color: 'from-amber-500 to-orange-600' },
+          { label: 'Net Available', val: formatPrice(Math.max(0, pending)), icon: Wallet, color: 'from-emerald-500 to-green-600' },
         ].map((s, i) => {
           const Icon = s.icon;
           return (
@@ -942,12 +1005,56 @@ function VendorPayoutsView({ stats }: { stats: any }) {
           );
         })}
       </div>
+
+      {/* Payout Billing Configuration Card */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-xs font-bold text-slate-900 dark:text-white">💳 Payout Destination Setup</h3>
+            <p className="text-[9px] text-slate-400 mt-0.5">Configure where you receive your automated Chapa / Telebirr or manual payouts.</p>
+          </div>
+          <button onClick={() => setShowBillingForm(!showBillingForm)} className="px-3 py-1.5 border rounded-lg text-[9px] font-bold text-indigo-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+            {showBillingForm ? 'Hide' : 'Configure ⚙️'}
+          </button>
+        </div>
+
+        {showBillingForm && (
+          <div className="mt-3 p-3.5 bg-slate-50 dark:bg-slate-800/40 border rounded-xl space-y-3 animate-slideDown">
+            <div>
+              <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">Payout Gateway Method</label>
+              <div className="flex gap-2 mt-1 bg-slate-100 dark:bg-slate-900 p-0.5 rounded-lg">
+                {['Telebirr', 'CBE Bank', 'Chapa'].map(m => (
+                  <button key={m} type="button" onClick={() => setPayoutMethod(m)} className={cn('flex-1 py-1.5 text-[9px] font-bold rounded', payoutMethod === m ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-400')}>
+                    {m}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">Billing Details</label>
+              <input 
+                id="payout-details-input"
+                className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-transparent text-foreground"
+                placeholder={payoutMethod === 'Telebirr' ? 'e.g. +251-911-XXXXXX' : payoutMethod === 'CBE Bank' ? 'e.g. Bank: CBE, Account: 1000XXXX, Name: Abebe K.' : 'e.g. Recipient Chapa ID / Email'}
+                value={payoutDetails}
+                onChange={e => setPayoutDetails(e.target.value)}
+              />
+            </div>
+
+            <button onClick={handleSaveBilling} className="px-4 py-2 bg-indigo-500 text-white rounded-xl text-[9px] font-bold shadow-md hover:bg-indigo-600 transition-colors">
+              Save Payout Method
+            </button>
+          </div>
+        )}
+      </div>
+
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <h3 className="text-sm font-bold text-slate-900 dark:text-white">Request Withdrawal</h3>
             <p className="text-xs text-slate-500 mt-0.5">Available: <strong className="text-emerald-600 text-sm">{formatPrice(Math.max(0, pending))}</strong><span className="text-slate-400 mx-2">·</span>Paid out: <strong>{formatPrice(paidOut)}</strong></p>
-            <p className="text-[9px] text-slate-400 mt-0.5">Withdrawals processed via Telebirr within 1-3 business days</p>
+            <p className="text-[9px] text-slate-400 mt-0.5">Selected Method: <strong className="text-slate-700 dark:text-slate-300 font-mono">{payoutMethod} ({payoutDetails || 'Not configured'})</strong></p>
           </div>
           <button className="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold hover:shadow-lg transition-all disabled:opacity-50 flex items-center gap-1.5" onClick={requestPayout} disabled={pending <= 0}><Wallet size={14} /> Request Payout</button>
         </div>
@@ -960,7 +1067,7 @@ function VendorPayoutsView({ stats }: { stats: any }) {
               <div className={cn('w-9 h-9 rounded-xl flex items-center justify-center', p.status === 'paid' ? 'bg-green-100' : 'bg-amber-100')}>
                 {p.status === 'paid' ? <CheckCircle size={15} className="text-green-600" /> : <Clock size={15} className="text-amber-600" />}
               </div>
-              <div className="flex-1"><div className="text-[10px] font-semibold text-slate-800 dark:text-slate-200">{formatPrice(p.amount)}</div><div className="text-[8px] text-slate-400">{new Date(p.requestedAt).toLocaleDateString()} · {p.method}</div></div>
+              <div className="flex-1"><div className="text-[10px] font-semibold text-slate-800 dark:text-slate-200">{formatPrice(p.amount)}</div><div className="text-[8px] text-slate-400">{new Date(p.requestedAt).toLocaleDateString()} · {p.method} ({p.details || 'no details'})</div></div>
               <span className={cn('text-[9px] px-2 py-0.5 rounded font-semibold', p.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700')}>{p.status === 'paid' ? 'Paid' : 'Pending'}</span>
             </div>
           ))}
