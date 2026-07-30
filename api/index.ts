@@ -1043,7 +1043,24 @@ export default async function handler(req: any, res: any) {
           if (se || up === null || up === undefined) { for (const prev of items) { if (prev.productId === item.productId) break; await supabase.rpc('increment_stock', { row_id: prev.productId, qty: prev.quantity || 1 }); } return fail('Insufficient stock for #' + item.productId, 409); }
           await supabase.from('products').update({ sold_count: supabase.rpc('increment', { x: qty }) }).eq('id', item.productId);
         }
-        const { data: order, error: oe } = await supabase.from('orders').insert({ ...req.body, order_number: on }).select().single();
+        const orderPayload = {
+          order_number: on,
+          telegram_id: req.body.telegram_id || req.body.telegramId || req.body.customer?.telegram_id || req.body.customer?.telegramId || null,
+          items: req.body.items || [],
+          total: Number(req.body.total || 0),
+          subtotal: Number(req.body.subtotal || 0),
+          discount: Number(req.body.discount || 0),
+          delivery: Number(req.body.delivery || 0),
+          status: req.body.status || 'pending',
+          payment_method: req.body.payment_method || req.body.paymentMethod || 'cod',
+          customer: req.body.customer || {},
+          notes: req.body.notes || req.body.customerNote || req.body.customer_note || '',
+          currency: req.body.currency || 'ETB',
+          language: req.body.language || 'en',
+          referrer_code: req.body.referrer_code || req.body.referrerCode || null,
+        };
+
+        const { data: order, error: oe } = await supabase.from('orders').insert(orderPayload).select().single();
         if (oe) { for (const item of items) { if (item.productId) await supabase.rpc('increment_stock', { row_id: item.productId, qty: item.quantity || 1 }); } return fail(oe.message); }
 
         // Notify admin about new order
