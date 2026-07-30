@@ -41,8 +41,22 @@ export default function AffiliateProducts() {
     catch { return { clicks: 0, sales: 0, commission: 0 }; }
   });
 
-  const commissionPercent = (settings as any)?.affiliateCommission || 10;
+  const globalCommissionPercent = (settings as any)?.affiliateCommission || 10;
   const pointsToCashRate = (settings as any)?.gameSettings?.pointsToCashRate || 0.5;
+
+  // Helper to dynamically resolve the custom vendor affiliate commission, fallback to global default
+  const getProductCommissionRate = (product: any): number => {
+    if (product?.vendorId) {
+      try {
+        const vendors = (settings as any)?.vendors || [];
+        const vendor = vendors.find((v: any) => v.id == product.vendorId || v.id === String(product.vendorId));
+        if (vendor && vendor.affiliateCommission !== undefined && vendor.affiliateCommission !== null) {
+          return Number(vendor.affiliateCommission);
+        }
+      } catch {}
+    }
+    return globalCommissionPercent;
+  };
 
   const saveStats = (pid: number, newProdStats: any, newTotals: any) => {
     localStorage.setItem('ss_affiliate_product_stats', JSON.stringify(newProdStats));
@@ -68,7 +82,9 @@ export default function AffiliateProducts() {
     setProductStats(newProdStats);
     setTotalStats(newTotals);
     saveStats(product.id, newProdStats, newTotals);
-    toast(`📋 Link copied! Earn ${commissionPercent}% if it sells!`, 'success');
+    
+    const rate = getProductCommissionRate(product);
+    toast(`📋 Link copied! Earn ${rate}% commission if it sells!`, 'success');
     haptic('light');
   };
 
@@ -100,7 +116,8 @@ export default function AffiliateProducts() {
 
   // Simulate a sale for a specific product
   const simulateSale = (product: any) => {
-    const cashCommission = Math.round(product.price * (commissionPercent / 100));
+    const rate = getProductCommissionRate(product);
+    const cashCommission = Math.round(product.price * (rate / 100));
     
     // Points Conversion: 1 Br cash normally equals 2 Pts. Points Booster adds 20% extra!
     const pointsMultiplier = 1 / pointsToCashRate; // e.g. 1 / 0.5 = 2 points per Birr
@@ -108,7 +125,6 @@ export default function AffiliateProducts() {
     const pointsBoosted = Math.round(pointsNormal * 1.20); // 20% bonus!
     
     const prod = productStats[product.id] || { clicks: 0, sales: 0, commission: 0 };
-    const earnedVal = payoutPref === 'points' ? pointsBoosted : cashCommission;
 
     const newProdStats = { 
       ...productStats, 
@@ -155,7 +171,7 @@ export default function AffiliateProducts() {
         <button onClick={() => navigate(-1)} className="p-1 hover:bg-muted rounded-lg transition-colors"><ChevronLeft size={20} /></button>
         <div>
           <h2 className="text-base font-bold">🤝 Affiliate Program</h2>
-          <p className="text-[9px] text-muted-foreground">Your code: <strong className="text-primary">{userCode}</strong> · Earn {commissionPercent}% per sale</p>
+          <p className="text-[9px] text-muted-foreground">Your code: <strong className="text-primary">{userCode}</strong> · Up to {globalCommissionPercent}% commission</p>
         </div>
       </div>
 
@@ -175,7 +191,7 @@ export default function AffiliateProducts() {
         ))}
       </div>
 
-      {/* Flexi-Payout Preference Card (UNPRECEDENTED) */}
+      {/* Flexi-Payout Preference Card */}
       <div className="bg-card rounded-2xl border border-border/80 p-3.5 mb-4 shadow-sm">
         <h3 className="text-xs font-bold mb-1 flex items-center gap-1.5"><Award size={14} className="text-amber-500 animate-pulse" /> Preferred Earnings Preference</h3>
         <p className="text-[8.5px] text-slate-400">Choose how your sales commissions are paid out. Points Booster adds 20% more value!</p>
@@ -214,7 +230,8 @@ export default function AffiliateProducts() {
       <div className="grid grid-cols-2 gap-2">
         {topProducts.map(p => {
           const stat = productStats[p.id];
-          const rawComm = Math.round(p.price * commissionPercent / 100);
+          const rate = getProductCommissionRate(p);
+          const rawComm = Math.round(p.price * rate / 100);
           const pointsComm = Math.round(rawComm * (1 / pointsToCashRate) * 1.20);
           
           return (
@@ -226,9 +243,9 @@ export default function AffiliateProducts() {
                 
                 <div className="text-[7.5px] text-slate-400 mt-1 min-h-[14px]">
                   {payoutPref === 'points' ? (
-                    <span className="text-amber-500 font-semibold">Earn ~{pointsComm} Pts/sale</span>
+                    <span className="text-amber-500 font-semibold">Earn ~{pointsComm} Pts ({rate}%)</span>
                   ) : (
-                    <span className="text-emerald-600 font-semibold">Earn ~Br {rawComm}/sale</span>
+                    <span className="text-emerald-600 font-semibold">Earn ~Br {rawComm} ({rate}%)</span>
                   )}
                   {stat && stat.clicks > 0 && <span className="block">{stat.clicks} clicks</span>}
                   {stat && stat.sales > 0 && <span className="text-green-600 block">✓ {stat.sales} sold!</span>}

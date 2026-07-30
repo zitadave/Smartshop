@@ -53,7 +53,13 @@ export default function AdminLayout() {
   const [tab, setTab] = useState<Tab>('overview');
   const [menuOpen, setMenuOpen] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
-  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({
+    'PROMOTION': true,
+    'OPERATIONS': true,
+    'FINANCE': true,
+    'ADMIN': true,
+    'INSIGHTS': true
+  });
   const navigate = useNavigate();
 
   // CRITICAL: Clean up old injected CSS from AdminThemeManager (no longer used)

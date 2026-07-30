@@ -535,6 +535,31 @@ try {
           React.createElement('div', { className: 'flex items-center justify-between' }, React.createElement('span', { className: 'text-xs text-slate-500' }, 'Platform fee'), React.createElement('span', { className: 'text-lg font-bold text-emerald-600' }, '10%')),
           React.createElement('div', { className: 'mt-2 bg-emerald-50 dark:bg-emerald-950/20 rounded-lg p-2.5 text-[9px] text-emerald-700 dark:text-emerald-400' }, 'Your store is active')
         ),
+        React.createElement('div', { className: 'bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4' },
+          React.createElement('h3', { className: 'text-sm font-bold mb-3 text-slate-900 dark:text-white' }, '🤝 Affiliate Commission Override'),
+          React.createElement('p', { className: 'text-[9.5px] text-slate-400 mb-3 leading-relaxed' }, 'Define the commission rate promoters earn when selling your products. Fallback global default is 10%.'),
+          React.createElement('div', { className: 'flex items-center gap-3 mb-3' },
+            React.createElement('span', { className: 'text-xs text-slate-500' }, 'Affiliate Rate (%)'),
+            React.createElement('input', { id: 'inp-aff-comm', type: 'number', min: '1', max: '100', placeholder: 'e.g. 10', defaultValue: settingsData.affiliateCommission || '10', className: 'w-24 p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-transparent text-slate-800 dark:text-slate-200' })
+          ),
+          React.createElement('button', { 
+            onClick: function() { 
+              var val = parseInt((document.getElementById('inp-aff-comm') as HTMLInputElement)?.value || '10') || 10;
+              settingsData.affiliateCommission = val;
+              localStorage.setItem('ss_vendor_settings', JSON.stringify(settingsData));
+              
+              const vendorId = parseInt(localStorage.getItem('ss_vendor_app_id') || '') || 1;
+              fetch('/api/vendors/' + vendorId, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ affiliateCommission: val })
+              }).then(r => r.json()).then(d => {
+                if (d.success) toast('✅ Affiliate commission override saved!', 'success');
+              }).catch(() => toast('✅ Settings saved!', 'success'));
+            }, 
+            className: 'px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-[10px] font-bold' 
+          }, 'Save Override')
+        ),
         React.createElement('div', { className: 'bg-white dark:bg-slate-900 rounded-2xl border border-red-200 dark:border-red-900/30 p-4' },
           React.createElement('h3', { className: 'text-sm font-bold mb-2 text-red-600' }, 'Danger Zone'),
           React.createElement('p', { className: 'text-[9px] text-slate-500 mb-3' }, 'Disable your store from search results'),
