@@ -117,57 +117,57 @@ export default function DriverDashboard() {
     return function() { clearInterval(interval); };
   }, [profile?.telegramId]);
 
-  // Silent Background GPS tracking & Offline-Resilient Cache polling
+  // Silent Background GPS tracking using watchPosition (prompts only once on mount / go-online!)
   useEffect(() => {
     if (!isOnline || !driverId) return;
 
-    const trackLocation = () => {
-      if (!navigator.geolocation) return;
+    if (!navigator.geolocation) return;
 
-      navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-          const lat = pos.coords.latitude;
-          const lng = pos.coords.longitude;
+    console.log('[GPS] Subscribing to continuous watchPosition...');
+    const watchId = navigator.geolocation.watchPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
 
-          try {
-            const offlineCache = JSON.parse(localStorage.getItem('ss_driver_offline_coords') || '[]');
-            
-            const res = await fetch('/api/delivery/location', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ 
-                driver_id: driverId, 
-                lat, 
-                lng,
-                offline_coords: offlineCache.length > 0 ? offlineCache : undefined
-              })
-            });
+        try {
+          const offlineCache = JSON.parse(localStorage.getItem('ss_driver_offline_coords') || '[]');
+          
+          const res = await fetch('/api/delivery/location', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              driver_id: driverId, 
+              lat, 
+              lng,
+              offline_coords: offlineCache.length > 0 ? offlineCache : undefined
+            })
+          });
 
-            if (res.ok) {
-              if (offlineCache.length > 0) {
-                localStorage.removeItem('ss_driver_offline_coords');
-                console.log(`[GPS] Successfully flushed ${offlineCache.length} cached offline coordinates to server.`);
-              }
-              console.log(`[GPS] Real-time coordinates updated: ${lat}, ${lng}`);
-            } else {
-              throw new Error('Server returned non-ok status');
+          if (res.ok) {
+            if (offlineCache.length > 0) {
+              localStorage.removeItem('ss_driver_offline_coords');
+              console.log(`[GPS] Successfully flushed ${offlineCache.length} cached coordinates to server.`);
             }
-          } catch (err) {
-            const entry = { lat, lng, timestamp: new Date().toISOString() };
-            const cache = JSON.parse(localStorage.getItem('ss_driver_offline_coords') || '[]');
-            cache.push(entry);
-            localStorage.setItem('ss_driver_offline_coords', JSON.stringify(cache));
-            console.warn(`[GPS OFFLINE] Network lost. Cached coordinates locally (${cache.length} stored).`);
+            console.log(`[GPS] Real-time coordinates watched & updated: ${lat}, ${lng}`);
+          } else {
+            throw new Error('Server non-ok response');
           }
-        },
-        (err) => console.warn('[GPS] Position query error:', err.message),
-        { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
-      );
-    };
+        } catch (err) {
+          const entry = { lat, lng, timestamp: new Date().toISOString() };
+          const cache = JSON.parse(localStorage.getItem('ss_driver_offline_coords') || '[]');
+          cache.push(entry);
+          localStorage.setItem('ss_driver_offline_coords', JSON.stringify(cache));
+          console.warn(`[GPS OFFLINE] Network lost. Cached coordinates locally (${cache.length} stored).`);
+        }
+      },
+      (err) => console.warn('[GPS] Position watch error:', err.message),
+      { enableHighAccuracy: false, timeout: 20000, maximumAge: 60000 }
+    );
 
-    trackLocation();
-    const interval = setInterval(trackLocation, 15000); // Poll every 15 seconds
-    return () => clearInterval(interval);
+    return () => {
+      console.log('[GPS] Cleaning up watchPosition...');
+      navigator.geolocation.clearWatch(watchId);
+    };
   }, [isOnline, driverId]);
 
   // Fetch available and active delivery milestones
@@ -211,57 +211,44 @@ export default function DriverDashboard() {
     haptic('light');
 
     if (newStatus) {
-      if (!navigator.geolocation) {
-        toast('❌ GPS Location not supported on this browser.', 'error');
-        return;
-      }
-      navigator.geolocation.getCurrentPosition(
-        function(pos) {
-          const lat = pos.coords.latitude;
-          const lng = pos.coords.longitude;
-          
-          fetch('/api/delivery/online', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ driver_id: driverId, is_online: newStatus })
-          }).then(function(r) { return r.json(); }).then(function(d) {
-            if (d.success) {
-              setIsOnline(newStatus);
-              var stored = JSON.parse(localStorage.getItem('ss_driver_profile') || '{}');
-              stored.is_online = newStatus;
-              localStorage.setItem('ss_driver_profile', JSON.stringify(stored));
-              toast('🟢 Active Radar: You are online!', 'success');
-              haptic('success');
-              
-              fetch('/api/delivery/location', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ driver_id: driverId, lat, lng })
-              }).catch(function() {});
-            }
-          });
-        },
-        function(err) {
-          console.warn('[GPS] Position query error:', err.message);
-          toast('📍 Connecting you online (Using fallback cell location)...', 'info');
-          
-          fetch('/api/delivery/online', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ driver_id: driverId, is_online: newStatus })
-          }).then(function(r) { return r.json(); }).then(function(d) {
-            if (d.success) {
-              setIsOnline(newStatus);
-              var stored = JSON.parse(localStorage.getItem('ss_driver_profile') || '{}');
-              stored.is_online = newStatus;
-              localStorage.setItem('ss_driver_profile', JSON.stringify(stored));
-              toast('🟢 Active Radar: You are online!', 'success');
-              haptic('success');
-            }
-          });
-        },
-        { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
-      );
+      // 1. Instantly set status to online on the database and state (non-blocking!)
+      fetch('/api/delivery/online', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ driver_id: driverId, is_online: newStatus })
+      }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.success) {
+          setIsOnline(newStatus);
+          var stored = JSON.parse(localStorage.getItem('ss_driver_profile') || '{}');
+          stored.is_online = newStatus;
+          localStorage.setItem('ss_driver_profile', JSON.stringify(stored));
+          toast('🟢 Active Radar: You are online!', 'success');
+          haptic('success');
+
+          // 2. Silently query initial location in background
+          if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+              function(pos) {
+                const lat = pos.coords.latitude;
+                const lng = pos.coords.longitude;
+                fetch('/api/delivery/location', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ driver_id: driverId, lat, lng })
+                }).catch(function() {});
+              },
+              function(err) {
+                console.warn('[GPS] Initial background lock failed:', err.message);
+              },
+              { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
+            );
+          }
+        } else {
+          toast('Failed to connect online', 'error');
+        }
+      }).catch(function() {
+        toast('Connection error', 'error');
+      });
     } else {
       fetch('/api/delivery/online', {
         method: 'POST',
