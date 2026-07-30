@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/stores/AppStore';
 import { toast } from '@/components/Toast';
 import { haptic } from '@/lib/confetti';
-import { ArrowLeft, Store, Save, Smartphone, Mail, FileText, Store as StoreIcon, Loader, Camera, Shield, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Store, Save, Smartphone, Mail, FileText, Store as StoreIcon, Loader, Camera, Shield, CheckCircle, FileSpreadsheet } from 'lucide-react';
 
 function compressImage(base64Str: string, maxWidth: number = 800): Promise<string> {
   return new Promise((resolve) => {
@@ -56,6 +56,12 @@ export default function VendorRegister() {
   var [faydaFrontImage, setFaydaFrontImage] = useState('');
   var [faydaBackImage, setFaydaBackImage] = useState('');
   var [scanningFayda, setScanningFayda] = useState(false);
+
+  // Ethiopian Trade License Gate fields (Dynamic)
+  var [isLicensed, setIsLicensed] = useState(false);
+  var [tinNumber, setTinNumber] = useState('');
+  var [licenseNumber, setLicenseNumber] = useState('');
+  var [licenseImage, setLicenseImage] = useState('');
 
   // Step 2: Store Business details
   var [storeName, setStoreName] = useState('');
@@ -125,11 +131,28 @@ export default function VendorRegister() {
     }
   }
 
+  function handleLicenseImageChange(e: any) {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setLicenseImage(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  }
+
   async function submit() {
     if (!firstName.trim() || !middleName.trim() || !lastName.trim()) { toast('Please enter your full legal name (Latin)', 'error'); return; }
     if (!firstNameAmh.trim() || !middleNameAmh.trim() || !lastNameAmh.trim()) { toast('Please enter your full legal name (Amharic)', 'error'); return; }
     if (!faydaId.trim()) { toast('Fayda ID number is required', 'error'); return; }
     if (!faydaFrontImage || !faydaBackImage) { toast('Please upload both Fayda Front and Back images', 'error'); return; }
+    
+    // License validations
+    if (isLicensed) {
+      if (!tinNumber.trim()) { toast('TIN Number is required for registered vendors', 'error'); return; }
+      if (!licenseNumber.trim()) { toast('Trade License Number is required for registered vendors', 'error'); return; }
+      if (!licenseImage) { toast('Please upload a copy of your Trade License', 'error'); return; }
+    }
+
     if (!storeName.trim()) { toast('Store name is required', 'error'); return; }
     if (!storePhone.trim()) { toast('Phone number is required', 'error'); return; }
     if (storeLat === null || storeLng === null) { toast('📍 Set Default Pickup Base is required. Please map your storefront location!', 'error'); return; }
@@ -138,9 +161,10 @@ export default function VendorRegister() {
     toast('⏳ Compressing photos for fast upload...', 'info');
     
     try {
-      const [cFront, cBack] = await Promise.all([
+      const [cFront, cBack, cLicense] = await Promise.all([
         compressImage(faydaFrontImage),
-        compressImage(faydaBackImage)
+        compressImage(faydaBackImage),
+        isLicensed ? compressImage(licenseImage) : Promise.resolve('')
       ]);
 
       var ls: any = {};
@@ -164,7 +188,11 @@ export default function VendorRegister() {
           fayda_id: faydaId.trim(),
           fayda_front_image: cFront,
           fayda_back_image: cBack,
-          gender: gender
+          gender: gender,
+          is_licensed: isLicensed,
+          tin_number: isLicensed ? tinNumber.trim() : '',
+          license_number: isLicensed ? licenseNumber.trim() : '',
+          license_image: isLicensed ? cLicense : ''
         })
       });
       var d = await res.json();
@@ -308,6 +336,52 @@ export default function VendorRegister() {
                       )}
                     </label>
                   </div>
+                </div>
+
+                {/* Dynamic Ethiopian License Verification Toggle */}
+                <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-bold block text-slate-800 dark:text-slate-200">🧾 Business Trade License Gate</span>
+                      <span className="text-[8px] text-slate-400 mt-0.5 block leading-relaxed">Do you have a registered Trade License & TIN? (No = subject to 2% Product TOT tax)</span>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer flex-shrink-0 ml-3">
+                      <input type="checkbox" checked={isLicensed} onChange={e => setIsLicensed(e.target.checked)} className="sr-only peer" />
+                      <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-slate-600 peer-checked:bg-emerald-500"></div>
+                    </label>
+                  </div>
+
+                  {isLicensed && (
+                    <div className="mt-3.5 space-y-3 pt-3.5 border-t border-slate-200/50 dark:border-slate-700/50 animate-slideDown">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[9px] font-bold uppercase text-slate-400">TIN Number *</label>
+                          <input className={'w-full mt-1.5 p-2.5 border rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/40 ' + (darkMode ? 'bg-slate-700 border-slate-600' : 'bg-white border-slate-200')}
+                            placeholder="e.g. 0012345678" value={tinNumber} onChange={e => setTinNumber(e.target.value)} />
+                        </div>
+                        <div>
+                          <label className="text-[9px] font-bold uppercase text-slate-400">License # *</label>
+                          <input className={'w-full mt-1.5 p-2.5 border rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/40 ' + (darkMode ? 'bg-slate-700 border-slate-600' : 'bg-white border-slate-200')}
+                            placeholder="e.g. TL-8591" value={licenseNumber} onChange={e => setLicenseNumber(e.target.value)} />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-[9px] font-bold uppercase text-slate-400">Upload Trade License Copy *</label>
+                        <label className={'w-full mt-1.5 aspect-[2.2] border-2 border-dashed rounded-2xl flex flex-col items-center justify-center p-2 cursor-pointer transition-all hover:border-emerald-500 ' + (licenseImage ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-slate-200 dark:border-slate-700')}>
+                          <input type="file" accept="image/*" className="hidden" onChange={handleLicenseImageChange} />
+                          {licenseImage ? (
+                            <img src={licenseImage} alt="Trade License" className="w-full h-full object-cover rounded-xl" />
+                          ) : (
+                            <div className="text-center flex items-center gap-2">
+                              <FileSpreadsheet className="text-slate-400" size={18} />
+                              <span className="text-[8.5px] text-slate-400 font-bold block">Attach License JPG/PNG</span>
+                            </div>
+                          )}
+                        </label>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <button

@@ -1043,6 +1043,21 @@ export default async function handler(req: any, res: any) {
           }
         }
 
+        if (b.is_licensed) {
+          if (b.tin_number) {
+            const dupTin = vs.find((v: any) => v.tin_number === b.tin_number && v.status !== 'rejected');
+            if (dupTin) {
+              return fail('A vendor with this TIN Number is already registered.', 409);
+            }
+          }
+          if (b.license_number) {
+            const dupLic = vs.find((v: any) => v.license_number === b.license_number && v.status !== 'rejected');
+            if (dupLic) {
+              return fail('A vendor with this Trade License Number is already registered.', 409);
+            }
+          }
+        }
+
         const v = { id: Date.now(), ...b, status: 'pending', joined_at: new Date().toISOString() };
         try {
           vs.push(v);

@@ -729,8 +729,16 @@ function AdminVendors() {
       });
       if (ok) sentCount++;
     }
+    if (app.is_licensed && app.license_image) {
+      const ok = await sendFileToTelegram(app.license_image, `vendor-license-${app.id}.jpg`, {
+        contentType: 'image/jpeg',
+        caption: `📄 Trade License for Vendor Application: ${app.full_name_latin || app.name || 'Vendor'} (TIN: ${app.tin_number})`,
+        silent: true,
+      });
+      if (ok) sentCount++;
+    }
     if (sentCount > 0) {
-      toast(`📎 Sent ${sentCount} Fayda ID documents successfully to your Telegram chat!`, 'success');
+      toast(`📎 Sent ${sentCount} Fayda ID & License documents successfully to your Telegram chat!`, 'success');
     } else {
       toast('❌ No documents found or failed to send.', 'error');
     }
@@ -840,6 +848,13 @@ function AdminVendors() {
                         <span className="text-slate-400 font-bold uppercase text-[8px] tracking-wider">Store Info</span>
                         <div className="font-semibold text-slate-700 dark:text-slate-300 mt-1">Store: {a.name}</div>
                         <div className="text-slate-500 mt-0.5">Description: {a.description || 'No description provided.'}</div>
+                        <div className="text-slate-500 mt-0.5 font-bold">Type: {a.is_licensed ? '✅ Registered Business' : '❌ Individual Seller'}</div>
+                        {a.is_licensed && (
+                          <div className="mt-1 p-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-400 rounded-lg space-y-0.5">
+                            <div>TIN: {a.tin_number}</div>
+                            <div>License: {a.license_number}</div>
+                          </div>
+                        )}
                       </div>
                       <div>
                         <span className="text-slate-400 font-bold uppercase text-[8px] tracking-wider">KYC Verification</span>
@@ -853,7 +868,7 @@ function AdminVendors() {
                     </div>
 
                     {/* KYC Document Thumbnails with Zoom */}
-                    <div className="grid grid-cols-2 gap-2.5">
+                    <div className="grid grid-cols-3 gap-2.5">
                       <div>
                         <span className="text-slate-400 font-bold uppercase text-[8px] tracking-wider">Fayda Front ID</span>
                         {a.fayda_front_image ? (
@@ -874,6 +889,17 @@ function AdminVendors() {
                           </div>
                         ) : (
                           <div className="aspect-[1.6] bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center text-[9px] text-slate-400 mt-1">No ID Image</div>
+                        )}
+                      </div>
+                      <div>
+                        <span className="text-slate-400 font-bold uppercase text-[8px] tracking-wider">Trade License</span>
+                        {a.is_licensed && a.license_image ? (
+                          <div className="relative group aspect-[1.6] rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-black cursor-pointer mt-1" onClick={() => setZoomImage(a.license_image)}>
+                            <img src={a.license_image} alt="Trade License" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[8px] text-white font-bold">🔍 Click to zoom</div>
+                          </div>
+                        ) : (
+                          <div className="aspect-[1.6] bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center text-[9px] text-slate-400 mt-1">Individual / No License</div>
                         )}
                       </div>
                     </div>
@@ -1709,6 +1735,37 @@ function AdminSettings() {
         <div className="space-y-3">
           <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={priceAlertEnabled} onChange={e => { setPriceAlertEnabled(e.target.checked); saveSetting('priceAlertEnabled', e.target.checked); }} className="rounded" /> Enable Price Drop Alerts</label>
           <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={settings.affiliateEnabled !== false} onChange={e => saveSetting('affiliateEnabled', e.target.checked)} className="rounded" /> Enable Affiliate Program</label>
+          
+          <div className="border-t border-slate-100 dark:border-slate-800 pt-3 mt-3 space-y-3">
+            <h4 className="text-[10px] font-bold text-slate-600 dark:text-slate-400 mb-2">🇪🇹 Ethiopian Finance &amp; Tax Settings</h4>
+            <div>
+              <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">Platform Tax Mode</label>
+              <select className="w-full mt-1.5 p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-transparent text-foreground" value={settings.taxSettings?.platformTaxMode || 'tot'} onChange={e => {
+                const updated = { ...(settings.taxSettings || {}), platformTaxMode: e.target.value };
+                saveSetting('taxSettings', updated);
+              }}>
+                <option value="tot">TOT Payer (2% on Platform Service Commission)</option>
+                <option value="vat">VAT Payer (15% on Platform Service Commission)</option>
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">Platform Tax Rate (%)</label>
+                <input type="number" className="w-full mt-1.5 p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-transparent text-foreground" value={settings.taxSettings?.platformTaxRate ?? 2} onChange={e => {
+                  const updated = { ...(settings.taxSettings || {}), platformTaxRate: Number(e.target.value) };
+                  saveSetting('taxSettings', updated);
+                }} />
+              </div>
+              <div>
+                <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">Individual Product TOT Rate (%)</label>
+                <input type="number" className="w-full mt-1.5 p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-transparent text-foreground" value={settings.taxSettings?.productTotRate ?? 2} onChange={e => {
+                  const updated = { ...(settings.taxSettings || {}), productTotRate: Number(e.target.value) };
+                  saveSetting('taxSettings', updated);
+                }} />
+              </div>
+            </div>
+          </div>
+
           <div className="border-t border-slate-100 dark:border-slate-800 pt-3 mt-3">
             <h4 className="text-[10px] font-bold text-slate-600 dark:text-slate-400 mb-2">🛠️ System Toggles</h4>
             <label className="flex items-center gap-2 text-xs mb-2"><input type="checkbox" checked={settings.chapaTestMode !== false} onChange={e => saveSetting('chapaTestMode', e.target.checked)} className="rounded" /> Chapa Test Mode (sandbox for testing without license)</label>
