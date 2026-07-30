@@ -1785,7 +1785,7 @@ export default async function handler(req: any, res: any) {
 
     // FALLBACK
     // ================================================================
-    return res.status(404).json({ error: 'Not found', path: path, method: method, buildTime: 'BUILD-7511' });
+    return res.status(404).json({ error: 'Not found', path: path, method: method, buildTime: 'BUILD-7512' });
 
   } catch (e: any) {
     logReq(method, path, 500, dur(start), ip, e.message);
