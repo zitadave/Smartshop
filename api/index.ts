@@ -61,6 +61,14 @@ async function tg(bot: any, ch: any, txt: any, pm?: any, ex?: any) {
   catch (e: any) { console.error('TG:', e); return false; }
 }
 
+function escapeHtml(unsafe: any): string {
+  if (unsafe == null) return '';
+  return String(unsafe)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 // ===== IDEMPOTENCY =====
 const idem = new Map();
 async function chkIdem(k: string) {
@@ -211,15 +219,18 @@ async function createDeliveryForOrder(on: string, lat?: number, lng?: number) {
         }
 
         if (hasMatched) {
-          const tgMsg = `🔔 *New Express Job Nearby!* 🚚\n\n` +
-            `📦 *Order:* #${on}\n` +
-            `📍 *Pickup:* ${ord.items?.[0]?.vendorName || 'Smart Shop Warehouse'}${distTextPickup}\n` +
-            `📍 *Dropoff:* ${ord.customer?.address || 'Addis Ababa'}${distTextDropoff}\n` +
-            `💰 *Your Payout:* Br ${payout}\n\n` +
+          const cleanPickup = escapeHtml(ord.items?.[0]?.vendorName || 'Smart Shop Warehouse');
+          const cleanDropoff = escapeHtml(ord.customer?.address || 'Addis Ababa');
+          
+          const tgMsg = `🔔 <b>New Express Job Nearby!</b> 🚚\n\n` +
+            `📦 <b>Order:</b> #${escapeHtml(on)}\n` +
+            `📍 <b>Pickup:</b> ${cleanPickup}${escapeHtml(distTextPickup)}\n` +
+            `📍 <b>Dropoff:</b> ${cleanDropoff}${escapeHtml(distTextDropoff)}\n` +
+            `💰 <b>Your Payout:</b> Br ${payout}\n\n` +
             `👉 Open your Driver Dashboard in the bot to accept this delivery!`;
             
           if (d.telegram_id) {
-            await tg(ENV.VENDOR_BOT_TOKEN, d.telegram_id, tgMsg);
+            await tg(ENV.VENDOR_BOT_TOKEN, d.telegram_id, tgMsg, 'HTML').catch(console.error);
           }
 
           await supabase.from('notifications').insert({
@@ -1015,18 +1026,17 @@ export default async function handler(req: any, res: any) {
           
           let orderItemsMsg = '';
           if (req.body.items && req.body.items.length > 0) {
-            orderItemsMsg = req.body.items.map((it: any) => `  - ${it.nameEn || it.name || 'Product'} (x${it.qty || it.quantity || 1})`).join('\n');
+            orderItemsMsg = req.body.items.map((it: any) => `  • ${escapeHtml(it.nameEn || it.name || 'Product')} (x${it.qty || it.quantity || 1})`).join('\n');
           }
 
-          tg(ENV.ADMIN_BOT_TOKEN, ENV.adminChatId, 
-            `🛍️ *New Order #${on}*\n` +
-            `💵 Total: *Br ${totalAmount.toLocaleString()}*\n` +
-            `💳 Payment: *${pMethod.toUpperCase()}*\n` +
-            `👤 Customer: *${custName}*\n` +
-            `📞 Phone: \`${custPhone}\`\n\n` +
-            `📦 *Items:\n*${orderItemsMsg}`, 
-            'Markdown'
-          ).catch(() => {});
+          const txt = `🛍 <b>New Order #${escapeHtml(on)}</b>\n\n` +
+            `💵 Total: <b>Br ${totalAmount.toLocaleString()}</b>\n` +
+            `💳 Payment: <b>${escapeHtml(pMethod.toUpperCase())}</b>\n` +
+            `👤 Customer: <b>${escapeHtml(custName)}</b>\n` +
+            `📞 Phone: <code>${escapeHtml(custPhone)}</code>\n\n` +
+            `📦 <b>Items:</b>\n${orderItemsMsg}`;
+
+          tg(ENV.ADMIN_BOT_TOKEN, ENV.adminChatId, txt, 'HTML').catch(() => {});
         } catch (err) {}
 
         if (order && order.status === 'confirmed') { createDeliveryForOrder(on).catch(console.error); }

@@ -33,8 +33,7 @@ interface DailyEarning {
 
 export default function DriverDashboard() {
   const navigate = useNavigate();
-  const store = useStore();
-  const { profile } = store;
+  const profile = useStore(state => state.profile);
   
   var [tab, setTab] = useState<Tab>('available');
   var [driver, setDriver] = useState<any>(null);
@@ -70,6 +69,12 @@ export default function DriverDashboard() {
   // Synchronize and poll driver profile directly from database
   function fetchDriverStatus(showSpinner = false) {
     var tgId = profile?.telegramId;
+    if (!tgId) {
+      try {
+        var stored = JSON.parse(localStorage.getItem('ss_profile') || '{}');
+        tgId = stored.telegramId || '';
+      } catch(e) {}
+    }
     if (!tgId) {
       setLoading(false);
       return;
