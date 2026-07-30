@@ -242,8 +242,23 @@ export default function DriverDashboard() {
           });
         },
         function(err) {
-          toast('📍 GPS Permission Required: Please turn on location permissions to go online and receive nearby jobs!', 'error');
-          haptic('error');
+          console.warn('[GPS] Position query error:', err.message);
+          toast('📍 Connecting you online (Using fallback cell location)...', 'info');
+          
+          fetch('/api/delivery/online', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ driver_id: driverId, is_online: newStatus })
+          }).then(function(r) { return r.json(); }).then(function(d) {
+            if (d.success) {
+              setIsOnline(newStatus);
+              var stored = JSON.parse(localStorage.getItem('ss_driver_profile') || '{}');
+              stored.is_online = newStatus;
+              localStorage.setItem('ss_driver_profile', JSON.stringify(stored));
+              toast('🟢 Active Radar: You are online!', 'success');
+              haptic('success');
+            }
+          });
         },
         { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
       );

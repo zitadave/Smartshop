@@ -345,31 +345,9 @@ export default async function handler(req: any, res: any) {
 
   try {
 
-    // ── CONFIG CHECK DIAGNOSTICS (At the very top of handler!) ──
-    if (path === '/api/config-check' && method === 'GET') {
-      const mask = (s: string) => s ? s.substring(0, 4) + '...' + s.substring(s.length - 4) : 'undefined';
-      let dbSettings = {};
-      let dbDrivers = [];
-      try {
-        const { data } = await supabase.from('settings').select('*').single();
-        dbSettings = data || {};
-        const { data: drivers } = await supabase.from('delivery_personnel').select('*');
-        dbDrivers = drivers || [];
-      } catch (err: any) {
-        dbSettings = { error: err.message };
-      }
-      return ok({
-        SUPABASE_URL: ENV.SUPABASE_URL,
-        ADMIN_BOT_TOKEN: mask(ENV.ADMIN_BOT_TOKEN),
-        VENDOR_BOT_TOKEN: mask(ENV.VENDOR_BOT_TOKEN),
-        ADMIN_CHAT_ID: ENV.adminChatId,
-        CHAPA_SECRET_KEY: mask(ENV.CHAPA_SECRET_KEY),
-        DB_SETTINGS: dbSettings,
-        DB_DRIVERS: dbDrivers,
-        ENV_KEYS: Object.keys(process.env)
-      });
-    }
 
+    // ================================================================
+    // EXPORT DRIVERS ROUTE
     // ================================================================
     // EXPORT DRIVERS ROUTE
     // ================================================================
