@@ -265,29 +265,26 @@ export default function ManualPaymentReview() {
     } catch {}
   };
 
-  const addBank = () => {
-    const name = prompt('Bank Name:'); if (!name) return;
-    const account = prompt('Account Number:'); if (!account) return;
-    const holder = prompt('Account Holder Name:'); if (!holder) return;
+  const [showAddBankModal, setShowAddBankModal] = useState(false);
+  const [newBankName, setNewBankName] = useState('');
+  const [newBankAccount, setNewBankAccount] = useState('');
+  const [newBankHolder, setNewBankHolder] = useState('');
+
+  const handleAddBankConfirm = () => {
+    if (!newBankName.trim() || !newBankAccount.trim() || !newBankHolder.trim()) {
+      toast('Please fill in all bank details!', 'error');
+      return;
+    }
+    const newBank = { name: newBankName.trim(), account: newBankAccount.trim(), holder: newBankHolder.trim() };
+    const updated = [...bankAccounts, newBank];
+    setBankAccounts(updated);
+    saveBankAccounts(updated);
     
-    fetch('/api/bank-accounts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bank_name: name, account_number: account, account_holder: holder })
-    }).then(r => r.json()).then(d => {
-      if (d.success) {
-        const newBank = { id: d.bank_account.id, name, account, holder };
-        const updated = [...bankAccounts, newBank];
-        saveBankAccounts(updated); 
-        setBankAccounts(updated);
-        toast('✅ Bank added and synced with database!', 'success');
-      }
-    }).catch(() => {
-      const updated = [...bankAccounts, { name, account, holder }];
-      saveBankAccounts(updated); 
-      setBankAccounts(updated);
-      toast('✅ Bank added!', 'success');
-    });
+    setNewBankName('');
+    setNewBankAccount('');
+    setNewBankHolder('');
+    setShowAddBankModal(false);
+    toast('✅ Bank account added to list! Click Save All to sync.', 'success');
   };
 
   const removeBank = (idx: number) => {
@@ -297,7 +294,42 @@ export default function ManualPaymentReview() {
     }
     const updated = bankAccounts.filter((_, i) => i !== idx);
     saveBankAccounts(updated); setBankAccounts(updated);
-    toast('🗑️ Bank removed', 'info');
+    toast('🗑️ Bank removed from list! Click Save All to sync.', 'info');
+  };
+
+  const handleSaveAllBanks = async () => {
+    toast('⏳ Saving all bank accounts to database...', 'info');
+    try {
+      const res = await fetch('/api/bank-accounts/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bank_accounts: bankAccounts })
+      });
+      const d = await res.json();
+      if (d.success) {
+        toast('✅ Bank accounts successfully saved and synced with database!', 'success');
+        setShowBankEditor(false);
+        // Reload list
+        fetch('/api/bank-accounts')
+          .then(r => r.json())
+          .then(data => {
+            if (data && data.bank_accounts) {
+              const mapped = data.bank_accounts.map((b: any) => ({
+                id: b.id,
+                name: b.bank_name,
+                account: b.account_number,
+                holder: b.account_holder
+              }));
+              setBankAccounts(mapped);
+              saveBankAccounts(mapped);
+            }
+          });
+      } else {
+        toast('Failed to save: ' + (d.error || 'Server error'), 'error');
+      }
+    } catch (err: any) {
+      toast('Error saving: ' + err.message, 'error');
+    }
   };
 
   const pending = payments.filter(p => p.status === 'pending').length;
@@ -465,11 +497,38 @@ export default function ManualPaymentReview() {
         </div>
         {showBankEditor && (
           <div className="flex gap-2 mt-3">
-            <button className="px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-lg text-[10px] font-semibold flex items-center gap-1 hover:bg-emerald-200" onClick={addBank}><Plus size={11} /> Add Bank</button>
-            <button className="px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg text-[10px] font-semibold flex items-center gap-1 hover:bg-indigo-200" onClick={() => { saveBankAccounts(bankAccounts); setShowBankEditor(false); toast('✅ Bank accounts saved!', 'success'); }}><Save size={11} /> Save All</button>
+            <button className="px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-lg text-[10px] font-semibold flex items-center gap-1 hover:bg-emerald-200" onClick={() => setShowAddBankModal(true)}><Plus size={11} /> Add Bank</button>
+            <button className="px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg text-[10px] font-semibold flex items-center gap-1 hover:bg-indigo-200" onClick={handleSaveAllBanks}><Save size={11} /> Save All</button>
           </div>
         )}
       </div>
+
+      {/* In-App Add Bank Modal (No Native Popups!) */}
+      {showAddBankModal && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setShowAddBankModal(false)}>
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 w-full max-w-sm shadow-2xl relative text-left text-foreground" onClick={e => e.stopPropagation()}>
+            <h3 className="text-sm font-black mb-3 text-slate-900 dark:text-white flex items-center gap-1.5">🏦 Add Bank Account</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">Bank Name</label>
+                <input className="w-full mt-1.5 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-foreground" placeholder="e.g. Commercial Bank of Ethiopia" value={newBankName} onChange={e => setNewBankName(e.target.value)} />
+              </div>
+              <div>
+                <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">Account Number</label>
+                <input className="w-full mt-1.5 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-foreground font-mono" placeholder="e.g. 1000123456" value={newBankAccount} onChange={e => setNewBankAccount(e.target.value)} />
+              </div>
+              <div>
+                <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">Account Holder Name</label>
+                <input className="w-full mt-1.5 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-foreground" placeholder="e.g. Smart Shop Trading PLC" value={newBankHolder} onChange={e => setNewBankHolder(e.target.value)} />
+              </div>
+            </div>
+            <div className="flex gap-2.5 mt-5">
+              <button className="flex-1 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-500 hover:bg-slate-50" onClick={() => setShowAddBankModal(false)}>Cancel</button>
+              <button className="flex-[1.5] py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold" onClick={handleAddBankConfirm}>Confirm Add Bank</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

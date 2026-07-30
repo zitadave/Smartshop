@@ -1074,6 +1074,23 @@ export default async function handler(req: any, res: any) {
 
     // ── BANK ACCOUNTS ENDPOINTS (Dynamic Database Sync) ─────────
     if (path.startsWith('/api/bank-accounts')) {
+      if (path === '/api/bank-accounts/bulk' && method === 'POST') {
+        const b = req.body || {};
+        const accounts = b.bank_accounts || [];
+        await supabase.from('bank_accounts').delete().neq('id', 0);
+        if (accounts.length > 0) {
+          const payload = accounts.map((a: any) => ({
+            bank_name: a.name || a.bank_name,
+            account_number: a.account || a.account_number,
+            account_holder: a.holder || a.account_holder,
+            active: true
+          }));
+          const { data, error } = await supabase.from('bank_accounts').insert(payload).select();
+          if (error) return fail(error.message, 500);
+          return ok({ success: true, bank_accounts: data || [] });
+        }
+        return ok({ success: true, bank_accounts: [] });
+      }
       if (method === 'GET') {
         const { data, error } = await supabase.from('bank_accounts').select('*').eq('active', true);
         if (error) return fail(error.message, 500);
