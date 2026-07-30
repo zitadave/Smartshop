@@ -192,23 +192,29 @@ async function createDeliveryForOrder(on: string, lat?: number, lng?: number) {
 
     if (onlineDrivers && onlineDrivers.length > 0) {
       for (const d of onlineDrivers) {
-        if (!d.current_lat || !d.current_lng) continue;
+        let hasMatched = true;
+        let distTextPickup = '';
+        let distTextDropoff = '';
 
-        const dLat = parseFloat(d.current_lat);
-        const dLng = parseFloat(d.current_lng);
-        
-        const distToPickup = calculateDistance(dLat, dLng, finalPickupLat as number, finalPickupLng as number);
-        const distToDropoff = calculateDistance(dLat, dLng, finalDropoffLat as number, finalDropoffLng as number);
-        const minDistance = Math.min(distToPickup, distToDropoff);
+        if (d.current_lat && d.current_lng) {
+          const dLat = parseFloat(d.current_lat);
+          const dLng = parseFloat(d.current_lng);
+          
+          const distToPickup = calculateDistance(dLat, dLng, finalPickupLat as number, finalPickupLng as number);
+          const distToDropoff = calculateDistance(dLat, dLng, finalDropoffLat as number, finalDropoffLng as number);
+          const minDistance = Math.min(distToPickup, distToDropoff);
 
-        // Dynamic proximity matching within cascading radius of 7.0km (extending up to 15.0km fallback)
-        const hasMatched = minDistance <= 7.0 || minDistance <= 15.0;
+          // Dynamic proximity matching within 15.0km fallback
+          hasMatched = minDistance <= 15.0;
+          distTextPickup = ` (Est. ${distToPickup.toFixed(1)} km away)`;
+          distTextDropoff = ` (Est. ${distToDropoff.toFixed(1)} km away)`;
+        }
 
         if (hasMatched) {
           const tgMsg = `🔔 *New Express Job Nearby!* 🚚\n\n` +
             `📦 *Order:* #${on}\n` +
-            `📍 *Pickup:* ${ord.items?.[0]?.vendorName || 'Smart Shop Warehouse'} (Est. ${distToPickup.toFixed(1)} km away)\n` +
-            `📍 *Dropoff:* ${ord.customer?.address || 'Addis Ababa'} (Est. ${distToDropoff.toFixed(1)} km away)\n` +
+            `📍 *Pickup:* ${ord.items?.[0]?.vendorName || 'Smart Shop Warehouse'}${distTextPickup}\n` +
+            `📍 *Dropoff:* ${ord.customer?.address || 'Addis Ababa'}${distTextDropoff}\n` +
             `💰 *Your Payout:* Br ${payout}\n\n` +
             `👉 Open your Driver Dashboard in the bot to accept this delivery!`;
             
@@ -220,7 +226,7 @@ async function createDeliveryForOrder(on: string, lat?: number, lng?: number) {
             telegram_id: d.telegram_id || null,
             type: 'delivery',
             title: 'New Nearby Delivery Available',
-            message: `New job #${on} is available for express pickup only ${distToPickup.toFixed(1)}km away!`,
+            message: `New job #${on} is available for express pickup!`,
             icon: '🚚',
           });
         }
@@ -999,6 +1005,30 @@ export default async function handler(req: any, res: any) {
         }
         const { data: order, error: oe } = await supabase.from('orders').insert({ ...req.body, order_number: on }).select().single();
         if (oe) { for (const item of items) { if (item.productId) await supabase.rpc('increment_stock', { row_id: item.productId, qty: item.quantity || 1 }); } return fail(oe.message); }
+
+        // Notify admin about new order
+        try {
+          const totalAmount = order?.total || order?.subtotal || req.body.total || req.body.subtotal || 0;
+          const custName = req.body.customer?.name || order?.customer?.name || 'Guest';
+          const custPhone = req.body.customer?.phone || order?.customer?.phone || 'N/A';
+          const pMethod = req.body.paymentMethod || order?.paymentMethod || 'COD';
+          
+          let orderItemsMsg = '';
+          if (req.body.items && req.body.items.length > 0) {
+            orderItemsMsg = req.body.items.map((it: any) => `  - ${it.nameEn || it.name || 'Product'} (x${it.qty || it.quantity || 1})`).join('\n');
+          }
+
+          tg(ENV.ADMIN_BOT_TOKEN, ENV.adminChatId, 
+            `🛍️ *New Order #${on}*\n` +
+            `💵 Total: *Br ${totalAmount.toLocaleString()}*\n` +
+            `💳 Payment: *${pMethod.toUpperCase()}*\n` +
+            `👤 Customer: *${custName}*\n` +
+            `📞 Phone: \`${custPhone}\`\n\n` +
+            `📦 *Items:\n*${orderItemsMsg}`, 
+            'Markdown'
+          ).catch(() => {});
+        } catch (err) {}
+
         if (order && order.status === 'confirmed') { createDeliveryForOrder(on).catch(console.error); }
         if (ik) await setIdem(ik, 'completed', order); return ok({ success: true, order });
       }

@@ -36,6 +36,9 @@ export default function Profile() {
 
   // ===== VENDOR STATUS =====
   var [vendorStatus, setVendorStatus] = useState('loading');
+  
+  // ===== DRIVER STATUS =====
+  var [driverStatus, setDriverStatus] = useState('loading');
 
   // Check vendor status on mount and every 5 seconds
   useEffect(function() {
@@ -84,6 +87,22 @@ export default function Profile() {
       }).catch(function() {
         if (!cancelled) setVendorStatus('none');
       });
+
+      // Check driver status
+      fetch('/api/delivery/drivers?telegramId=' + storedTgId)
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          if (cancelled) return;
+          if (d && d.success && d.driver) {
+            if (!cancelled) setDriverStatus(d.driver.status);
+            localStorage.setItem('ss_driver_status', d.driver.status);
+          } else {
+            if (!cancelled) setDriverStatus('none');
+          }
+        })
+        .catch(function() {
+          if (!cancelled) setDriverStatus('none');
+        });
     }
     
     // Initial check immediately
@@ -133,6 +152,17 @@ export default function Profile() {
     engagementItems.push({ icon: '⏳', label: 'Application Pending', desc: 'Under review by admin', onClick: function() { toast('Your application is being reviewed.', 'info'); } });
   } else {
     engagementItems.push({ icon: '📝', label: 'Become a Vendor', desc: 'Start selling products', onClick: function() { navigate('/vendor-register'); } });
+  }
+
+  // Driver Status menu items
+  if (driverStatus === 'approved') {
+    engagementItems.push({ icon: '🏍️', label: 'Smart Express', desc: 'Driver dashboard & active jobs', onClick: function() { navigate('/driver'); } });
+  } else if (driverStatus === 'pending_review' || driverStatus === 'pending_fayda') {
+    engagementItems.push({ icon: '⏳', label: 'Express Driver Pending', desc: 'Driver application under review', onClick: function() { toast('Your independent driver application is currently under review.', 'info'); } });
+  } else if (driverStatus === 'rejected') {
+    engagementItems.push({ icon: '❌', label: 'Driver application rejected', desc: 'Tap to see reason / reapply', onClick: function() { navigate('/driver'); } });
+  } else {
+    engagementItems.push({ icon: '🏍️', label: 'Become a Driver', desc: 'Deliver packages & earn weekly', onClick: function() { navigate('/driver-register'); } });
   }
 
   engagementItems.push(
