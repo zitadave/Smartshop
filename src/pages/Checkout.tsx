@@ -17,21 +17,41 @@ import {
  ChevronDown, PartyPopper, Star, Gem, X, Check, ChevronUp
 } from 'lucide-react';
 
-function getBankAccounts() {
- try { const s = localStorage.getItem('ss_bank_accounts'); if (s) { const p = JSON.parse(s); if (Array.isArray(p) && p.length > 0) return p; } } catch {}
- return [
- { name: 'Commercial Bank of Ethiopia', account: '100000XXXXXXX', holder: 'Smart Shop Trading PLC' },
- { name: 'Dashen Bank', account: '0987654321', holder: 'Smart Shop Trading PLC' },
- { name: 'Awash Bank', account: '013005432100', holder: 'Smart Shop Trading PLC' },
- ];
-}
-const BANK_ACCOUNTS = getBankAccounts();
-
 export default function Checkout() {
  const navigate = useNavigate();
  const store = useStore();
  const { cart, language, getCartTotal, addOrder, clearCart, addLoyaltyPoints, addNotification, profile, settings } = store;
  const total = getCartTotal();
+
+ const [bankAccounts, setBankAccounts] = useState<any[]>([]);
+
+ useEffect(() => {
+   fetch('/api/bank-accounts')
+     .then(r => r.json())
+     .then(d => {
+       if (d && d.bank_accounts && d.bank_accounts.length > 0) {
+         const mapped = d.bank_accounts.map((b: any) => ({
+           name: b.bank_name,
+           account: b.account_number,
+           holder: b.account_holder
+         }));
+         setBankAccounts(mapped);
+       } else {
+         setBankAccounts([
+           { name: 'Commercial Bank of Ethiopia', account: '100000XXXXXXX', holder: 'Smart Shop Trading PLC' },
+           { name: 'Dashen Bank', account: '0987654321', holder: 'Smart Shop Trading PLC' },
+           { name: 'Awash Bank', account: '013005432100', holder: 'Smart Shop Trading PLC' },
+         ]);
+       }
+     })
+     .catch(() => {
+       setBankAccounts([
+         { name: 'Commercial Bank of Ethiopia', account: '100000XXXXXXX', holder: 'Smart Shop Trading PLC' },
+         { name: 'Dashen Bank', account: '0987654321', holder: 'Smart Shop Trading PLC' },
+         { name: 'Awash Bank', account: '013005432100', holder: 'Smart Shop Trading PLC' },
+       ]);
+     });
+ }, []);
 
  const [step, setStep] = useState<'review' | 'payment' | 'bank'>('review');
  const [paymentMethod, setPaymentMethod] = useState<'chapa' | 'bank' | null>(null);
@@ -462,7 +482,7 @@ export default function Checkout() {
  <div className="flex items-start gap-4 relative z-10">
  <div className={cn('w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg', opt.disabled && !sel ? 'bg-slate-300 dark:bg-slate-600' : 'bg-gradient-to-br from-indigo-500 to-purple-600')}>{opt.disabled && !sel ? <Lock size={18} className="text-white" /> : opt.icon}</div>
  <div className="flex-1">
- <div className="flex items-center gap-2 flex-wrap"><h3 className="font-bold text-sm text-foreground">{opt.icon.props.className.includes('Banknote') ? 'Bank Transfer' : 'Pay with Chapa'}</h3>{sel && <CheckCircle size={16} className="text-indigo-600" />}{opt.badge && <span className={cn('px-2 py-0.5 rounded-full text-[8px] font-bold', opt.badge === 'RECOMMENDED' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700')}>{opt.badge}</span>}</div>
+ <div className="flex items-center gap-2 flex-wrap"><h3 className="font-bold text-sm text-foreground">{opt.label}</h3>{sel && <CheckCircle size={16} className="text-indigo-600" />}{opt.badge && <span className={cn('px-2 py-0.5 rounded-full text-[8px] font-bold', opt.badge === 'RECOMMENDED' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700')}>{opt.badge}</span>}</div>
  <p className="text-[10px] text-muted-foreground mt-1">{opt.desc}</p>
  <div className="flex gap-2 mt-2 flex-wrap">{opt.tags.map((t, i) => <span key={i} className="text-[8px] bg-muted px-2 py-0.5 rounded font-mono text-muted-foreground">{t}</span>)}</div>
  {opt.disabled && <p className="text-[9px] text-amber-600 mt-1">Chapa is being finalized. Please use Bank Transfer.</p>}
@@ -515,7 +535,7 @@ export default function Checkout() {
  </button>
  {bankDropdownOpen && (
  <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-xl shadow-xl z-20 overflow-hidden animate-fadeUp">
- {BANK_ACCOUNTS.map(b => (
+ {bankAccounts.map(b => (
  <button key={b.name}
  className={cn('w-full px-3 py-2.5 text-xs text-left hover:bg-muted transition-colors flex items-center gap-2', selectedBank === b.name ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700' : 'text-foreground')}
  onClick={() => { setSelectedBank(b.name); setBankDropdownOpen(false); }}>
@@ -527,7 +547,7 @@ export default function Checkout() {
  )}
  </div>
  {selectedBank && (() => {
- const bank = BANK_ACCOUNTS.find(b => b.name === selectedBank);
+ const bank = bankAccounts.find(b => b.name === selectedBank);
  if (!bank) return null;
  return (
  <div className="mt-3 animate-fadeUp space-y-2">

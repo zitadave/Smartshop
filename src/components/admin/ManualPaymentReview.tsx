@@ -86,7 +86,26 @@ export default function ManualPaymentReview() {
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
 
   const refresh = () => setPayments(getPayments());
-  useEffect(() => { refresh(); setBankAccounts(getBankAccounts()); }, []);
+  useEffect(() => { 
+    refresh(); 
+    fetch('/api/bank-accounts')
+      .then(r => r.json())
+      .then(d => {
+        if (d && d.bank_accounts && d.bank_accounts.length > 0) {
+          const mapped = d.bank_accounts.map((b: any) => ({
+            id: b.id,
+            name: b.bank_name,
+            account: b.account_number,
+            holder: b.account_holder
+          }));
+          setBankAccounts(mapped);
+          saveBankAccounts(mapped);
+        } else {
+          setBankAccounts(getBankAccounts());
+        }
+      })
+      .catch(() => setBankAccounts(getBankAccounts()));
+  }, []);
 
   const filtered = payments.filter(p => {
     if (filter !== 'all' && p.status !== filter) return false;
@@ -250,12 +269,32 @@ export default function ManualPaymentReview() {
     const name = prompt('Bank Name:'); if (!name) return;
     const account = prompt('Account Number:'); if (!account) return;
     const holder = prompt('Account Holder Name:'); if (!holder) return;
-    const updated = [...bankAccounts, { name, account, holder }];
-    saveBankAccounts(updated); setBankAccounts(updated);
-    toast('✅ Bank added!', 'success');
+    
+    fetch('/api/bank-accounts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bank_name: name, account_number: account, account_holder: holder })
+    }).then(r => r.json()).then(d => {
+      if (d.success) {
+        const newBank = { id: d.bank_account.id, name, account, holder };
+        const updated = [...bankAccounts, newBank];
+        saveBankAccounts(updated); 
+        setBankAccounts(updated);
+        toast('✅ Bank added and synced with database!', 'success');
+      }
+    }).catch(() => {
+      const updated = [...bankAccounts, { name, account, holder }];
+      saveBankAccounts(updated); 
+      setBankAccounts(updated);
+      toast('✅ Bank added!', 'success');
+    });
   };
 
   const removeBank = (idx: number) => {
+    const target = bankAccounts[idx];
+    if (target && (target as any).id) {
+      fetch(`/api/bank-accounts/${(target as any).id}`, { method: 'DELETE' }).catch(() => {});
+    }
     const updated = bankAccounts.filter((_, i) => i !== idx);
     saveBankAccounts(updated); setBankAccounts(updated);
     toast('🗑️ Bank removed', 'info');

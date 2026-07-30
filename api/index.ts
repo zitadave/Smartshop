@@ -1072,6 +1072,33 @@ export default async function handler(req: any, res: any) {
       if (method === 'PUT') { const vid = pid(path); try { const vs = await getV(); const up = vs.map((v: any) => v.id == vid ? { ...v, ...req.body } : v); await setV(up); } catch {} const em = req.body.status === 'approved' ? '✅' : req.body.status === 'rejected' ? '❌' : '⏸️'; tg(ENV.ADMIN_BOT_TOKEN, ENV.adminChatId, em + ' Vendor ' + vid + ': ' + (req.body.status || 'updated')); return ok({ success: true }); }
     }
 
+    // ── BANK ACCOUNTS ENDPOINTS (Dynamic Database Sync) ─────────
+    if (path.startsWith('/api/bank-accounts')) {
+      if (method === 'GET') {
+        const { data, error } = await supabase.from('bank_accounts').select('*').eq('active', true);
+        if (error) return fail(error.message, 500);
+        return ok({ bank_accounts: data || [] });
+      }
+      if (method === 'POST') {
+        const b = req.body || {};
+        const { data, error } = await supabase.from('bank_accounts').insert({
+          bank_name: b.bank_name,
+          account_number: b.account_number,
+          account_holder: b.account_holder,
+          active: true
+        }).select().single();
+        if (error) return fail(error.message, 500);
+        return ok({ success: true, bank_account: data });
+      }
+      if (method === 'DELETE') {
+        const parts = path.split('/');
+        const id = parts[3];
+        const { error } = await supabase.from('bank_accounts').delete().eq('id', parseInt(id));
+        if (error) return fail(error.message, 500);
+        return ok({ success: true });
+      }
+    }
+
     // ── PAYOUTS ENDPOINTS (Dynamic Database Sync) ──────────────
     if (path.startsWith('/api/payouts')) {
       if (method === 'GET') {
