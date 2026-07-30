@@ -81,6 +81,35 @@ function applySavedTheme() {
   } catch(e) {}
 }
 
+function TelegramStartParamHandler() {
+  const navigate = useNavigate();
+  useEffect(function() {
+    try {
+      var tg = (window as any).Telegram?.WebApp;
+      var startParam = tg?.initDataUnsafe?.start_param || '';
+      if (startParam) {
+        console.log(`[Telegram] Found start_param: ${startParam}`);
+        if (startParam.startsWith('group_')) {
+          var token = startParam.substring(6); // 'group_' has length 6
+          if (token) {
+            navigate(`/group-deal/${token}`);
+          }
+        } else if (startParam.startsWith('ref_')) {
+          var refCode = startParam.substring(4); // 'ref_' has length 4
+          if (refCode) {
+            localStorage.setItem('ss_referrer', refCode.toUpperCase());
+          }
+        } else {
+          localStorage.setItem('ss_referrer', startParam.toUpperCase());
+        }
+      }
+    } catch (e) {
+      console.error('Error handling start_param:', e);
+    }
+  }, [navigate]);
+  return null;
+}
+
 export default function App() {
   var { darkMode, setProducts, setSettings, settings, products, setProfile } = useStore();
 
@@ -163,6 +192,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <TelegramStartParamHandler />
       {TG && <TelegramBackButton />}
       <ToastContainer />
       <Routes>

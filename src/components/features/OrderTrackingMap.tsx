@@ -121,8 +121,24 @@ export default function OrderTrackingMap({ orderNumber, compact }: OrderTracking
 
       const hasDriver = !!(delivery?.driver);
       if (hasDriver) {
-        const dLat = delivery.driver.current_lat || 9.03;
-        const dLng = delivery.driver.current_lng || 38.74;
+        const dLat = Number(delivery.driver.current_lat) || 9.03;
+        const dLng = Number(delivery.driver.current_lng) || 38.74;
+
+        const isHeadingToPickup = ['assigned', 'accepted', 'at_vendor'].includes(delivery.status);
+        const destLat = isHeadingToPickup ? (Number(delivery.pickup_lat) || 9.0315) : cLat;
+        const destLng = isHeadingToPickup ? (Number(delivery.pickup_lng) || 38.7485) : cLng;
+
+        // Render storefront marker if heading to pickup
+        let storeMarker: any = null;
+        if (isHeadingToPickup) {
+          const storeIcon = L.divIcon({
+            className: 'custom-store-icon',
+            html: `<div class="w-8 h-8 rounded-full bg-blue-500 border-2 border-white flex items-center justify-center shadow-lg"><span class="text-sm">🏪</span></div>`,
+            iconSize: [32, 32],
+            iconAnchor: [16, 16]
+          });
+          storeMarker = L.marker([destLat, destLng], { icon: storeIcon }).addTo(map);
+        }
 
         const motorIcon = L.divIcon({
           className: 'custom-motor-icon',
@@ -133,15 +149,50 @@ export default function OrderTrackingMap({ orderNumber, compact }: OrderTracking
 
         const driverMarker = L.marker([dLat, dLng], { icon: motorIcon }).addTo(map);
 
-        L.polyline([[dLat, dLng], [cLat, cLng]], {
-          color: '#6366F1',
-          weight: 3,
-          opacity: 0.85,
-          dashArray: '8, 8'
-        }).addTo(map);
+        // Fetch high-accuracy street routing path from OSRM
+        fetch(`https://router.project-osrm.org/route/v1/driving/${dLng},${dLat};${destLng},${destLat}?overview=full&geometries=geojson`)
+          .then(res => res.json())
+          .then(data => {
+            if (data && data.routes && data.routes[0]) {
+              const coordinates = data.routes[0].geometry.coordinates;
+              const latLngs = coordinates.map((coord: [number, number]) => [coord[1], coord[0]]);
+              
+              // Draw solid route line
+              const routeLine = L.polyline(latLngs, {
+                color: '#6366F1',
+                weight: 4,
+                opacity: 0.95
+              }).addTo(map);
 
-        const group = new L.featureGroup([driverMarker, customerMarker]);
-        map.fitBounds(group.getBounds().pad(0.15));
+              // Draw pulsing glow line overlay
+              L.polyline(latLngs, {
+                color: '#818CF8',
+                weight: 8,
+                opacity: 0.35
+              }).addTo(map);
+
+              const markers = [driverMarker, customerMarker];
+              if (storeMarker) markers.push(storeMarker);
+              const group = new L.featureGroup(markers);
+              map.fitBounds(group.getBounds().pad(0.15));
+            } else {
+              throw new Error('No OSRM route found');
+            }
+          })
+          .catch(() => {
+            // Graceful fallback to straight line
+            const routeLine = L.polyline([[dLat, dLng], [destLat, destLng]], {
+              color: '#6366F1',
+              weight: 3,
+              opacity: 0.85,
+              dashArray: '8, 8'
+            }).addTo(map);
+
+            const markers = [driverMarker, customerMarker];
+            if (storeMarker) markers.push(storeMarker);
+            const group = new L.featureGroup(markers);
+            map.fitBounds(group.getBounds().pad(0.15));
+          });
       } else {
         map.setView([cLat, cLng], 15);
       }

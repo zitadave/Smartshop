@@ -485,6 +485,17 @@ try {
   var ig = sd.instagram || '';
   var tw = sd.twitter || '';
   var yt = sd.youtube || '';
+  
+  var currentMembership = { plan: 'Bronze' };
+  try {
+    var raw = localStorage.getItem('ss_vendor_membership');
+    if (raw) currentMembership = JSON.parse(raw);
+  } catch(e) {}
+  var feePct = '10%';
+  if (currentMembership.plan === 'Silver') feePct = '8%';
+  else if (currentMembership.plan === 'Gold') feePct = '5%';
+  else if (currentMembership.plan === 'Platinum') feePct = '2%';
+
   return React.createElement('div', { className: 'space-y-4 animate-fadeUp' },
     React.createElement('h2', { className: 'text-lg font-bold text-slate-900 dark:text-white' }, '\ud83c\udfaa My Store'),
     React.createElement('p', { className: 'text-[10px] text-slate-500' }, 'Manage your storefront and preferences'),
@@ -532,7 +543,7 @@ try {
       React.createElement('div', { className: 'space-y-4' },
         React.createElement('div', { className: 'bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4' },
           React.createElement('h3', { className: 'text-sm font-bold mb-3 text-slate-900 dark:text-white' }, 'Commission'),
-          React.createElement('div', { className: 'flex items-center justify-between' }, React.createElement('span', { className: 'text-xs text-slate-500' }, 'Platform fee'), React.createElement('span', { className: 'text-lg font-bold text-emerald-600' }, '10%')),
+          React.createElement('div', { className: 'flex items-center justify-between' }, React.createElement('span', { className: 'text-xs text-slate-500' }, 'Platform fee'), React.createElement('span', { className: 'text-lg font-bold text-emerald-600' }, feePct)),
           React.createElement('div', { className: 'mt-2 bg-emerald-50 dark:bg-emerald-950/20 rounded-lg p-2.5 text-[9px] text-emerald-700 dark:text-emerald-400' }, 'Your store is active')
         ),
         React.createElement('div', { className: 'bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4' },
@@ -914,6 +925,22 @@ function VendorPayoutsView({ stats }: { stats: any }) {
 
   const [payouts, setPayouts] = useState<any[]>(() => { try { return JSON.parse(localStorage.getItem('ss_vendor_payouts') || '[]'); } catch { return []; } });
   
+  const currentMembership = useMemo(() => {
+    try {
+      const raw = localStorage.getItem('ss_vendor_membership');
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return { plan: 'Bronze', status: 'active', platformFee: 10 };
+  }, []);
+
+  const platformFeeRate = useMemo(() => {
+    const planName = currentMembership?.plan || 'Bronze';
+    if (planName === 'Silver') return 0.08;
+    if (planName === 'Gold') return 0.05;
+    if (planName === 'Platinum') return 0.02;
+    return 0.10; // Bronze (Free) / fallback
+  }, [currentMembership]);
+
   const [payoutMethod, setPayoutMethod] = useState(() => {
     try {
       const s = JSON.parse(localStorage.getItem('ss_vendor_settings') || '{}');
@@ -946,7 +973,7 @@ function VendorPayoutsView({ stats }: { stats: any }) {
         const orderVendorSales = myItems.reduce((s: number, it: any) => s + (it.total || 0), 0);
         rev += orderVendorSales;
         
-        plat += Math.round(orderVendorSales * 0.1);
+        plat += Math.round(orderVendorSales * platformFeeRate);
 
         if (o.referrer_code || o.referrerCode) {
           aff += Math.round(orderVendorSales * (customAffRate / 100));
@@ -955,7 +982,7 @@ function VendorPayoutsView({ stats }: { stats: any }) {
     });
 
     return { totalRevenue: rev, platformFee: plat, affiliateFee: aff };
-  }, [orders, vendorProductIds, customAffRate, settings]);
+  }, [orders, vendorProductIds, customAffRate, settings, platformFeeRate]);
 
   const netEarned = totalRevenue - platformFee - affiliateFee;
   const paidOut = payouts.filter(p => p.status === 'paid').reduce((s, p) => s + p.amount, 0);
@@ -991,7 +1018,7 @@ function VendorPayoutsView({ stats }: { stats: any }) {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
           { label: 'Total Revenue', val: formatPrice(totalRevenue), icon: DollarSign, color: 'from-blue-500 to-blue-600' },
-          { label: 'Platform Fee (10%)', val: formatPrice(platformFee), icon: TrendingDown, color: 'from-slate-500 to-slate-600' },
+          { label: 'Platform Fee (' + Math.round(platformFeeRate * 100) + '%)', val: formatPrice(platformFee), icon: TrendingDown, color: 'from-slate-500 to-slate-600' },
           { label: `Promoter Comm (${customAffRate}%)`, val: formatPrice(affiliateFee), icon: Users, color: 'from-amber-500 to-orange-600' },
           { label: 'Net Available', val: formatPrice(Math.max(0, pending)), icon: Wallet, color: 'from-emerald-500 to-green-600' },
         ].map((s, i) => {
@@ -1756,6 +1783,152 @@ function VendorSubscriptionsView() {
   const [saving, setSaving] = useState(false);
   const [planToDelete, setPlanToDelete] = useState<number | null>(null);
 
+  const [subView, setSubView] = useState<'goods' | 'membership'>('goods');
+
+  // Membership states
+  const [membership, setMembership] = useState(() => {
+    try {
+      const raw = localStorage.getItem('ss_vendor_membership');
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return {
+      plan: 'Bronze',
+      status: 'active',
+      cost: 0,
+      startedAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      paymentMethod: 'None',
+      billingCycle: 'monthly',
+      reference: 'FREE-TIER'
+    };
+  });
+
+  const [showUpgradeModal, setShowUpgradeModal] = useState<string | null>(null);
+  const [upgradePaymentMethod, setUpgradePaymentMethod] = useState<'Telebirr' | 'Chapa' | 'CBE'>('Telebirr');
+  const [cbeReference, setCbeReference] = useState('');
+  const [upgrading, setUpgrading] = useState(false);
+
+  const daysLeft = useMemo(() => {
+    const expiry = new Date(membership.expiresAt).getTime();
+    const now = Date.now();
+    const diff = expiry - now;
+    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  }, [membership.expiresAt]);
+
+  const billingProgress = Math.min(100, Math.max(0, Math.round(((30 - daysLeft) / 30) * 100)));
+
+  const PLATFORM_PLANS = [
+    {
+      name: 'Bronze',
+      emoji: '🥉',
+      cost: 0,
+      fee: 10,
+      limit: 10,
+      color: 'from-amber-700 to-amber-800',
+      features: [
+        'Standard Storefront listing',
+        '10% Platform fee per sale',
+        'Upload limit: 10 products',
+        'Manual CBE payout processing',
+        'Basic storefront analytics'
+      ]
+    },
+    {
+      name: 'Silver',
+      emoji: '🥈',
+      cost: 500,
+      fee: 8,
+      limit: 50,
+      color: 'from-slate-400 to-slate-500',
+      features: [
+        'Priority Storefront listing',
+        'Reduced 8% Platform fee',
+        'Upload limit: 50 products',
+        'Instant Telebirr/Chapa Payouts',
+        'Basic analytics reports',
+        'Telegram notifications dispatch'
+      ]
+    },
+    {
+      name: 'Gold',
+      emoji: '🥇',
+      cost: 1200,
+      fee: 5,
+      limit: 200,
+      color: 'from-yellow-400 via-amber-500 to-yellow-600',
+      features: [
+        'Featured Storefront placement',
+        'Super low 5% Platform fee',
+        'Upload limit: 200 products',
+        'Priority instant payouts',
+        'AI description generator tool',
+        'Live CBE manual payment review',
+        'Advanced sales analytics dashboards'
+      ]
+    },
+    {
+      name: 'Platinum',
+      emoji: '💎',
+      cost: 2500,
+      fee: 2,
+      limit: 99999,
+      color: 'from-indigo-600 via-purple-600 to-pink-600',
+      features: [
+        'Sponsored placement on top searches',
+        'Lowest 2% Platform fee!',
+        'Upload limit: Unlimited products',
+        'Dedicated 1-on-1 account manager',
+        'Custom B2B Telegram Bot integration',
+        'Fully automated Chapa payouts',
+        'Early access to new features'
+      ]
+    }
+  ];
+
+  const handleUpgrade = (planName: string) => {
+    const costMap: Record<string, number> = { Silver: 500, Gold: 1200, Platinum: 2500 };
+    const cost = costMap[planName] || 0;
+    
+    setUpgrading(true);
+    setTimeout(() => {
+      const updated = {
+        plan: planName,
+        status: 'active',
+        cost: cost,
+        startedAt: new Date().toISOString(),
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        paymentMethod: upgradePaymentMethod,
+        billingCycle: 'monthly',
+        reference: upgradePaymentMethod === 'CBE' ? cbeReference : 'TXN-' + Math.random().toString(36).substring(2, 10).toUpperCase()
+      };
+      
+      localStorage.setItem('ss_vendor_membership', JSON.stringify(updated));
+      setMembership(updated);
+      setUpgrading(false);
+      setShowUpgradeModal(null);
+      setCbeReference('');
+      toast(`🎉 Upgraded to ${planName} Plan successfully!`, 'success');
+      setTimeout(() => window.location.reload(), 1000);
+    }, 2000);
+  };
+
+  const handleCancelMembership = () => {
+    if (!confirm('Are you sure you want to downgrade to Bronze (Free) plan? You will lose reduced platform fees and listing benefits.')) return;
+    const downgraded = {
+      plan: 'Bronze',
+      status: 'active',
+      cost: 0,
+      startedAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      paymentMethod: 'None',
+      billingCycle: 'monthly'
+    };
+    localStorage.setItem('ss_vendor_membership', JSON.stringify(downgraded));
+    setMembership(downgraded);
+    toast('📉 Downgraded to Bronze (Free) plan.', 'info');
+    setTimeout(() => window.location.reload(), 1000);
+  };
+
   // Form states
   const [name, setName] = useState('');
   const [nameAmharic, setNameAmharic] = useState('');
@@ -1902,115 +2075,261 @@ function VendorSubscriptionsView() {
 
   return (
     <div className="space-y-4 animate-scaleIn">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-base font-bold text-slate-800 dark:text-slate-100">📅 Subscription Goods (የደንበኝነት እቃዎች)</h2>
-          <p className="text-[10px] text-slate-500">Manage recurring products & delivery bundles</p>
-        </div>
+      {/* Sub-tab selection */}
+      <div className="flex bg-slate-100 dark:bg-slate-850 p-1 rounded-2xl mb-4 max-w-xs border dark:border-slate-800">
         <button 
-          onClick={() => setShowModal(true)}
-          className="px-3.5 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold shadow hover:shadow-lg transition-all"
-        >
-          ➕ Add Subscription Plan
+          onClick={() => setSubView('goods')}
+          className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${subView === 'goods' ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>
+          📦 Goods Plans
+        </button>
+        <button 
+          onClick={() => setSubView('membership')}
+          className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${subView === 'membership' ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>
+          💎 Platform Membership
         </button>
       </div>
 
-      {loading ? (
-        <div className="text-center py-12"><Loader className="animate-spin text-emerald-500 mx-auto" size={24} /></div>
-      ) : plans.length === 0 ? (
-        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-8 text-center">
-          <Clock size={32} className="mx-auto mb-2 text-slate-300 animate-pulse" />
-          <p className="text-xs font-bold text-slate-500">No subscription plans created yet</p>
-          <p className="text-[9px] text-slate-400 mt-1">Create subscription goods (e.g. weekly groceries, diaper delivery packs) to get recurring monthly revenue!</p>
-        </div>
+      {subView === 'goods' ? (
+        <>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-bold text-slate-800 dark:text-slate-100">📅 Subscription Goods (የደንበኝነት እቃዎች)</h2>
+              <p className="text-[10px] text-slate-500">Manage recurring products & delivery bundles</p>
+            </div>
+            <button 
+              onClick={() => setShowModal(true)}
+              className="px-3.5 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold shadow hover:shadow-lg transition-all cursor-pointer"
+            >
+              ➕ Add Subscription Plan
+            </button>
+          </div>
+
+          {loading ? (
+            <div className="text-center py-12"><Loader className="animate-spin text-emerald-500 mx-auto" size={24} /></div>
+          ) : plans.length === 0 ? (
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-8 text-center animate-scaleIn">
+              <Clock size={32} className="mx-auto mb-2 text-slate-300 animate-pulse" />
+              <p className="text-xs font-bold text-slate-500">No subscription plans created yet</p>
+              <p className="text-[9px] text-slate-400 mt-1">Create subscription goods (e.g. weekly groceries, diaper delivery packs) to get recurring monthly revenue!</p>
+            </div>
+          ) : (
+            <div className="grid sm:grid-cols-2 gap-3.5">
+              {plans.map((p: any) => {
+                // Retrieve biweekly price tag if present
+                const biweeklyTag = p.tags?.find?.((t: string) => t.startsWith?.('biweeklyPrice:'));
+                const biweeklyVal = biweeklyTag ? biweeklyTag.split(':')[1] : '';
+                return (
+                  <div key={p.id} className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+                    <div>
+                      <div className="flex justify-between items-start">
+                        <div className="flex gap-2.5 items-center">
+                          <span className="text-2xl p-2 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border">{p.emoji || '📦'}</span>
+                          <div>
+                            <h3 className="text-xs font-black text-slate-800 dark:text-slate-100">{p.name}</h3>
+                            {p.name_amharic && <p className="text-[10px] text-slate-400 mt-0.5">{p.name_amharic}</p>}
+                          </div>
+                        </div>
+                        <span className="text-[8px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200/50">Active</span>
+                      </div>
+                      
+                      {/* Custom preview of uploaded photo if available */}
+                      {p.image && (
+                        <div className="mt-3 aspect-[1.8] rounded-2xl overflow-hidden border border-slate-200/80 bg-white">
+                          <img src={p.image} className="w-full h-full object-cover" alt="Plan Cover" />
+                        </div>
+                      )}
+
+                      <p className="text-[9.5px] text-slate-500 dark:text-slate-400 mt-3 leading-relaxed line-clamp-2">{p.description || 'No description provided.'}</p>
+                      
+                      <div className="grid grid-cols-4 gap-1.5 border-t border-slate-100 dark:border-slate-800/80 pt-3 mt-3 text-center">
+                        {p.daily_price ? (
+                          <div className="bg-slate-50 dark:bg-slate-800/40 p-1.5 rounded-xl border">
+                            <div className="text-[6.5px] text-slate-400 uppercase font-black font-sans">Daily</div>
+                            <div className="text-[9.5px] font-black text-emerald-500 mt-0.5">Br {p.daily_price}</div>
+                          </div>
+                        ) : (
+                          <div className="bg-slate-50 dark:bg-slate-800/40 p-1.5 rounded-xl border opacity-50">
+                            <div className="text-[6.5px] text-slate-400 uppercase font-black">Daily</div>
+                            <div className="text-[9.5px] text-slate-400 mt-0.5">-</div>
+                          </div>
+                        )}
+                        {p.weekly_price ? (
+                          <div className="bg-slate-50 dark:bg-slate-800/40 p-1.5 rounded-xl border">
+                            <div className="text-[6.5px] text-slate-400 uppercase font-black">Weekly</div>
+                            <div className="text-[9.5px] font-black text-emerald-500 mt-0.5">Br {p.weekly_price}</div>
+                          </div>
+                        ) : (
+                          <div className="bg-slate-50 dark:bg-slate-800/40 p-1.5 rounded-xl border opacity-50">
+                            <div className="text-[6.5px] text-slate-400 uppercase font-black">Weekly</div>
+                            <div className="text-[9.5px] text-slate-400 mt-0.5">-</div>
+                          </div>
+                        )}
+                        {biweeklyVal ? (
+                          <div className="bg-slate-50 dark:bg-slate-800/40 p-1.5 rounded-xl border border-indigo-500/25">
+                            <div className="text-[6.5px] text-indigo-500 uppercase font-black">Bi-weekly</div>
+                            <div className="text-[9.5px] font-black text-indigo-500 mt-0.5">Br {biweeklyVal}</div>
+                          </div>
+                        ) : (
+                          <div className="bg-slate-50 dark:bg-slate-800/40 p-1.5 rounded-xl border opacity-50">
+                            <div className="text-[6.5px] text-slate-400 uppercase font-black">Bi-weekly</div>
+                            <div className="text-[9.5px] text-slate-400 mt-0.5">-</div>
+                          </div>
+                        )}
+                        {p.monthly_price ? (
+                          <div className="bg-slate-50 dark:bg-slate-800/40 p-1.5 rounded-xl border">
+                            <div className="text-[6.5px] text-slate-400 uppercase font-black">Monthly</div>
+                            <div className="text-[9.5px] font-black text-emerald-500 mt-0.5">Br {p.monthly_price}</div>
+                          </div>
+                        ) : (
+                          <div className="bg-slate-50 dark:bg-slate-800/40 p-1.5 rounded-xl border opacity-50">
+                            <div className="text-[6.5px] text-slate-400 uppercase font-black">Monthly</div>
+                            <div className="text-[9.5px] text-slate-400 mt-0.5">-</div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 border-t border-slate-100 dark:border-slate-800/80 pt-3 mt-4">
+                      <button 
+                        onClick={() => deletePlan(p.id)}
+                        className="flex-1 py-2 border border-red-200 hover:bg-red-50 text-red-500 dark:text-red-400 rounded-xl text-[9px] font-bold shadow-sm transition-all cursor-pointer"
+                      >
+                        🗑️ Delete Plan
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
       ) : (
-        <div className="grid sm:grid-cols-2 gap-3.5">
-          {plans.map((p: any) => {
-            // Retrieve biweekly price tag if present
-            const biweeklyTag = p.tags?.find?.((t: string) => t.startsWith?.('biweeklyPrice:'));
-            const biweeklyVal = biweeklyTag ? biweeklyTag.split(':')[1] : '';
-            return (
-              <div key={p.id} className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm flex flex-col justify-between">
-                <div>
-                  <div className="flex justify-between items-start">
-                    <div className="flex gap-2.5 items-center">
-                      <span className="text-2xl p-2 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border">{p.emoji || '📦'}</span>
-                      <div>
-                        <h3 className="text-xs font-black text-slate-800 dark:text-slate-100">{p.name}</h3>
-                        {p.name_amharic && <p className="text-[10px] text-slate-400 mt-0.5">{p.name_amharic}</p>}
-                      </div>
-                    </div>
-                    <span className="text-[8px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200/50">Active</span>
-                  </div>
-                  
-                  {/* Custom preview of uploaded photo if available */}
-                  {p.image && (
-                    <div className="mt-3 aspect-[1.8] rounded-2xl overflow-hidden border border-slate-200/80 bg-white">
-                      <img src={p.image} className="w-full h-full object-cover" alt="Plan Cover" />
-                    </div>
-                  )}
-
-                  <p className="text-[9.5px] text-slate-500 dark:text-slate-400 mt-3 leading-relaxed line-clamp-2">{p.description || 'No description provided.'}</p>
-                  
-                  <div className="grid grid-cols-4 gap-1.5 border-t border-slate-100 dark:border-slate-800/80 pt-3 mt-3 text-center">
-                    {p.daily_price ? (
-                      <div className="bg-slate-50 dark:bg-slate-800/40 p-1.5 rounded-xl border">
-                        <div className="text-[6.5px] text-slate-400 uppercase font-black font-sans">Daily</div>
-                        <div className="text-[9.5px] font-black text-emerald-500 mt-0.5">Br {p.daily_price}</div>
-                      </div>
-                    ) : (
-                      <div className="bg-slate-50 dark:bg-slate-800/40 p-1.5 rounded-xl border opacity-50">
-                        <div className="text-[6.5px] text-slate-400 uppercase font-black">Daily</div>
-                        <div className="text-[9.5px] text-slate-400 mt-0.5">-</div>
-                      </div>
-                    )}
-                    {p.weekly_price ? (
-                      <div className="bg-slate-50 dark:bg-slate-800/40 p-1.5 rounded-xl border">
-                        <div className="text-[6.5px] text-slate-400 uppercase font-black">Weekly</div>
-                        <div className="text-[9.5px] font-black text-emerald-500 mt-0.5">Br {p.weekly_price}</div>
-                      </div>
-                    ) : (
-                      <div className="bg-slate-50 dark:bg-slate-800/40 p-1.5 rounded-xl border opacity-50">
-                        <div className="text-[6.5px] text-slate-400 uppercase font-black">Weekly</div>
-                        <div className="text-[9.5px] text-slate-400 mt-0.5">-</div>
-                      </div>
-                    )}
-                    {biweeklyVal ? (
-                      <div className="bg-slate-50 dark:bg-slate-800/40 p-1.5 rounded-xl border border-indigo-500/25">
-                        <div className="text-[6.5px] text-indigo-500 uppercase font-black">Bi-weekly</div>
-                        <div className="text-[9.5px] font-black text-indigo-500 mt-0.5">Br {biweeklyVal}</div>
-                      </div>
-                    ) : (
-                      <div className="bg-slate-50 dark:bg-slate-800/40 p-1.5 rounded-xl border opacity-50">
-                        <div className="text-[6.5px] text-slate-400 uppercase font-black">Bi-weekly</div>
-                        <div className="text-[9.5px] text-slate-400 mt-0.5">-</div>
-                      </div>
-                    )}
-                    {p.monthly_price ? (
-                      <div className="bg-slate-50 dark:bg-slate-800/40 p-1.5 rounded-xl border">
-                        <div className="text-[6.5px] text-slate-400 uppercase font-black">Monthly</div>
-                        <div className="text-[9.5px] font-black text-emerald-500 mt-0.5">Br {p.monthly_price}</div>
-                      </div>
-                    ) : (
-                      <div className="bg-slate-50 dark:bg-slate-800/40 p-1.5 rounded-xl border opacity-50">
-                        <div className="text-[6.5px] text-slate-400 uppercase font-black">Monthly</div>
-                        <div className="text-[9.5px] text-slate-400 mt-0.5">-</div>
-                      </div>
-                    )}
-                  </div>
+        <div className="space-y-4 animate-scaleIn text-left">
+          {/* Active Subscription Status Card */}
+          <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/20 rounded-3xl p-5 border border-slate-800/60 shadow-xl relative overflow-hidden text-white">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl" />
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider">Vendor Platform Account</span>
+                <h3 className="text-xl font-black mt-1 flex items-center gap-1.5">
+                  {membership.plan === 'Platinum' ? '💎' : membership.plan === 'Gold' ? '🥇' : membership.plan === 'Silver' ? '🥈' : '🥉'}
+                  {membership.plan} Plan
+                </h3>
+                <div className="text-[10px] text-slate-400 mt-1 flex items-center gap-2">
+                  <span>Status: <strong className="text-emerald-400 capitalize">{membership.status}</strong></span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  <span>Cycle: <strong>{membership.billingCycle}</strong></span>
                 </div>
-
-              <div className="flex gap-2 border-t border-slate-100 dark:border-slate-800/80 pt-3 mt-4">
-                <button 
-                  onClick={() => deletePlan(p.id)}
-                  className="flex-1 py-2 border border-red-200 hover:bg-red-50 text-red-500 dark:text-red-400 rounded-xl text-[9px] font-bold shadow-sm transition-all"
-                >
-                  🗑️ Delete Plan
-                </button>
+              </div>
+              <div className="text-right">
+                <div className="text-sm font-black text-emerald-400">Br {membership.cost} / mo</div>
+                {membership.plan !== 'Bronze' && (
+                  <button 
+                    onClick={handleCancelMembership}
+                    className="mt-2 text-[9px] text-rose-400 hover:text-rose-500 font-bold underline bg-transparent border-none outline-none cursor-pointer"
+                  >
+                    Downgrade Plan
+                  </button>
+                )}
               </div>
             </div>
-            );
-          })}
+
+            {/* Dynamic Billing Progress bar */}
+            <div className="mt-5 border-t border-slate-800/80 pt-4 space-y-2">
+              <div className="flex justify-between items-center text-[10px]">
+                <span className="font-semibold text-slate-300">📅 Monthly Cycle Progress</span>
+                <span className="font-bold text-slate-100">{daysLeft} days left</span>
+              </div>
+              <div className="h-2 bg-slate-800 rounded-full overflow-hidden relative">
+                <div 
+                  className="h-full bg-gradient-to-r from-emerald-500 to-green-400 rounded-full" 
+                  style={{ width: `${billingProgress}%` }} 
+                />
+              </div>
+              <div className="flex justify-between text-[8px] text-slate-500">
+                <span>Started: {new Date(membership.startedAt).toLocaleDateString()}</span>
+                <span>Expires: {new Date(membership.expiresAt).toLocaleDateString()}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Plan Comparison Grid */}
+          <div className="space-y-3">
+            <div>
+              <h3 className="text-sm font-black text-slate-800 dark:text-slate-100">✨ Select Tiered Premium Plan</h3>
+              <p className="text-[10px] text-slate-500">Upgrade to unlock super low platform fees and raise listing limits.</p>
+            </div>
+            
+            <div className="grid sm:grid-cols-2 gap-3.5">
+              {PLATFORM_PLANS.map((plan) => {
+                const isActive = membership.plan === plan.name;
+                return (
+                  <div 
+                    key={plan.name} 
+                    className={cn(
+                      'bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-sm border flex flex-col justify-between transition-all duration-300 relative overflow-hidden',
+                      isActive ? 'border-emerald-500 dark:border-emerald-500 ring-2 ring-emerald-500/20' : 'border-slate-200 dark:border-slate-800'
+                    )}
+                  >
+                    {isActive && (
+                      <span className="absolute top-0 right-0 bg-emerald-500 text-white text-[8px] font-black uppercase tracking-wider px-3.5 py-1 rounded-bl-2xl">
+                        Active
+                      </span>
+                    )}
+
+                    <div className="space-y-4">
+                      <div className="flex gap-2.5 items-center">
+                        <span className="text-2xl p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border">{plan.emoji}</span>
+                        <div>
+                          <h4 className="text-xs font-black text-slate-800 dark:text-slate-100">{plan.name} Plan</h4>
+                          <span className="text-[10px] font-bold text-emerald-600">{plan.fee}% Platform Fee</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-baseline gap-1 bg-slate-50 dark:bg-slate-800/40 p-3 rounded-2xl border border-slate-100 dark:border-slate-800">
+                        <span className="text-xl font-black text-slate-800 dark:text-white">Br {plan.cost.toLocaleString()}</span>
+                        <span className="text-[10px] text-slate-400">/ month</span>
+                      </div>
+
+                      {/* Features Bullet List */}
+                      <ul className="space-y-2 text-[9.5px] text-slate-500 dark:text-slate-400 font-medium">
+                        {plan.features.map((feature, idx) => (
+                          <li key={idx} className="flex items-start gap-1.5 leading-normal">
+                            <span className="text-emerald-500 font-extrabold flex-shrink-0 mt-0.5">✓</span>
+                            <span>{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="pt-5 border-t border-slate-100 dark:border-slate-800/80 mt-5">
+                      {isActive ? (
+                        <button 
+                          disabled 
+                          className="w-full py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-400 rounded-xl text-xs font-bold"
+                        >
+                          Current Active Plan
+                        </button>
+                      ) : (
+                        <button 
+                          onClick={() => setShowUpgradeModal(plan.name)}
+                          className={cn(
+                            'w-full py-2.5 rounded-xl text-xs font-bold transition-all shadow hover:shadow-md active:scale-95 text-white bg-gradient-to-r cursor-pointer',
+                            plan.name === 'Platinum' ? 'from-indigo-600 to-purple-600' :
+                            plan.name === 'Gold' ? 'from-yellow-500 to-amber-600' :
+                            plan.name === 'Silver' ? 'from-slate-500 to-slate-600' :
+                            'from-emerald-500 to-green-600'
+                          )}
+                        >
+                          {plan.cost === 0 ? 'Downgrade to Bronze' : `Subscribe to ${plan.name}`}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
 
@@ -2086,7 +2405,7 @@ function VendorSubscriptionsView() {
                 </div>
               </div>
 
-              {/* Cover Image Upload (Paste URL or local upload!) */}
+              {/* Cover Image Upload */}
               <div className="grid grid-cols-2 gap-2.5">
                 <div>
                   <label className="text-[8px] text-slate-400 font-extrabold uppercase block mb-1">Image URL</label>
@@ -2101,7 +2420,6 @@ function VendorSubscriptionsView() {
                       const reader = new FileReader();
                       reader.onloadend = async () => {
                         const base64 = reader.result as string;
-                        // Compress the base64 image to keep it optimized!
                         const compressed = await compressImage(base64, 600);
                         setImage(compressed);
                         toast('✅ Photo uploaded and ready!', 'success');
@@ -2161,6 +2479,101 @@ function VendorSubscriptionsView() {
               >
                 Yes, Delete
               </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Platform Subscription Billing & Upgrade Modal */}
+      {showUpgradeModal && createPortal(
+        <div className="fixed inset-0 z-[140] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fadeIn" onClick={() => setShowUpgradeModal(null)}>
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 w-full max-w-sm shadow-2xl relative animate-scaleIn text-left animate-slideUp" onClick={e => e.stopPropagation()}>
+            <button className="absolute right-4 top-4 w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-slate-400 hover:text-slate-600 text-sm hover:scale-110 active:scale-95 transition-all" onClick={() => setShowUpgradeModal(null)}>✕</button>
+            
+            <div className="text-center mb-5 border-b border-slate-100 dark:border-slate-800/85 pb-3">
+              <span className="text-[9px] bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 px-3 py-1 rounded-full font-black uppercase tracking-wider">Platform Upgrade</span>
+              <h3 className="text-sm font-black mt-2 text-slate-900 dark:text-white">Subscribe to {showUpgradeModal}</h3>
+              <p className="text-[10px] text-slate-500 mt-1">Upgrade your vendor account to enjoy reduced platform sales commission.</p>
+            </div>
+
+            <div className="space-y-4">
+              {/* Cost display */}
+              <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border dark:border-slate-800 text-center">
+                <span className="text-[9px] text-slate-400 font-extrabold uppercase">Monthly Cost</span>
+                <div className="text-2xl font-black text-indigo-600 mt-0.5">
+                  Br {showUpgradeModal === 'Silver' ? '500' : showUpgradeModal === 'Gold' ? '1,200' : '2,500'}
+                </div>
+                <span className="text-[8px] text-slate-500 block mt-1">Billed automatically every 30 days cycle</span>
+              </div>
+
+              {/* Payment Option Selector */}
+              <div className="space-y-1.5">
+                <label className="text-[8px] text-slate-400 font-extrabold uppercase block mb-1">Select Payment Gateway</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: 'Telebirr' as const, label: 'Telebirr', icon: '📱' },
+                    { id: 'Chapa' as const, label: 'Chapa', icon: '💳' },
+                    { id: 'CBE' as const, label: 'CBE Bank', icon: '🏦' }
+                  ].map(opt => (
+                    <button 
+                      key={opt.id}
+                      onClick={() => setUpgradePaymentMethod(opt.id)}
+                      className={cn(
+                        'p-2 rounded-xl text-[10px] font-black flex flex-col items-center gap-1.5 border transition-all active:scale-95 cursor-pointer',
+                        upgradePaymentMethod === opt.id 
+                          ? 'border-indigo-500 bg-indigo-50/40 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400' 
+                          : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 text-slate-500 dark:text-slate-400'
+                      )}
+                    >
+                      <span className="text-lg">{opt.icon}</span>
+                      <span>{opt.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* CBE manual account display */}
+              {upgradePaymentMethod === 'CBE' && (
+                <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30 rounded-2xl p-3.5 space-y-2 text-[9.5px] leading-relaxed text-blue-700 dark:text-blue-400 animate-scaleIn">
+                  <div className="font-bold flex items-center gap-1">🏦 Bank Account details (CBE):</div>
+                  <div>Account: <strong>1000283748293</strong></div>
+                  <div>Name: <strong>Smart Shop Ethiopia</strong></div>
+                  <div className="text-[8.5px] text-slate-400 dark:text-slate-500">Please transfer the cost above, and enter your 10-digit transaction reference number below:</div>
+                  <input 
+                    type="text"
+                    placeholder="e.g. FT26210A88"
+                    value={cbeReference}
+                    onChange={e => setCbeReference(e.target.value.toUpperCase())}
+                    className="w-full p-2.5 border border-blue-200 dark:border-blue-900/50 rounded-xl text-xs bg-white dark:bg-slate-950 text-slate-800 dark:text-white outline-none font-bold"
+                  />
+                </div>
+              )}
+
+              {/* Action buttons */}
+              <div className="flex gap-2 border-t border-slate-100 dark:border-slate-850 pt-4 mt-2">
+                <button 
+                  onClick={() => setShowUpgradeModal(null)}
+                  className="flex-1 py-3 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => handleUpgrade(showUpgradeModal)}
+                  disabled={upgrading || (upgradePaymentMethod === 'CBE' && !cbeReference.trim())}
+                  className="flex-1 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-1 disabled:opacity-50 cursor-pointer"
+                >
+                  {upgrading ? (
+                    <>
+                      <Loader size={12} className="animate-spin animate-pulse" /> Upgrading...
+                    </>
+                  ) : (
+                    <>
+                      💸 Pay & Subscribe
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>,
