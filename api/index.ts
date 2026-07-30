@@ -1113,25 +1113,6 @@ export default async function handler(req: any, res: any) {
     }
 
     // ── BANK ACCOUNTS ENDPOINTS (Dynamic Database Sync) ─────────
-    if (path === '/api/config-check' && method === 'GET') {
-      const mask = (s: string) => s ? s.substring(0, 4) + '...' + s.substring(s.length - 4) : 'undefined';
-      let dbSettings = {};
-      try {
-        const { data } = await supabase.from('settings').select('*').single();
-        dbSettings = data || {};
-      } catch (err: any) {
-        dbSettings = { error: err.message };
-      }
-      return ok({
-        SUPABASE_URL: ENV.SUPABASE_URL,
-        ADMIN_BOT_TOKEN: mask(ENV.ADMIN_BOT_TOKEN),
-        VENDOR_BOT_TOKEN: mask(ENV.VENDOR_BOT_TOKEN),
-        ADMIN_CHAT_ID: ENV.adminChatId,
-        CHAPA_SECRET_KEY: mask(ENV.CHAPA_SECRET_KEY),
-        DB_SETTINGS: dbSettings,
-        ENV_KEYS: Object.keys(process.env)
-      });
-    }
     if (path.startsWith('/api/bank-accounts')) {
       if (path === '/api/bank-accounts/bulk' && method === 'POST') {
         const b = req.body || {};
