@@ -101,10 +101,26 @@ async function createDeliveryForOrder(on: string, lat?: number, lng?: number) {
     const { data: existingDel } = await supabase.from('deliveries').select('id').eq('order_number', on).maybeSingle();
 
     const { data: ord } = await supabase.from('orders').select('*').eq('order_number', on).maybeSingle();
-    if (!ord) return;
+    if (!ord) {
+      console.warn(`[DELIVERY] Order #${on} not found in database.`);
+      return;
+    }
 
-    const itemCount = ord.items?.reduce((acc: number, it: any) => acc + (it.quantity || 1), 0) || 0;
-    const fee = ord.delivery || 0;
+    // Defensive parsing of items if stored as JSON string
+    let items = ord.items || [];
+    if (typeof items === 'string') {
+      try {
+        items = JSON.parse(items);
+      } catch {
+        items = [];
+      }
+    }
+    if (!Array.isArray(items)) {
+      items = [];
+    }
+
+    const itemCount = items.reduce((acc: number, it: any) => acc + (it.quantity || it.qty || 1), 0);
+    const fee = Number(ord.delivery || ord.delivery_fee || 0);
     const customerTelegramId = ord.telegram_id || ord.telegramId || ord.customer?.telegram_id || ord.customer?.telegramId || null;
     
     let delCommRate = 0.20;
@@ -116,14 +132,15 @@ async function createDeliveryForOrder(on: string, lat?: number, lng?: number) {
     } catch {}
 
     const commission = Math.round(fee * delCommRate);
-    const payout = fee - commission;
+    const payout = Math.max(80, fee - commission); // Ensure a base payout of at least 80 Birr for drivers!
 
     let finalPickupLat = lat || null;
     let finalPickupLng = lng || null;
 
+    const firstItem = items[0] || null;
+    const firstVendorId = firstItem?.vendorId || firstItem?.vendor_id || null;
+
     if (!finalPickupLat) {
-      const items = ord.items || [];
-      const firstVendorId = items[0]?.vendorId || null;
       if (firstVendorId) {
         const vendors = await getV();
         const vendorProfile = vendors.find((v: any) => v.id == firstVendorId || v.id === String(firstVendorId));
@@ -171,7 +188,7 @@ async function createDeliveryForOrder(on: string, lat?: number, lng?: number) {
       distance_km: 3.5,
       platform_commission: commission,
       driver_payout: payout,
-      pickup_address: ord.items?.[0]?.vendorName || 'Smart Shop Warehouse',
+      pickup_address: firstItem?.vendorName || firstItem?.vendor_name || 'Smart Shop Warehouse',
       delivery_address: ord.customer?.address || 'Addis Ababa',
       customer_telegram_id: customerTelegramId,
       pickup_lat: finalPickupLat,
