@@ -203,6 +203,13 @@ export default function Checkout() {
    } catch {}
  }
 
+ // Increment mystery boxes count on checkout success (Platform Loyalty Integration)
+ try {
+   const boxesPerPurchase = settings?.gameSettings?.boxesPerPurchase || 1;
+   const currentBoxes = parseInt(localStorage.getItem('ss_game_boxes') || '0');
+   localStorage.setItem('ss_game_boxes', String(currentBoxes + boxesPerPurchase));
+ } catch {}
+
  const fulfillment = createFulfillment({ orderNumber: orderNum, items: order.items, total: order.total, customer: order.customer, createdAt: order.createdAt, status: order.status });
  upsertFulfillment(fulfillment);
  addOrder(order);

@@ -91,15 +91,17 @@ export function SpinWheel({ onWin, segments: customSegments, adminSettings }: Sp
       totalSpins: (sData.totalSpins || 0) + 1,
     }));
 
-    // 1. Calculate weighted index based on reward sizes (Platform Protection!)
+    // Calculate weighted index based on reward sizes (Platform Protection!)
     const target = getWeightedTargetIndex(segments);
     const result = segments[target];
 
     const segAngle = 360 / segments.length;
-    const fullSpins = (3 + Math.floor(Math.random() * 3)) * 360;
+    // Increase rotational multiplier to make spin elegant over 16 seconds
+    const fullSpins = (15 + Math.floor(Math.random() * 5)) * 360;
     const finalAngle = fullSpins + (360 - target * segAngle - segAngle / 2);
     setRotation(prev => prev + finalAngle);
 
+    // THRILLING SUSPENSE: 16-second spin timeout!
     setTimeout(() => {
       setSpinning(false);
       setAvailable(false);
@@ -133,7 +135,7 @@ export function SpinWheel({ onWin, segments: customSegments, adminSettings }: Sp
       }
       
       onWin(prizeLabel, parsed.value);
-    }, 2500);
+    }, 16000); // 16-second gradual slowdown
   }, [available, spinning, onWin, segments]);
 
   useEffect(() => { setAvailable(canSpin()); }, []);
@@ -147,10 +149,14 @@ export function SpinWheel({ onWin, segments: customSegments, adminSettings }: Sp
     <div className="flex flex-col items-center gap-4 py-4">
       <div className="relative w-64 h-64">
         <div className="absolute inset-0 rounded-full border-[0.5px] border-primary/5" />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 z-10">
+        
+        {/* NO GAP POINTER REALIGNMENT: shifted translate-y downwards */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 translate-y-1.5 z-10">
           <div className="w-0 h-0 border-l-[12px] border-r-[12px] border-t-[20px] border-l-transparent border-r-transparent border-t-primary drop-shadow-lg" />
         </div>
-        <svg viewBox="0 0 200 200" className="w-full h-full transition-transform duration-[2500ms] ease-out"
+
+        {/* Dynamic transition-transform sets 16-second ease-out curve */}
+        <svg viewBox="0 0 200 200" className="w-full h-full transition-transform duration-[16000ms] cubic-bezier(0.1, 0.8, 0.2, 1)"
           style={{ transform: `rotate(${rotation}deg)` }}>
           {segments.map((seg, i) => {
             const angle = (360 / segments.length) * i;
@@ -171,6 +177,9 @@ export function SpinWheel({ onWin, segments: customSegments, adminSettings }: Sp
             let rotateAngle = 0;
             if (orientation === 'radial') {
               rotateAngle = angle + (360 / segments.length / 2);
+            } else if (orientation === 'to-center') {
+              // Points directly inward toward the center
+              rotateAngle = angle + (360 / segments.length / 2) + 90;
             } else if (orientation === 'vertical') {
               rotateAngle = 90;
             } else {
@@ -232,15 +241,55 @@ export function MysteryBox({ onOpen, boxes = 0, adminSettings }: { onOpen: (priz
     setOpening(true);
 
     setTimeout(() => {
-      const prize = openMysteryBox();
-      setResult(prize);
+      // Risk Protection: Highly weighted mystery box odds (Low chance for big wins)
+      const prizes = [
+        { prize: '10 Loyalty Points', value: 10, emoji: '🏆' },
+        { prize: '25 Loyalty Points', value: 25, emoji: '⭐' },
+        { prize: 'Br 20 Coupon', value: 20, emoji: '🎁' },
+        { prize: 'Br 50 Coupon', value: 50, emoji: '💰' },
+        { prize: 'Br 100 Off', value: 100, emoji: '💎' },
+        { prize: 'Br 500 Mega Off', value: 500, emoji: '🎊' },
+      ];
+      
+      const maxBoxPrize = adminSettings?.maxBoxPrize || 1000;
+      const filteredPrizes = prizes.filter(p => p.value <= maxBoxPrize);
+
+      const weights = [45, 30, 15, 8, 1.8, 0.2].slice(0, filteredPrizes.length);
+      const totalWeight = weights.reduce((a, b) => a + b, 0);
+      let rand = Math.random() * totalWeight;
+
+      let chosenPrize = filteredPrizes[0];
+      for (let i = 0; i < filteredPrizes.length; i++) {
+        rand -= weights[i];
+        if (rand <= 0) {
+          chosenPrize = filteredPrizes[i];
+          break;
+        }
+      }
+
+      setResult(chosenPrize);
       setShowResult(true);
       setOpening(false);
-      if (prize.value > 0) {
-        onOpen(prize.prize, prize.value);
-        toast(`🎉 Mystery Box: ${prize.emoji} ${prize.prize}!`, 'success');
+      
+      if (chosenPrize.value > 0) {
+        onOpen(chosenPrize.prize, chosenPrize.value);
+        
+        // Save coupon codes for checkout if it's a discount
+        if (chosenPrize.prize.includes('Coupon') || chosenPrize.prize.includes('Off')) {
+          const codes = JSON.parse(localStorage.getItem('ss_game_coupons') || '[]');
+          codes.push({
+            code: 'BOX-' + Date.now().toString(36).toUpperCase(),
+            discount: chosenPrize.value,
+            source: 'mystery_box',
+            claimed: false,
+            expiresAt: Date.now() + 7 * 86400000,
+          });
+          localStorage.setItem('ss_game_coupons', JSON.stringify(codes));
+        }
+        
+        toast(`🎉 Mystery Box: ${chosenPrize.emoji} ${chosenPrize.prize}!`, 'success');
       } else {
-        toast(prize.prize, 'info');
+        toast(chosenPrize.prize, 'info');
       }
     }, 1500);
   };

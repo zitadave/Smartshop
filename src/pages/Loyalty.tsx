@@ -24,7 +24,7 @@ export default function Loyalty() {
   const [streakClaimed, setStreakClaimed] = useState(getStreak().claimed);
   const [showConversion, setShowConversion] = useState(false);
   const [convertAmount, setConvertAmount] = useState(100);
-  const [mysteryBoxes, setMysteryBoxes] = useState(3);
+  const [mysteryBoxes, setMysteryBoxes] = useState(0);
   
   // Custom coupons state
   const [myCoupons, setMyCoupons] = useState<any[]>([]);
@@ -33,6 +33,9 @@ export default function Loyalty() {
     try {
       const c = JSON.parse(localStorage.getItem('ss_game_coupons') || '[]');
       setMyCoupons(c);
+      
+      const bCount = parseInt(localStorage.getItem('ss_game_boxes') || '0');
+      setMysteryBoxes(bCount);
     } catch {}
   }, []);
 
@@ -58,9 +61,19 @@ export default function Loyalty() {
   };
 
   const handleMysteryWin = (prize: string, value: number) => {
-    const newPts = loyaltyPoints + value;
-    localStorage.setItem('ss_loyalty', String(newPts));
-    useStore.setState({ loyaltyPoints: newPts });
+    const isPoints = prize.includes('Points') || prize.includes('Pts');
+    if (isPoints) {
+      const newPts = loyaltyPoints + value;
+      localStorage.setItem('ss_loyalty', String(newPts));
+      useStore.setState({ loyaltyPoints: newPts });
+    }
+    setMysteryBoxes(prev => {
+      const updated = Math.max(0, prev - 1);
+      localStorage.setItem('ss_game_boxes', String(updated));
+      return updated;
+    });
+    // Reload local coupons
+    try { setMyCoupons(JSON.parse(localStorage.getItem('ss_game_coupons') || '[]')); } catch {}
   };
 
   const handleClaimStreak = () => {
