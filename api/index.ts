@@ -1578,9 +1578,34 @@ export default async function handler(req: any, res: any) {
       const from = sb.message?.from || {};
 
       // Deep links
-      if (st.startsWith('/start ') || st.startsWith('/driver')) {
+      if (st.startsWith('/start ') || st.startsWith('/driver') || st === '/driver') {
         const param = st.includes(' ') ? st.split(' ')[1] : '';
-        if (st.startsWith('/driver') || param.startsWith('driver')) {
+        if (st.startsWith('/driver') || param.startsWith('driver') || st === '/driver') {
+          // Check driver status first
+          let driverRecord = null;
+          try {
+            const { data } = await supabase.from('delivery_personnel').select('*').eq('telegram_id', from.id || 0).maybeSingle();
+            driverRecord = data;
+          } catch {}
+
+          if (driverRecord && driverRecord.status === 'approved') {
+            await sd(`🏍️ *Smart Express Driver Dashboard*\n\nWelcome back, *${driverRecord.full_name_latin}*!\n\nTap below to open your Driver Dashboard, view active runs, and accept jobs:`, {
+              inline_keyboard: [[{ text: '🏍️ Open Driver Dashboard', web_app: { url: ENV.BASE_URL + '/driver?tg_id=' + (from.id || '') + '&v=' + Date.now() } }]]
+            });
+            return ok({ ok: true });
+          } else if (driverRecord && (driverRecord.status === 'pending_review' || driverRecord.status === 'pending_fayda')) {
+            await sd(`⏳ *Driver Application Under Review*\n\nHi *${driverRecord.full_name_latin}*! Your independent driver application is currently under review by our admin team.\n\nWe will notify you here once confirmed!`, {
+              inline_keyboard: [[{ text: '🔄 Check Application Status', web_app: { url: ENV.BASE_URL + '/driver?tg_id=' + (from.id || '') + '&v=' + Date.now() } }]]
+            });
+            return ok({ ok: true });
+          } else if (driverRecord && driverRecord.status === 'rejected') {
+            await sd(`❌ *Driver Application Rejected*\n\nYour application was rejected for the following reason:\n\n_"${driverRecord.rejection_reason || 'Does not meet safety criteria'}"_\n\nTap below to adjust details and reapply:`, {
+              inline_keyboard: [[{ text: '✏️ Edit & Re-apply', web_app: { url: ENV.BASE_URL + '/driver-register?tg_id=' + (from.id || '') + '&v=' + Date.now() } }]]
+            });
+            return ok({ ok: true });
+          }
+
+          // Fallback to normal registration
           await sd('🚚 *Driver Registration*\n\n📸 Fayda ID, 🏍 Vehicle, 👨 Emergency, 💳 Payment', { inline_keyboard: [[{ text: '🚀 Register Now', web_app: { url: ENV.BASE_URL + '/driver-register?tg_id=' + (from.id || '') + '&v=' + Date.now() } }]] });
           return ok({ ok: true });
         }
@@ -1598,10 +1623,6 @@ export default async function handler(req: any, res: any) {
       // Commands (work even without fresh contact)
       if (st === '/shop' || st === '/shop now') {
         await sd('🛍️ *Smart Shop*\n\nTap *👇 /shop now* to start shopping!', { inline_keyboard: [[{ text: '🛍️ /shop now', web_app: { url: ENV.BASE_URL + '?tg_id=' + (from.id || '') + '&v=' + Date.now() } }]] });
-        return ok({ ok: true });
-      }
-      if (st === '/driver') {
-        await sd('🚚 *Driver Registration*', { inline_keyboard: [[{ text: '🚀 Register', web_app: { url: ENV.BASE_URL + '/driver-register?tg_id=' + (from.id || '') + '&v=' + Date.now() } }]] });
         return ok({ ok: true });
       }
       if (st === '/vendor') {
@@ -1647,12 +1668,26 @@ export default async function handler(req: any, res: any) {
 
         const shopUrl = ENV.BASE_URL + '?tg_id=' + encodeURIComponent(uid) + '&phone=' + encodeURIComponent(ph) + '&name=' + encodeURIComponent(fn) + (un ? '&username=' + encodeURIComponent(un) : '') + '&v=' + Date.now();
 
+        let driverRecord = null;
+        try {
+          const { data } = await supabase.from('delivery_personnel').select('*').eq('telegram_id', parseInt(uid)).maybeSingle();
+          driverRecord = data;
+        } catch {}
+
+        const driverUrl = driverRecord && driverRecord.status === 'approved'
+          ? ENV.BASE_URL + '/driver?tg_id=' + uid + '&v=' + Date.now()
+          : ENV.BASE_URL + '/driver-register?tg_id=' + uid + '&v=' + Date.now();
+
+        const driverText = driverRecord && driverRecord.status === 'approved'
+          ? '🏍️ Smart Express'
+          : '🚚 /driver';
+
         fetchTO('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/setChatMenuButton', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: sc, menu_button: { type: 'default' } }) }).catch(() => {});
 
         await sd('✅ *Welcome to Smart Shop!* 🇪🇹\n\n👇 *Choose a command:*', {
           inline_keyboard: [
             [{ text: '🛍️ /shop now', web_app: { url: shopUrl } }],
-            [{ text: '🚚 /driver', web_app: { url: ENV.BASE_URL + '/driver-register?tg_id=' + uid + '&v=' + Date.now() } }],
+            [{ text: driverText, web_app: { url: driverUrl } }],
             [{ text: '🏪 /vendor', web_app: { url: ENV.BASE_URL + '/vendor-register?tg_id=' + uid + '&v=' + Date.now() } }],
             [{ text: '📞 /contact', callback_data: 'contact' }],
             [{ text: '❓ /help', callback_data: 'help' }],
