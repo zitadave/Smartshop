@@ -42,7 +42,7 @@ export default function Checkout() {
 
  const [name, setName] = useState(profile.name || '');
  const [phone, setPhone] = useState(profile.phone || '');
- const [city, setCity] = useState('');
+ const [city, setCity] = useState('Addis Ababa');
  const [address, setAddress] = useState('');
  const [locationDetected, setLocationDetected] = useState(false);
  const [detectedAddress, setDetectedAddress] = useState('');
@@ -338,18 +338,6 @@ export default function Checkout() {
  <div className="space-y-2.5">
  <input className="w-full p-2.5 border border-border rounded-xl text-xs bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30" placeholder="Full Name *" value={name} onChange={e => setName(e.target.value)} />
  <input className="w-full p-2.5 border border-border rounded-xl text-xs bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30" placeholder="Phone Number *" value={phone} onChange={e => setPhone(e.target.value)} />
- 
- <select className="w-full p-2.5 border border-border rounded-xl text-xs bg-transparent text-foreground focus:outline-none focus:ring-2 focus:ring-ring/30" value={city} onChange={e => setCity(e.target.value)}>
- <option value="">City *</option>
- <option value="Addis Ababa">Addis Ababa</option>
- <option value="Bahir Dar">Bahir Dar</option>
- <option value="Adama">Adama</option>
- <option value="Hawassa">Hawassa</option>
- <option value="Gondar">Gondar</option>
- <option value="Mekelle">Mekelle</option>
- <option value="Dire Dawa">Dire Dawa</option>
- <option value="Jimma">Jimma</option>
- </select>
 
  {/* GPS Geolocation Auto-Detection Banner (Full Width - Premium UX) */}
  <div className="space-y-2">
