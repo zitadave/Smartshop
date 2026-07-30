@@ -26,6 +26,33 @@ export default function Checkout() {
  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
 
  useEffect(() => {
+   // Check local storage first for instant testing on the same device (admins/testers)
+   try {
+     const local = localStorage.getItem('ss_bank_accounts');
+     if (local) {
+       const parsed = JSON.parse(local);
+       if (parsed && parsed.length > 0) {
+         setBankAccounts(parsed);
+         // Still fetch from API to sync in background
+         fetch('/api/bank-accounts')
+           .then(r => r.json())
+           .then(d => {
+             if (d && d.bank_accounts && d.bank_accounts.length > 0) {
+               const mapped = d.bank_accounts.map((b: any) => ({
+                 name: b.bank_name,
+                 account: b.account_number,
+                 holder: b.account_holder
+               }));
+               setBankAccounts(mapped);
+               localStorage.setItem('ss_bank_accounts', JSON.stringify(mapped));
+             }
+           }).catch(() => {});
+         return;
+       }
+     }
+   } catch {}
+
+   // Otherwise fetch from database
    fetch('/api/bank-accounts')
      .then(r => r.json())
      .then(d => {
