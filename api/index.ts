@@ -192,11 +192,21 @@ async function createDeliveryForOrder(on: string, lat?: number, lng?: number) {
     }
     console.log(`[DELIVERY] Created pending delivery record for confirmed order ${on} at pickup: (${finalPickupLat}, ${finalPickupLng})`);
 
-    const { data: onlineDrivers } = await supabase
+    let { data: onlineDrivers } = await supabase
       .from('delivery_personnel')
       .select('*')
       .eq('status', 'approved')
       .eq('is_online', true);
+
+    // Fallback: If no online drivers are found, notify ALL approved drivers to maximize pickup chances!
+    if (!onlineDrivers || onlineDrivers.length === 0) {
+      const { data: allApproved } = await supabase
+        .from('delivery_personnel')
+        .select('*')
+        .eq('status', 'approved');
+      onlineDrivers = allApproved || [];
+      console.log(`[DELIVERY] No online drivers found. Cascading dispatch to ${onlineDrivers?.length || 0} approved partners.`);
+    }
 
     if (onlineDrivers && onlineDrivers.length > 0) {
       for (const d of onlineDrivers) {
