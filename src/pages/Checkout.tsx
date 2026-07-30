@@ -338,8 +338,8 @@ export default function Checkout() {
  <div className="space-y-2.5">
  <input className="w-full p-2.5 border border-border rounded-xl text-xs bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30" placeholder="Full Name *" value={name} onChange={e => setName(e.target.value)} />
  <input className="w-full p-2.5 border border-border rounded-xl text-xs bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30" placeholder="Phone Number *" value={phone} onChange={e => setPhone(e.target.value)} />
- <div className="grid grid-cols-2 gap-2">
- <select className="p-2.5 border border-border rounded-xl text-xs bg-transparent text-foreground focus:outline-none focus:ring-2 focus:ring-ring/30" value={city} onChange={e => setCity(e.target.value)}>
+ 
+ <select className="w-full p-2.5 border border-border rounded-xl text-xs bg-transparent text-foreground focus:outline-none focus:ring-2 focus:ring-ring/30" value={city} onChange={e => setCity(e.target.value)}>
  <option value="">City *</option>
  <option value="Addis Ababa">Addis Ababa</option>
  <option value="Bahir Dar">Bahir Dar</option>
@@ -350,21 +350,23 @@ export default function Checkout() {
  <option value="Dire Dawa">Dire Dawa</option>
  <option value="Jimma">Jimma</option>
  </select>
- <div className="flex flex-col gap-2">
+
+ {/* GPS Geolocation Auto-Detection Banner (Full Width - Premium UX) */}
+ <div className="space-y-2">
  {detectingLocation && (
- <div className="flex items-center gap-2 p-2 bg-muted/40 rounded-xl border border-border/40 text-[10px] text-muted-foreground w-full">
+ <div className="flex items-center gap-2 p-3 bg-muted/40 rounded-xl border border-border/40 text-xs text-muted-foreground">
  <span className="w-3 h-3 border border-t-primary border-r-transparent rounded-full animate-spin flex-shrink-0" />
  <span>Auto-detecting your location via GPS...</span>
  </div>
  )}
  
  {detectedAddress && useDetectedLocation === null && (
- <div className="bg-primary/5 dark:bg-primary/10 border border-primary/20 p-3 rounded-2xl space-y-2.5 animate-scaleIn w-full text-left">
+ <div className="bg-primary/5 dark:bg-primary/10 border border-primary/20 p-3.5 rounded-2xl space-y-2.5 animate-scaleIn text-left">
  <div className="flex gap-2">
- <MapPin size={14} className="text-primary flex-shrink-0 mt-0.5" />
+ <MapPin size={16} className="text-primary flex-shrink-0 mt-0.5" />
  <div>
- <div className="text-[9px] font-extrabold uppercase tracking-wider text-primary">📍 GPS Detected Address</div>
- <p className="text-[11px] text-foreground font-medium mt-1 leading-normal">{detectedAddress}</p>
+ <div className="text-[10px] font-extrabold uppercase tracking-wider text-primary">📍 GPS Detected Address</div>
+ <p className="text-xs text-foreground font-medium mt-1 leading-normal">{detectedAddress}</p>
  </div>
  </div>
  <div className="flex gap-2">
@@ -375,7 +377,7 @@ export default function Checkout() {
  setUseDetectedLocation(true);
  toast('📍 Address set to GPS location!', 'success');
  }}
- className="flex-1 py-1 bg-primary text-primary-foreground rounded-lg text-[9px] font-bold shadow hover:bg-primary/95 transition-all"
+ className="flex-1 py-1.5 bg-primary text-primary-foreground rounded-lg text-[10px] font-bold shadow hover:bg-primary/95 transition-all"
  >
  Yes, Deliver Here
  </button>
@@ -384,7 +386,7 @@ export default function Checkout() {
  onClick={() => {
  setUseDetectedLocation(false);
  }}
- className="px-2.5 py-1 border border-border/80 text-muted-foreground hover:text-foreground rounded-lg text-[9px] font-medium"
+ className="px-3 py-1.5 border border-border/80 text-muted-foreground hover:text-foreground rounded-lg text-[10px] font-medium"
  >
  Enter Manually
  </button>
@@ -393,7 +395,7 @@ export default function Checkout() {
  )}
 
  {useDetectedLocation === true && (
- <div className="flex items-center justify-between p-2.5 bg-emerald-500/10 dark:bg-emerald-950/20 border border-emerald-500/20 rounded-xl text-[10px] text-emerald-600 dark:text-emerald-400 w-full">
+ <div className="flex items-center justify-between p-3 bg-emerald-500/10 dark:bg-emerald-950/20 border border-emerald-500/20 rounded-xl text-xs text-emerald-600 dark:text-emerald-400">
  <span className="flex items-center gap-1.5 font-medium">
  <span>✅ Using dynamic GPS detected location</span>
  </span>
@@ -403,16 +405,17 @@ export default function Checkout() {
  setAddress('');
  setUseDetectedLocation(null);
  }}
- className="text-[8px] uppercase tracking-wider font-extrabold text-primary underline"
+ className="text-[9px] uppercase tracking-wider font-extrabold text-primary underline"
  >
  Change
  </button>
  </div>
  )}
+ </div>
 
  <input 
- className="p-2.5 border border-border rounded-xl text-xs bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30" 
- placeholder="Address" 
+ className="w-full p-2.5 border border-border rounded-xl text-xs bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30" 
+ placeholder="Delivery Address *" 
  value={address} 
  onChange={e => {
  setAddress(e.target.value);
@@ -421,8 +424,6 @@ export default function Checkout() {
  }
  }} 
  />
- </div>
- </div>
  </div>
  </div>
  <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/20 dark:to-purple-950/20 rounded-2xl border border-indigo-200 dark:border-indigo-800/30 p-4 shadow-sm mb-4">
