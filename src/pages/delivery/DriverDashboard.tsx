@@ -156,7 +156,7 @@ export default function DriverDashboard() {
           }
         },
         (err) => console.warn('[GPS] Position query error:', err.message),
-        { enableHighAccuracy: true, timeout: 8000 }
+        { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
       );
     };
 
@@ -240,7 +240,7 @@ export default function DriverDashboard() {
           toast('📍 GPS Permission Required: Please turn on location permissions to go online and receive nearby jobs!', 'error');
           haptic('error');
         },
-        { enableHighAccuracy: true, timeout: 8000 }
+        { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
       );
     } else {
       fetch('/api/delivery/online', {

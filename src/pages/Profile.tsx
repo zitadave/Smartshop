@@ -154,15 +154,9 @@ export default function Profile() {
     engagementItems.push({ icon: '📝', label: 'Become a Vendor', desc: 'Start selling products', onClick: function() { navigate('/vendor-register'); } });
   }
 
-  // Driver Status menu items
+  // Driver Status menu items (Only visible to approved drivers!)
   if (driverStatus === 'approved') {
     engagementItems.push({ icon: '🏍️', label: 'Smart Express', desc: 'Driver dashboard & active jobs', onClick: function() { navigate('/driver'); } });
-  } else if (driverStatus === 'pending_review' || driverStatus === 'pending_fayda') {
-    engagementItems.push({ icon: '⏳', label: 'Express Driver Pending', desc: 'Driver application under review', onClick: function() { toast('Your independent driver application is currently under review.', 'info'); } });
-  } else if (driverStatus === 'rejected') {
-    engagementItems.push({ icon: '❌', label: 'Driver application rejected', desc: 'Tap to see reason / reapply', onClick: function() { navigate('/driver'); } });
-  } else {
-    engagementItems.push({ icon: '🏍️', label: 'Become a Driver', desc: 'Deliver packages & earn weekly', onClick: function() { navigate('/driver-register'); } });
   }
 
   engagementItems.push(
