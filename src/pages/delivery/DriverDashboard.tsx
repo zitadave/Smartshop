@@ -282,7 +282,7 @@ export default function DriverDashboard() {
     }).then(function(r) { return r.json(); }).then(function(d) {
       if (d.success) {
         toast('✅ Milestone assigned! Drive safely.', 'success');
-        setDeliveries(deliveries.filter(function(del) { return del.id !== deliveryId; }));
+        setDeliveries(deliveries.map(function(del) { return del.id === deliveryId ? { ...del, status: 'accepted', driver_id: driverId } : del; }));
         setTab('active');
         fetchDeliveries();
         haptic('success');

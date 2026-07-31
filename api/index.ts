@@ -754,7 +754,7 @@ export default async function handler(req: any, res: any) {
         return ok({ success: true, driver: data });
       }
       if (path === '/api/delivery/available' && method === 'GET') { 
-        const { data, error } = await supabase.from('deliveries').select('*').in('status', ['pending', 'assigned', 'picking_up', 'in_transit']).order('created_at', { ascending: false }); 
+        const { data, error } = await supabase.from('deliveries').select('*').in('status', ['pending', 'assigned', 'accepted', 'at_vendor', 'picked_up', 'in_transit', 'arrived']).order('created_at', { ascending: false }); 
         if (error) return fail(error.message, 500); 
         return ok({ deliveries: data || [] }); 
       }
@@ -764,7 +764,13 @@ export default async function handler(req: any, res: any) {
         const driver_id = b.driver_id || b.driverId || b.id;
         if (!delivery_id || !driver_id) return fail('delivery_id and driver_id required');
         const { data, error } = await supabase.from('deliveries').update({ driver_id, status: 'accepted', assigned_at: new Date().toISOString(), accepted_at: new Date().toISOString() }).eq('id', delivery_id).in('status', ['pending', 'assigned']).select().single();
-        if (error) return fail(error.message || 'Already taken'); return ok({ success: true, delivery: data });
+        if (error) return fail(error.message || 'Already taken');
+        if (data && data.order_number) {
+          try {
+            await supabase.from('orders').update({ status: 'in_transit' }).eq('order_number', data.order_number);
+          } catch {}
+        }
+        return ok({ success: true, delivery: data });
       }
       if (path === '/api/delivery/decline' && method === 'POST') {
         const b = req.body || {};
@@ -1722,7 +1728,7 @@ export default async function handler(req: any, res: any) {
     // ================================================================
     // SEED / COMMISSION / PAYMENT / TAX / VENDOR NOTIFY
     // ================================================================
-    if (path === '/api/seed' && method === 'GET') { const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]); const v = await getV(); return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-07-31-V7000' }); }
+    if (path === '/api/seed' && method === 'GET') { const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]); const v = await getV(); return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-07-31-V8000' }); }
     if (path === '/api/ai/voice-order' && method === 'POST') {
       try {
         const { data: prs } = await supabase.from('products').select('*');
