@@ -345,13 +345,15 @@ async function createDeliveryForOrder(on: string, lat?: number, lng?: number, or
           }
         } catch {}
       }
-      await supabase.from('notifications').insert({
-        telegram_id: customerTelegramId,
-        type: 'delivery',
-        title: '🔐 Delivery Security PIN: ' + upfrontPin,
-        message: `Your security PIN for order #${on} is ${upfrontPin}. Enter this when your courier arrives to release payment.`,
-        icon: '🔐',
-      }).catch(() => {});
+      try {
+        await supabase.from('notifications').insert({
+          telegram_id: customerTelegramId,
+          type: 'delivery',
+          title: '🔐 Delivery Security PIN: ' + upfrontPin,
+          message: `Your security PIN for order #${on} is ${upfrontPin}. Enter this when your courier arrives to release payment.`,
+          icon: '🔐',
+        });
+      } catch {}
     }
 
     if (onlineDrivers && onlineDrivers.length > 0) {
@@ -913,28 +915,32 @@ export default async function handler(req: any, res: any) {
         const dp = data.driver_payout || 0;
         const comm = data.platform_commission || Math.round((data.fee || 0) * 0.2);
         if (data.driver_id) {
-          await supabase.from('driver_earnings').insert({
-            driver_id: data.driver_id,
-            delivery_id: data.id,
-            amount: dp || ((data.fee || 0) - comm),
-            commission: comm,
-            type: 'delivery',
-            status: 'completed',
-          }).catch(() => {});
-          await supabase.rpc('increment_driver_deliveries', { p_driver_id: data.driver_id }).catch(() => {});
+          try {
+            await supabase.from('driver_earnings').insert({
+              driver_id: data.driver_id,
+              delivery_id: data.id,
+              amount: dp || ((data.fee || 0) - comm),
+              commission: comm,
+              type: 'delivery',
+              status: 'completed',
+            });
+            await supabase.rpc('increment_driver_deliveries', { p_driver_id: data.driver_id });
+          } catch {}
         }
 
         // 4. Release Vendor Escrow Payout
         const vendorId = data.vendor_id || 1;
         const vendorNet = Math.max(0, (data.total || 1000) - comm - Math.round((data.total || 1000) * 0.02));
-        await supabase.from('payouts').insert({
-          vendor_id: vendorId,
-          order_number: data.order_number,
-          amount: vendorNet,
-          status: 'cleared',
-          cleared_at: nowIso,
-          note: `Escrow released upon customer PIN verification (${pin})`,
-        }).catch(() => {});
+        try {
+          await supabase.from('payouts').insert({
+            vendor_id: vendorId,
+            order_number: data.order_number,
+            amount: vendorNet,
+            status: 'cleared',
+            cleared_at: nowIso,
+            note: `Escrow released upon customer PIN verification (${pin})`,
+          });
+        } catch {}
 
         // 5. Notify all 3 Stakeholders on Telegram
         const bots = [ENV.BOT_TOKEN, ENV.VENDOR_BOT_TOKEN, ENV.ADMIN_BOT_TOKEN].filter(Boolean);
@@ -1689,7 +1695,7 @@ export default async function handler(req: any, res: any) {
     // ================================================================
     // SEED / COMMISSION / PAYMENT / TAX / VENDOR NOTIFY
     // ================================================================
-    if (path === '/api/seed' && method === 'GET') { const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]); const v = await getV(); return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-07-31-V5000' }); }
+    if (path === '/api/seed' && method === 'GET') { const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]); const v = await getV(); return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-07-31-V6000' }); }
     if (path === '/api/ai/voice-order' && method === 'POST') {
       try {
         const { data: prs } = await supabase.from('products').select('*');
