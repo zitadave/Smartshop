@@ -613,7 +613,6 @@ export default async function handler(req: any, res: any) {
           result = await supabase.from('delivery_personnel').update(payload).eq('id', existingDriver.id).select().single();
         } else {
           result = await supabase.from('delivery_personnel').insert({
-            telegram_id: b.telegram_id || null,
             agreed_to_terms_at: new Date().toISOString(),
             ...payload
           }).select().single();
@@ -1288,7 +1287,7 @@ export default async function handler(req: any, res: any) {
             title: `New Order #${on}`,
             message: `Order #${on} placed for Br ${totalAmount.toLocaleString()} via ${pMethod.toUpperCase()}`,
             icon: '🛍',
-          }).catch(() => {});
+          });
         } catch (err) {}
 
         if (order && (order.status === 'confirmed' || order.status === 'pending' || order.status === 'processing')) { 

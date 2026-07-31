@@ -182,13 +182,13 @@ export default function DriverDashboard() {
             const currentIds = prev.map(function(x) { return x.id; });
             const newJobs = d.deliveries.filter(function(x) { return (x.status === 'pending' || x.status === 'assigned') && !currentIds.includes(x.id); });
             if (newJobs.length > 0) {
-              const assignedToMe = newJobs.find(function(x) { return x.status === 'assigned' && (x.driver_id === driverId || x.driver_id == driverId); });
+              const assignedToMe = newJobs.find(function(x: any) { return x.status === 'assigned' && (x.driver_id === driverId || x.driver_id == driverId); });
               if (assignedToMe) {
                 toast(`⚡ Order #${assignedToMe.order_number} has been AUTOMATICALLY ASSIGNED to you!`, 'success');
                 haptic('success');
               } else {
                 toast(`🔔 New express delivery job available! Order #${newJobs[0].order_number}`, 'info');
-                haptic('warning');
+                haptic('medium');
               }
             }
             return d.deliveries;
