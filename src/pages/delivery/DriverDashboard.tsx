@@ -283,6 +283,29 @@ export default function DriverDashboard() {
     }).catch(function() {});
   }
 
+  function declineDelivery(deliveryId: number) {
+    if (!driverId) return;
+    if (!confirm('Decline this delivery job? We will reassign it immediately to the next closest express partner.')) return;
+    haptic('medium');
+
+    fetch('/api/delivery/decline', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ delivery_id: deliveryId, driver_id: driverId, reason: 'driver_passed' })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      if (d.success) {
+        toast('❌ Job declined & reassigned to next partner.', 'info');
+        setDeliveries(deliveries.filter(function(del) { return del.id !== deliveryId; }));
+        fetchDeliveries();
+        haptic('success');
+      } else {
+        toast('Error declining: ' + (d.error || 'unknown error'), 'error');
+      }
+    }).catch(function() {
+      toast('Connection error', 'error');
+    });
+  }
+
   function triggerStatusUpdate(deliveryId: number, status: string) {
     haptic('light');
     fetch('/api/delivery/status', {
@@ -713,12 +736,21 @@ export default function DriverDashboard() {
                           <span>📐 distance: <strong>{del.distance_km || '?'} km</strong></span>
                           {del.cod_amount > 0 && <span>💵 Collect COD: <strong className="text-rose-400">Br {del.cod_amount}</strong></span>}
                         </div>
-                        <button 
-                          className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-[9.5px] font-black shadow-md hover:shadow-lg transition-all flex items-center gap-1 active:scale-95" 
-                          onClick={function() { acceptDelivery(del.id); }}
-                        >
-                          Accept <ArrowRight size={10} />
-                        </button>
+                        <div className="flex items-center gap-1.5">
+                          <button 
+                            className="px-3 py-2 bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 rounded-xl text-[9px] font-black transition-all flex items-center gap-1 active:scale-95 border border-slate-750" 
+                            onClick={function() { declineDelivery(del.id); }}
+                            title="Decline & pass to next partner"
+                          >
+                            Pass ✕
+                          </button>
+                          <button 
+                            className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-[9.5px] font-black shadow-md hover:shadow-lg transition-all flex items-center gap-1 active:scale-95" 
+                            onClick={function() { acceptDelivery(del.id); }}
+                          >
+                            Accept <ArrowRight size={10} />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -801,10 +833,19 @@ export default function DriverDashboard() {
                         >
                           <Navigation size={11} className="text-indigo-400" /> 🧭 Open GPS Nav
                         </a>
+                        {(del.status === 'assigned' || del.status === 'accepted' || del.status === 'pending') && (
+                          <button 
+                            className="px-3 py-2.5 bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 rounded-xl text-[9px] font-bold transition-all flex items-center justify-center gap-1 active:scale-95 border border-slate-750"
+                            onClick={function() { declineDelivery(del.id); }}
+                            title="Decline & pass to next partner"
+                          >
+                            Pass ✕
+                          </button>
+                        )}
                         <button 
                           className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-[9px] font-bold shadow-md transition-all active:scale-95 flex items-center justify-center gap-1"
                           onClick={function() {
-                            if (del.status === 'accepted') triggerStatusUpdate(del.id, 'at_vendor');
+                            if (del.status === 'assigned' || del.status === 'accepted') triggerStatusUpdate(del.id, 'at_vendor');
                             else if (del.status === 'at_vendor') triggerStatusUpdate(del.id, 'picked_up');
                             else if (del.status === 'picked_up') triggerStatusUpdate(del.id, 'in_transit');
                             else if (del.status === 'in_transit') triggerStatusUpdate(del.id, 'arrived');
@@ -815,7 +856,7 @@ export default function DriverDashboard() {
                           }}
                         >
                           <Check size={11} /> 
-                          {del.status === 'accepted' ? 'Arrived at Shop' : 
+                          {del.status === 'assigned' || del.status === 'accepted' ? 'Arrived at Shop' : 
                            del.status === 'at_vendor' ? 'Verify & Load Items' : 
                            del.status === 'picked_up' ? 'Depart Shop' : 
                            del.status === 'in_transit' ? 'Arrived at Dropoff' : 

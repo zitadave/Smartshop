@@ -669,8 +669,105 @@ export default async function handler(req: any, res: any) {
       if (path === '/api/delivery/accept' && method === 'POST') {
         const { delivery_id, driver_id } = req.body || {};
         if (!delivery_id || !driver_id) return fail('delivery_id and driver_id required');
-        const { data, error } = await supabase.from('deliveries').update({ driver_id, status: 'accepted', assigned_at: new Date().toISOString(), accepted_at: new Date().toISOString() }).eq('id', delivery_id).eq('status', 'pending').select().single();
+        const { data, error } = await supabase.from('deliveries').update({ driver_id, status: 'accepted', assigned_at: new Date().toISOString(), accepted_at: new Date().toISOString() }).eq('id', delivery_id).in('status', ['pending', 'assigned']).select().single();
         if (error) return fail(error.message || 'Already taken'); return ok({ success: true, delivery: data });
+      }
+      if (path === '/api/delivery/decline' && method === 'POST') {
+        const { delivery_id, driver_id } = req.body || {};
+        if (!delivery_id || !driver_id) return fail('delivery_id and driver_id required');
+        
+        const { data: del } = await supabase.from('deliveries').select('*').eq('id', delivery_id).single();
+        if (!del) return fail('Delivery not found', 404);
+
+        console.log(`[DELIVERY DECLINE] Driver ${driver_id} declined delivery ${delivery_id} (${del.order_number}). Finding next available partner...`);
+        
+        // 1. Fetch online approved drivers (or all approved as fallback)
+        let { data: onlineDrivers } = await supabase
+          .from('delivery_personnel')
+          .select('*')
+          .eq('status', 'approved')
+          .eq('is_online', true);
+
+        if (!onlineDrivers || onlineDrivers.length === 0) {
+          const { data: allApproved } = await supabase
+            .from('delivery_personnel')
+            .select('*')
+            .eq('status', 'approved');
+          onlineDrivers = allApproved || [];
+        }
+
+        // 2. Filter out the driver who just declined this job
+        const remainingDrivers = (onlineDrivers || []).filter((d: any) => d.id != driver_id && d.id !== String(driver_id));
+
+        if (remainingDrivers.length > 0) {
+          // Select the closest remaining driver
+          let nextBestDriver = remainingDrivers[0];
+          let minDistance = Infinity;
+          for (const d of remainingDrivers) {
+            if (d.current_lat && d.current_lng && del.pickup_lat && del.pickup_lng) {
+              const dist = calculateDistance(parseFloat(d.current_lat), parseFloat(d.current_lng), parseFloat(del.pickup_lat), parseFloat(del.pickup_lng));
+              if (dist < minDistance) {
+                minDistance = dist;
+                nextBestDriver = d;
+              }
+            }
+          }
+
+          await supabase.from('deliveries').update({
+            driver_id: nextBestDriver.id,
+            status: 'assigned',
+            assigned_at: new Date().toISOString(),
+          }).eq('id', delivery_id);
+
+          // Notify next best driver on Telegram
+          const cleanPickup = escapeHtml(del.pickup_address || 'Smart Shop Warehouse');
+          const cleanDropoff = escapeHtml(del.delivery_address || 'Addis Ababa');
+          const payout = del.driver_payout || del.fee || 80;
+          
+          const tgMsg = `⚡ <b>New Express Job Reassigned to You!</b> 🚚\n\n` +
+            `📦 <b>Order:</b> #${escapeHtml(del.order_number)}\n` +
+            `📍 <b>Pickup:</b> ${cleanPickup}\n` +
+            `📍 <b>Dropoff:</b> ${cleanDropoff}\n` +
+            `💰 <b>Your Net Payout:</b> Br ${payout}\n\n` +
+            `👉 Open your Driver Dashboard to start pickup!`;
+
+          let drvTgId = nextBestDriver.telegram_id || nextBestDriver.telegramId;
+          if (!drvTgId && nextBestDriver.phone) {
+            try {
+              const { data: uRow } = await supabase.from('users').select('telegram_id').eq('phone', nextBestDriver.phone).maybeSingle();
+              if (uRow?.telegram_id) drvTgId = uRow.telegram_id;
+            } catch (e) {}
+          }
+
+          if (drvTgId) {
+            const bots = [ENV.BOT_TOKEN, ENV.VENDOR_BOT_TOKEN, ENV.ADMIN_BOT_TOKEN].filter(Boolean);
+            for (const bot of bots) {
+              try {
+                const okSent = await tg(bot, drvTgId, tgMsg, 'HTML');
+                if (okSent) break;
+              } catch (e) {}
+            }
+          }
+
+          await supabase.from('notifications').insert({
+            telegram_id: drvTgId || null,
+            type: 'delivery',
+            title: '⚡ Reassigned Job Available',
+            message: `Order #${del.order_number} has been assigned to you (Br ${payout} payout)`,
+            icon: '🚚',
+          });
+
+          return ok({ success: true, reassigned: true, new_driver_id: nextBestDriver.id });
+        } else {
+          // No other drivers available - return job to open unassigned pending pool
+          await supabase.from('deliveries').update({
+            driver_id: null,
+            status: 'pending',
+            assigned_at: null,
+          }).eq('id', delivery_id);
+
+          return ok({ success: true, reassigned: false, new_driver_id: null });
+        }
       }
       if (path === '/api/delivery/status' && method === 'POST') {
         const { delivery_id, status, item_count } = req.body || {};
