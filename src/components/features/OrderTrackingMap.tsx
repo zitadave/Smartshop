@@ -270,10 +270,10 @@ export default function OrderTrackingMap({ orderNumber, compact }: OrderTracking
     const isPlaced = true;
     const isAwaitingApproval = order?.status === 'pending_approval';
     const isAwaitingPayment = order?.status === 'pending_payment';
-    const isConfirmed = order?.status === 'confirmed' || order?.status === 'processing' || order?.status === 'shipped' || order?.status === 'delivered' || order?.status === 'completed';
-    const isProcessing = order?.status === 'processing' || order?.status === 'shipped' || order?.status === 'delivered' || order?.status === 'completed';
-    const isInTransit = order?.status === 'shipped' || order?.status === 'delivered' || order?.status === 'completed';
-    const isDelivered = order?.status === 'delivered' || order?.status === 'completed';
+    const isConfirmed = ['confirmed', 'processing', 'in_transit', 'out_for_delivery', 'shipped', 'arrived', 'delivered', 'completed'].includes(order?.status || '') || !!delivery;
+    const isProcessing = ['processing', 'in_transit', 'out_for_delivery', 'shipped', 'arrived', 'delivered', 'completed'].includes(order?.status || '') || ['at_vendor', 'picked_up', 'in_transit', 'arrived', 'delivered'].includes(delivery?.status || '');
+    const isInTransit = ['in_transit', 'out_for_delivery', 'shipped', 'arrived', 'delivered', 'completed'].includes(order?.status || '') || ['picked_up', 'in_transit', 'arrived', 'delivered'].includes(delivery?.status || '');
+    const isDelivered = ['delivered', 'completed'].includes(order?.status || '') || delivery?.status === 'delivered';
 
     const formatTime = (isoString?: string) => {
       if (!isoString) return 'Pending';
