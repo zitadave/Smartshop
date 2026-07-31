@@ -267,11 +267,13 @@ async function createDeliveryForOrder(on: string, lat?: number, lng?: number, or
     const deliveryStatus = bestDriver ? 'assigned' : 'pending';
     const assignedDriverId = bestDriver ? bestDriver.id : null;
     const nowIso = new Date().toISOString();
+    const upfrontPin = Math.floor(1000 + Math.random() * 9000).toString();
 
     const deliveryPayload: Record<string, any> = {
       order_number: on,
       status: deliveryStatus,
       driver_id: assignedDriverId,
+      delivery_pin: upfrontPin,
       assigned_at: assignedDriverId ? nowIso : null,
       accepted_at: assignedDriverId ? nowIso : null,
       item_count: itemCount,
@@ -292,6 +294,7 @@ async function createDeliveryForOrder(on: string, lat?: number, lng?: number, or
       await supabase.from('deliveries').update({
         driver_id: assignedDriverId,
         status: deliveryStatus,
+        delivery_pin: upfrontPin,
         assigned_at: assignedDriverId ? nowIso : null,
         accepted_at: assignedDriverId ? nowIso : null,
         pickup_lat: finalPickupLat,
@@ -322,7 +325,34 @@ async function createDeliveryForOrder(on: string, lat?: number, lng?: number, or
         console.log(`[DELIVERY] Successfully created delivery record ${newDel?.id} for order ${on}`);
       }
     }
-    console.log(`[DELIVERY] Automatically assigned order ${on} to driver ${bestDriver?.id || 'none'} (${bestDriver?.full_name_latin || 'unassigned'})`);
+    console.log(`[DELIVERY] Automatically assigned order ${on} to driver ${bestDriver?.id || 'none'} (${bestDriver?.full_name_latin || 'unassigned'}) with upfront PIN ${upfrontPin}`);
+
+    // STAGE 1: Notify Customer upfront with their Security PIN
+    if (customerTelegramId) {
+      const driverName = bestDriver ? (bestDriver.full_name_latin || 'Smart Express Partner') : 'Smart Express Courier';
+      const pinMsg = `🎉 <b>Order Confirmed & Driver Assigned!</b>\n\n` +
+        `📦 <b>Order:</b> #${escapeHtml(on)}\n` +
+        `🚚 <b>Assigned Courier:</b> ${escapeHtml(driverName)}\n` +
+        `🔐 <b>Your Delivery Security PIN:</b> <code>${upfrontPin}</code>\n\n` +
+        `⚠️ <i>Keep this PIN safe! When your driver arrives with your package, enter this PIN on your Order Tracking page (or give it to your driver) to confirm receipt and release payment.</i>`;
+      const bots = [ENV.BOT_TOKEN, ENV.VENDOR_BOT_TOKEN, ENV.ADMIN_BOT_TOKEN].filter(Boolean);
+      for (const bot of bots) {
+        try {
+          const sent = await tg(bot, customerTelegramId, pinMsg, 'HTML');
+          if (sent) {
+            console.log(`[DELIVERY PIN] Sent upfront security PIN ${upfrontPin} to customer tg=${customerTelegramId}`);
+            break;
+          }
+        } catch {}
+      }
+      await supabase.from('notifications').insert({
+        telegram_id: customerTelegramId,
+        type: 'delivery',
+        title: '🔐 Delivery Security PIN: ' + upfrontPin,
+        message: `Your security PIN for order #${on} is ${upfrontPin}. Enter this when your courier arrives to release payment.`,
+        icon: '🔐',
+      }).catch(() => {});
+    }
 
     if (onlineDrivers && onlineDrivers.length > 0) {
       for (const d of onlineDrivers) {
@@ -863,7 +893,76 @@ export default async function handler(req: any, res: any) {
         if (!delivery_id || !pin) return fail('delivery_id and pin required');
         const { data, error } = await supabase.from('deliveries').select('*').eq('id', delivery_id).single();
         if (error || !data) return ok({ success: false, verified: false }); if (data.delivery_pin !== pin) return ok({ success: false, verified: false });
-        await supabase.from('deliveries').update({ pin_verified_at: new Date().toISOString() }).eq('id', delivery_id); return ok({ success: true, verified: true });
+        
+        const nowIso = new Date().toISOString();
+        // 1. Update delivery status to completed/delivered
+        await supabase.from('deliveries').update({
+          status: 'delivered',
+          pin_verified_at: nowIso,
+          delivered_at: nowIso,
+        }).eq('id', delivery_id);
+
+        // 2. Update order status to delivered
+        if (data.order_number) {
+          await supabase.from('orders').update({
+            status: 'delivered',
+          }).eq('order_number', data.order_number);
+        }
+
+        // 3. Clear Driver Payout
+        const dp = data.driver_payout || 0;
+        const comm = data.platform_commission || Math.round((data.fee || 0) * 0.2);
+        if (data.driver_id) {
+          await supabase.from('driver_earnings').insert({
+            driver_id: data.driver_id,
+            delivery_id: data.id,
+            amount: dp || ((data.fee || 0) - comm),
+            commission: comm,
+            type: 'delivery',
+            status: 'completed',
+          }).catch(() => {});
+          await supabase.rpc('increment_driver_deliveries', { p_driver_id: data.driver_id }).catch(() => {});
+        }
+
+        // 4. Release Vendor Escrow Payout
+        const vendorId = data.vendor_id || 1;
+        const vendorNet = Math.max(0, (data.total || 1000) - comm - Math.round((data.total || 1000) * 0.02));
+        await supabase.from('payouts').insert({
+          vendor_id: vendorId,
+          order_number: data.order_number,
+          amount: vendorNet,
+          status: 'cleared',
+          cleared_at: nowIso,
+          note: `Escrow released upon customer PIN verification (${pin})`,
+        }).catch(() => {});
+
+        // 5. Notify all 3 Stakeholders on Telegram
+        const bots = [ENV.BOT_TOKEN, ENV.VENDOR_BOT_TOKEN, ENV.ADMIN_BOT_TOKEN].filter(Boolean);
+        // Customer
+        if (data.customer_telegram_id) {
+          const custMsg = `🎉 <b>Delivery Confirmed & Escrow Released!</b>\n\n` +
+            `Thank you for shopping with Smart Shop! Your order #${data.order_number} is completed and payment has been released to your courier and seller.`;
+          for (const bot of bots) {
+            try { if (await tg(bot, data.customer_telegram_id, custMsg, 'HTML')) break; } catch {}
+          }
+        }
+        // Driver
+        if (data.driver_id) {
+          try {
+            const { data: drv } = await supabase.from('delivery_personnel').select('telegram_id, phone').eq('id', data.driver_id).single();
+            const drvTg = drv?.telegram_id;
+            if (drvTg) {
+              const drvMsg = `💰 <b>Delivery Completed & Earnings Cleared!</b>\n\n` +
+                `PIN verified for order #${data.order_number}.\n` +
+                `<b>Net Earnings:</b> Br ${dp || ((data.fee || 0) - comm)} cleared to your weekly balance!`;
+              for (const bot of bots) {
+                try { if (await tg(bot, drvTg, drvMsg, 'HTML')) break; } catch {}
+              }
+            }
+          } catch {}
+        }
+
+        return ok({ success: true, verified: true, message: 'PIN verified! Escrow payment released to all stakeholders.' });
       }
       if (path === '/api/delivery/rate' && method === 'POST') {
         const b = req.body || {};
@@ -1590,7 +1689,7 @@ export default async function handler(req: any, res: any) {
     // ================================================================
     // SEED / COMMISSION / PAYMENT / TAX / VENDOR NOTIFY
     // ================================================================
-    if (path === '/api/seed' && method === 'GET') { const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]); const v = await getV(); return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-07-31-V4000' }); }
+    if (path === '/api/seed' && method === 'GET') { const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]); const v = await getV(); return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-07-31-V5000' }); }
     if (path === '/api/ai/voice-order' && method === 'POST') {
       try {
         const { data: prs } = await supabase.from('products').select('*');

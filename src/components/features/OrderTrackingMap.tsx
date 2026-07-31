@@ -32,6 +32,27 @@ export default function OrderTrackingMap({ orderNumber, compact }: OrderTracking
   const [delivery, setDelivery] = useState<any>(null);
   const [loadingLive, setLoadingLive] = useState(true);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [pinInput, setPinInput] = useState('');
+
+  const verifyPinCustomer = async () => {
+    if (!delivery || !pinInput) return;
+    try {
+      const res = await fetch('/api/delivery/verify-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ delivery_id: delivery.id, pin: pinInput }),
+      });
+      const data = await res.json();
+      if (data.success && data.verified) {
+        alert('🎉 PIN Verified! Your delivery is complete and escrow payment has been released.');
+        window.location.reload();
+      } else {
+        alert('❌ Incorrect PIN. Please try again.');
+      }
+    } catch {
+      alert('Error verifying PIN.');
+    }
+  };
 
   // Dynamic CDN loader for Leaflet
   useEffect(() => {
@@ -405,6 +426,51 @@ export default function OrderTrackingMap({ orderNumber, compact }: OrderTracking
           })}
         </div>
       </div>
+
+      {/* Security PIN Card */}
+      {delivery?.delivery_pin && delivery?.status !== 'delivered' && (
+        <div className="bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-indigo-500/10 rounded-2xl border border-emerald-500/30 p-4 shadow-sm space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+              🔐 Escrow Delivery Security PIN
+            </span>
+            <span className="font-mono text-sm font-black bg-emerald-500 text-white px-2.5 py-0.5 rounded-lg shadow-sm">
+              {delivery.delivery_pin}
+            </span>
+          </div>
+          <p className="text-[9px] text-muted-foreground leading-relaxed">
+            Provide this 4-digit PIN to your driver upon arrival to confirm package receipt and release escrow payment to the courier & seller.
+          </p>
+        </div>
+      )}
+
+      {/* Interactive Customer PIN Confirmation */}
+      {delivery?.delivery_pin && delivery?.status !== 'delivered' && (
+        <div className="bg-card rounded-2xl border-2 border-indigo-500/30 p-4 shadow-md space-y-2.5">
+          <div className="text-xs font-black text-foreground flex items-center gap-1.5">
+            <span>🛡️ Confirm Package Receipt</span>
+          </div>
+          <p className="text-[10px] text-muted-foreground">
+            Enter your 4-digit security PIN (<code className="font-mono font-bold text-indigo-500">{delivery.delivery_pin}</code>) below to confirm receipt of your items and release escrow payment:
+          </p>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              maxLength={4}
+              placeholder="PIN (4 digits)"
+              className="w-28 p-2 text-center font-mono font-black text-sm bg-background border border-border rounded-xl outline-none focus:border-indigo-500"
+              value={pinInput}
+              onChange={(e) => setPinInput(e.target.value)}
+            />
+            <button
+              className="flex-1 py-2 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white rounded-xl text-xs font-black shadow-md transition-all active:scale-95"
+              onClick={verifyPinCustomer}
+            >
+              ✔️ Confirm Receipt & Release Payout
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Technical Delivery Logistics */}
       <div className="bg-card rounded-2xl border border-border p-3.5">
