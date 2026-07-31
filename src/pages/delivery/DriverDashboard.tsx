@@ -182,8 +182,14 @@ export default function DriverDashboard() {
             const currentIds = prev.map(function(x) { return x.id; });
             const newJobs = d.deliveries.filter(function(x) { return (x.status === 'pending' || x.status === 'assigned') && !currentIds.includes(x.id); });
             if (newJobs.length > 0) {
-              toast(`🔔 New express delivery job available! Order #${newJobs[0].order_number}`, 'info');
-              haptic('warning');
+              const assignedToMe = newJobs.find(function(x) { return x.status === 'assigned' && (x.driver_id === driverId || x.driver_id == driverId); });
+              if (assignedToMe) {
+                toast(`⚡ Order #${assignedToMe.order_number} has been AUTOMATICALLY ASSIGNED to you!`, 'success');
+                haptic('success');
+              } else {
+                toast(`🔔 New express delivery job available! Order #${newJobs[0].order_number}`, 'info');
+                haptic('warning');
+              }
             }
             return d.deliveries;
           });
@@ -629,8 +635,8 @@ export default function DriverDashboard() {
       <div className="max-w-lg mx-auto -mt-4 px-4 relative z-10">
         <div className="bg-slate-900 rounded-2xl shadow-xl border border-slate-800/80 p-1 flex">
           {[
-            { id: 'available' as Tab, icon: Bell, label: 'Available', badge: deliveries.filter(function(d) { return d.status === 'pending' || d.status === 'assigned'; }).length },
-            { id: 'active' as Tab, icon: Clock, label: 'Active', badge: deliveries.filter(function(d) { return d.status !== 'pending' && d.status !== 'assigned' && d.status !== 'delivered' && d.status !== 'failed' && d.status !== 'cancelled' && d.status !== 'returned'; }).length },
+            { id: 'available' as Tab, icon: Bell, label: 'Available', badge: deliveries.filter(function(d) { return d.status === 'pending'; }).length },
+            { id: 'active' as Tab, icon: Clock, label: 'Active', badge: deliveries.filter(function(d) { return d.status !== 'pending' && d.status !== 'delivered' && d.status !== 'failed' && d.status !== 'cancelled' && d.status !== 'returned'; }).length },
             { id: 'history' as Tab, icon: Activity, label: 'History' },
             { id: 'earnings' as Tab, icon: Wallet, label: 'Earnings' },
           ].map(function(t) {
@@ -724,7 +730,7 @@ export default function DriverDashboard() {
           {/* ACTIVE TASKS TAB */}
           {tab === 'active' && (
             <div className="space-y-3">
-              {deliveries.filter(function(d) { return d.status !== 'pending' && d.status !== 'assigned' && d.status !== 'delivered' && d.status !== 'failed' && d.status !== 'cancelled' && d.status !== 'returned'; }).length === 0 ? (
+              {deliveries.filter(function(d) { return d.status !== 'pending' && d.status !== 'delivered' && d.status !== 'failed' && d.status !== 'cancelled' && d.status !== 'returned'; }).length === 0 ? (
                 <div className="bg-slate-900 rounded-3xl border border-slate-800/80 p-8 text-center animate-scaleIn">
                   <div className="w-14 h-14 rounded-full bg-slate-800/60 flex items-center justify-center mx-auto mb-3">
                     <Clock size={24} className="text-slate-500" />
@@ -750,7 +756,7 @@ export default function DriverDashboard() {
                     </button>
                   </div>
 
-                  {deliveries.filter(function(d) { return d.status !== 'pending' && d.status !== 'assigned' && d.status !== 'delivered' && d.status !== 'failed' && d.status !== 'cancelled' && d.status !== 'returned'; }).map(function(del) {
+                  {deliveries.filter(function(d) { return d.status !== 'pending' && d.status !== 'delivered' && d.status !== 'failed' && d.status !== 'cancelled' && d.status !== 'returned'; }).map(function(del) {
                     var fee = del.driver_payout || del.fee || 0;
                   
                   // Device map navigation trigger — Opens deep linking coords or standard directions

@@ -210,35 +210,6 @@ async function createDeliveryForOrder(on: string, lat?: number, lng?: number) {
       }
     }
 
-    const deliveryPayload = {
-      order_number: on,
-      status: 'pending',
-      item_count: itemCount,
-      fee: fee,
-      distance_km: 3.5,
-      platform_commission: commission,
-      driver_payout: payout,
-      pickup_address: firstItem?.vendorName || firstItem?.vendor_name || 'Smart Shop Warehouse',
-      delivery_address: ord.customer?.address || 'Addis Ababa',
-      customer_telegram_id: customerTelegramId,
-      pickup_lat: finalPickupLat,
-      pickup_lng: finalPickupLng,
-      delivery_lat: finalDropoffLat,
-      delivery_lng: finalDropoffLng,
-    };
-
-    if (existingDel) {
-      await supabase.from('deliveries').update({
-        pickup_lat: finalPickupLat,
-        pickup_lng: finalPickupLng,
-        delivery_lat: finalDropoffLat,
-        delivery_lng: finalDropoffLng,
-      }).eq('id', existingDel.id);
-    } else {
-      await supabase.from('deliveries').insert(deliveryPayload);
-    }
-    console.log(`[DELIVERY] Created pending delivery record for confirmed order ${on} at pickup: (${finalPickupLat}, ${finalPickupLng})`);
-
     let { data: onlineDrivers } = await supabase
       .from('delivery_personnel')
       .select('*')
@@ -255,6 +226,61 @@ async function createDeliveryForOrder(on: string, lat?: number, lng?: number) {
       console.log(`[DELIVERY] No online drivers found. Cascading dispatch to ${onlineDrivers?.length || 0} approved partners.`);
     }
 
+    // AUTOMATIC DRIVER ASSIGNMENT: Select closest approved driver
+    let bestDriver = onlineDrivers && onlineDrivers.length > 0 ? onlineDrivers[0] : null;
+    if (onlineDrivers && onlineDrivers.length > 1) {
+      let minDistance = Infinity;
+      for (const d of onlineDrivers) {
+        if (d.current_lat && d.current_lng) {
+          const dist = calculateDistance(parseFloat(d.current_lat), parseFloat(d.current_lng), finalPickupLat as number, finalPickupLng as number);
+          if (dist < minDistance) {
+            minDistance = dist;
+            bestDriver = d;
+          }
+        }
+      }
+    }
+
+    const deliveryStatus = bestDriver ? 'assigned' : 'pending';
+    const assignedDriverId = bestDriver ? bestDriver.id : null;
+    const nowIso = new Date().toISOString();
+
+    const deliveryPayload: Record<string, any> = {
+      order_number: on,
+      status: deliveryStatus,
+      driver_id: assignedDriverId,
+      assigned_at: assignedDriverId ? nowIso : null,
+      accepted_at: assignedDriverId ? nowIso : null,
+      item_count: itemCount,
+      fee: fee,
+      distance_km: 3.5,
+      platform_commission: commission,
+      driver_payout: payout,
+      pickup_address: firstItem?.vendorName || firstItem?.vendor_name || 'Smart Shop Warehouse',
+      delivery_address: ord.customer?.address || 'Addis Ababa',
+      customer_telegram_id: customerTelegramId,
+      pickup_lat: finalPickupLat,
+      pickup_lng: finalPickupLng,
+      delivery_lat: finalDropoffLat,
+      delivery_lng: finalDropoffLng,
+    };
+
+    if (existingDel) {
+      await supabase.from('deliveries').update({
+        driver_id: assignedDriverId,
+        status: deliveryStatus,
+        assigned_at: assignedDriverId ? nowIso : null,
+        accepted_at: assignedDriverId ? nowIso : null,
+        pickup_lat: finalPickupLat,
+        pickup_lng: finalPickupLng,
+        delivery_lat: finalDropoffLat,
+        delivery_lng: finalDropoffLng,
+      }).eq('id', existingDel.id);
+    } else {
+      await supabase.from('deliveries').insert(deliveryPayload);
+    }
+    console.log(`[DELIVERY] Automatically assigned order ${on} to driver ${bestDriver?.id || 'none'} (${bestDriver?.full_name_latin || 'unassigned'})`);
+
     if (onlineDrivers && onlineDrivers.length > 0) {
       for (const d of onlineDrivers) {
         let hasMatched = true;
@@ -269,8 +295,7 @@ async function createDeliveryForOrder(on: string, lat?: number, lng?: number) {
           const distToDropoff = calculateDistance(dLat, dLng, finalDropoffLat as number, finalDropoffLng as number);
           const minDistance = Math.min(distToPickup, distToDropoff);
 
-          // Dynamic proximity matching within 15.0km fallback
-          hasMatched = minDistance <= 15.0;
+          hasMatched = minDistance <= 25.0;
           distTextPickup = ` (Est. ${distToPickup.toFixed(1)} km away)`;
           distTextDropoff = ` (Est. ${distToDropoff.toFixed(1)} km away)`;
         }
@@ -279,28 +304,49 @@ async function createDeliveryForOrder(on: string, lat?: number, lng?: number) {
           const cleanPickup = escapeHtml(ord.items?.[0]?.vendorName || 'Smart Shop Warehouse');
           const cleanDropoff = escapeHtml(ord.customer?.address || 'Addis Ababa');
           
-          const tgMsg = `🔔 <b>New Express Job Nearby!</b> 🚚\n\n` +
-            `📦 <b>Order:</b> #${escapeHtml(on)}\n` +
-            `📍 <b>Pickup:</b> ${cleanPickup}${escapeHtml(distTextPickup)}\n` +
-            `📍 <b>Dropoff:</b> ${cleanDropoff}${escapeHtml(distTextDropoff)}\n` +
-            `💰 <b>Your Payout:</b> Br ${payout}\n\n` +
-            `👉 Open your Driver Dashboard in the bot to accept this delivery!`;
-            
-          if (d.telegram_id) {
+          const isAssignedToThisDriver = bestDriver && d.id === bestDriver.id;
+          const tgMsg = isAssignedToThisDriver
+            ? `⚡ <b>New Express Job Automatically Assigned!</b> 🚚\n\n` +
+              `📦 <b>Order:</b> #${escapeHtml(on)}\n` +
+              `📍 <b>Pickup:</b> ${cleanPickup}${escapeHtml(distTextPickup)}\n` +
+              `📍 <b>Dropoff:</b> ${cleanDropoff}${escapeHtml(distTextDropoff)}\n` +
+              `💰 <b>Your Net Payout:</b> Br ${payout}\n\n` +
+              `👉 Open your Driver Dashboard to start pickup!`
+            : `🔔 <b>New Express Job Nearby!</b> 🚚\n\n` +
+              `📦 <b>Order:</b> #${escapeHtml(on)}\n` +
+              `📍 <b>Pickup:</b> ${cleanPickup}${escapeHtml(distTextPickup)}\n` +
+              `📍 <b>Dropoff:</b> ${cleanDropoff}${escapeHtml(distTextDropoff)}\n` +
+              `💰 <b>Your Payout:</b> Br ${payout}\n\n` +
+              `👉 Open your Driver Dashboard in the bot to check deliveries!`;
+
+          let drvTgId = d.telegram_id || d.telegramId;
+          if (!drvTgId && d.phone) {
+            try {
+              const { data: uRow } = await supabase.from('users').select('telegram_id').eq('phone', d.phone).maybeSingle();
+              if (uRow?.telegram_id) drvTgId = uRow.telegram_id;
+            } catch (e) {}
+          }
+
+          if (drvTgId) {
             const bots = [ENV.BOT_TOKEN, ENV.VENDOR_BOT_TOKEN, ENV.ADMIN_BOT_TOKEN].filter(Boolean);
             for (const bot of bots) {
               try {
-                const okSent = await tg(bot, d.telegram_id, tgMsg, 'HTML');
-                if (okSent) break;
+                const okSent = await tg(bot, drvTgId, tgMsg, 'HTML');
+                if (okSent) {
+                  console.log(`[DELIVERY NOTIFY] Successfully sent telegram alert to driver ${drvTgId} using bot ${bot}`);
+                  break;
+                }
               } catch (e) {}
             }
           }
 
           await supabase.from('notifications').insert({
-            telegram_id: d.telegram_id || null,
+            telegram_id: drvTgId || null,
             type: 'delivery',
-            title: 'New Nearby Delivery Available',
-            message: `New job #${on} is available for express pickup!`,
+            title: isAssignedToThisDriver ? '⚡ New Job Assigned to You' : 'New Nearby Delivery Available',
+            message: isAssignedToThisDriver
+              ? `Order #${on} has been automatically assigned to you (Br ${payout} payout)`
+              : `New job #${on} is available for express pickup!`,
             icon: '🚚',
           });
         }
@@ -537,6 +583,7 @@ export default async function handler(req: any, res: any) {
         }
 
         const payload = {
+          telegram_id: b.telegram_id || b.telegramId || null,
           full_name_latin: b.full_name_latin, 
           full_name_amharic: b.full_name_amharic || '', 
           phone: b.phone,

@@ -274,7 +274,8 @@ export default function DriverRegister() {
       
       var ls: any = {};
       try { ls = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
-      var tgId = ls.telegramId || '';
+      var winTgId = (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id || '';
+      var tgId = winTgId || ls.telegramId || '';
       
       var res = await fetch('/api/delivery/register', {
         method: 'POST',
