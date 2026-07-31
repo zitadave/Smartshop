@@ -239,17 +239,27 @@ async function createDeliveryForOrder(on: string, lat?: number, lng?: number, or
       console.log(`[DELIVERY] No approved drivers found. Cascading dispatch to ALL ${onlineDrivers?.length || 0} registered partners.`);
     }
 
-    // AUTOMATIC DRIVER ASSIGNMENT: Select closest approved driver
-    let bestDriver = onlineDrivers && onlineDrivers.length > 0 ? onlineDrivers[0] : null;
-    if (onlineDrivers && onlineDrivers.length > 1) {
+    // 1. Only consider real drivers who have a reachable telegram_id or a valid real phone (ignore seed test drivers like +251911111111)
+    const validDrivers = (onlineDrivers || []).filter((d: any) => {
+      const hasTg = d.telegram_id || d.telegramId;
+      const isFakeSeed = d.phone === '+251911111111' || d.full_name_latin === 'Test Driver';
+      return !isFakeSeed && (hasTg || d.phone);
+    });
+
+    const candidates = validDrivers.length > 0 ? validDrivers : (onlineDrivers || []);
+
+    // AUTOMATIC DRIVER ASSIGNMENT: Select closest approved driver among valid contactable drivers
+    let bestDriver = candidates.length > 0 ? candidates[0] : null;
+    if (candidates.length > 1) {
       let minDistance = Infinity;
-      for (const d of onlineDrivers) {
-        if (d.current_lat && d.current_lng) {
-          const dist = calculateDistance(parseFloat(d.current_lat), parseFloat(d.current_lng), finalPickupLat as number, finalPickupLng as number);
-          if (dist < minDistance) {
-            minDistance = dist;
-            bestDriver = d;
-          }
+      for (const d of candidates) {
+        let dist = 5.0; // Default distance if coordinates not set yet
+        if (d.current_lat && d.current_lng && finalPickupLat && finalPickupLng) {
+          dist = calculateDistance(parseFloat(d.current_lat), parseFloat(d.current_lng), finalPickupLat as number, finalPickupLng as number);
+        }
+        if (dist < minDistance) {
+          minDistance = dist;
+          bestDriver = d;
         }
       }
     }
@@ -1558,7 +1568,7 @@ export default async function handler(req: any, res: any) {
     // ================================================================
     // SEED / COMMISSION / PAYMENT / TAX / VENDOR NOTIFY
     // ================================================================
-    if (path === '/api/seed' && method === 'GET') { const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]); const v = await getV(); return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-07-31-V1000' }); }
+    if (path === '/api/seed' && method === 'GET') { const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]); const v = await getV(); return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-07-31-V2000' }); }
     if (path === '/api/ai/voice-order' && method === 'POST') {
       try {
         const { data: prs } = await supabase.from('products').select('*');
