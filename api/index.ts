@@ -717,13 +717,17 @@ export default async function handler(req: any, res: any) {
         return ok({ deliveries: data || [] }); 
       }
       if (path === '/api/delivery/accept' && method === 'POST') {
-        const { delivery_id, driver_id } = req.body || {};
+        const b = req.body || {};
+        const delivery_id = b.delivery_id || b.deliveryId || b.id;
+        const driver_id = b.driver_id || b.driverId || b.id;
         if (!delivery_id || !driver_id) return fail('delivery_id and driver_id required');
         const { data, error } = await supabase.from('deliveries').update({ driver_id, status: 'accepted', assigned_at: new Date().toISOString(), accepted_at: new Date().toISOString() }).eq('id', delivery_id).in('status', ['pending', 'assigned']).select().single();
         if (error) return fail(error.message || 'Already taken'); return ok({ success: true, delivery: data });
       }
       if (path === '/api/delivery/decline' && method === 'POST') {
-        const { delivery_id, driver_id } = req.body || {};
+        const b = req.body || {};
+        const delivery_id = b.delivery_id || b.deliveryId || b.id;
+        const driver_id = b.driver_id || b.driverId || b.id;
         if (!delivery_id || !driver_id) return fail('delivery_id and driver_id required');
         
         const { data: del } = await supabase.from('deliveries').select('*').eq('id', delivery_id).single();
@@ -820,7 +824,10 @@ export default async function handler(req: any, res: any) {
         }
       }
       if (path === '/api/delivery/status' && method === 'POST') {
-        const { delivery_id, status, item_count } = req.body || {};
+        const b = req.body || {};
+        const delivery_id = b.delivery_id || b.deliveryId || b.id;
+        const status = b.status;
+        const item_count = b.item_count || b.itemCount;
         if (!delivery_id || !status) return fail('delivery_id and status required'); if (!DSTAT.includes(status)) return fail('Invalid status');
         const ud: Record<string, any> = { status }; if (status === 'at_vendor' && item_count) ud.item_count_confirmed_at_vendor = item_count;
         if (status === 'picked_up') ud.picked_up_at = new Date().toISOString();
@@ -850,13 +857,20 @@ export default async function handler(req: any, res: any) {
         return ok({ success: true, delivery: data });
       }
       if (path === '/api/delivery/verify-pin' && method === 'POST') {
-        const { delivery_id, pin } = req.body || {}; if (!delivery_id || !pin) return fail('delivery_id and pin required');
+        const b = req.body || {};
+        const delivery_id = b.delivery_id || b.deliveryId || b.id;
+        const pin = b.pin;
+        if (!delivery_id || !pin) return fail('delivery_id and pin required');
         const { data, error } = await supabase.from('deliveries').select('*').eq('id', delivery_id).single();
         if (error || !data) return ok({ success: false, verified: false }); if (data.delivery_pin !== pin) return ok({ success: false, verified: false });
         await supabase.from('deliveries').update({ pin_verified_at: new Date().toISOString() }).eq('id', delivery_id); return ok({ success: true, verified: true });
       }
       if (path === '/api/delivery/rate' && method === 'POST') {
-        const { delivery_id, driver_rating, customer_rating } = req.body || {}; if (!delivery_id) return fail('delivery_id required');
+        const b = req.body || {};
+        const delivery_id = b.delivery_id || b.deliveryId || b.id;
+        const driver_rating = b.driver_rating || b.driverRating;
+        const customer_rating = b.customer_rating || b.customerRating;
+        if (!delivery_id) return fail('delivery_id required');
         const ud: Record<string, any> = {}; if (driver_rating) ud.driver_rating = Math.max(1, Math.min(5, parseInt(driver_rating))); if (customer_rating) ud.customer_rating = Math.max(1, Math.min(5, parseInt(customer_rating)));
         const { error } = await supabase.from('deliveries').update(ud).eq('id', delivery_id); if (error) return fail(error.message);
         if (driver_rating) { const { data: d } = await supabase.from('deliveries').select('driver_id').eq('id', delivery_id).single(); if (d?.driver_id) { const { data: rt } = await supabase.from('deliveries').select('driver_rating').eq('driver_id', d.driver_id).not('driver_rating', 'is', null); if (rt?.length) { const a = rt.reduce((s, r) => s + (r.driver_rating || 0), 0) / rt.length; await supabase.from('delivery_personnel').update({ rating: Math.round(a * 10) / 10 }).eq('id', d.driver_id); } } }
@@ -1576,7 +1590,7 @@ export default async function handler(req: any, res: any) {
     // ================================================================
     // SEED / COMMISSION / PAYMENT / TAX / VENDOR NOTIFY
     // ================================================================
-    if (path === '/api/seed' && method === 'GET') { const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]); const v = await getV(); return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-07-31-V3000' }); }
+    if (path === '/api/seed' && method === 'GET') { const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]); const v = await getV(); return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-07-31-V4000' }); }
     if (path === '/api/ai/voice-order' && method === 'POST') {
       try {
         const { data: prs } = await supabase.from('products').select('*');
