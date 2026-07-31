@@ -1275,13 +1275,14 @@ export default async function handler(req: any, res: any) {
           telegram_id: req.body.telegram_id || req.body.telegramId || req.body.customer?.telegram_id || req.body.customer?.telegramId || null,
           items: req.body.items || [],
           total: Number(req.body.total || 0),
-          subtotal: Number(req.body.subtotal || 0),
-          discount: Number(req.body.discount || 0),
-          delivery: Number(req.body.delivery || 0),
+          delivery_fee: Number(req.body.delivery || 0),
           status: req.body.status || 'pending',
           payment_method: req.body.payment_method || req.body.paymentMethod || 'cod',
           customer: {
             ...(req.body.customer || {}),
+            subtotal: Number(req.body.subtotal || 0),
+            discount: Number(req.body.discount || 0),
+            delivery: Number(req.body.delivery || 0),
             currency: req.body.currency || 'ETB',
             language: req.body.language || 'en',
             referrer_code: req.body.referrer_code || req.body.referrerCode || null,
@@ -1289,7 +1290,15 @@ export default async function handler(req: any, res: any) {
           notes: req.body.notes || req.body.customerNote || req.body.customer_note || '',
         };
 
-        const { data: order, error: oe } = await supabase.from('orders').insert(orderPayload).select().single();
+        let { data: order, error: oe } = await supabase.from('orders').insert(orderPayload).select().single();
+        if (oe && oe.message && oe.message.includes('schema cache')) {
+          delete (orderPayload as any).delivery_fee;
+          delete (orderPayload as any).subtotal;
+          delete (orderPayload as any).discount;
+          const retry = await supabase.from('orders').insert(orderPayload).select().single();
+          order = retry.data;
+          oe = retry.error;
+        }
         if (oe) { for (const item of items) { if (item.productId) await supabase.rpc('increment_stock', { row_id: item.productId, qty: item.quantity || 1 }); } return fail(oe.message); }
 
         // Notify admin about new order
@@ -1519,7 +1528,7 @@ export default async function handler(req: any, res: any) {
     // ================================================================
     // SEED / COMMISSION / PAYMENT / TAX / VENDOR NOTIFY
     // ================================================================
-    if (path === '/api/seed' && method === 'GET') { const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]); const v = await getV(); return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-07-31-V700' }); }
+    if (path === '/api/seed' && method === 'GET') { const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]); const v = await getV(); return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-07-31-V900' }); }
     if (path === '/api/ai/voice-order' && method === 'POST') {
       try {
         const { data: prs } = await supabase.from('products').select('*');
