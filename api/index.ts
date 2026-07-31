@@ -1360,7 +1360,7 @@ export default async function handler(req: any, res: any) {
             `📞 Phone: <code>${escapeHtml(custPhone)}</code>\n\n` +
             `📦 <b>Items:</b>\n${orderItemsMsg}`;
 
-          notifyAdmins(txt, 'HTML').catch(() => {});
+          await notifyAdmins(txt, 'HTML');
           await supabase.from('notifications').insert({
             telegram_id: null,
             type: 'order',
@@ -1371,7 +1371,11 @@ export default async function handler(req: any, res: any) {
         } catch (err) {}
 
         if (order && (order.status === 'confirmed' || order.status === 'pending' || order.status === 'processing')) { 
-          createDeliveryForOrder(on, undefined, undefined, order).catch(console.error); 
+          try {
+            await createDeliveryForOrder(on, undefined, undefined, order);
+          } catch (e) {
+            console.error('[DELIVERY DISPATCH ERROR]', e);
+          }
         }
         if (ik) await setIdem(ik, 'completed', order); return ok({ success: true, order });
       }
@@ -1383,8 +1387,12 @@ export default async function handler(req: any, res: any) {
         const lat = req.body.lat;
         const lng = req.body.lng;
         await supabase.from('orders').update({ status }).eq('order_number', on);
-        if (status === 'confirmed' || status === 'processing') { 
-          createDeliveryForOrder(on, lat, lng).catch(console.error); 
+        if (status === 'confirmed' || status === 'processing' || status === 'pending') { 
+          try {
+            await createDeliveryForOrder(on, lat, lng);
+          } catch (e) {
+            console.error('[DELIVERY DISPATCH ERROR]', e);
+          }
         }
         return ok({ success: true });
       }
@@ -1568,7 +1576,7 @@ export default async function handler(req: any, res: any) {
     // ================================================================
     // SEED / COMMISSION / PAYMENT / TAX / VENDOR NOTIFY
     // ================================================================
-    if (path === '/api/seed' && method === 'GET') { const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]); const v = await getV(); return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-07-31-V2000' }); }
+    if (path === '/api/seed' && method === 'GET') { const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]); const v = await getV(); return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-07-31-V3000' }); }
     if (path === '/api/ai/voice-order' && method === 'POST') {
       try {
         const { data: prs } = await supabase.from('products').select('*');
@@ -1857,7 +1865,7 @@ export default async function handler(req: any, res: any) {
           const { data: order } = await supabase.from('orders').select('*').eq('order_number', orderNumber).single();
           if (order) {
             await supabase.from('orders').update({ status: 'confirmed', payment_verified_at: new Date().toISOString() }).eq('order_number', orderNumber);
-            createDeliveryForOrder(orderNumber).catch(console.error);
+            await createDeliveryForOrder(orderNumber);
             if (order.customer?.telegram_id || order.telegram_id) {
               const tid = order.customer?.telegram_id || order.telegram_id;
               const successMsg = `🎉 *Payment Confirmed!* \n\nThank you, your payment of *Br ${paidAmt}* for order *#${orderNumber}* has been verified successfully! \n\nWe are preparing your package for express dispatch.`;
