@@ -763,8 +763,8 @@ export default async function handler(req: any, res: any) {
         const delivery_id = b.delivery_id || b.deliveryId || b.id;
         const driver_id = b.driver_id || b.driverId || b.id;
         if (!delivery_id || !driver_id) return fail('delivery_id and driver_id required');
-        const { data, error } = await supabase.from('deliveries').update({ driver_id, status: 'accepted', assigned_at: new Date().toISOString(), accepted_at: new Date().toISOString() }).eq('id', delivery_id).in('status', ['pending', 'assigned']).select().single();
-        if (error) return fail(error.message || 'Already taken');
+        const { data, error } = await supabase.from('deliveries').update({ driver_id, status: 'accepted', assigned_at: new Date().toISOString(), accepted_at: new Date().toISOString() }).eq('id', delivery_id).in('status', ['pending', 'assigned']).select().maybeSingle();
+        if (error || !data) return fail('Delivery already accepted or completed', 409);
         if (data && data.order_number) {
           try {
             await supabase.from('orders').update({ status: 'in_transit' }).eq('order_number', data.order_number);
@@ -1728,7 +1728,7 @@ export default async function handler(req: any, res: any) {
     // ================================================================
     // SEED / COMMISSION / PAYMENT / TAX / VENDOR NOTIFY
     // ================================================================
-    if (path === '/api/seed' && method === 'GET') { const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]); const v = await getV(); return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-07-31-V8000' }); }
+    if (path === '/api/seed' && method === 'GET') { const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]); const v = await getV(); return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-07-31-V9000' }); }
     if (path === '/api/ai/voice-order' && method === 'POST') {
       try {
         const { data: prs } = await supabase.from('products').select('*');
