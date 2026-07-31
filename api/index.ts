@@ -1286,18 +1286,28 @@ export default async function handler(req: any, res: any) {
             currency: req.body.currency || 'ETB',
             language: req.body.language || 'en',
             referrer_code: req.body.referrer_code || req.body.referrerCode || null,
+            notes: req.body.notes || req.body.customerNote || req.body.customer_note || '',
           },
-          notes: req.body.notes || req.body.customerNote || req.body.customer_note || '',
         };
+        if (req.body.delivery || req.body.delivery_fee) {
+          orderPayload.delivery_fee = Number(req.body.delivery || req.body.delivery_fee || 0);
+        }
 
-        let { data: order, error: oe } = await supabase.from('orders').insert(orderPayload).select().single();
-        if (oe && oe.message && oe.message.includes('schema cache')) {
-          delete (orderPayload as any).delivery_fee;
-          delete (orderPayload as any).subtotal;
-          delete (orderPayload as any).discount;
-          const retry = await supabase.from('orders').insert(orderPayload).select().single();
-          order = retry.data;
-          oe = retry.error;
+        let order = null;
+        let oe = null;
+        for (let attempt = 0; attempt < 4; attempt++) {
+          const res = await supabase.from('orders').insert(orderPayload).select().single();
+          order = res.data;
+          oe = res.error;
+          if (oe && oe.message && oe.message.includes('schema cache')) {
+            const m = oe.message.match(/Could not find the '([^']+)' column/i);
+            if (m && m[1]) {
+              delete orderPayload[m[1]];
+              console.warn(`[ORDERS] Schema mismatch: removed column '${m[1]}', retrying insert (attempt ${attempt + 1})...`);
+              continue;
+            }
+          }
+          break;
         }
         if (oe) { for (const item of items) { if (item.productId) await supabase.rpc('increment_stock', { row_id: item.productId, qty: item.quantity || 1 }); } return fail(oe.message); }
 
@@ -1528,7 +1538,7 @@ export default async function handler(req: any, res: any) {
     // ================================================================
     // SEED / COMMISSION / PAYMENT / TAX / VENDOR NOTIFY
     // ================================================================
-    if (path === '/api/seed' && method === 'GET') { const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]); const v = await getV(); return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-07-31-V900' }); }
+    if (path === '/api/seed' && method === 'GET') { const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]); const v = await getV(); return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-07-31-V999' }); }
     if (path === '/api/ai/voice-order' && method === 'POST') {
       try {
         const { data: prs } = await supabase.from('products').select('*');
