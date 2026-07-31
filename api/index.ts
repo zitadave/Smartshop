@@ -290,7 +290,27 @@ async function createDeliveryForOrder(on: string, lat?: number, lng?: number, or
         delivery_lng: finalDropoffLng,
       }).eq('id', existingDel.id);
     } else {
-      await supabase.from('deliveries').insert(deliveryPayload);
+      let newDel = null;
+      let delErr = null;
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const res = await supabase.from('deliveries').insert(deliveryPayload).select().single();
+        newDel = res.data;
+        delErr = res.error;
+        if (delErr && delErr.message && delErr.message.includes('schema cache')) {
+          const m = delErr.message.match(/Could not find the '([^']+)' column/i);
+          if (m && m[1]) {
+            delete deliveryPayload[m[1]];
+            console.warn(`[DELIVERY] Schema mismatch: removed column '${m[1]}', retrying insert (attempt ${attempt + 1})...`);
+            continue;
+          }
+        }
+        break;
+      }
+      if (delErr) {
+        console.error(`[DELIVERY] Insert failed for order ${on}: ${delErr.message}`);
+      } else {
+        console.log(`[DELIVERY] Successfully created delivery record ${newDel?.id} for order ${on}`);
+      }
     }
     console.log(`[DELIVERY] Automatically assigned order ${on} to driver ${bestDriver?.id || 'none'} (${bestDriver?.full_name_latin || 'unassigned'})`);
 
@@ -1538,7 +1558,7 @@ export default async function handler(req: any, res: any) {
     // ================================================================
     // SEED / COMMISSION / PAYMENT / TAX / VENDOR NOTIFY
     // ================================================================
-    if (path === '/api/seed' && method === 'GET') { const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]); const v = await getV(); return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-07-31-V999' }); }
+    if (path === '/api/seed' && method === 'GET') { const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]); const v = await getV(); return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-07-31-V1000' }); }
     if (path === '/api/ai/voice-order' && method === 'POST') {
       try {
         const { data: prs } = await supabase.from('products').select('*');
