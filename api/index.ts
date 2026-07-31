@@ -1280,11 +1280,13 @@ export default async function handler(req: any, res: any) {
           delivery: Number(req.body.delivery || 0),
           status: req.body.status || 'pending',
           payment_method: req.body.payment_method || req.body.paymentMethod || 'cod',
-          customer: req.body.customer || {},
+          customer: {
+            ...(req.body.customer || {}),
+            currency: req.body.currency || 'ETB',
+            language: req.body.language || 'en',
+            referrer_code: req.body.referrer_code || req.body.referrerCode || null,
+          },
           notes: req.body.notes || req.body.customerNote || req.body.customer_note || '',
-          currency: req.body.currency || 'ETB',
-          language: req.body.language || 'en',
-          referrer_code: req.body.referrer_code || req.body.referrerCode || null,
         };
 
         const { data: order, error: oe } = await supabase.from('orders').insert(orderPayload).select().single();
@@ -1517,7 +1519,7 @@ export default async function handler(req: any, res: any) {
     // ================================================================
     // SEED / COMMISSION / PAYMENT / TAX / VENDOR NOTIFY
     // ================================================================
-    if (path === '/api/seed' && method === 'GET') { const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]); const v = await getV(); return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-07-31-V500' }); }
+    if (path === '/api/seed' && method === 'GET') { const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]); const v = await getV(); return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-07-31-V700' }); }
     if (path === '/api/ai/voice-order' && method === 'POST') {
       try {
         const { data: prs } = await supabase.from('products').select('*');
