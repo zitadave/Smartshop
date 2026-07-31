@@ -328,7 +328,17 @@ async function createDeliveryForOrder(on: string, lat?: number, lng?: number, or
     console.log(`[DELIVERY] Automatically assigned order ${on} to driver ${bestDriver?.id || 'none'} (${bestDriver?.full_name_latin || 'unassigned'}) with upfront PIN ${upfrontPin}`);
 
     // STAGE 1: Notify Customer upfront with their Security PIN
-    if (customerTelegramId) {
+    let custTgId = customerTelegramId;
+    if (!custTgId && ord.customer?.phone) {
+      try {
+        const last9 = String(ord.customer.phone).replace(/\D/g, '').slice(-9);
+        const { data: allU } = await supabase.from('users').select('telegram_id, phone').not('telegram_id', 'is', null);
+        const foundU = (allU || []).find((u: any) => u.phone && String(u.phone).replace(/\D/g, '').slice(-9) === last9);
+        if (foundU?.telegram_id) custTgId = foundU.telegram_id;
+      } catch {}
+    }
+
+    if (custTgId) {
       const driverName = bestDriver ? (bestDriver.full_name_latin || 'Smart Express Partner') : 'Smart Express Courier';
       const pinMsg = `🎉 <b>Order Confirmed & Driver Assigned!</b>\n\n` +
         `📦 <b>Order:</b> #${escapeHtml(on)}\n` +
@@ -338,16 +348,16 @@ async function createDeliveryForOrder(on: string, lat?: number, lng?: number, or
       const bots = [ENV.BOT_TOKEN, ENV.VENDOR_BOT_TOKEN, ENV.ADMIN_BOT_TOKEN].filter(Boolean);
       for (const bot of bots) {
         try {
-          const sent = await tg(bot, customerTelegramId, pinMsg, 'HTML');
+          const sent = await tg(bot, custTgId, pinMsg, 'HTML');
           if (sent) {
-            console.log(`[DELIVERY PIN] Sent upfront security PIN ${upfrontPin} to customer tg=${customerTelegramId}`);
+            console.log(`[DELIVERY PIN] Sent upfront security PIN ${upfrontPin} to customer tg=${custTgId}`);
             break;
           }
         } catch {}
       }
       try {
         await supabase.from('notifications').insert({
-          telegram_id: customerTelegramId,
+          telegram_id: custTgId,
           type: 'delivery',
           title: '🔐 Delivery Security PIN: ' + upfrontPin,
           message: `Your security PIN for order #${on} is ${upfrontPin}. Enter this when your courier arrives to release payment.`,
@@ -863,15 +873,32 @@ export default async function handler(req: any, res: any) {
         if (!delivery_id || !status) return fail('delivery_id and status required'); if (!DSTAT.includes(status)) return fail('Invalid status');
         const ud: Record<string, any> = { status }; if (status === 'at_vendor' && item_count) ud.item_count_confirmed_at_vendor = item_count;
         if (status === 'picked_up') ud.picked_up_at = new Date().toISOString();
-        if (status === 'arrived') ud.delivery_pin = Math.floor(1000 + Math.random() * 9000).toString();
         if (status === 'delivered') ud.delivered_at = new Date().toISOString();
         const { data, error } = await supabase.from('deliveries').update(ud).eq('id', delivery_id).select().single();
         if (error) return fail(error.message);
         
-        // Dispatch completion PIN dynamically to customer via Telegram chat on arrival!
+        // Sync Order Status in orders table so customer tracking timeline updates instantly
+        const orderStatusMap: Record<string, string> = {
+          'at_vendor': 'processing',
+          'picked_up': 'in_transit',
+          'in_transit': 'in_transit',
+          'arrived': 'out_for_delivery',
+          'delivered': 'delivered',
+          'cancelled': 'cancelled',
+        };
+        if (data && data.order_number && orderStatusMap[status]) {
+          try {
+            await supabase.from('orders').update({ status: orderStatusMap[status] }).eq('order_number', data.order_number);
+          } catch {}
+        }
+
+        // Dispatch arrival notice & PIN reminder dynamically to customer via Telegram chat!
         if (status === 'arrived' && data && data.customer_telegram_id) {
-          const pinMsg = `📦 *Smart Shop Delivery Dispatch*\n\nYour order *#${data.order_number}* has arrived at your destination!\n\n🔑 Your Delivery Completion PIN is: *${data.delivery_pin}*\n\nPlease provide this PIN to your delivery driver, or tap *Confirm Receipt* on your order detail page inside the WebApp to confirm receipt yourself!`;
-          await tg(ENV.VENDOR_BOT_TOKEN, data.customer_telegram_id, pinMsg);
+          const pinMsg = `📦 <b>Smart Shop Delivery Arrived!</b>\n\nYour order <b>#${escapeHtml(data.order_number)}</b> has arrived at your destination!\n\n🔑 Your Security Delivery PIN is: <code>${escapeHtml(data.delivery_pin)}</code>\n\nPlease provide this PIN to your delivery courier, or tap <b>Confirm Receipt</b> on your order tracking page inside the WebApp to confirm receipt yourself!`;
+          const bots = [ENV.BOT_TOKEN, ENV.VENDOR_BOT_TOKEN, ENV.ADMIN_BOT_TOKEN].filter(Boolean);
+          for (const bot of bots) {
+            try { if (await tg(bot, data.customer_telegram_id, pinMsg, 'HTML')) break; } catch {}
+          }
         }
 
         if (status === 'delivered' && data) { 
@@ -1695,7 +1722,7 @@ export default async function handler(req: any, res: any) {
     // ================================================================
     // SEED / COMMISSION / PAYMENT / TAX / VENDOR NOTIFY
     // ================================================================
-    if (path === '/api/seed' && method === 'GET') { const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]); const v = await getV(); return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-07-31-V6000' }); }
+    if (path === '/api/seed' && method === 'GET') { const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]); const v = await getV(); return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-07-31-V7000' }); }
     if (path === '/api/ai/voice-order' && method === 'POST') {
       try {
         const { data: prs } = await supabase.from('products').select('*');

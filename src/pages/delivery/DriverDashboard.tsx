@@ -326,6 +326,10 @@ export default function DriverDashboard() {
         toast('✅ Delivery status updated to: ' + status, 'success');
         fetchDeliveries();
         haptic('success');
+        if (status === 'arrived') {
+          setPinVerificationId(deliveryId);
+          setVerificationPinInput('');
+        }
       }
     }).catch(function() {});
   }

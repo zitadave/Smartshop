@@ -228,13 +228,15 @@ export default function Checkout() {
  const points = Math.floor(grandTotal * (pointsEarnRate / 100));
  setRewardPoints(points);
 
+ const tgId = profile.telegramId || (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id || null;
  const order: any = {
  orderNumber: orderNum,
+ telegram_id: tgId,
  status: paymentMethod === 'bank' ? 'pending_approval' : 'confirmed',
  items: cart.map(i => ({ id: i.id, name: i.nameEn, quantity: i.qty, price: i.price, total: i.price * i.qty, vendorId: i.vendorId || undefined, vendorName: i.vendorName })),
  total: grandTotal, subtotal: total, discount: promoDiscount, delivery: deliveryFee,
  paymentMethod: paymentMethod === 'chapa' ? 'chapa' : 'manual',
- customer: { name, phone, city, address, notes: '' },
+ customer: { name, phone, city, address, notes: '', telegram_id: tgId },
  date: new Date().toLocaleDateString(), createdAt: new Date().toISOString(), currency: 'ETB', language,
  referrer_code: localStorage.getItem('ss_referrer') || undefined,
  };
