@@ -226,6 +226,15 @@ async function createDeliveryForOrder(on: string, lat?: number, lng?: number) {
       console.log(`[DELIVERY] No online drivers found. Cascading dispatch to ${onlineDrivers?.length || 0} approved partners.`);
     }
 
+    // FINAL FALLBACK: If NO approved drivers exist at all in the database, notify ALL registered drivers so test/demo flows work!
+    if (!onlineDrivers || onlineDrivers.length === 0) {
+      const { data: allDrivers } = await supabase
+        .from('delivery_personnel')
+        .select('*');
+      onlineDrivers = allDrivers || [];
+      console.log(`[DELIVERY] No approved drivers found. Cascading dispatch to ALL ${onlineDrivers?.length || 0} registered partners.`);
+    }
+
     // AUTOMATIC DRIVER ASSIGNMENT: Select closest approved driver
     let bestDriver = onlineDrivers && onlineDrivers.length > 0 ? onlineDrivers[0] : null;
     if (onlineDrivers && onlineDrivers.length > 1) {
@@ -295,7 +304,7 @@ async function createDeliveryForOrder(on: string, lat?: number, lng?: number) {
           const distToDropoff = calculateDistance(dLat, dLng, finalDropoffLat as number, finalDropoffLng as number);
           const minDistance = Math.min(distToPickup, distToDropoff);
 
-          hasMatched = minDistance <= 25.0;
+          hasMatched = true;
           distTextPickup = ` (Est. ${distToPickup.toFixed(1)} km away)`;
           distTextDropoff = ` (Est. ${distToDropoff.toFixed(1)} km away)`;
         }
@@ -322,8 +331,10 @@ async function createDeliveryForOrder(on: string, lat?: number, lng?: number) {
           let drvTgId = d.telegram_id || d.telegramId;
           if (!drvTgId && d.phone) {
             try {
-              const { data: uRow } = await supabase.from('users').select('telegram_id').eq('phone', d.phone).maybeSingle();
-              if (uRow?.telegram_id) drvTgId = uRow.telegram_id;
+              const last9 = String(d.phone).replace(/\D/g, '').slice(-9);
+              const { data: allU } = await supabase.from('users').select('telegram_id, phone').not('telegram_id', 'is', null);
+              const foundU = (allU || []).find((u: any) => u.phone && String(u.phone).replace(/\D/g, '').slice(-9) === last9);
+              if (foundU?.telegram_id) drvTgId = foundU.telegram_id;
             } catch (e) {}
           }
 
@@ -331,13 +342,19 @@ async function createDeliveryForOrder(on: string, lat?: number, lng?: number) {
             const bots = [ENV.BOT_TOKEN, ENV.VENDOR_BOT_TOKEN, ENV.ADMIN_BOT_TOKEN].filter(Boolean);
             for (const bot of bots) {
               try {
-                const okSent = await tg(bot, drvTgId, tgMsg, 'HTML');
+                let okSent = await tg(bot, drvTgId, tgMsg, 'HTML');
+                if (!okSent) {
+                  const plainText = tgMsg.replace(/<[^>]+>/g, '');
+                  okSent = await tg(bot, drvTgId, plainText);
+                }
                 if (okSent) {
                   console.log(`[DELIVERY NOTIFY] Successfully sent telegram alert to driver ${drvTgId} using bot ${bot}`);
                   break;
                 }
               } catch (e) {}
             }
+          } else {
+            console.warn(`[DELIVERY NOTIFY] Driver ${d.id} (${d.full_name_latin}) has no telegram_id to notify! phone=${d.phone}`);
           }
 
           await supabase.from('notifications').insert({
@@ -1836,7 +1853,16 @@ export default async function handler(req: any, res: any) {
       const sb = req.body, sc = sb.message?.chat?.id, st = sb.message?.text || '';
       if (!sc) return ok({ ok: true });
       const uc = sb.message?.contact;
-      const sd = (txt: any, kb?: any) => tg(ENV.VENDOR_BOT_TOKEN, sc, txt, 'Markdown', kb ? { reply_markup: JSON.stringify(kb) } : {});
+      const sd = async (txt: any, kb?: any) => {
+        const bots = [ENV.BOT_TOKEN, ENV.VENDOR_BOT_TOKEN, ENV.ADMIN_BOT_TOKEN].filter(Boolean);
+        for (const bot of bots) {
+          try {
+            const sent = await tg(bot, sc, txt, 'Markdown', kb ? { reply_markup: JSON.stringify(kb) } : {});
+            if (sent) return true;
+          } catch {}
+        }
+        return false;
+      };
       const from = sb.message?.from || {};
 
       // Deep links

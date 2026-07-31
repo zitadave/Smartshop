@@ -75,13 +75,22 @@ export default function DriverDashboard() {
         tgId = stored.telegramId || '';
       } catch(e) {}
     }
-    if (!tgId) {
+    var userPhone = profile?.phone || localStorage.getItem('ss_user_phone') || '';
+    try {
+      if (!userPhone) {
+        var p = JSON.parse(localStorage.getItem('ss_profile') || '{}');
+        userPhone = p.phone || '';
+      }
+    } catch(e) {}
+
+    if (!tgId && !userPhone) {
       setLoading(false);
       return;
     }
 
     if (showSpinner) setRefreshing(true);
-    fetch('/api/delivery/drivers?telegramId=' + tgId)
+    var url = tgId ? '/api/delivery/drivers?telegramId=' + tgId : '/api/delivery/drivers?phone=' + encodeURIComponent(userPhone);
+    fetch(url)
       .then(function(r) { return r.json(); })
       .then(function(d) {
         if (d.success && d.driver) {
