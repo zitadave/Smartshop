@@ -126,11 +126,15 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 }
 
-async function createDeliveryForOrder(on: string, lat?: number, lng?: number) {
+async function createDeliveryForOrder(on: string, lat?: number, lng?: number, ordParam?: any) {
   try {
     const { data: existingDel } = await supabase.from('deliveries').select('id').eq('order_number', on).maybeSingle();
 
-    const { data: ord } = await supabase.from('orders').select('*').eq('order_number', on).maybeSingle();
+    let ord = ordParam;
+    if (!ord) {
+      const { data } = await supabase.from('orders').select('*').eq('order_number', on).maybeSingle();
+      ord = data;
+    }
     if (!ord) {
       console.warn(`[DELIVERY] Order #${on} not found in database.`);
       return;
@@ -1254,9 +1258,17 @@ export default async function handler(req: any, res: any) {
         const on = req.body.orderNumber || gON(); const items = req.body.items || [];
         for (const item of items) {
           if (!item.productId) continue; const qty = item.quantity || 1;
-          const { data: up, error: se } = await supabase.rpc('decrement_stock', { row_id: item.productId, qty }).single();
-          if (se || up === null || up === undefined) { for (const prev of items) { if (prev.productId === item.productId) break; await supabase.rpc('increment_stock', { row_id: prev.productId, qty: prev.quantity || 1 }); } return fail('Insufficient stock for #' + item.productId, 409); }
-          await supabase.from('products').update({ sold_count: supabase.rpc('increment', { x: qty }) }).eq('id', item.productId);
+          try {
+            const { data: prod } = await supabase.from('products').select('stock_count, sold_count').eq('id', item.productId).single();
+            if (prod && typeof prod.stock_count === 'number' && prod.stock_count === 0) {
+              return fail('Insufficient stock for product #' + item.productId, 409);
+            }
+            const newStock = Math.max(0, (prod?.stock_count || 100) - qty);
+            const newSold = (prod?.sold_count || 0) + qty;
+            await supabase.from('products').update({ stock_count: newStock, sold_count: newSold }).eq('id', item.productId);
+          } catch (e) {
+            console.warn('[STOCK] Non-blocking stock update error for prod ' + item.productId);
+          }
         }
         const orderPayload = {
           order_number: on,
@@ -1308,7 +1320,7 @@ export default async function handler(req: any, res: any) {
         } catch (err) {}
 
         if (order && (order.status === 'confirmed' || order.status === 'pending' || order.status === 'processing')) { 
-          createDeliveryForOrder(on).catch(console.error); 
+          createDeliveryForOrder(on, undefined, undefined, order).catch(console.error); 
         }
         if (ik) await setIdem(ik, 'completed', order); return ok({ success: true, order });
       }
@@ -1505,7 +1517,7 @@ export default async function handler(req: any, res: any) {
     // ================================================================
     // SEED / COMMISSION / PAYMENT / TAX / VENDOR NOTIFY
     // ================================================================
-    if (path === '/api/seed' && method === 'GET') { const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]); const v = await getV(); return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-7511-SEED' }); }
+    if (path === '/api/seed' && method === 'GET') { const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]); const v = await getV(); return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-07-31-V500' }); }
     if (path === '/api/ai/voice-order' && method === 'POST') {
       try {
         const { data: prs } = await supabase.from('products').select('*');
