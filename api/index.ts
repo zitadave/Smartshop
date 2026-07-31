@@ -69,6 +69,36 @@ function escapeHtml(unsafe: any): string {
     .replace(/>/g, "&gt;");
 }
 
+async function notifyAdmins(txt: string, pm = 'HTML') {
+  const chatIds = new Set<string>();
+  if (ENV.adminChatId) chatIds.add(String(ENV.adminChatId));
+  try {
+    const { data: sd } = await supabase.from('settings').select('*').single();
+    const s = sd?.data || sd || {};
+    if (s.adminChatId) chatIds.add(String(s.adminChatId));
+    if (s.admin_chat_id) chatIds.add(String(s.admin_chat_id));
+    if (s.telegramAdminChatId) chatIds.add(String(s.telegramAdminChatId));
+  } catch {}
+  try {
+    const { data: aus } = await supabase.from('admin_users').select('telegram_id').eq('is_active', true);
+    if (aus) {
+      for (const au of aus) {
+        if (au.telegram_id) chatIds.add(String(au.telegram_id));
+      }
+    }
+  } catch {}
+
+  const bots = [ENV.ADMIN_BOT_TOKEN, ENV.BOT_TOKEN, ENV.VENDOR_BOT_TOKEN].filter(Boolean);
+  for (const cid of chatIds) {
+    for (const bot of bots) {
+      try {
+        const sent = await tg(bot, cid, txt, pm);
+        if (sent) break;
+      } catch {}
+    }
+  }
+}
+
 // ===== IDEMPOTENCY =====
 const idem = new Map();
 async function chkIdem(k: string) {
@@ -257,7 +287,13 @@ async function createDeliveryForOrder(on: string, lat?: number, lng?: number) {
             `👉 Open your Driver Dashboard in the bot to accept this delivery!`;
             
           if (d.telegram_id) {
-            await tg(ENV.VENDOR_BOT_TOKEN, d.telegram_id, tgMsg, 'HTML').catch(console.error);
+            const bots = [ENV.BOT_TOKEN, ENV.VENDOR_BOT_TOKEN, ENV.ADMIN_BOT_TOKEN].filter(Boolean);
+            for (const bot of bots) {
+              try {
+                const okSent = await tg(bot, d.telegram_id, tgMsg, 'HTML');
+                if (okSent) break;
+              } catch (e) {}
+            }
           }
 
           await supabase.from('notifications').insert({
@@ -545,7 +581,10 @@ export default async function handler(req: any, res: any) {
         if (method === 'GET') { 
           var uParams = new URLSearchParams(req.url?.split('?')[1] || '');
           const tgId = uParams.get('telegram_id') || uParams.get('telegramId');
-          if (tgId) {
+          if (req.url?.includes('telegramId=') || req.url?.includes('telegram_id=')) {
+            if (!tgId || tgId === 'undefined' || tgId === 'null' || tgId === '0' || tgId === '') {
+              return ok({ success: false, driver: null });
+            }
             const { data, error } = await supabase.from('delivery_personnel').select('*').eq('telegram_id', parseInt(tgId)).single();
             if (error || !data) return ok({ success: false, driver: null });
             return ok({ success: true, driver: data });
@@ -575,7 +614,11 @@ export default async function handler(req: any, res: any) {
         }
         return ok({ success: true, driver: data });
       }
-      if (path === '/api/delivery/available' && method === 'GET') { const { data, error } = await supabase.from('deliveries').select('*').eq('status', 'pending').order('created_at', { ascending: false }); if (error) return fail(error.message, 500); return ok({ deliveries: data || [] }); }
+      if (path === '/api/delivery/available' && method === 'GET') { 
+        const { data, error } = await supabase.from('deliveries').select('*').in('status', ['pending', 'assigned', 'picking_up', 'in_transit']).order('created_at', { ascending: false }); 
+        if (error) return fail(error.message, 500); 
+        return ok({ deliveries: data || [] }); 
+      }
       if (path === '/api/delivery/accept' && method === 'POST') {
         const { delivery_id, driver_id } = req.body || {};
         if (!delivery_id || !driver_id) return fail('delivery_id and driver_id required');
@@ -626,13 +669,25 @@ export default async function handler(req: any, res: any) {
         return ok({ success: true });
       }
       if (path === '/api/delivery/online' && method === 'POST') {
-        const { driver_id, is_online } = req.body || {}; if (!driver_id) return fail('driver_id required');
-        const { error } = await supabase.from('delivery_personnel').update({ is_online: is_online === true, last_active_at: new Date().toISOString() }).eq('id', driver_id);
-        if (error) return fail(error.message); return ok({ success: true, is_online: is_online === true });
+        const b = req.body || {};
+        const driver_id = b.driver_id || b.driverId || b.id;
+        if (!driver_id) return fail('driver_id required');
+        const { error } = await supabase.from('delivery_personnel').update({ is_online: b.is_online === true, last_active_at: new Date().toISOString() }).eq('id', driver_id);
+        if (error) return fail(error.message); return ok({ success: true, is_online: b.is_online === true });
       }
       if (path === '/api/delivery/location' && method === 'POST') {
-        const { driver_id, lat, lng } = req.body || {}; if (!driver_id || lat == null || lng == null) return fail('driver_id, lat, lng required');
-        const { error } = await supabase.from('delivery_personnel').update({ current_lat: parseFloat(lat), current_lng: parseFloat(lng), location_updated_at: new Date().toISOString() }).eq('id', driver_id);
+        const b = req.body || {};
+        const driver_id = b.driver_id || b.driverId || b.id;
+        const lat = b.lat;
+        const lng = b.lng;
+        if (!driver_id || lat == null || lng == null) return fail('driver_id, lat, lng required');
+        const { error } = await supabase.from('delivery_personnel').update({ 
+          current_lat: parseFloat(lat), 
+          current_lng: parseFloat(lng), 
+          is_online: true, 
+          last_active_at: new Date().toISOString(), 
+          location_updated_at: new Date().toISOString() 
+        }).eq('id', driver_id);
         if (error) return fail(error.message); return ok({ success: true });
       }
       if (path.startsWith('/api/delivery/tracking/') && method === 'GET') {
@@ -1082,10 +1137,19 @@ export default async function handler(req: any, res: any) {
             `📞 Phone: <code>${escapeHtml(custPhone)}</code>\n\n` +
             `📦 <b>Items:</b>\n${orderItemsMsg}`;
 
-          tg(ENV.ADMIN_BOT_TOKEN, ENV.adminChatId, txt, 'HTML').catch(() => {});
+          notifyAdmins(txt, 'HTML').catch(() => {});
+          await supabase.from('notifications').insert({
+            telegram_id: null,
+            type: 'order',
+            title: `New Order #${on}`,
+            message: `Order #${on} placed for Br ${totalAmount.toLocaleString()} via ${pMethod.toUpperCase()}`,
+            icon: '🛍',
+          }).catch(() => {});
         } catch (err) {}
 
-        if (order && order.status === 'confirmed') { createDeliveryForOrder(on).catch(console.error); }
+        if (order && (order.status === 'confirmed' || order.status === 'pending' || order.status === 'processing')) { 
+          createDeliveryForOrder(on).catch(console.error); 
+        }
         if (ik) await setIdem(ik, 'completed', order); return ok({ success: true, order });
       }
       if (method === 'GET') { const on = path.replace('/api/orders/', '').split('/')[0]; const { data } = await supabase.from('orders').select('*').eq('order_number', on).single(); return ok({ success: true, order: data }); }

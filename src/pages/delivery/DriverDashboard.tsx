@@ -181,7 +181,7 @@ export default function DriverDashboard() {
           setDeliveries(function(prev) {
             const currentIds = prev.map(function(x) { return x.id; });
             const newJobs = d.deliveries.filter(function(x) { return (x.status === 'pending' || x.status === 'assigned') && !currentIds.includes(x.id); });
-            if (newJobs.length > 0 && prev.length > 0) {
+            if (newJobs.length > 0) {
               toast(`🔔 New express delivery job available! Order #${newJobs[0].order_number}`, 'info');
               haptic('warning');
             }
@@ -210,60 +210,49 @@ export default function DriverDashboard() {
     var newStatus = !isOnline;
     haptic('light');
 
+    setIsOnline(newStatus);
+    var stored = JSON.parse(localStorage.getItem('ss_driver_profile') || '{}');
+    stored.is_online = newStatus;
+    localStorage.setItem('ss_driver_profile', JSON.stringify(stored));
+
     if (newStatus) {
+      toast('🟢 Active Radar: You are online!', 'success');
+      haptic('success');
       // 1. Instantly set status to online on the database and state (non-blocking!)
       fetch('/api/delivery/online', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ driver_id: driverId, is_online: newStatus })
-      }).then(function(r) { return r.json(); }).then(function(d) {
-        if (d.success) {
-          setIsOnline(newStatus);
-          var stored = JSON.parse(localStorage.getItem('ss_driver_profile') || '{}');
-          stored.is_online = newStatus;
-          localStorage.setItem('ss_driver_profile', JSON.stringify(stored));
-          toast('🟢 Active Radar: You are online!', 'success');
-          haptic('success');
-
-          // 2. Silently query initial location in background
-          if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-              function(pos) {
-                const lat = pos.coords.latitude;
-                const lng = pos.coords.longitude;
-                fetch('/api/delivery/location', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ driver_id: driverId, lat, lng })
-                }).catch(function() {});
-              },
-              function(err) {
-                console.warn('[GPS] Initial background lock failed:', err.message);
-              },
-              { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
-            );
-          }
-        } else {
-          toast('Failed to connect online', 'error');
-        }
       }).catch(function() {
-        toast('Connection error', 'error');
+        toast('Connection error - retrying...', 'error');
       });
+
+      // 2. Silently query initial location in background
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          function(pos) {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            fetch('/api/delivery/location', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ driver_id: driverId, lat, lng })
+            }).catch(function() {});
+          },
+          function(err) {
+            console.warn('[GPS] Initial background lock failed:', err.message);
+          },
+          { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
+        );
+      }
     } else {
+      toast('🔴 Offline: Radar turned off', 'success');
+      haptic('success');
       fetch('/api/delivery/online', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ driver_id: driverId, is_online: newStatus })
-      }).then(function(r) { return r.json(); }).then(function(d) {
-        if (d.success) {
-          setIsOnline(newStatus);
-          var stored = JSON.parse(localStorage.getItem('ss_driver_profile') || '{}');
-          stored.is_online = newStatus;
-          localStorage.setItem('ss_driver_profile', JSON.stringify(stored));
-          toast('🔴 Offline: Radar turned off', 'success');
-          haptic('success');
-        }
-      });
+      }).catch(function() {});
     }
   }
 

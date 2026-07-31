@@ -38,7 +38,7 @@ export default function Profile() {
   var [vendorStatus, setVendorStatus] = useState('loading');
   
   // ===== DRIVER STATUS =====
-  var [driverStatus, setDriverStatus] = useState('loading');
+  var [driverStatus, setDriverStatus] = useState('none');
 
   // Check vendor status on mount and every 5 seconds
   useEffect(function() {
@@ -55,7 +55,10 @@ export default function Profile() {
       
       if (!storedTgId) {
         // No Telegram ID yet - set to 'none'
-        if (!cancelled) setVendorStatus('none');
+        if (!cancelled) {
+          setVendorStatus('none');
+          setDriverStatus('none');
+        }
         return;
       }
       
@@ -93,15 +96,17 @@ export default function Profile() {
         .then(function(r) { return r.json(); })
         .then(function(d) {
           if (cancelled) return;
-          if (d && d.success && d.driver) {
-            if (!cancelled) setDriverStatus(d.driver.status);
-            localStorage.setItem('ss_driver_status', d.driver.status);
+          if (d && d.success && d.driver && d.driver.status === 'approved') {
+            if (!cancelled) setDriverStatus('approved');
+            localStorage.setItem('ss_driver_status', 'approved');
           } else {
-            if (!cancelled) setDriverStatus('none');
+            if (!cancelled) setDriverStatus(d?.driver?.status || 'none');
+            localStorage.setItem('ss_driver_status', d?.driver?.status || 'none');
           }
         })
         .catch(function() {
           if (!cancelled) setDriverStatus('none');
+          localStorage.setItem('ss_driver_status', 'none');
         });
     }
     
@@ -154,8 +159,8 @@ export default function Profile() {
     engagementItems.push({ icon: '📝', label: 'Become a Vendor', desc: 'Start selling products', onClick: function() { navigate('/vendor-register'); } });
   }
 
-  // Driver Status menu items (Only visible to approved drivers!)
-  if (driverStatus === 'approved') {
+  // Driver Status menu items (Only visible to approved drivers, not for rejected, not for vendor, not for regular customer!)
+  if (driverStatus === 'approved' && vendorStatus !== 'approved' && vendorStatus !== 'pending') {
     engagementItems.push({ icon: '🏍️', label: 'Smart Express', desc: 'Driver dashboard & active jobs', onClick: function() { navigate('/driver'); } });
   }
 
