@@ -105,7 +105,32 @@ export default function ProductDetail() {
     setCreating(false);
   };
 
+  const [fetchingProduct, setFetchingProduct] = useState(false);
+
+  useEffect(() => {
+    if (!product && !fetchingProduct && store.products.length === 0) {
+      setFetchingProduct(true);
+      fetch('/api/products')
+        .then(r => r.json())
+        .then(d => {
+          if (d && d.products) store.setProducts(d.products);
+          setFetchingProduct(false);
+        })
+        .catch(() => setFetchingProduct(false));
+    }
+  }, [id, product, fetchingProduct, store.products.length]);
+
   if (!product) {
+    if (store.products.length === 0 || fetchingProduct) {
+      return (
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <div className="w-8 h-8 border-2 border-border border-t-primary rounded-full animate-spin mx-auto" />
+            <p className="text-xs text-muted-foreground mt-3">Loading product...</p>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="text-center py-20">
         <div className="text-5xl mb-3">🔍</div>

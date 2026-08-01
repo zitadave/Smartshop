@@ -187,6 +187,14 @@ export default function DriverDashboard() {
   var [pinVerificationId, setPinVerificationId] = useState<number | null>(null);
   var [verificationPinInput, setVerificationPinInput] = useState('');
   var [verifyingPin, setVerifyingPin] = useState(false);
+  var [expandedDeliveryId, setExpandedDeliveryId] = useState<number | null>(null);
+
+  useEffect(function() {
+    if (deliveries.length > 0 && expandedDeliveryId === null) {
+      const firstActive = deliveries.find(function(d) { return d.status !== 'pending' && d.status !== 'delivered' && d.status !== 'failed' && d.status !== 'cancelled' && d.status !== 'returned'; });
+      if (firstActive) setExpandedDeliveryId(firstActive.id);
+    }
+  }, [deliveries, expandedDeliveryId]);
 
   // Simulated daily earnings trend (7 days) for our custom CSS bar chart
   var [dailyEarnings, setDailyEarnings] = useState<DailyEarning[]>([
@@ -936,85 +944,132 @@ export default function DriverDashboard() {
 
                   {deliveries.filter(function(d) { return d.status !== 'pending' && d.status !== 'delivered' && d.status !== 'failed' && d.status !== 'cancelled' && d.status !== 'returned'; }).map(function(del) {
                     var fee = del.driver_payout || del.fee || 0;
+                    var isExpanded = expandedDeliveryId === del.id;
 
                     return (
-                      <div key={del.id} className="bg-slate-900 rounded-3xl border border-emerald-500/30 p-4 shadow-xl animate-scaleIn space-y-3.5">
-                        <div className="flex items-center justify-between border-b border-slate-800/85 pb-2.5">
+                      <div key={del.id} className="bg-card rounded-3xl border border-border p-4 shadow-xl animate-scaleIn space-y-3 text-foreground">
+                        {/* Always-visible Compact Header Bar (Click to Toggle Expand) */}
+                        <div 
+                          className="flex items-center justify-between cursor-pointer select-none"
+                          onClick={() => {
+                            setExpandedDeliveryId(isExpanded ? null : del.id);
+                            haptic('light');
+                          }}
+                        >
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-mono font-black text-emerald-400">#{del.order_number}</span>
+                            <span className="text-xs font-mono font-black text-primary">#{del.order_number}</span>
+                            <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">Br {fee}</span>
                             {del.cod_amount > 0 && (
-                              <span className="bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[8px] font-extrabold px-2 py-0.5 rounded-full">
-                                💵 COD: Br {del.cod_amount}
+                              <span className="bg-rose-500/20 text-rose-500 text-[8px] font-extrabold px-2 py-0.5 rounded-full">
+                                COD Br {del.cod_amount}
                               </span>
                             )}
                           </div>
-                          <span className={'px-2 py-0.5 rounded text-[8px] font-black uppercase ' + getStatusColor(del.status)}>
-                            {del.status?.replace('_', ' ')}
-                          </span>
-                        </div>
-
-                        {/* INTEGRATED IN-APP LIVE STREET MAP */}
-                        <DriverLiveMap delivery={del} driverLat={driver?.current_lat} driverLng={driver?.current_lng} />
-
-                        {/* Clear Addresses Box */}
-                        <div className="space-y-2 bg-slate-950/60 rounded-2xl p-3 border border-slate-800/60">
-                          <div className="flex items-start gap-2.5">
-                            <span className="w-2 h-2 rounded-full bg-blue-400 mt-1 flex-shrink-0" />
-                            <div>
-                              <div className="text-[8px] text-slate-500 uppercase tracking-wider font-extrabold">🏪 Vendor Pickup Shop</div>
-                              <div className="text-xs font-bold text-slate-200 mt-0.5">{del.pickup_address || 'Smart Shop Partner Store'}</div>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-2.5">
-                            <span className="w-2 h-2 rounded-full bg-emerald-400 mt-1 flex-shrink-0" />
-                            <div className="flex-1">
-                              <div className="text-[8px] text-slate-500 uppercase tracking-wider font-extrabold">🏠 Customer Destination</div>
-                              <div className="text-xs font-bold text-slate-200 mt-0.5">{del.delivery_address || 'Customer Residence'}</div>
-                            </div>
-                            {del.customer_phone && (
-                              <a 
-                                href={`tel:${del.customer_phone}`}
-                                className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-xl text-[9px] font-black flex items-center gap-1 border border-slate-700 active:scale-95"
-                                title="Call Customer"
-                              >
-                                <Phone size={10} /> Call
-                              </a>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Payout Banner */}
-                        <div className="flex items-center justify-between bg-emerald-950/30 border border-emerald-500/20 px-3.5 py-2 rounded-xl">
-                          <span className="text-[9px] text-emerald-300 font-bold uppercase tracking-wider">Net Delivery Payout</span>
-                          <span className="text-sm font-black text-emerald-400">Br {fee}</span>
-                        </div>
-
-                        {/* 1-Click Action Bar */}
-                        <div className="flex items-center gap-2 pt-0.5">
-                          {(del.status === 'assigned' || del.status === 'accepted' || del.status === 'pending') && (
-                            <button 
-                              className="px-3.5 py-3 bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 rounded-xl text-[10px] font-black transition-all flex items-center justify-center gap-1 active:scale-95 border border-slate-700"
-                              onClick={function() { declineDelivery(del.id); }}
-                              title="Decline & pass to next partner"
-                            >
-                              Pass ✕
+                          <div className="flex items-center gap-1.5">
+                            <span className={'px-2 py-0.5 rounded text-[8px] font-black uppercase ' + getStatusColor(del.status)}>
+                              {del.status?.replace('_', ' ')}
+                            </span>
+                            <button className="p-1 rounded-lg hover:bg-muted text-muted-foreground text-[10px] font-bold">
+                              {isExpanded ? '▴ Collapse' : '▾ View Mission'}
                             </button>
-                          )}
-                          <button 
-                            className="flex-1 py-3 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white rounded-xl text-xs font-black shadow-lg shadow-emerald-500/20 transition-all active:scale-95 flex items-center justify-center gap-1.5"
-                            onClick={function() {
-                              if (del.status !== 'arrived') {
-                                triggerStatusUpdate(del.id, 'arrived');
-                              } else {
-                                setPinVerificationId(del.id);
-                                setVerificationPinInput('');
-                              }
-                            }}
-                          >
-                            <Check size={14} /> 
-                            {del.status === 'arrived' ? 'Verify Customer PIN' : '📍 Arrived — Verify PIN'}
-                          </button>
+                          </div>
                         </div>
+
+                        {/* If Compact / Collapsed, show sleek 1-click action button on summary row! */}
+                        {!isExpanded && (
+                          <div className="flex items-center justify-between border-t border-border pt-2.5">
+                            <span className="text-[10px] text-muted-foreground truncate max-w-[55%]">
+                              🏪 {del.pickup_address || 'Shop'} ➔ 🏠 {del.delivery_address || 'Customer'}
+                            </span>
+                            <button 
+                              className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 text-white rounded-xl text-[10px] font-black shadow transition-all active:scale-95 flex items-center gap-1"
+                              onClick={function(e) {
+                                e.stopPropagation();
+                                if (del.status !== 'arrived') {
+                                  triggerStatusUpdate(del.id, 'arrived');
+                                } else {
+                                  setPinVerificationId(del.id);
+                                  setVerificationPinInput('');
+                                }
+                              }}
+                            >
+                              📍 Arrived — Verify PIN
+                            </button>
+                          </div>
+                        )}
+
+                        {/* FULLY EXPANDED MISSION VIEW */}
+                        {isExpanded && (
+                          <>
+                            {/* INTEGRATED IN-APP LIVE STREET MAP */}
+                            <DriverLiveMap delivery={del} driverLat={driver?.current_lat} driverLng={driver?.current_lng} />
+
+                            {/* Clear Addresses Box */}
+                            <div className="space-y-2 bg-muted/50 rounded-2xl p-3 border border-border">
+                              <div className="flex items-start gap-2.5">
+                                <span className="w-2 h-2 rounded-full bg-blue-500 mt-1 flex-shrink-0" />
+                                <div>
+                                  <div className="text-[8px] text-muted-foreground uppercase tracking-wider font-extrabold">🏪 Vendor Pickup Shop</div>
+                                  <div className="text-xs font-bold text-foreground mt-0.5">{del.pickup_address || 'Smart Shop Partner Store'}</div>
+                                </div>
+                              </div>
+                              <div className="flex items-start gap-2.5">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 mt-1 flex-shrink-0" />
+                                <div className="flex-1">
+                                  <div className="text-[8px] text-muted-foreground uppercase tracking-wider font-extrabold">🏠 Customer Destination</div>
+                                  <div className="text-xs font-bold text-foreground mt-0.5">{del.delivery_address || 'Customer Residence'}</div>
+                                </div>
+                                {del.customer_phone && (
+                                  <a 
+                                    href={`tel:${del.customer_phone}`}
+                                    className="px-2.5 py-1.5 bg-card hover:bg-muted text-primary rounded-xl text-[9px] font-black flex items-center gap-1 border border-border active:scale-95 shadow"
+                                    title="Call Customer"
+                                    onClick={e => e.stopPropagation()}
+                                  >
+                                    <Phone size={10} /> Call
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Payout Banner */}
+                            <div className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/20 px-3.5 py-2 rounded-xl">
+                              <span className="text-[9px] text-emerald-600 dark:text-emerald-300 font-bold uppercase tracking-wider">Net Delivery Payout</span>
+                              <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">Br {fee}</span>
+                            </div>
+
+                            {/* 1-Click Action Bar */}
+                            <div className="flex items-center gap-2 pt-0.5">
+                              {(del.status === 'assigned' || del.status === 'accepted' || del.status === 'pending') && (
+                                <button 
+                                  className="px-3.5 py-3 bg-muted hover:bg-red-500/20 text-muted-foreground hover:text-red-500 rounded-xl text-[10px] font-black transition-all flex items-center justify-center gap-1 active:scale-95 border border-border"
+                                  onClick={function(e) { 
+                                    e.stopPropagation();
+                                    declineDelivery(del.id); 
+                                  }}
+                                  title="Decline & pass to next partner"
+                                >
+                                  Pass ✕
+                                </button>
+                              )}
+                              <button 
+                                className="flex-1 py-3 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white rounded-xl text-xs font-black shadow-lg shadow-emerald-500/20 transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                                onClick={function(e) {
+                                  e.stopPropagation();
+                                  if (del.status !== 'arrived') {
+                                    triggerStatusUpdate(del.id, 'arrived');
+                                  } else {
+                                    setPinVerificationId(del.id);
+                                    setVerificationPinInput('');
+                                  }
+                                }}
+                              >
+                                <Check size={14} /> 
+                                {del.status === 'arrived' ? 'Verify Customer PIN' : '📍 Arrived — Verify PIN'}
+                              </button>
+                            </div>
+                          </>
+                        )}
                       </div>
                     );
                   })}
