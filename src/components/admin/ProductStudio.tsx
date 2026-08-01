@@ -715,43 +715,90 @@ export default function ProductStudio({ editProduct, onClose, onSaved }: Product
                     </div>
 
                     {settings.flashSales && settings.flashSales[String(form.id || 0)] && (
-                      <div className="grid grid-cols-2 gap-3 pt-2 border-t border-rose-500/20 text-xs">
-                        <div>
-                          <span className="text-[8px] font-bold text-slate-400 uppercase">Offer Discount %</span>
-                          <div className="font-extrabold text-rose-600">{settings.flashSales[String(form.id || 0)].discount}% OFF (Br {form.price})</div>
-                        </div>
-                        <div>
-                          <span className="text-[8px] font-bold text-slate-400 uppercase">Offer Expires</span>
-                          <div className="font-bold text-slate-700 dark:text-slate-200">
-                            {new Date(settings.flashSales[String(form.id || 0)].end).toLocaleDateString()} ({Math.max(1, Math.round((settings.flashSales[String(form.id || 0)].end - Date.now()) / 86400000))}d left)
-                          </div>
-                        </div>
-                        <div className="col-span-2 flex gap-1.5 pt-1">
-                          {[
-                            { label: '24 Hours', ms: 86400000 },
-                            { label: '3 Days', ms: 86400000 * 3 },
-                            { label: '7 Days', ms: 86400000 * 7 },
-                            { label: '30 Days', ms: 86400000 * 30 }
-                          ].map((dur, i) => (
-                            <button key={i} type="button"
-                              className="px-2.5 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 rounded-lg text-[9px] font-extrabold transition-all"
-                              onClick={() => {
+                      <div className="space-y-3 pt-3 border-t border-rose-500/20 text-xs">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-[8px] font-bold text-slate-400 uppercase block mb-1">Offer Discount %</label>
+                            <input
+                              type="number"
+                              className="w-full p-2 border border-rose-200 dark:border-rose-800 rounded-lg text-xs font-bold text-rose-600 bg-white dark:bg-slate-900"
+                              value={settings.flashSales[String(form.id || 0)].discount || discountPercent || 15}
+                              min={1}
+                              max={99}
+                              onChange={e => {
                                 const pid = String(form.id || 0);
                                 const current = { ...(settings.flashSales || {}) };
                                 current[pid] = {
-                                  end: Date.now() + dur.ms,
-                                  startedAt: Date.now(),
-                                  discount: discountPercent || 15,
-                                  maxQty: 50
+                                  ...current[pid],
+                                  discount: Number(e.target.value)
                                 };
                                 const updated = { ...settings, flashSales: current };
                                 setSettings(updated as any);
                                 settingsApi.update(updated);
-                                toast(`⚡ Offer duration extended to ${dur.label}!`, 'success');
-                              }}>
-                              + {dur.label}
-                            </button>
-                          ))}
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[8px] font-bold text-slate-400 uppercase block mb-1">Max Offer Stock Qty</label>
+                            <input
+                              type="number"
+                              className="w-full p-2 border border-rose-200 dark:border-rose-800 rounded-lg text-xs font-bold text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900"
+                              value={settings.flashSales[String(form.id || 0)].maxQty || 50}
+                              min={1}
+                              onChange={e => {
+                                const pid = String(form.id || 0);
+                                const current = { ...(settings.flashSales || {}) };
+                                current[pid] = {
+                                  ...current[pid],
+                                  maxQty: Number(e.target.value)
+                                };
+                                const updated = { ...settings, flashSales: current };
+                                setSettings(updated as any);
+                                settingsApi.update(updated);
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <span className="text-[8px] font-bold text-slate-400 uppercase block mb-1.5">Set / Extend Offer Duration</span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {[
+                              { label: '6 Hours', ms: 86400000 * 0.25 },
+                              { label: '24 Hours', ms: 86400000 },
+                              { label: '3 Days', ms: 86400000 * 3 },
+                              { label: '7 Days', ms: 86400000 * 7 },
+                              { label: '14 Days', ms: 86400000 * 14 },
+                              { label: '30 Days', ms: 86400000 * 30 }
+                            ].map((dur, i) => (
+                              <button key={i} type="button"
+                                className="px-2.5 py-1.5 bg-rose-500/10 hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 rounded-lg text-[9px] font-extrabold transition-all border border-rose-500/20 active:scale-95"
+                                onClick={() => {
+                                  const pid = String(form.id || 0);
+                                  const current = { ...(settings.flashSales || {}) };
+                                  current[pid] = {
+                                    ...current[pid],
+                                    end: Date.now() + dur.ms,
+                                    startedAt: Date.now(),
+                                    discount: current[pid]?.discount || discountPercent || 15,
+                                    maxQty: current[pid]?.maxQty || 50
+                                  };
+                                  const updated = { ...settings, flashSales: current };
+                                  setSettings(updated as any);
+                                  settingsApi.update(updated);
+                                  toast(`⚡ Offer set to expire in ${dur.label}!`, 'success');
+                                }}>
+                                ⏱️ {dur.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="bg-rose-500/10 border border-rose-500/30 rounded-xl p-2.5 flex items-center justify-between text-[11px] font-bold text-rose-700 dark:text-rose-300">
+                          <span>
+                            ⚡ LIVE: {settings.flashSales[String(form.id || 0)].discount}% OFF · Ends {new Date(settings.flashSales[String(form.id || 0)].end).toLocaleDateString()} ({Math.max(1, Math.round((settings.flashSales[String(form.id || 0)].end - Date.now()) / 86400000))}d left)
+                          </span>
+                          <span className="text-[9px] uppercase font-black bg-rose-600 text-white px-2 py-0.5 rounded-full">Active</span>
                         </div>
                       </div>
                     )}
