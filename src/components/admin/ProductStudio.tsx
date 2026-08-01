@@ -104,6 +104,9 @@ export default function ProductStudio({ editProduct, onClose, onSaved }: Product
   const [newTag, setNewTag] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [showPreview, setShowPreview] = useState(false);
+  const [showNewCategory, setShowNewCategory] = useState(false);
+  const [newCatLabel, setNewCatLabel] = useState('');
+  const [newCatIcon, setNewCatIcon] = useState('🛍️');
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -405,7 +408,7 @@ export default function ProductStudio({ editProduct, onClose, onSaved }: Product
                     <div>
                       <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Category</label>
                       <div className="grid grid-cols-4 gap-1.5 mt-1">
-                        {CATEGORIES.map(c => (
+                        {[...CATEGORIES, ...((settings as any).customCategories || [])].map(c => (
                           <button key={c.id} className={cn('flex flex-col items-center gap-1 p-2 rounded-xl border transition-all text-[9px]',
                             form.category === c.id ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700' : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:border-indigo-300')}
                             onClick={() => update('category', c.id)}>
@@ -414,6 +417,34 @@ export default function ProductStudio({ editProduct, onClose, onSaved }: Product
                           </button>
                         ))}
                       </div>
+                      {showNewCategory ? (
+                        <div className="mt-2 p-2 bg-indigo-50 dark:bg-indigo-950/30 rounded-xl border border-indigo-200 dark:border-indigo-800 space-y-2">
+                          <div className="text-[9px] font-bold text-indigo-600">➕ Add Custom Category (Available to Admins & Vendors)</div>
+                          <div className="flex gap-1.5">
+                            <input type="text" placeholder="Icon (e.g. 🧸)" className="w-14 p-1.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-900 text-center"
+                              value={newCatIcon} onChange={e => setNewCatIcon(e.target.value)} />
+                            <input type="text" placeholder="Category Name (e.g. Toys, Shoes, Auto)" className="flex-1 p-1.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-900"
+                              value={newCatLabel} onChange={e => setNewCatLabel(e.target.value)} />
+                            <button className="px-3 py-1 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700"
+                              onClick={() => {
+                                if (!newCatLabel) return;
+                                const catId = newCatLabel.toLowerCase().replace(/[^a-z0-9]/g, '-');
+                                const newCatObj = { id: catId, icon: newCatIcon || '🛍️', label: newCatLabel, labelAm: newCatLabel };
+                                const updatedCustom = [...((settings as any).customCategories || []), newCatObj];
+                                const updatedSettings = { ...settings, customCategories: updatedCustom };
+                                setSettings(updatedSettings as any);
+                                settingsApi.update(updatedSettings);
+                                update('category', catId);
+                                setNewCatLabel('');
+                                setShowNewCategory(false);
+                                toast('✅ Custom Category added!', 'success');
+                              }}>Add</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button className="mt-1.5 text-[9px] font-bold text-indigo-600 hover:underline flex items-center gap-1"
+                          onClick={() => setShowNewCategory(true)}>+ Add Custom Category</button>
+                      )}
                     </div>
                     <div>
                       <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Badge</label>
@@ -643,6 +674,84 @@ export default function ProductStudio({ editProduct, onClose, onSaved }: Product
                         Br {suggestedPrice().toLocaleString()}
                       </button>
                     </div>
+                  </div>
+
+                  {/* Limited Discount Offer & Flash Sale Control - Available to Admins & Vendors */}
+                  <div className="bg-rose-500/5 dark:bg-rose-950/20 rounded-2xl border border-rose-500/20 p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="text-xs font-bold text-rose-600 flex items-center gap-1.5">
+                          <span>⚡</span> Limited Discount Offer (Flash Sale)
+                        </h4>
+                        <p className="text-[9px] text-slate-500">Launch a time-limited promotional discount with a live countdown timer</p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" className="sr-only peer"
+                          checked={!!(settings.flashSales && settings.flashSales[String(form.id || 0)])}
+                          onChange={e => {
+                            const pid = String(form.id || Date.now());
+                            const current = { ...(settings.flashSales || {}) };
+                            if (e.target.checked) {
+                              current[pid] = {
+                                end: Date.now() + 86400000 * 3,
+                                startedAt: Date.now(),
+                                discount: discountPercent || 15,
+                                maxQty: 50
+                              };
+                              toast('⚡ Limited Discount Offer activated for 3 days!', 'success');
+                            } else {
+                              delete current[pid];
+                              toast('Limited Discount Offer disabled.', 'info');
+                            }
+                            const updated = { ...settings, flashSales: current };
+                            setSettings(updated as any);
+                            settingsApi.update(updated);
+                          }} />
+                        <div className="w-9 h-5 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-rose-500 after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all" />
+                      </label>
+                    </div>
+
+                    {settings.flashSales && settings.flashSales[String(form.id || 0)] && (
+                      <div className="grid grid-cols-2 gap-3 pt-2 border-t border-rose-500/20 text-xs">
+                        <div>
+                          <span className="text-[8px] font-bold text-slate-400 uppercase">Offer Discount %</span>
+                          <div className="font-extrabold text-rose-600">{settings.flashSales[String(form.id || 0)].discount}% OFF (Br {form.price})</div>
+                        </div>
+                        <div>
+                          <span className="text-[8px] font-bold text-slate-400 uppercase">Offer Expires</span>
+                          <div className="font-bold text-slate-700 dark:text-slate-200">
+                            {new Date(settings.flashSales[String(form.id || 0)].end).toLocaleDateString()} ({Math.max(1, Math.round((settings.flashSales[String(form.id || 0)].end - Date.now()) / 86400000))}d left)
+                          </div>
+                        </div>
+                        <div className="col-span-2 flex gap-1.5 pt-1">
+                          {[
+                            { label: '24 Hours', ms: 86400000 },
+                            { label: '3 Days', ms: 86400000 * 3 },
+                            { label: '7 Days', ms: 86400000 * 7 },
+                            { label: '30 Days', ms: 86400000 * 30 }
+                          ].map((dur, i) => (
+                            <button key={i} type="button"
+                              className="px-2.5 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 rounded-lg text-[9px] font-extrabold transition-all"
+                              onClick={() => {
+                                const pid = String(form.id || 0);
+                                const current = { ...(settings.flashSales || {}) };
+                                current[pid] = {
+                                  end: Date.now() + dur.ms,
+                                  startedAt: Date.now(),
+                                  discount: discountPercent || 15,
+                                  maxQty: 50
+                                };
+                                const updated = { ...settings, flashSales: current };
+                                setSettings(updated as any);
+                                settingsApi.update(updated);
+                                toast(`⚡ Offer duration extended to ${dur.label}!`, 'success');
+                              }}>
+                              + {dur.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Pre-order */}

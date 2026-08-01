@@ -364,7 +364,7 @@ export default function Home() {
 
       <div className="px-4 py-4">
         <div className="flex gap-2.5 overflow-x-auto scrollbar-none snap-x">
-          {CATEGORIES.map(cat => (
+          {[...CATEGORIES, ...((settings as any).customCategories || [])].map(cat => (
             <button key={cat.id}
               className={cn('flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-medium whitespace-nowrap border transition-all duration-300 flex-shrink-0 snap-start hover-lift',
                 activeCat === cat.id

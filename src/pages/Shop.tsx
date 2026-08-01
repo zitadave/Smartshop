@@ -18,7 +18,7 @@ export default function Shop() {
 
   const navigate = useNavigate();
   const location = useLocation();
-  const { toggleWishlist, language } = useStore();
+  const { toggleWishlist, language, settings } = useStore();
   const { filtered, search, setSearch, category, setCategory, sort, setSort } = useProducts();
   const cart = useCart();
   const btnAnim = useButtonAnimation();
@@ -227,7 +227,7 @@ export default function Shop() {
         {/* Category + Filter Row */}
         <div className="flex items-center gap-2 px-4 pb-2.5">
           <div className="flex gap-1.5 overflow-x-auto scrollbar-none flex-1">
-            {CATEGORIES.map(cat => (
+            {[...CATEGORIES, ...((settings as any).customCategories || [])].map(cat => (
               <button key={cat.id}
                 className={cn(
                   'flex items-center gap-1.5 px-3.5 py-2 rounded-2xl text-[10px] font-medium whitespace-nowrap border transition-all duration-300 flex-shrink-0',
