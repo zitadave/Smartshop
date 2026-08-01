@@ -352,9 +352,6 @@ export default function Home() {
         </section>
       )}
 
-      {/* Subscription Plans Section */}
-      <SubscriptionSection onNavigate={navigate} />
-
       {/* Sponsored / Promoted Products */}
       <TrendingSection
         products={products}
@@ -424,6 +421,9 @@ export default function Home() {
           </HorizontalScroll>
         </section>
       )}
+
+      {/* Subscription Plans Section - ALWAYS BETWEEN RECENTLY VIEWED AND FEATURED PRODUCTS */}
+      <SubscriptionSection onNavigate={navigate} />
 
       <section className="mt-2 animate-fadeUp">
         <SectionHeader
