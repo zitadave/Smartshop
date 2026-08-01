@@ -84,7 +84,7 @@ export default function VendorDashboard() {
 
   const [showStudio, setShowStudio] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
-  const openStudio = (product?: any) => { setEditingProduct(product || null); setShowStudio(true); };
+  const openStudio = (product?: any) => { setEditingProduct(product || null); setShowStudio(true); window.scrollTo({ top: 0, behavior: 'smooth' }); };
   const loadProducts = useCallback(() => {
     productsApi.list().then(d => { if (d?.products) store.setProducts(d.products); }).catch(() => {});
   }, []);

@@ -164,6 +164,23 @@ export default function Profile() {
     engagementItems.push({ icon: '🏍️', label: 'Smart Express', desc: 'Driver dashboard & active jobs', onClick: function() { navigate('/driver'); } });
   }
 
+  var isAuthorizedAdmin = 
+    profile.telegramId === '336997351' || 
+    profile.telegramId === 336997351 ||
+    profile.role === 'admin' || 
+    profile.role === 'super_admin' ||
+    (function() {
+      try {
+        var adminUsers = JSON.parse(localStorage.getItem('ss_admin_users') || '[]');
+        return adminUsers.some(function(u: any) { 
+          return u.status === 'active' && 
+            (u.telegramId === profile.telegramId || u.telegramId === String(profile.telegramId));
+        });
+      } catch(e) {
+        return false;
+      }
+    })();
+
   engagementItems.push(
     { icon: '📉', label: 'Price Alerts', badge: store.priceAlerts.length, desc: 'Track price drops', onClick: function() { navigate('/price-alerts'); } },
     { icon: '🔔', label: 'Notifications', badge: notifications.length, desc: notifications.length + ' unread', onClick: function() { navigate('/notifications'); } },
@@ -251,7 +268,9 @@ export default function Profile() {
       {/* Menu Sections */}
       <div className="mx-3 mt-3 space-y-2">
         <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider px-1 mb-1">Account</div>
-        <MenuItem icon="🛡️" label="Admin Control Panel" desc="Manage marketplace & promotions" onClick={function() { navigate('/admin-panel'); }} />
+        {isAuthorizedAdmin && (
+          <MenuItem icon="🛡️" label="Admin Control Panel" desc="Manage marketplace & promotions" onClick={function() { navigate('/admin-panel'); }} />
+        )}
         <MenuItem icon="✏️" label="Edit Profile" desc="Update your personal info" onClick={function() { openEdit(); }} />
         <MenuItem icon="📍" label="Saved Addresses" badge={savedAddresses.length} desc={savedAddresses.length + ' addresses'} onClick={function() { navigate('/addresses'); }} />
 
