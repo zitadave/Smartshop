@@ -35,11 +35,14 @@ function DriverLiveMap({ delivery, driverLat, driverLng, onArrived }: { delivery
   const [isFullScreen, setIsFullScreen] = useState(false);
   const pLat = Number(delivery.pickup_lat) || 9.0190;
   const pLng = Number(delivery.pickup_lng) || 38.7680;
-  const dLat = Number(delivery.delivery_lat) || 9.0315;
-  const dLng = Number(delivery.delivery_lng) || 38.7485;
+  const isKechene = (delivery.delivery_address || '').toLowerCase().includes('kechenie') || (delivery.delivery_address || '').toLowerCase().includes('gulale') || (delivery.delivery_address || '').toLowerCase().includes('semien');
+  const dLat = isKechene ? 9.0450 : (Number(delivery.delivery_lat) || 9.0315);
+  const dLng = isKechene ? 38.7550 : (Number(delivery.delivery_lng) || 38.7485);
 
-  // Genuine Google Maps Directions Embed URL between vendor pickup and customer dropoff
-  const embedUrl = `https://www.google.com/maps?saddr=${pLat},${pLng}&daddr=${dLat},${dLng}&output=embed`;
+  // Genuine Google Maps Directions Embed URL between shipping start and shipping destination
+  const pAddr = encodeURIComponent(delivery.pickup_address ? `${delivery.pickup_address}, Addis Ababa` : `${pLat},${pLng}`);
+  const dAddr = encodeURIComponent(delivery.delivery_address || `${dLat},${dLng}`);
+  const embedUrl = `https://www.google.com/maps?f=d&source=s_d&saddr=${pLat},${pLng}+(${pAddr})&daddr=${dLat},${dLng}+(${dAddr})&hl=en&output=embed`;
 
   return (
     <>
