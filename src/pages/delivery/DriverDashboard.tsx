@@ -43,7 +43,7 @@ function DriverLiveMap({ delivery, driverLat, driverLng, onArrived }: { delivery
 
   return (
     <>
-      <div className="relative w-full h-72 rounded-3xl overflow-hidden border border-slate-800 shadow-2xl bg-slate-950">
+      <div className="relative w-full h-72 rounded-3xl overflow-hidden border border-border shadow-2xl bg-card">
         <iframe
           title={`Google Maps Route #${delivery.order_number}`}
           width="100%"
@@ -61,7 +61,7 @@ function DriverLiveMap({ delivery, driverLat, driverLng, onArrived }: { delivery
               setIsFullScreen(true);
               haptic('light');
             }}
-            className="bg-slate-900/95 hover:bg-slate-800 text-white border border-slate-700/80 px-3 py-1.5 rounded-xl text-[10px] font-black flex items-center gap-1 shadow-lg transition-all active:scale-95"
+            className="bg-card/95 hover:bg-muted text-foreground border border-border px-3 py-1.5 rounded-xl text-[10px] font-black flex items-center gap-1 shadow-lg transition-all active:scale-95"
           >
             🔍 Full Screen
           </button>
@@ -70,14 +70,14 @@ function DriverLiveMap({ delivery, driverLat, driverLng, onArrived }: { delivery
 
       {/* Full-Screen Cyber-Logistics Map Overlay */}
       {isFullScreen && (
-        <div className="fixed inset-0 z-[100] bg-slate-950 flex flex-col animate-fadeIn">
+        <div className="fixed inset-0 z-[100] bg-background flex flex-col animate-fadeIn">
           {/* Top Header Bar */}
-          <div className="h-16 bg-slate-900/95 border-b border-slate-800 px-4 flex items-center justify-between shadow-xl">
+          <div className="h-16 bg-card/95 border-b border-border px-4 flex items-center justify-between shadow-xl">
             <div className="flex items-center gap-3">
-              <span className="text-sm font-mono font-black text-emerald-400">#{delivery.order_number}</span>
+              <span className="text-sm font-mono font-black text-emerald-600 dark:text-emerald-400">#{delivery.order_number}</span>
               <div className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-500/25 via-emerald-500/20 to-teal-500/25 border-2 border-emerald-400/60 px-3 py-1.5 rounded-2xl shadow-lg shadow-emerald-500/20">
-                <span className="text-[10px] uppercase font-extrabold tracking-wider text-emerald-300">NET EARNING:</span>
-                <span className="text-base font-black text-white tracking-tight drop-shadow">
+                <span className="text-[10px] uppercase font-extrabold tracking-wider text-emerald-600 dark:text-emerald-300">NET EARNING:</span>
+                <span className="text-base font-black text-foreground tracking-tight drop-shadow">
                   Br {delivery.driver_payout || delivery.fee || 80}
                 </span>
               </div>
@@ -87,7 +87,7 @@ function DriverLiveMap({ delivery, driverLat, driverLng, onArrived }: { delivery
                 setIsFullScreen(false);
                 haptic('light');
               }}
-              className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-extrabold border border-slate-700 flex items-center gap-1.5 active:scale-95 shadow"
+              className="px-3.5 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-xl text-xs font-extrabold border border-border flex items-center gap-1.5 active:scale-95 shadow"
             >
               ✕ Close
             </button>
@@ -109,17 +109,17 @@ function DriverLiveMap({ delivery, driverLat, driverLng, onArrived }: { delivery
           </div>
 
           {/* Bottom Action HUD in Full Screen */}
-          <div className="p-4 bg-slate-900/95 border-t border-slate-800 space-y-3 shadow-2xl">
-            <div className="flex items-center justify-between text-xs text-slate-300 font-semibold px-1">
+          <div className="p-4 bg-card/95 border-t border-border space-y-3 shadow-2xl text-foreground">
+            <div className="flex items-center justify-between text-xs font-semibold px-1">
               <span className="truncate max-w-[45%]">🏪 {delivery.pickup_address || 'Smart Shop'}</span>
-              <span className="text-slate-500 font-black">➔</span>
+              <span className="text-muted-foreground font-black">➔</span>
               <span className="truncate max-w-[45%]">🏠 {delivery.delivery_address || 'Customer'}</span>
             </div>
             <div className="flex items-center gap-2.5">
               {delivery.customer_phone && (
                 <a
                   href={`tel:${delivery.customer_phone}`}
-                  className="px-5 py-3.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 border border-slate-700 active:scale-95 shadow"
+                  className="px-5 py-3.5 bg-muted hover:bg-muted/80 text-emerald-600 dark:text-emerald-400 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 border border-border active:scale-95 shadow"
                 >
                   <Phone size={15} /> Call
                 </a>
@@ -777,7 +777,7 @@ export default function DriverDashboard() {
               </div>
               {progressPercentage < 100 ? (
                 <p className="text-[8px] opacity-90 text-right">
-                  Deliver {targetDeliveries - deliveriesCount} more orders to unlock **{nextTierEmoji} {nextTier}**
+                  Deliver {targetDeliveries - deliveriesCount} more orders to unlock <strong className="font-bold">{nextTierEmoji} {nextTier}</strong>
                 </p>
               ) : (
                 <p className="text-[8px] opacity-90 text-right">🎯 Top level achieved! You are a fleet legend!</p>
@@ -789,7 +789,7 @@ export default function DriverDashboard() {
 
       {/* Navigation Tabs */}
       <div className="max-w-lg mx-auto -mt-4 px-4 relative z-10">
-        <div className="bg-slate-900 rounded-2xl shadow-xl border border-slate-800/80 p-1 flex">
+        <div className="bg-card rounded-2xl shadow-xl border border-border p-1 flex">
           {[
             { id: 'available' as Tab, icon: Bell, label: 'Available', badge: deliveries.filter(function(d) { return d.status === 'pending'; }).length },
             { id: 'active' as Tab, icon: Clock, label: 'Active', badge: deliveries.filter(function(d) { return d.status !== 'pending' && d.status !== 'delivered' && d.status !== 'failed' && d.status !== 'cancelled' && d.status !== 'returned'; }).length },
@@ -805,7 +805,7 @@ export default function DriverDashboard() {
                   'flex-1 py-2.5 rounded-xl text-[10px] font-bold flex items-center justify-center gap-1.5 transition-all outline-none',
                   isSelected 
                     ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/15' 
-                    : 'text-slate-400 hover:text-slate-200'
+                    : 'text-muted-foreground hover:text-foreground'
                 )} 
                 onClick={function() { setTab(t.id); haptic('light'); }}
               >
@@ -828,50 +828,50 @@ export default function DriverDashboard() {
           {tab === 'available' && (
             <div className="space-y-3">
               {deliveries.filter(function(d) { return d.status === 'pending' || d.status === 'assigned'; }).length === 0 ? (
-                <div className="bg-slate-900 rounded-3xl border border-slate-800/80 p-8 text-center animate-scaleIn">
-                  <div className="w-14 h-14 rounded-full bg-slate-800/60 flex items-center justify-center mx-auto mb-3">
-                    <Bell size={24} className="text-slate-500 animate-pulse" />
+                <div className="bg-card text-card-foreground rounded-3xl border border-border p-8 text-center animate-scaleIn">
+                  <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mx-auto mb-3">
+                    <Bell size={24} className="text-muted-foreground animate-pulse" />
                   </div>
-                  <p className="text-xs font-bold text-slate-400">No active delivery milestones nearby</p>
-                  <p className="text-[10px] text-slate-500 mt-1">Make sure you are toggled online to receive real-time updates</p>
+                  <p className="text-xs font-bold text-foreground">No active delivery milestones nearby</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">Make sure you are toggled online to receive real-time updates</p>
                 </div>
               ) : (
                 deliveries.filter(function(d) { return d.status === 'pending' || d.status === 'assigned'; }).map(function(del) {
                   var fee = del.driver_payout || del.fee || 0;
                   var pTag = getPriorityTag(del);
                   return (
-                    <div key={del.id} className="bg-slate-900 rounded-3xl border border-slate-800 p-4 shadow hover:border-slate-700/60 transition-all duration-300 animate-scaleIn space-y-3">
+                    <div key={del.id} className="bg-card text-card-foreground rounded-3xl border border-border p-4 shadow-xl hover:border-primary/40 transition-all duration-300 animate-scaleIn space-y-3">
                       <div className="flex items-start justify-between">
                         <div className="space-y-1">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-[9px] font-black font-mono text-emerald-400">#{del.order_number}</span>
+                            <span className="text-[9px] font-black font-mono text-primary">#{del.order_number}</span>
                             <span className={cn('px-2 py-0.5 rounded text-[8px] font-black uppercase', pTag.color)}>{pTag.label}</span>
                           </div>
                           <div className="space-y-1 pt-1.5">
-                            <div className="flex items-center gap-1.5 text-[9px] text-slate-400">
+                            <div className="flex items-center gap-1.5 text-[9px] text-muted-foreground">
                               <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                              <span className="font-semibold truncate">Pickup: {del.pickup_address || 'Partner Shop'}</span>
+                              <span className="font-semibold truncate text-foreground">Pickup: {del.pickup_address || 'Partner Shop'}</span>
                             </div>
-                            <div className="flex items-center gap-1.5 text-[9px] text-slate-400">
+                            <div className="flex items-center gap-1.5 text-[9px] text-muted-foreground">
                               <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                              <span className="font-semibold truncate">Deliver: {del.delivery_address || 'Customer Residence'}</span>
+                              <span className="font-semibold truncate text-foreground">Deliver: {del.delivery_address || 'Customer Residence'}</span>
                             </div>
                           </div>
                         </div>
                         <div className="text-right flex-shrink-0">
-                          <div className="text-sm font-extrabold text-emerald-400">Br {fee}</div>
-                          <span className="text-[7.5px] text-slate-500 uppercase font-black">Net earnings</span>
+                          <div className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400">Br {fee}</div>
+                          <span className="text-[7.5px] text-muted-foreground uppercase font-black">Net earnings</span>
                         </div>
                       </div>
                       
-                      <div className="flex items-center justify-between border-t border-slate-800/85 pt-3 text-[9px] text-slate-400">
+                      <div className="flex items-center justify-between border-t border-border pt-3 text-[9px] text-muted-foreground">
                         <div className="flex items-center gap-3">
-                          <span>📐 distance: <strong>{del.distance_km || '?'} km</strong></span>
-                          {del.cod_amount > 0 && <span>💵 Collect COD: <strong className="text-rose-400">Br {del.cod_amount}</strong></span>}
+                          <span>📐 distance: <strong className="text-foreground">{del.distance_km || '?'} km</strong></span>
+                          {del.cod_amount > 0 && <span>💵 Collect COD: <strong className="text-rose-500 dark:text-rose-400">Br {del.cod_amount}</strong></span>}
                         </div>
                         <div className="flex items-center gap-1.5">
                           <button 
-                            className="px-3 py-2 bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 rounded-xl text-[9px] font-black transition-all flex items-center gap-1 active:scale-95 border border-slate-750" 
+                            className="px-3 py-2 bg-muted hover:bg-red-500/10 text-muted-foreground hover:text-red-500 rounded-xl text-[9px] font-black transition-all flex items-center gap-1 active:scale-95 border border-border" 
                             onClick={function() { declineDelivery(del.id); }}
                             title="Decline & pass to next partner"
                           >
@@ -896,22 +896,22 @@ export default function DriverDashboard() {
           {tab === 'active' && (
             <div className="space-y-3">
               {deliveries.filter(function(d) { return d.status !== 'pending' && d.status !== 'delivered' && d.status !== 'failed' && d.status !== 'cancelled' && d.status !== 'returned'; }).length === 0 ? (
-                <div className="bg-slate-900 rounded-3xl border border-slate-800/80 p-8 text-center animate-scaleIn">
-                  <div className="w-14 h-14 rounded-full bg-slate-800/60 flex items-center justify-center mx-auto mb-3">
-                    <Clock size={24} className="text-slate-500" />
+                <div className="bg-card text-card-foreground rounded-3xl border border-border p-8 text-center animate-scaleIn">
+                  <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mx-auto mb-3">
+                    <Clock size={24} className="text-muted-foreground" />
                   </div>
-                  <p className="text-xs font-bold text-slate-400">No active delivery missions</p>
-                  <p className="text-[10px] text-slate-500 mt-1">Claim available delivery runs from the available tab</p>
+                  <p className="text-xs font-bold text-foreground">No active delivery missions</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">Claim available delivery runs from the available tab</p>
                 </div>
               ) : (
                 <>
                   {/* TSP Optimization Trigger */}
-                  <div className="bg-slate-900 rounded-2xl border border-indigo-500/25 p-3 flex items-center justify-between shadow shadow-indigo-500/5 animate-scaleIn">
+                  <div className="bg-card text-card-foreground rounded-2xl border border-indigo-500/25 p-3 flex items-center justify-between shadow shadow-indigo-500/5 animate-scaleIn">
                     <div>
-                      <h4 className="text-[10px] font-black text-slate-100 uppercase tracking-wider flex items-center gap-1">
+                      <h4 className="text-[10px] font-black text-foreground uppercase tracking-wider flex items-center gap-1">
                         ✨ Routing Sequence
                       </h4>
-                      <p className="text-[8px] text-slate-400 mt-0.5">Optimize multiple drops in the mathematically fastest sequence.</p>
+                      <p className="text-[8px] text-muted-foreground mt-0.5">Optimize multiple drops in the mathematically fastest sequence.</p>
                     </div>
                     <button 
                       onClick={optimizeRoute}
@@ -1059,12 +1059,12 @@ export default function DriverDashboard() {
 
           {/* HISTORY TAB */}
           {tab === 'history' && (
-            <div className="bg-slate-900 rounded-3xl border border-slate-800/80 p-8 text-center animate-scaleIn">
-              <div className="w-14 h-14 rounded-full bg-slate-800/60 flex items-center justify-center mx-auto mb-3">
-                <Activity size={24} className="text-slate-500" />
+            <div className="bg-card text-card-foreground rounded-3xl border border-border p-8 text-center animate-scaleIn">
+              <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mx-auto mb-3">
+                <Activity size={24} className="text-muted-foreground" />
               </div>
-              <p className="text-xs font-bold text-slate-400">No completed delivery history</p>
-              <p className="text-[10px] text-slate-500 mt-1">Complete claimed runs to view your metrics</p>
+              <p className="text-xs font-bold text-foreground">No completed delivery history</p>
+              <p className="text-[10px] text-muted-foreground mt-1">Complete claimed runs to view your metrics</p>
             </div>
           )}
 
@@ -1072,13 +1072,13 @@ export default function DriverDashboard() {
           {tab === 'earnings' && (
             <div className="space-y-4 animate-scaleIn">
               {/* Financial Balance Summary Card */}
-              <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950/20 rounded-3xl p-5 border border-slate-800/60 shadow-xl relative overflow-hidden">
+              <div className="bg-card text-card-foreground rounded-3xl p-5 border border-border shadow-xl relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl" />
                 <div className="flex items-center justify-between">
                   <div>
-                    <span className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider">Available Balance</span>
-                    <div className="text-2xl font-black text-emerald-400 mt-0.5">Br {(earnings?.total_pending || 0).toLocaleString()}</div>
-                    <span className="text-[8px] text-slate-500 block mt-1">Calculated base fee + commission payouts</span>
+                    <span className="text-[9px] text-muted-foreground font-extrabold uppercase tracking-wider">Available Balance</span>
+                    <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5">Br {(earnings?.total_pending || 0).toLocaleString()}</div>
+                    <span className="text-[8px] text-muted-foreground block mt-1">Calculated base fee + commission payouts</span>
                   </div>
                   <button 
                     className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl text-xs font-bold shadow-md shadow-emerald-500/10 transition-all active:scale-95 flex items-center gap-1 flex-shrink-0"
@@ -1088,30 +1088,30 @@ export default function DriverDashboard() {
                   </button>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-3 border-t border-slate-800/80 mt-4 pt-3 text-xs">
+                <div className="grid grid-cols-2 gap-3 border-t border-border mt-4 pt-3 text-xs">
                   <div>
-                    <span className="text-[8px] text-slate-500 uppercase font-black">Total Withdrawn</span>
-                    <div className="font-extrabold text-slate-200 mt-0.5">Br {(earnings?.total_paid || 0).toLocaleString()}</div>
+                    <span className="text-[8px] text-muted-foreground uppercase font-black">Total Withdrawn</span>
+                    <div className="font-extrabold text-foreground mt-0.5">Br {(earnings?.total_paid || 0).toLocaleString()}</div>
                   </div>
                   <div className="text-right">
-                    <span className="text-[8px] text-slate-500 uppercase font-black">Next Auto-Payout</span>
-                    <div className="font-bold text-indigo-400 mt-0.5">Friday, 12:00 AM</div>
+                    <span className="text-[8px] text-muted-foreground uppercase font-black">Next Auto-Payout</span>
+                    <div className="font-bold text-indigo-500 dark:text-indigo-400 mt-0.5">Friday, 12:00 AM</div>
                   </div>
                 </div>
               </div>
 
               {/* Custom CSS-Based 7-Day Performance trend bar chart */}
-              <div className="bg-slate-900 rounded-3xl border border-slate-800 p-4 space-y-4">
+              <div className="bg-card text-card-foreground rounded-3xl border border-border p-4 space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-xs font-extrabold tracking-wide">📅 Weekly Earnings Trend</h3>
-                    <p className="text-[8px] text-slate-500">Past 7 days performance metrics</p>
+                    <h3 className="text-xs font-extrabold tracking-wide text-foreground">📅 Weekly Earnings Trend</h3>
+                    <p className="text-[8px] text-muted-foreground">Past 7 days performance metrics</p>
                   </div>
-                  <TrendingUp size={14} className="text-indigo-400" />
+                  <TrendingUp size={14} className="text-indigo-500 dark:text-indigo-400" />
                 </div>
 
                 {/* Vertical Bar Chart */}
-                <div className="flex items-end justify-between h-32 pt-2 pb-1.5 px-2 bg-slate-950/40 rounded-2xl border border-slate-850/60 shadow-inner">
+                <div className="flex items-end justify-between h-32 pt-2 pb-1.5 px-2 bg-muted/40 rounded-2xl border border-border shadow-inner">
                   {dailyEarnings.map(function(item) {
                     // Normalize bar height based on max value in array (max is Mon-Sun, let's say max is 900)
                     var barHeight = Math.max(10, Math.min(100, Math.round((item.amount / 950) * 100)));
@@ -1127,7 +1127,7 @@ export default function DriverDashboard() {
                           className="w-4 rounded-t-lg bg-gradient-to-t from-emerald-500 to-indigo-500 group-hover:from-emerald-400 group-hover:to-indigo-400 transition-all duration-500 shadow-inner"
                           style={{ height: `${barHeight}px` }}
                         />
-                        <span className="text-[8px] font-extrabold text-slate-500 group-hover:text-slate-300">{item.day}</span>
+                        <span className="text-[8px] font-extrabold text-muted-foreground group-hover:text-foreground">{item.day}</span>
                       </div>
                     );
                   })}
@@ -1141,44 +1141,44 @@ export default function DriverDashboard() {
       {/* CASHOUT / PAYOUT MODAL */}
       {showCashoutModal && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-fadeIn" onClick={function() { setShowCashoutModal(false); }}>
-          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 w-full max-w-sm shadow-2xl relative animate-scaleIn" onClick={function(e) { e.stopPropagation(); }}>
-            <button className="absolute right-4 top-4 w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-slate-400 hover:text-slate-600 text-sm" onClick={function() { setShowCashoutModal(false); }}>✕</button>
+          <div className="bg-card text-card-foreground rounded-3xl border border-border p-6 w-full max-w-sm shadow-2xl relative animate-scaleIn" onClick={function(e) { e.stopPropagation(); }}>
+            <button className="absolute right-4 top-4 w-8 h-8 rounded-full bg-muted flex items-center justify-center font-bold text-muted-foreground hover:text-foreground text-sm" onClick={function() { setShowCashoutModal(false); }}>✕</button>
             
-            <div className="text-center mb-5 border-b border-slate-100 dark:border-slate-800/80 pb-3">
-              <span className="text-[9px] bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full font-black uppercase tracking-wider">Instant Cashout</span>
-              <h3 className="text-sm font-black mt-2 text-slate-900 dark:text-white">Withdraw Earnings</h3>
-              <p className="text-[10px] text-slate-500 mt-1">Instantly cashout your pending balance via Telebirr.</p>
+            <div className="text-center mb-5 border-b border-border pb-3">
+              <span className="text-[9px] bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 px-3 py-1 rounded-full font-black uppercase tracking-wider">Instant Cashout</span>
+              <h3 className="text-sm font-black mt-2 text-foreground">Withdraw Earnings</h3>
+              <p className="text-[10px] text-muted-foreground mt-1">Instantly cashout your pending balance via Telebirr.</p>
             </div>
 
             <div className="space-y-3.5">
               <div>
-                <label className="text-[8px] text-slate-400 font-extrabold uppercase block mb-1">Telebirr Account Number</label>
+                <label className="text-[8px] text-muted-foreground font-extrabold uppercase block mb-1">Telebirr Account Number</label>
                 <input 
                   type="text" 
                   value={cashoutPhone} 
                   onChange={function(e) { setCashoutPhone(e.target.value); }}
                   placeholder="+251-..." 
-                  className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white outline-none focus:border-emerald-500 transition-colors font-bold"
+                  className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground outline-none focus:border-emerald-500 transition-colors font-bold"
                 />
               </div>
 
               <div>
-                <div className="flex justify-between text-[8px] text-slate-400 font-extrabold uppercase mb-1">
+                <div className="flex justify-between text-[8px] text-muted-foreground font-extrabold uppercase mb-1">
                   <span>Amount to Withdraw (Br)</span>
-                  <span className="text-indigo-400">Available: Br {earnings?.total_pending || 0}</span>
+                  <span className="text-indigo-500 dark:text-indigo-400">Available: Br {earnings?.total_pending || 0}</span>
                 </div>
                 <input 
                   type="number" 
                   value={cashoutAmount} 
                   onChange={function(e) { setCashoutAmount(e.target.value); }}
                   placeholder="e.g. 500" 
-                  className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-white outline-none focus:border-emerald-500 transition-colors font-bold text-emerald-500"
+                  className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground outline-none focus:border-emerald-500 transition-colors font-bold text-emerald-600 dark:text-emerald-400"
                 />
               </div>
 
               <div className="flex gap-2 pt-2">
                 <button 
-                  className="flex-1 py-3 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-500" 
+                  className="flex-1 py-3 border border-border rounded-xl text-xs font-semibold text-muted-foreground hover:bg-muted" 
                   onClick={function() { setShowCashoutModal(false); }}
                 >
                   Cancel
@@ -1207,31 +1207,31 @@ export default function DriverDashboard() {
       {/* PIN VERIFICATION MODAL */}
       {pinVerificationId !== null && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-fadeIn" onClick={function() { setPinVerificationId(null); }}>
-          <div className="bg-slate-900 rounded-3xl border border-emerald-500/20 p-6 w-full max-w-sm shadow-2xl relative animate-scaleIn" onClick={function(e) { e.stopPropagation(); }}>
-            <button className="absolute right-4 top-4 w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center font-bold text-slate-400 hover:text-slate-200 text-sm" onClick={function() { setPinVerificationId(null); }}>✕</button>
+          <div className="bg-card text-card-foreground rounded-3xl border border-emerald-500/30 p-6 w-full max-w-sm shadow-2xl relative animate-scaleIn" onClick={function(e) { e.stopPropagation(); }}>
+            <button className="absolute right-4 top-4 w-8 h-8 rounded-full bg-muted flex items-center justify-center font-bold text-muted-foreground hover:text-foreground text-sm" onClick={function() { setPinVerificationId(null); }}>✕</button>
             
-            <div className="text-center mb-5 border-b border-slate-800 pb-3">
-              <span className="text-[9px] bg-emerald-950/40 text-emerald-400 border border-emerald-500/20 px-3 py-1 rounded-full font-black uppercase tracking-wider">Security Control</span>
-              <h3 className="text-sm font-black mt-2 text-white">Complete Mission</h3>
-              <p className="text-[10px] text-slate-400 mt-1">Enter the 4-digit verification PIN provided by the customer to securely authorize delivery completion.</p>
+            <div className="text-center mb-5 border-b border-border pb-3">
+              <span className="text-[9px] bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-3 py-1 rounded-full font-black uppercase tracking-wider">Security Control</span>
+              <h3 className="text-sm font-black mt-2 text-foreground">Complete Mission</h3>
+              <p className="text-[10px] text-muted-foreground mt-1">Enter the 4-digit verification PIN provided by the customer to securely authorize delivery completion.</p>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="text-[8px] text-slate-400 font-extrabold uppercase block mb-1">Customer Verification PIN</label>
+                <label className="text-[8px] text-muted-foreground font-extrabold uppercase block mb-1">Customer Verification PIN</label>
                 <input 
                   type="text" 
                   maxLength={4}
                   value={verificationPinInput} 
                   onChange={function(e) { setVerificationPinInput(e.target.value.replace(/\D/g, '')); }}
                   placeholder="e.g. 1234" 
-                  className="w-full p-3 border border-slate-800 rounded-xl text-center text-lg bg-slate-950 text-white outline-none focus:border-emerald-500 transition-colors font-black tracking-[1em] pl-[1.2em]"
+                  className="w-full p-3 border border-border rounded-xl text-center text-lg bg-background text-foreground outline-none focus:border-emerald-500 transition-colors font-black tracking-[1em] pl-[1.2em]"
                 />
               </div>
 
               <div className="flex gap-2 pt-2">
                 <button 
-                  className="flex-1 py-3 border border-slate-800 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-800" 
+                  className="flex-1 py-3 border border-border rounded-xl text-xs font-semibold text-muted-foreground hover:bg-muted" 
                   onClick={function() { setPinVerificationId(null); }}
                 >
                   Cancel
