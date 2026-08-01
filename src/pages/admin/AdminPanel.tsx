@@ -53,14 +53,151 @@ export default function AdminLayout() {
   const [tab, setTab] = useState<Tab>('overview');
   const [menuOpen, setMenuOpen] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
-  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({
-    'PROMOTION': true,
-    'OPERATIONS': true,
-    'FINANCE': true,
-    'ADMIN': true,
-    'INSIGHTS': true
-  });
   const navigate = useNavigate();
+
+  type DeptId = 'analytics' | 'rates' | 'verification' | 'payouts' | 'promotions' | 'catalog' | 'orders' | 'partners' | 'accounting' | 'system';
+
+  const DEPARTMENTS: { id: DeptId; icon: any; label: string; desc: string; defaultTab: Tab; tabs: { id: Tab; label: string }[] }[] = [
+    {
+      id: 'analytics',
+      icon: LayoutDashboard,
+      label: '1. Executive BI & Analytics',
+      desc: 'High-level KPIs, sales analytics & predictive demand',
+      defaultTab: 'overview',
+      tabs: [
+        { id: 'overview', label: '📊 Executive Overview' },
+        { id: 'analytics', label: '📈 Product Analytics' },
+        { id: 'forecast', label: '🔮 Demand Forecast' },
+        { id: 'activity', label: '📋 Audit Log' },
+      ],
+    },
+    {
+      id: 'rates',
+      icon: DollarSign,
+      label: '2. Rates, Thresholds & Commission',
+      desc: 'All platform commission %, delivery fees & reward thresholds',
+      defaultTab: 'settings',
+      tabs: [
+        { id: 'settings', label: '⚙️ Global Commission & Rates' },
+        { id: 'delivery', label: '🏍️ Delivery Fees & Subsidies' },
+      ],
+    },
+    {
+      id: 'verification',
+      icon: Shield,
+      label: '3. Verification & KYC',
+      desc: 'Document verification for stores, couriers & bank receipts',
+      defaultTab: 'vendors',
+      tabs: [
+        { id: 'vendors', label: '🏪 Vendor KYC Applications' },
+        { id: 'driver', label: '🚚 Driver KYC & Fleet' },
+        { id: 'manualpayments', label: '🏦 Bank Receipt Approvals' },
+        { id: 'security', label: '🔒 Security & Access Control' },
+      ],
+    },
+    {
+      id: 'payouts',
+      icon: Landmark,
+      label: '4. Payouts & Escrow',
+      desc: 'All money distributions and withdrawals leaving the platform',
+      defaultTab: 'finance',
+      tabs: [
+        { id: 'finance', label: '💸 Vendor Revenue Payouts' },
+        { id: 'delivery', label: '💼 Courier Escrow Settlements' },
+      ],
+    },
+    {
+      id: 'promotions',
+      icon: Zap,
+      label: '5. Promotions & Deals',
+      desc: 'All promotional campaigns, feature cards & social commerce',
+      defaultTab: 'marketplace',
+      tabs: [
+        { id: 'marketplace', label: '🏆 Homepage Feature Cards' },
+        { id: 'flashdeals', label: '⚡ Flash Deals Manager' },
+        { id: 'groupbuy', label: '🤝 Group Buy (ማህበር)' },
+        { id: 'coupons', label: '🎟️ Coupons & Promo Codes' },
+        { id: 'promotions', label: '📢 All Promotions' },
+        { id: 'broadcast', label: '📣 Telegram Broadcasts' },
+        { id: 'affiliates', label: '🤝 Affiliates' },
+      ],
+    },
+    {
+      id: 'catalog',
+      icon: Package,
+      label: '6. Merchandise & Catalog',
+      desc: 'Retail products, bulk import & daily subscriptions',
+      defaultTab: 'products',
+      tabs: [
+        { id: 'products', label: '📦 Product Catalog' },
+        { id: 'bulkProducts', label: '📥 Bulk Import / Export' },
+        { id: 'subscriptions', label: '📅 Daily Subscriptions' },
+        { id: 'preorders', label: '⏳ Pre-Orders' },
+      ],
+    },
+    {
+      id: 'orders',
+      icon: ShoppingCart,
+      label: '7. Orders & Fulfillment',
+      desc: 'Customer purchases, logistics pipeline & cart recovery',
+      defaultTab: 'orders',
+      tabs: [
+        { id: 'orders', label: '🛒 Orders Manager' },
+        { id: 'fulfillment', label: '📋 Fulfillment Kanban' },
+        { id: 'sla', label: '⚡ SLA Speed Monitor' },
+        { id: 'abandoned', label: '🛒 Abandoned Carts' },
+        { id: 'returns', label: '🔄 Customer Returns' },
+        { id: 'tracking', label: '📍 Live Tracking' },
+      ],
+    },
+    {
+      id: 'partners',
+      icon: Users,
+      label: '8. Partners & Reviews',
+      desc: 'Active stores, delivery fleet & marketplace feedback',
+      defaultTab: 'vendors',
+      tabs: [
+        { id: 'vendors', label: '🏪 Active Vendors Directory' },
+        { id: 'driver', label: '🚚 Driver Fleet Tracking' },
+        { id: 'reviews', label: '⭐ Customer Reviews & Ratings' },
+      ],
+    },
+    {
+      id: 'accounting',
+      icon: BookOpen,
+      label: '9. Tax, Accounting & Books',
+      desc: 'Official bookkeeping, ledger entries & ERCA tax remittance',
+      defaultTab: 'smartbooks',
+      tabs: [
+        { id: 'smartbooks', label: '📘 Smart Books (P&L)' },
+        { id: 'finance', label: '🏛️ Tax & ERCA Reports' },
+      ],
+    },
+    {
+      id: 'system',
+      icon: SettingsIcon,
+      label: '10. Platform Config & System',
+      desc: 'Appearance, bots, RBAC roles & database backups',
+      defaultTab: 'themes',
+      tabs: [
+        { id: 'themes', label: '🎨 Theme Customizer' },
+        { id: 'roles', label: '🛡️ Admin Roles & RBAC' },
+        { id: 'telegram', label: '🤖 Telegram Admin Bot' },
+        { id: 'backup', label: '💾 Database Backups' },
+        { id: 'alerts', label: '🔔 Smart System Alerts' },
+      ],
+    },
+  ];
+
+  const [activeDeptId, setActiveDeptId] = useState<DeptId>('analytics');
+  const currentDept = DEPARTMENTS.find(d => d.id === activeDeptId) || DEPARTMENTS[0];
+
+  useEffect(() => {
+    const found = DEPARTMENTS.find(d => d.tabs.some(t => t.id === tab));
+    if (found && found.id !== activeDeptId) {
+      setActiveDeptId(found.id);
+    }
+  }, [tab]);
 
   // CRITICAL: Clean up old injected CSS from AdminThemeManager (no longer used)
   // This style tag was injected WITHOUT .dark prefix, so it overrode light mode
@@ -227,46 +364,32 @@ export default function AdminLayout() {
 
       <aside className={`fixed top-14 left-0 bottom-0 w-60 z-40 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 ${menuOpen ? 'translate-x-0' : '-translate-x-full'} xl:translate-x-0 flex flex-col`} data-admin-sidebar>
         <div className="flex-1 overflow-y-auto py-3 px-2 space-y-1">
-          {(() => {
-            const groups: { title: string; ids: Tab[] }[] = [
-              { title: 'STORE', ids: ['overview', 'products', 'orders', 'vendors', 'delivery', 'marketplace', 'reviews'] },
-              { title: 'PROMOTION', ids: ['promotions', 'broadcast', 'flashdeals', 'preorders', 'coupons', 'tracking', 'themes', 'affiliates'] },
-              { title: 'OPERATIONS', ids: ['subscriptions', 'groupbuy', 'manualpayments', 'alerts', 'abandoned', 'fulfillment', 'sla', 'driver', 'returns'] },
-              { title: 'FINANCE', ids: ['finance', 'smartbooks', 'settings'] },
-              { title: 'ADMIN', ids: ['roles', 'security', 'backup', 'telegram', 'activity'] },
-              { title: 'INSIGHTS', ids: ['analytics', 'forecast', 'bulkProducts'] },
-            ];
-            const isCollapsed = (g: string) => collapsedGroups[g] === true;
-            const toggle = (g: string) => setCollapsedGroups(c => ({ ...c, [g]: !isCollapsed(g) }));
-            return groups.map(group => {
-              const hasActive = group.ids.includes(tab);
-              return (
-                <div key={group.title} className="space-y-0.5">
-                  <button className="flex items-center gap-1.5 w-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.1em] text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
-                    onClick={() => toggle(group.title)}>
-                    <ChevronRight size={10} className={cn('transition-transform', !isCollapsed(group.title) && 'rotate-90')} />
-                    {group.title}
-                    {hasActive && <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 ml-auto" />}
-                  </button>
-                  {!isCollapsed(group.title) && NAV_ITEMS.filter(i => group.ids.includes(i.id)).map(item => {
-                    const Icon = item.icon;
-                    const isActive = tab === item.id;
-                    return (
-                      <button key={item.id} className={cn('w-full flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 group',
-                        isActive ? 'bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/50 dark:to-purple-950/50 text-indigo-700 dark:text-indigo-300 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white'
-                      )} onClick={() => { setTab(item.id); setMenuOpen(false); }}>
-                        <div className={cn('p-1.5 rounded-lg transition-all', isActive ? 'bg-indigo-500/10' : 'group-hover:bg-slate-100 dark:group-hover:bg-slate-800')}>
-                          <Icon size={14} className={cn(isActive ? 'text-indigo-600' : 'text-slate-400')} />
-                        </div>
-                        <span className="flex-1 text-left">{item.label}</span>
-                        <ChevronRight size={10} className={cn('opacity-0 transition-all', isActive && 'opacity-100')} />
-                      </button>
-                    );
-                  })}
+          {DEPARTMENTS.map(dept => {
+            const Icon = dept.icon;
+            const isActive = activeDeptId === dept.id;
+            return (
+              <button
+                key={dept.id}
+                onClick={() => {
+                  setActiveDeptId(dept.id);
+                  setTab(dept.defaultTab);
+                  setMenuOpen(false);
+                }}
+                className={cn(
+                  'w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 group',
+                  isActive
+                    ? 'bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/50 dark:to-purple-950/50 text-indigo-700 dark:text-indigo-300 shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white'
+                )}
+              >
+                <div className={cn('p-1.5 rounded-lg transition-all', isActive ? 'bg-indigo-500/10' : 'group-hover:bg-slate-100 dark:group-hover:bg-slate-800')}>
+                  <Icon size={16} className={cn(isActive ? 'text-indigo-600' : 'text-slate-400')} />
                 </div>
-              );
-            });
-          })()}
+                <span className="flex-1 text-left truncate">{dept.label}</span>
+                <ChevronRight size={14} className={cn('opacity-0 transition-all', isActive && 'opacity-100 text-indigo-600')} />
+              </button>
+            );
+          })}
         </div>
         <div className="flex-shrink-0 p-3 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 sticky bottom-0">
           <button className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors" onClick={() => { localStorage.setItem('ss_dark', 'false'); document.documentElement.classList.remove('dark'); window.location.href = '/'; }}>
@@ -279,6 +402,38 @@ export default function AdminLayout() {
 
       <main className="xl:ml-60 pt-14 min-h-screen transition-all duration-300 overflow-x-visible">
         <div className="p-4 md:p-6 max-w-7xl mx-auto animate-fadeUp">
+          {/* Department Header & Horizontal Sub-Tabs Command Bar */}
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 mb-6 shadow-sm">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                <currentDept.icon size={20} />
+              </div>
+              <div>
+                <h2 className="text-base font-extrabold text-slate-900 dark:text-white">{currentDept.label}</h2>
+                <p className="text-[10px] text-slate-500">{currentDept.desc}</p>
+              </div>
+            </div>
+            <div className="flex gap-1.5 overflow-x-auto scrollbar-none border-t border-slate-100 dark:border-slate-800 pt-3">
+              {currentDept.tabs.map((t) => {
+                const isSelected = tab === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => setTab(t.id)}
+                    className={cn(
+                      'px-3.5 py-2 rounded-xl text-xs font-extrabold whitespace-nowrap transition-all border',
+                      isSelected
+                        ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-indigo-600 shadow-md'
+                        : 'bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-300'
+                    )}
+                  >
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {tab === 'overview' && <Overview onNavigate={handleCmdNavigate} />}
           {tab === 'products' && <AdminProducts />}
           {tab === 'orders' && <AdminOrders />}
