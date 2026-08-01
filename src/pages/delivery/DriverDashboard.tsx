@@ -31,7 +31,8 @@ interface DailyEarning {
   amount: number;
 }
 
-function DriverLiveMap({ delivery, driverLat, driverLng }: { delivery: any; driverLat?: number; driverLng?: number }) {
+function DriverLiveMap({ delivery, driverLat, driverLng, onArrived }: { delivery: any; driverLat?: number; driverLng?: number; onArrived?: () => void }) {
+  const [isFullScreen, setIsFullScreen] = useState(false);
   const pLat = Number(delivery.pickup_lat) || 9.0190;
   const pLng = Number(delivery.pickup_lng) || 38.7680;
   const dLat = Number(delivery.delivery_lat) || 9.0315;
@@ -41,30 +42,118 @@ function DriverLiveMap({ delivery, driverLat, driverLng }: { delivery: any; driv
   const embedUrl = `https://www.google.com/maps?saddr=${pLat},${pLng}&daddr=${dLat},${dLng}&output=embed`;
 
   return (
-    <div className="relative w-full h-48 rounded-2xl overflow-hidden border border-slate-800 shadow-xl bg-slate-950">
-      <iframe
-        title={`Google Maps Route #${delivery.order_number}`}
-        width="100%"
-        height="100%"
-        style={{ border: 0 }}
-        loading="lazy"
-        allowFullScreen={false}
-        referrerPolicy="no-referrer-when-downgrade"
-        src={embedUrl}
-        className="w-full h-full filter contrast-125"
-      />
-      <div className="absolute top-2 right-2 z-10 flex gap-1.5 pointer-events-none">
-        <span className="bg-slate-900/90 backdrop-blur-md text-emerald-400 border border-emerald-500/30 text-[9px] font-mono font-bold px-2.5 py-1 rounded-lg shadow flex items-center gap-1">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-          {delivery.distance_km || '3.5'} km • ~{Math.max(5, Math.round((Number(delivery.distance_km) || 3.5) * 3))} min drive
-        </span>
+    <>
+      <div className="relative w-full h-72 rounded-3xl overflow-hidden border border-slate-800 shadow-2xl bg-slate-950">
+        <iframe
+          title={`Google Maps Route #${delivery.order_number}`}
+          width="100%"
+          height="100%"
+          style={{ border: 0 }}
+          loading="lazy"
+          allowFullScreen={false}
+          referrerPolicy="no-referrer-when-downgrade"
+          src={embedUrl}
+          className="w-full h-full filter contrast-125"
+        />
+        <div className="absolute top-3 left-3 z-10 pointer-events-none">
+          <span className="bg-slate-900/95 backdrop-blur-md text-emerald-400 border border-emerald-500/40 text-[10px] font-mono font-black px-3 py-1 rounded-xl shadow-lg flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+            {delivery.distance_km || '3.5'} km • ~{Math.max(5, Math.round((Number(delivery.distance_km) || 3.5) * 3))} min drive
+          </span>
+        </div>
+        <div className="absolute top-3 right-3 z-10">
+          <button
+            onClick={() => {
+              setIsFullScreen(true);
+              haptic('light');
+            }}
+            className="bg-slate-900/95 hover:bg-slate-800 text-white border border-slate-700/80 px-3 py-1.5 rounded-xl text-[10px] font-black flex items-center gap-1 shadow-lg transition-all active:scale-95"
+          >
+            🔍 Full Screen
+          </button>
+        </div>
+        <div className="absolute bottom-3 left-3 right-3 z-10 pointer-events-none">
+          <span className="bg-slate-900/95 backdrop-blur-md text-slate-100 text-[9.5px] px-3 py-1.5 rounded-xl font-bold border border-slate-800 shadow-lg block truncate">
+            🏪 {delivery.pickup_address || 'Smart Shop'} ➔ 🏠 {delivery.delivery_address || 'Customer'}
+          </span>
+        </div>
       </div>
-      <div className="absolute bottom-2 left-2 right-2 z-10 flex items-center justify-between pointer-events-none">
-        <span className="bg-slate-900/95 backdrop-blur text-slate-200 text-[8.5px] px-2.5 py-1 rounded-lg font-bold border border-slate-800 shadow-md">
-          🏪 {delivery.pickup_address || 'Smart Shop'} ➔ 🏠 {delivery.delivery_address || 'Customer'}
-        </span>
-      </div>
-    </div>
+
+      {/* Full-Screen Cyber-Logistics Map Overlay */}
+      {isFullScreen && (
+        <div className="fixed inset-0 z-[100] bg-slate-950 flex flex-col animate-fadeIn">
+          {/* Top Header Bar */}
+          <div className="h-16 bg-slate-900/95 border-b border-slate-800 px-4 flex items-center justify-between shadow-xl">
+            <div className="flex items-center gap-2.5">
+              <span className="text-sm font-mono font-black text-emerald-400">#{delivery.order_number}</span>
+              <span className="bg-emerald-500/20 text-emerald-400 text-[10px] font-black px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                Br {delivery.driver_payout || delivery.fee || 80} Net
+              </span>
+            </div>
+            <button
+              onClick={() => {
+                setIsFullScreen(false);
+                haptic('light');
+              }}
+              className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-extrabold border border-slate-700 flex items-center gap-1.5 active:scale-95 shadow"
+            >
+              ✕ Close
+            </button>
+          </div>
+
+          {/* 100% Full-Screen Google Map */}
+          <div className="flex-1 w-full relative">
+            <iframe
+              title={`Full Screen Google Maps Route #${delivery.order_number}`}
+              width="100%"
+              height="100%"
+              style={{ border: 0 }}
+              loading="lazy"
+              allowFullScreen={true}
+              referrerPolicy="no-referrer-when-downgrade"
+              src={embedUrl}
+              className="w-full h-full filter contrast-125"
+            />
+            <div className="absolute top-4 left-4 z-10 pointer-events-none">
+              <span className="bg-slate-900/95 backdrop-blur-md text-emerald-400 border border-emerald-500/40 text-xs font-mono font-black px-3.5 py-2 rounded-xl shadow-xl flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+                {delivery.distance_km || '3.5'} km • ~{Math.max(5, Math.round((Number(delivery.distance_km) || 3.5) * 3))} min drive
+              </span>
+            </div>
+          </div>
+
+          {/* Bottom Action HUD in Full Screen */}
+          <div className="p-4 bg-slate-900/95 border-t border-slate-800 space-y-3 shadow-2xl">
+            <div className="flex items-center justify-between text-xs text-slate-300 font-semibold px-1">
+              <span className="truncate max-w-[45%]">🏪 {delivery.pickup_address || 'Smart Shop'}</span>
+              <span className="text-slate-500 font-black">➔</span>
+              <span className="truncate max-w-[45%]">🏠 {delivery.delivery_address || 'Customer'}</span>
+            </div>
+            <div className="flex items-center gap-2.5">
+              {delivery.customer_phone && (
+                <a
+                  href={`tel:${delivery.customer_phone}`}
+                  className="px-5 py-3.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 border border-slate-700 active:scale-95 shadow"
+                >
+                  <Phone size={15} /> Call
+                </a>
+              )}
+              <button
+                onClick={() => {
+                  setIsFullScreen(false);
+                  haptic('medium');
+                  onArrived?.();
+                }}
+                className="flex-1 py-3.5 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white rounded-xl text-xs font-black shadow-lg shadow-emerald-500/25 transition-all active:scale-95 flex items-center justify-center gap-1.5"
+              >
+                <Check size={16} /> 
+                {delivery.status === 'arrived' ? 'Verify Customer PIN' : '📍 Arrived — Verify PIN'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
