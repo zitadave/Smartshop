@@ -856,24 +856,18 @@ export default function DriverDashboard() {
                           </button>
                         )}
                         <button 
-                          className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-[9px] font-bold shadow-md transition-all active:scale-95 flex items-center justify-center gap-1"
+                          className="flex-1 py-3 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white rounded-xl text-xs font-black shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5"
                           onClick={function() {
-                            if (del.status === 'assigned' || del.status === 'accepted') triggerStatusUpdate(del.id, 'at_vendor');
-                            else if (del.status === 'at_vendor') triggerStatusUpdate(del.id, 'picked_up');
-                            else if (del.status === 'picked_up') triggerStatusUpdate(del.id, 'in_transit');
-                            else if (del.status === 'in_transit') triggerStatusUpdate(del.id, 'arrived');
-                            else if (del.status === 'arrived') {
+                            if (del.status !== 'arrived') {
+                              triggerStatusUpdate(del.id, 'arrived');
+                            } else {
                               setPinVerificationId(del.id);
                               setVerificationPinInput('');
                             }
                           }}
                         >
-                          <Check size={11} /> 
-                          {del.status === 'assigned' || del.status === 'accepted' ? 'Arrived at Shop' : 
-                           del.status === 'at_vendor' ? 'Verify & Load Items' : 
-                           del.status === 'picked_up' ? 'Depart Shop' : 
-                           del.status === 'in_transit' ? 'Arrived at Dropoff' : 
-                           'Verify Customer PIN'}
+                          <Check size={13} /> 
+                          {del.status === 'arrived' ? 'Verify Customer PIN' : '📍 Arrived — Verify PIN'}
                         </button>
                       </div>
                     </div>
