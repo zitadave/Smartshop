@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/stores/AppStore';
+import { ordersApi } from '@/lib/api';
 import { t } from '@/i18n/translations';
 import { formatPrice, cn } from '@/lib/utils';
 import { ReceiptButton } from '@/components/features/DigitalReceipt';
@@ -10,8 +12,31 @@ export default function Orders() {
   const navigate = useNavigate();
   const { orders, language, preOrders } = useStore();
 
-  const statusIcons: Record<string, string> = { confirmed: '✅', processing: '📦', shipped: '🚚', delivered: '🏠', completed: '✅', cancelled: '❌', returned: '🔄', 'pre-order': '🚀' };
-  const statusLabels: Record<string, string> = { confirmed: 'Confirmed', processing: 'Processing', shipped: 'Shipped', delivered: 'Delivered', completed: 'Completed', cancelled: 'Cancelled', returned: 'Returned', 'pre-order': 'Pre-Order' };
+  useEffect(() => {
+    ordersApi.list().then(res => {
+      if (res && res.orders) {
+        const mappedOrders = res.orders.map((o: any) => ({
+          orderNumber: o.order_number || o.orderNumber,
+          status: o.status,
+          items: o.items || [],
+          total: o.total || 0,
+          subtotal: o.subtotal || 0,
+          discount: o.discount || 0,
+          paymentMethod: o.payment_method || o.paymentMethod || 'COD',
+          customer: o.customer || {},
+          date: o.created_at ? new Date(o.created_at).toLocaleDateString() : o.date || '',
+          createdAt: o.created_at || o.createdAt || '',
+        }));
+        if (mappedOrders.length > 0) {
+          useStore.setState({ orders: mappedOrders });
+          try { localStorage.setItem('ss_orders', JSON.stringify(mappedOrders)); } catch {}
+        }
+      }
+    }).catch(() => {});
+  }, []);
+
+  const statusIcons: Record<string, string> = { confirmed: '✅', processing: '📦', shipped: '🚚', in_transit: '🚚', out_for_delivery: '🚛', arrived: '📍', delivered: '🏠', completed: '✅', cancelled: '❌', returned: '🔄', 'pre-order': '🚀' };
+  const statusLabels: Record<string, string> = { confirmed: 'Confirmed', processing: 'Processing', shipped: 'Shipped', in_transit: 'In Transit', out_for_delivery: 'Out for Delivery', arrived: 'Arrived', delivered: 'Delivered', completed: 'Completed', cancelled: 'Cancelled', returned: 'Returned', 'pre-order': 'Pre-Order' };
 
   const allOrders = [...orders, ...preOrders.map(po => ({
     orderNumber: po.orderNumber,

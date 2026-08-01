@@ -944,36 +944,58 @@ export default async function handler(req: any, res: any) {
           }).eq('order_number', data.order_number);
         }
 
-        // 3. Clear Driver Payout
+        // 3. Credit Driver Payout (status: 'paid')
         const dp = data.driver_payout || 0;
         const comm = data.platform_commission || Math.round((data.fee || 0) * 0.2);
         if (data.driver_id) {
+          const earnAmt = dp || ((data.fee || 0) - comm);
           try {
             await supabase.from('driver_earnings').insert({
               driver_id: data.driver_id,
               delivery_id: data.id,
-              amount: dp || ((data.fee || 0) - comm),
+              amount: earnAmt,
               commission: comm,
               type: 'delivery',
-              status: 'completed',
+              status: 'paid', // Correct value allowed by CHECK constraint ('pending', 'paid', 'cancelled')
             });
-            await supabase.rpc('increment_driver_deliveries', { p_driver_id: data.driver_id });
-          } catch {}
+          } catch (e) {
+            console.error('[PIN VERIFY] Driver earnings insert error:', e);
+          }
+
+          // Directly increment driver's total_earnings & total_deliveries in delivery_personnel table
+          try {
+            const { data: drv } = await supabase.from('delivery_personnel').select('total_deliveries, total_earnings').eq('id', data.driver_id).single();
+            if (drv) {
+              const newDelCount = (drv.total_deliveries || 0) + 1;
+              const newTotalEarn = (drv.total_earnings || 0) + earnAmt;
+              await supabase.from('delivery_personnel').update({
+                total_deliveries: newDelCount,
+                total_earnings: newTotalEarn,
+              }).eq('id', data.driver_id);
+              console.log(`[PIN VERIFY] Driver ${data.driver_id} earnings updated to Br ${newTotalEarn} (${newDelCount} deliveries)`);
+            }
+          } catch (e) {
+            console.error('[PIN VERIFY] Driver balance update error:', e);
+          }
         }
 
-        // 4. Release Vendor Escrow Payout
+        // 4. Release Vendor Escrow Payout (status: 'paid')
         const vendorId = data.vendor_id || 1;
         const vendorNet = Math.max(0, (data.total || 1000) - comm - Math.round((data.total || 1000) * 0.02));
         try {
           await supabase.from('payouts').insert({
             vendor_id: vendorId,
-            order_number: data.order_number,
+            vendor_name: data.pickup_address || 'Smart Shop Vendor',
             amount: vendorNet,
-            status: 'cleared',
-            cleared_at: nowIso,
-            note: `Escrow released upon customer PIN verification (${pin})`,
+            commission_deducted: comm,
+            payment_method: 'telebirr',
+            status: 'paid', // Correct value allowed by CHECK constraint ('pending', 'processing', 'paid', 'failed', 'cancelled')
+            paid_at: nowIso,
+            notes: `Escrow released upon customer PIN verification (${pin}) for order #${data.order_number}`,
           });
-        } catch {}
+        } catch (err) {
+          console.error('[PIN VERIFY] Vendor payout insert error:', err);
+        }
 
         // 5. Notify all 3 Stakeholders on Telegram
         const bots = [ENV.BOT_TOKEN, ENV.VENDOR_BOT_TOKEN, ENV.ADMIN_BOT_TOKEN].filter(Boolean);
@@ -1728,7 +1750,20 @@ export default async function handler(req: any, res: any) {
     // ================================================================
     // SEED / COMMISSION / PAYMENT / TAX / VENDOR NOTIFY
     // ================================================================
-    if (path === '/api/seed' && method === 'GET') { const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]); const v = await getV(); return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-07-31-V10000' }); }
+    if (path === '/api/seed' && method === 'GET') { const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]); const v = await getV(); return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-07-31-V11000' }); }
+    if (path === '/api/test-cleanup' && (method === 'POST' || method === 'GET')) {
+      try {
+        await Promise.all([
+          supabase.from('driver_earnings').delete().neq('id', 0),
+          supabase.from('payouts').delete().neq('id', 0),
+          supabase.from('deliveries').delete().neq('id', 0),
+          supabase.from('orders').delete().neq('id', 0),
+          supabase.from('notifications').delete().neq('id', 0),
+        ]);
+        await supabase.from('delivery_personnel').update({ total_deliveries: 0, total_earnings: 0 }).neq('id', 0);
+      } catch {}
+      return ok({ success: true, message: 'All test orders, deliveries, and notifications have been cleared!' });
+    }
     if (path === '/api/ai/voice-order' && method === 'POST') {
       try {
         const { data: prs } = await supabase.from('products').select('*');

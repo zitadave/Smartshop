@@ -521,9 +521,13 @@ export default function OrderTrackingMap({ orderNumber, compact }: OrderTracking
 
 /** Simple progress bar for order tracking */
 export function OrderProgressBar({ status }: { status: string }) {
-  const steps = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'completed'];
-  const currentIdx = steps.indexOf(status);
-  const progress = currentIdx >= 0 ? ((currentIdx + 1) / steps.length) * 100 : 0;
+  let progress = 20;
+  if (['confirmed'].includes(status)) progress = 33;
+  if (['processing'].includes(status)) progress = 50;
+  if (['shipped', 'in_transit'].includes(status)) progress = 75;
+  if (['out_for_delivery', 'arrived'].includes(status)) progress = 90;
+  if (['delivered', 'completed'].includes(status)) progress = 100;
+  if (['cancelled', 'returned'].includes(status)) progress = 0;
 
   return (
     <div className="flex items-center gap-1.5">
