@@ -221,6 +221,25 @@ export default function Home() {
       <PullToRefresh onRefresh={handleRefresh}>
       <Hero productCount={products.length} topRating={topRating} />
 
+      {/* Best Seller & On Sale - directly under Hero section */}
+      <div className="flex gap-3 px-4 -mt-5 mb-3 relative z-20">
+        {[
+          { icon: '🛍️', label: 'Best Seller', val: topProducts[0]?.nameEn || 'Loading...', gradient: 'from-amber-500 via-orange-500 to-red-500' },
+          { icon: '🔥', label: 'On Sale', val: `${specialOffers.length} deals`, gradient: 'from-rose-500 via-pink-500 to-purple-500' },
+        ].map((card, i) => (
+          <div key={i}
+            className={`flex-1 bg-gradient-to-br ${card.gradient} rounded-2xl p-4 text-white shadow-xl hover-lift cursor-pointer animate-scaleIn`}
+            onClick={() => navigate('/shop')}
+            style={{ animationDelay: `${0.3 + i * 0.12}s` }}
+            role="button" tabIndex={0}
+          >
+            <div className="text-xl mb-1 opacity-90">{card.icon}</div>
+            <div className="text-[9px] text-white/60 font-medium uppercase tracking-wider">{card.label}</div>
+            <div className="text-xs font-bold truncate mt-1 leading-tight">{card.val}</div>
+          </div>
+        ))}
+      </div>
+
       <div className="px-4 mt-2">
         <BroadcastBanner />
       </div>
@@ -331,24 +350,6 @@ export default function Home() {
         btnAnim={btnAnim}
         wishAnim={wishAnim}
       />
-
-      <div className="flex gap-3 px-4 -mt-5 mb-3 relative z-20">
-        {[
-          { icon: '🛍️', label: 'Best Seller', val: topProducts[0]?.nameEn || 'Loading...', gradient: 'from-amber-500 via-orange-500 to-red-500' },
-          { icon: '🔥', label: 'On Sale', val: `${specialOffers.length} deals`, gradient: 'from-rose-500 via-pink-500 to-purple-500' },
-        ].map((card, i) => (
-          <div key={i}
-            className={`flex-1 bg-gradient-to-br ${card.gradient} rounded-2xl p-4 text-white shadow-xl hover-lift cursor-pointer animate-scaleIn`}
-            onClick={() => navigate('/shop')}
-            style={{ animationDelay: `${0.3 + i * 0.12}s` }}
-            role="button" tabIndex={0}
-          >
-            <div className="text-xl mb-1 opacity-90">{card.icon}</div>
-            <div className="text-[9px] text-white/60 font-medium uppercase tracking-wider">{card.label}</div>
-            <div className="text-xs font-bold truncate mt-1 leading-tight">{card.val}</div>
-          </div>
-        ))}
-      </div>
 
       <div className="px-4 py-4">
         <div className="flex gap-2.5 overflow-x-auto scrollbar-none snap-x">
