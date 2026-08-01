@@ -32,106 +32,35 @@ interface DailyEarning {
 }
 
 function DriverLiveMap({ delivery, driverLat, driverLng }: { delivery: any; driverLat?: number; driverLng?: number }) {
-  const [mapLoaded, setMapLoaded] = useState(false);
-  const mapId = `driver-map-${delivery.id}`;
+  const pLat = Number(delivery.pickup_lat) || 9.0190;
+  const pLng = Number(delivery.pickup_lng) || 38.7680;
+  const dLat = Number(delivery.delivery_lat) || 9.0315;
+  const dLng = Number(delivery.delivery_lng) || 38.7485;
 
-  useEffect(() => {
-    if ((window as any).L) {
-      setMapLoaded(true);
-      return;
-    }
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-    document.head.appendChild(link);
-
-    const script = document.createElement('script');
-    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-    script.onload = () => setMapLoaded(true);
-    document.head.appendChild(script);
-  }, []);
-
-  useEffect(() => {
-    if (!mapLoaded || !(window as any).L) return;
-    const L = (window as any).L;
-    const el = document.getElementById(mapId);
-    if (!el) return;
-
-    el.innerHTML = '';
-    const map = L.map(el, { zoomControl: false, attributionControl: false });
-
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      maxZoom: 19
-    }).addTo(map);
-
-    const pLat = Number(delivery.pickup_lat) || 9.0190;
-    const pLng = Number(delivery.pickup_lng) || 38.7680;
-    const dLat = Number(delivery.delivery_lat) || 9.0315;
-    const dLng = Number(delivery.delivery_lng) || 38.7485;
-    const myLat = Number(driverLat) || pLat;
-    const myLng = Number(driverLng) || pLng;
-
-    const storeIcon = L.divIcon({
-      className: 'custom-store-icon',
-      html: `<div class="w-8 h-8 rounded-full bg-blue-500 border-2 border-white flex items-center justify-center shadow-lg"><span class="text-sm">🏪</span></div>`,
-      iconSize: [32, 32],
-      iconAnchor: [16, 16]
-    });
-    const destIcon = L.divIcon({
-      className: 'custom-dest-icon',
-      html: `<div class="w-8 h-8 rounded-full bg-emerald-500 border-2 border-white flex items-center justify-center shadow-lg"><span class="text-sm">🏠</span></div>`,
-      iconSize: [32, 32],
-      iconAnchor: [16, 16]
-    });
-    const driverIcon = L.divIcon({
-      className: 'custom-driver-icon',
-      html: `<div class="w-8 h-8 rounded-full bg-indigo-600 border-2 border-white flex items-center justify-center shadow-lg animate-pulse"><span class="text-sm">🏍️</span></div>`,
-      iconSize: [32, 32],
-      iconAnchor: [16, 16]
-    });
-
-    const mStore = L.marker([pLat, pLng], { icon: storeIcon }).addTo(map);
-    const mDest = L.marker([dLat, dLng], { icon: destIcon }).addTo(map);
-    const mDriver = L.marker([myLat, myLng], { icon: driverIcon }).addTo(map);
-
-    fetch(`https://router.project-osrm.org/route/v1/driving/${pLng},${pLat};${dLng},${dLat}?overview=full&geometries=geojson`)
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.routes && data.routes[0]) {
-          const coordinates = data.routes[0].geometry.coordinates;
-          const latLngs = coordinates.map((coord: [number, number]) => [coord[1], coord[0]]);
-          
-          L.polyline(latLngs, { color: '#10B981', weight: 4, opacity: 0.9 }).addTo(map);
-          L.polyline(latLngs, { color: '#34D399', weight: 8, opacity: 0.3 }).addTo(map);
-
-          const group = new L.featureGroup([mStore, mDest, mDriver]);
-          map.fitBounds(group.getBounds().pad(0.25));
-        } else {
-          throw new Error('OSRM fallback');
-        }
-      })
-      .catch(() => {
-        L.polyline([[pLat, pLng], [dLat, dLng]], { color: '#10B981', weight: 3, dashArray: '6, 6' }).addTo(map);
-        const group = new L.featureGroup([mStore, mDest, mDriver]);
-        map.fitBounds(group.getBounds().pad(0.25));
-      });
-
-    return () => {
-      try { map.remove(); } catch {}
-    };
-  }, [mapLoaded, delivery.id, delivery.pickup_lat, delivery.delivery_lat, driverLat, driverLng]);
+  // Genuine Google Maps Directions Embed URL between vendor pickup and customer dropoff
+  const embedUrl = `https://www.google.com/maps?saddr=${pLat},${pLng}&daddr=${dLat},${dLng}&output=embed`;
 
   return (
-    <div className="relative w-full h-44 rounded-2xl overflow-hidden border border-slate-800 shadow-inner bg-slate-950">
-      <div id={mapId} className="w-full h-full" />
-      <div className="absolute top-2 right-2 z-10 flex gap-1.5">
+    <div className="relative w-full h-48 rounded-2xl overflow-hidden border border-slate-800 shadow-xl bg-slate-950">
+      <iframe
+        title={`Google Maps Route #${delivery.order_number}`}
+        width="100%"
+        height="100%"
+        style={{ border: 0 }}
+        loading="lazy"
+        allowFullScreen={false}
+        referrerPolicy="no-referrer-when-downgrade"
+        src={embedUrl}
+        className="w-full h-full filter contrast-125"
+      />
+      <div className="absolute top-2 right-2 z-10 flex gap-1.5 pointer-events-none">
         <span className="bg-slate-900/90 backdrop-blur-md text-emerald-400 border border-emerald-500/30 text-[9px] font-mono font-bold px-2.5 py-1 rounded-lg shadow flex items-center gap-1">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
           {delivery.distance_km || '3.5'} km • ~{Math.max(5, Math.round((Number(delivery.distance_km) || 3.5) * 3))} min drive
         </span>
       </div>
       <div className="absolute bottom-2 left-2 right-2 z-10 flex items-center justify-between pointer-events-none">
-        <span className="bg-slate-900/90 backdrop-blur text-slate-300 text-[8px] px-2 py-0.5 rounded-md font-semibold border border-slate-800">
+        <span className="bg-slate-900/95 backdrop-blur text-slate-200 text-[8.5px] px-2.5 py-1 rounded-lg font-bold border border-slate-800 shadow-md">
           🏪 {delivery.pickup_address || 'Smart Shop'} ➔ 🏠 {delivery.delivery_address || 'Customer'}
         </span>
       </div>
