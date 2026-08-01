@@ -26,6 +26,15 @@ export default function Shop() {
   const [showFilters, setShowFilters] = useState(false);
   const { visibleItems, hasMore, sentinelRef } = useInfiniteScroll(filtered, { pageSize: 8 });
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const sortParam = params.get('sort');
+    if (sortParam === 'sale' || sortParam === 'price_low') {
+      setSort('price_low');
+      setShowFilters(true);
+    }
+  }, [location.search, setSort]);
+
   // AI Voice-Note Ordering states
   const [recording, setRecording] = useState(false);
 

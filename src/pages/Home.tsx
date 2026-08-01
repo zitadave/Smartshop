@@ -55,9 +55,9 @@ function SubscriptionSection({ onNavigate }: { onNavigate: (path: string) => voi
 
           return (
             <div key={plan.id}
-              className="flex-shrink-0 w-52 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-all cursor-pointer active:scale-[0.98]"
+              className="flex-shrink-0 w-52 h-64 bg-card text-card-foreground rounded-2xl shadow-sm border border-border overflow-hidden hover:shadow-md transition-all cursor-pointer active:scale-[0.98] flex flex-col justify-between"
               onClick={() => onNavigate('/subscription-shop?plan=' + plan.id)}>
-              <div className={'bg-gradient-to-r ' + getPlanCategoryColor(plan.category) + ' p-4 text-white'}>
+              <div className={'bg-gradient-to-r ' + getPlanCategoryColor(plan.category) + ' p-4 text-white flex-shrink-0'}>
                 <div className="flex items-center justify-between">
                   <span className="text-3xl">{plan.emoji}</span>
                   {savings > 0 && (
@@ -69,35 +69,37 @@ function SubscriptionSection({ onNavigate }: { onNavigate: (path: string) => voi
                 <h3 className="font-bold text-sm mt-2">{plan.name}</h3>
                 <p className="text-[10px] text-white/80 mt-0.5">{plan.description}</p>
               </div>
-              <div className="p-3">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] text-slate-400 font-medium uppercase">{plan.unit}{plan.unitLabel}</span>
-                  {plan.tags.includes('popular') && <span className="text-[9px] bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full font-medium">🔥 Popular</span>}
-                  {plan.tags.includes('essential') && !plan.tags.includes('popular') && <span className="text-[9px] bg-green-100 text-green-600 px-2 py-0.5 rounded-full font-medium">⚡ Essential</span>}
-                </div>
-                <div className="space-y-1">
-                  {plan.dailyPrice > 0 && (
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-500">Daily</span>
-                      <span className="font-bold text-slate-800">Br {plan.dailyPrice.toLocaleString()}</span>
-                    </div>
-                  )}
-                  {plan.weeklyPrice > 0 && (
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-500">Weekly</span>
-                      <span className="font-bold text-slate-800">Br {plan.weeklyPrice.toLocaleString()}</span>
-                    </div>
-                  )}
-                  {plan.monthlyPrice > 0 && (
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-500">Monthly</span>
-                      <span className="font-bold text-slate-800">Br {plan.monthlyPrice.toLocaleString()}</span>
-                    </div>
-                  )}
+              <div className="p-3 flex-1 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] text-muted-foreground font-medium uppercase">{plan.unit}{plan.unitLabel}</span>
+                    {plan.tags.includes('popular') && <span className="text-[9px] bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full font-medium">🔥 Popular</span>}
+                    {plan.tags.includes('essential') && !plan.tags.includes('popular') && <span className="text-[9px] bg-green-100 text-green-600 px-2 py-0.5 rounded-full font-medium">⚡ Essential</span>}
+                  </div>
+                  <div className="space-y-1">
+                    {plan.dailyPrice > 0 && (
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">Daily</span>
+                        <span className="font-bold text-foreground">Br {plan.dailyPrice.toLocaleString()}</span>
+                      </div>
+                    )}
+                    {plan.weeklyPrice > 0 && (
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">Weekly</span>
+                        <span className="font-bold text-foreground">Br {plan.weeklyPrice.toLocaleString()}</span>
+                      </div>
+                    )}
+                    {plan.monthlyPrice > 0 && (
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">Monthly</span>
+                        <span className="font-bold text-foreground">Br {plan.monthlyPrice.toLocaleString()}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <button
                   onClick={(e) => { e.stopPropagation(); onNavigate('/subscription-shop?plan=' + plan.id); }}
-                  className="w-full mt-3 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-xs font-semibold rounded-xl hover:shadow-lg transition-all active:scale-95 flex items-center justify-center gap-1">
+                  className="w-full mt-auto py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-xs font-semibold rounded-xl hover:shadow-lg transition-all active:scale-95 flex items-center justify-center gap-1">
                   <Package size={12} /> Subscribe
                 </button>
               </div>
@@ -221,15 +223,15 @@ export default function Home() {
       <PullToRefresh onRefresh={handleRefresh}>
       <Hero productCount={products.length} topRating={topRating} />
 
-      {/* Best Seller & On Sale - directly under Hero section */}
-      <div className="flex gap-3 px-4 mt-3 mb-4 relative z-20">
+      {/* Best Seller & On Sale - HALF ON Hero section, HALF OUTSIDE Hero section */}
+      <div className="flex gap-3 px-4 -mt-11 mb-4 relative z-20">
         {[
-          { icon: '🛍️', label: 'Best Seller', val: topProducts[0]?.nameEn || 'Loading...', gradient: 'from-amber-500 via-orange-500 to-red-500' },
-          { icon: '🔥', label: 'On Sale', val: `${specialOffers.length} deals`, gradient: 'from-rose-500 via-pink-500 to-purple-500' },
+          { icon: '🛍️', label: 'Best Seller', val: topProducts[0]?.nameEn || 'Loading...', gradient: 'from-amber-500 via-orange-500 to-red-500', onClick: () => navigate('/product/' + (topProducts[0]?.id || 5)) },
+          { icon: '🔥', label: 'On Sale', val: `${specialOffers.length} deals`, gradient: 'from-rose-500 via-pink-500 to-purple-500', onClick: () => navigate('/shop?sort=sale') },
         ].map((card, i) => (
           <div key={i}
             className={`flex-1 bg-gradient-to-br ${card.gradient} rounded-2xl p-4 text-white shadow-xl hover-lift cursor-pointer animate-scaleIn`}
-            onClick={() => navigate('/shop')}
+            onClick={card.onClick}
             style={{ animationDelay: `${0.3 + i * 0.12}s` }}
             role="button" tabIndex={0}
           >

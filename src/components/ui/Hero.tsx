@@ -13,7 +13,7 @@ export function Hero({ productCount, topRating }: HeroProps) {
   const { language } = useStore();
 
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-[#0b1628] via-[#14213d] to-[#1a2d4f] text-white px-6 pt-12 pb-10">
+    <section className="relative overflow-hidden bg-gradient-to-br from-[#0b1628] via-[#14213d] to-[#1a2d4f] text-white px-6 pt-12 pb-16">
       {/* Animated Orbs */}
       <div className="absolute top-[-80px] right-[-80px] w-64 h-64 rounded-full bg-gradient-to-br from-blue-400/15 to-purple-400/10 animate-float" style={{ animationDuration: '7s' }} />
       <div className="absolute bottom-[-60px] left-[-60px] w-48 h-48 rounded-full bg-gradient-to-tr from-cyan-400/10 to-teal-400/10 animate-float" style={{ animationDuration: '9s', animationDelay: '1s' }} />
