@@ -55,16 +55,6 @@ function DriverLiveMap({ delivery, driverLat, driverLng, onArrived }: { delivery
           src={embedUrl}
           className="w-full h-full filter contrast-125"
         />
-        <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 pointer-events-none">
-          <div className="bg-gradient-to-r from-emerald-500/30 to-teal-500/30 backdrop-blur-md border-2 border-emerald-400/60 px-3 py-1.5 rounded-2xl shadow-xl shadow-emerald-500/20 flex items-center gap-1.5">
-            <span className="text-[9px] uppercase font-extrabold tracking-wider text-emerald-300">NET:</span>
-            <span className="text-sm font-black text-white">Br {delivery.driver_payout || delivery.fee || 80}</span>
-          </div>
-          <span className="bg-slate-900/95 backdrop-blur-md text-slate-200 border border-slate-700 text-[10px] font-mono font-bold px-3 py-1.5 rounded-2xl shadow-lg flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-            {delivery.distance_km || '3.5'} km • ~{Math.max(5, Math.round((Number(delivery.distance_km) || 3.5) * 3))} min
-          </span>
-        </div>
         <div className="absolute top-3 right-3 z-10">
           <button
             onClick={() => {
@@ -75,11 +65,6 @@ function DriverLiveMap({ delivery, driverLat, driverLng, onArrived }: { delivery
           >
             🔍 Full Screen
           </button>
-        </div>
-        <div className="absolute bottom-3 left-3 right-3 z-10 pointer-events-none">
-          <span className="bg-slate-900/95 backdrop-blur-md text-slate-100 text-[9.5px] px-3 py-1.5 rounded-xl font-bold border border-slate-800 shadow-lg block truncate">
-            🏪 {delivery.pickup_address || 'Smart Shop'} ➔ 🏠 {delivery.delivery_address || 'Customer'}
-          </span>
         </div>
       </div>
 
@@ -121,12 +106,6 @@ function DriverLiveMap({ delivery, driverLat, driverLng, onArrived }: { delivery
               src={embedUrl}
               className="w-full h-full filter contrast-125"
             />
-            <div className="absolute top-4 left-4 z-10 pointer-events-none">
-              <span className="bg-slate-900/95 backdrop-blur-md text-emerald-400 border border-emerald-500/40 text-xs font-mono font-black px-3.5 py-2 rounded-xl shadow-xl flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-                {delivery.distance_km || '3.5'} km • ~{Math.max(5, Math.round((Number(delivery.distance_km) || 3.5) * 3))} min drive
-              </span>
-            </div>
           </div>
 
           {/* Bottom Action HUD in Full Screen */}
