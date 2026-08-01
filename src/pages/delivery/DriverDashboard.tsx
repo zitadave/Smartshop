@@ -37,24 +37,131 @@ function DriverLiveMap({ delivery, driverLat, driverLng, onArrived }: { delivery
   const pLng = Number(delivery.pickup_lng) || 38.7650;
   const dLat = Number(delivery.delivery_lat) || 9.0520;
   const dLng = Number(delivery.delivery_lng) || 38.7580;
+  const [mapLoaded, setMapLoaded] = useState(false);
 
-  // Genuine Google Maps Directions Embed URL using exact numeric GPS coordinates from shipping start to shipping destination
-  const embedUrl = `https://www.google.com/maps?saddr=${pLat},${pLng}&daddr=${dLat},${dLng}&output=embed`;
+  useEffect(() => {
+    if ((window as any).L) {
+      setMapLoaded(true);
+      return;
+    }
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    document.head.appendChild(link);
+
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    script.onload = () => setMapLoaded(true);
+    document.head.appendChild(script);
+  }, []);
+
+  const renderMap = (containerId: string) => {
+    const L = (window as any).L;
+    if (!L) return;
+
+    const container = L.DomUtil.get(containerId);
+    if (!container) return;
+    if (container._leaflet_id) {
+      container._leaflet_id = null;
+    }
+
+    try {
+      const map = L.map(containerId, {
+        zoomControl: true,
+        attributionControl: false
+      });
+
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19
+      }).addTo(map);
+
+      const storeIcon = L.divIcon({
+        className: 'custom-store-icon',
+        html: `<div class="w-8 h-8 rounded-full bg-blue-500 border-2 border-white flex items-center justify-center shadow-lg"><span class="text-sm">🏪</span></div>`,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16]
+      });
+      const storeMarker = L.marker([pLat, pLng], { icon: storeIcon }).addTo(map);
+
+      const customerIcon = L.divIcon({
+        className: 'custom-home-icon',
+        html: `<div class="w-8 h-8 rounded-full bg-rose-500 border-2 border-white flex items-center justify-center shadow-lg"><span class="text-sm">📍</span></div>`,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16]
+      });
+      const customerMarker = L.marker([dLat, dLng], { icon: customerIcon }).addTo(map);
+
+      let driverMarker: any = null;
+      if (driverLat && driverLng) {
+        const motorIcon = L.divIcon({
+          className: 'custom-motor-icon',
+          html: `<div class="w-8 h-8 rounded-full bg-indigo-600 border-2 border-white flex items-center justify-center shadow-lg"><span class="text-sm">🏍️</span></div>`,
+          iconSize: [32, 32],
+          iconAnchor: [16, 16]
+        });
+        driverMarker = L.marker([driverLat, driverLng], { icon: motorIcon }).addTo(map);
+      }
+
+      fetch(`https://router.project-osrm.org/route/v1/driving/${pLng},${pLat};${dLng},${dLat}?overview=full&geometries=geojson`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.routes && data.routes[0]) {
+            const coordinates = data.routes[0].geometry.coordinates;
+            const latLngs = coordinates.map((coord: [number, number]) => [coord[1], coord[0]]);
+            
+            L.polyline(latLngs, {
+              color: '#10B981',
+              weight: 5,
+              opacity: 0.95
+            }).addTo(map);
+
+            L.polyline(latLngs, {
+              color: '#34D399',
+              weight: 9,
+              opacity: 0.35
+            }).addTo(map);
+
+            const markers = [storeMarker, customerMarker];
+            if (driverMarker) markers.push(driverMarker);
+            const group = new L.featureGroup(markers);
+            map.fitBounds(group.getBounds().pad(0.18));
+          } else {
+            throw new Error('No OSRM route found');
+          }
+        })
+        .catch(() => {
+          L.polyline([[pLat, pLng], [dLat, dLng]], {
+            color: '#10B981',
+            weight: 4,
+            opacity: 0.85,
+            dashArray: '8, 8'
+          }).addTo(map);
+
+          const markers = [storeMarker, customerMarker];
+          if (driverMarker) markers.push(driverMarker);
+          const group = new L.featureGroup(markers);
+          map.fitBounds(group.getBounds().pad(0.18));
+        });
+    } catch {}
+  };
+
+  useEffect(() => {
+    if (!mapLoaded) return;
+    renderMap(`driver-card-map-${delivery.id}`);
+  }, [mapLoaded, delivery, driverLat, driverLng]);
+
+  useEffect(() => {
+    if (!mapLoaded || !isFullScreen) return;
+    const timer = setTimeout(() => {
+      renderMap(`driver-full-map-${delivery.id}`);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [mapLoaded, isFullScreen, delivery, driverLat, driverLng]);
 
   return (
     <>
       <div className="relative w-full h-72 rounded-3xl overflow-hidden border border-border shadow-2xl bg-card">
-        <iframe
-          title={`Google Maps Route #${delivery.order_number}`}
-          width="100%"
-          height="100%"
-          style={{ border: 0 }}
-          loading="lazy"
-          allowFullScreen={false}
-          referrerPolicy="no-referrer-when-downgrade"
-          src={embedUrl}
-          className="w-full h-full filter contrast-125"
-        />
+        <div id={`driver-card-map-${delivery.id}`} className="w-full h-full filter contrast-125" />
         <div className="absolute top-3 right-3 z-10">
           <button
             onClick={() => {
@@ -93,19 +200,9 @@ function DriverLiveMap({ delivery, driverLat, driverLng, onArrived }: { delivery
             </button>
           </div>
 
-          {/* 100% Full-Screen Google Map */}
+          {/* 100% Full-Screen Map */}
           <div className="flex-1 w-full relative">
-            <iframe
-              title={`Full Screen Google Maps Route #${delivery.order_number}`}
-              width="100%"
-              height="100%"
-              style={{ border: 0 }}
-              loading="lazy"
-              allowFullScreen={true}
-              referrerPolicy="no-referrer-when-downgrade"
-              src={embedUrl}
-              className="w-full h-full filter contrast-125"
-            />
+            <div id={`driver-full-map-${delivery.id}`} className="w-full h-full filter contrast-125" />
           </div>
 
           {/* Bottom Action HUD in Full Screen */}
