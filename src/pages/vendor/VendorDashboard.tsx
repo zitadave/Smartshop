@@ -985,8 +985,20 @@ function VendorPayoutsView({ stats }: { stats: any }) {
   }, [orders, vendorProductIds, customAffRate, settings, platformFeeRate]);
 
   const netEarned = totalRevenue - platformFee - affiliateFee;
-  const paidOut = payouts.filter(p => p.status === 'paid').reduce((s, p) => s + p.amount, 0);
-  const pending = netEarned - paidOut;
+  useEffect(() => {
+    fetch('/api/payouts?vendorId=' + vendorId)
+      .then(r => r.json())
+      .then(d => {
+        if (d && d.payouts && d.payouts.length > 0) {
+          setPayouts(d.payouts);
+        }
+      })
+      .catch(() => {});
+  }, [vendorId]);
+
+  const escrowHoldAmount = payouts.filter(p => p.status === 'pending').reduce((s, p) => s + (p.amount || 0), 0);
+  const paidOut = payouts.filter(p => p.status === 'paid').reduce((s, p) => s + (p.amount || 0), 0);
+  const availableBalance = Math.max(0, netEarned - paidOut - escrowHoldAmount);
 
   const handleSaveBilling = () => {
     try {
@@ -1018,9 +1030,9 @@ function VendorPayoutsView({ stats }: { stats: any }) {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
           { label: 'Total Revenue', val: formatPrice(totalRevenue), icon: DollarSign, color: 'from-blue-500 to-blue-600' },
-          { label: 'Platform Fee (' + Math.round(platformFeeRate * 100) + '%)', val: formatPrice(platformFee), icon: TrendingDown, color: 'from-slate-500 to-slate-600' },
-          { label: `Promoter Comm (${customAffRate}%)`, val: formatPrice(affiliateFee), icon: Users, color: 'from-amber-500 to-orange-600' },
-          { label: 'Net Available', val: formatPrice(Math.max(0, pending)), icon: Wallet, color: 'from-emerald-500 to-green-600' },
+          { label: '6h Escrow Hold (Buyer Window)', val: formatPrice(escrowHoldAmount), icon: Clock, color: 'from-amber-500 to-orange-600' },
+          { label: 'Cleared & Paid Out', val: formatPrice(paidOut), icon: CheckCircle, color: 'from-purple-500 to-violet-600' },
+          { label: 'Available to Withdraw', val: formatPrice(availableBalance), icon: Wallet, color: 'from-emerald-500 to-green-600' },
         ].map((s, i) => {
           const Icon = s.icon;
           return (
@@ -1031,6 +1043,25 @@ function VendorPayoutsView({ stats }: { stats: any }) {
             </div>
           );
         })}
+      </div>
+
+      {/* 6-Hour Buyer Inspection Escrow Hold Protection Card */}
+      <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 border border-amber-500/20 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <span className="text-[9px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
+            ⏳ 6-Hour Buyer Inspection Escrow Protection
+          </span>
+          <h3 className="text-sm font-extrabold text-slate-800 dark:text-slate-100 mt-2">
+            Br {escrowHoldAmount.toLocaleString()} Currently in 6-Hour Hold
+          </h3>
+          <p className="text-[10px] text-slate-500 mt-0.5 leading-relaxed">
+            While delivery couriers are paid instantly upon PIN verification, merchant revenue is safely held in platform escrow for exactly 6 hours to protect shoppers from defective or wrong items. Once 6 hours elapse without a dispute, funds automatically release to your withdrawable balance.
+          </p>
+        </div>
+        <div className="text-right flex-shrink-0">
+          <div className="text-[8px] font-bold text-slate-400 uppercase">Withdrawable Balance</div>
+          <div className="text-xl font-black text-emerald-600">Br {availableBalance.toLocaleString()}</div>
+        </div>
       </div>
 
       {/* Payout Billing Configuration Card */}
@@ -1080,22 +1111,30 @@ function VendorPayoutsView({ stats }: { stats: any }) {
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <h3 className="text-sm font-bold text-slate-900 dark:text-white">Request Withdrawal</h3>
-            <p className="text-xs text-slate-500 mt-0.5">Available: <strong className="text-emerald-600 text-sm">{formatPrice(Math.max(0, pending))}</strong><span className="text-slate-400 mx-2">·</span>Paid out: <strong>{formatPrice(paidOut)}</strong></p>
+            <p className="text-xs text-slate-500 mt-0.5">Available: <strong className="text-emerald-600 text-sm">{formatPrice(Math.max(0, availableBalance))}</strong><span className="text-slate-400 mx-2">·</span>In 6h Escrow Hold: <strong className="text-amber-600">{formatPrice(escrowHoldAmount)}</strong></p>
             <p className="text-[9px] text-slate-400 mt-0.5">Selected Method: <strong className="text-slate-700 dark:text-slate-300 font-mono">{payoutMethod} ({payoutDetails || 'Not configured'})</strong></p>
           </div>
-          <button className="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold hover:shadow-lg transition-all disabled:opacity-50 flex items-center gap-1.5" onClick={requestPayout} disabled={pending <= 0}><Wallet size={14} /> Request Payout</button>
+          <button className="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold hover:shadow-lg transition-all disabled:opacity-50 flex items-center gap-1.5" onClick={requestPayout} disabled={availableBalance <= 0}><Wallet size={14} /> Request Payout</button>
         </div>
       </div>
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-x-hidden">
-        <div className="p-4 border-b border-slate-100 dark:border-slate-800"><h3 className="text-sm font-bold text-slate-900 dark:text-white">Payout History ({payouts.length})</h3></div>
+        <div className="p-4 border-b border-slate-100 dark:border-slate-800"><h3 className="text-sm font-bold text-slate-900 dark:text-white">Payout & 6h Escrow History ({payouts.length})</h3></div>
         <div className="divide-y divide-slate-100 dark:divide-slate-800">
           {payouts.length === 0 ? <p className="text-center py-6 text-xs text-slate-400">No payout history yet</p> : payouts.slice(0, 15).map(p => (
             <div key={p.id} className="flex items-center gap-3 p-3 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
               <div className={cn('w-9 h-9 rounded-xl flex items-center justify-center', p.status === 'paid' ? 'bg-green-100' : 'bg-amber-100')}>
                 {p.status === 'paid' ? <CheckCircle size={15} className="text-green-600" /> : <Clock size={15} className="text-amber-600" />}
               </div>
-              <div className="flex-1"><div className="text-[10px] font-semibold text-slate-800 dark:text-slate-200">{formatPrice(p.amount)}</div><div className="text-[8px] text-slate-400">{new Date(p.requestedAt).toLocaleDateString()} · {p.method} ({p.details || 'no details'})</div></div>
-              <span className={cn('text-[9px] px-2 py-0.5 rounded font-semibold', p.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700')}>{p.status === 'paid' ? 'Paid' : 'Pending'}</span>
+              <div className="flex-1">
+                <div className="text-[10px] font-semibold text-slate-800 dark:text-slate-200">{formatPrice(p.amount)}</div>
+                <div className="text-[8px] text-slate-400">
+                  {new Date(p.created_at || p.requestedAt || Date.now()).toLocaleDateString()} · {p.payment_method || p.method || 'telebirr'} ({p.account_number || p.details || 'account'})
+                  {p.status === 'pending' && <span className="block text-amber-600 font-semibold mt-0.5">⏳ 6-Hour Buyer Inspection Escrow Hold</span>}
+                </div>
+              </div>
+              <span className={cn('text-[9px] px-2 py-0.5 rounded font-semibold', p.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700')}>
+                {p.status === 'paid' ? '✅ Paid' : '⏳ 6h Hold'}
+              </span>
             </div>
           ))}
         </div>

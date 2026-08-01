@@ -962,9 +962,10 @@ export default async function handler(req: any, res: any) {
           }
         }
 
-        // 4. Release Vendor Escrow Payout (status: 'paid')
+        // 4. Vendor 6-Hour Buyer Inspection Escrow Hold (status: 'pending')
         const vendorId = data.vendor_id || 1;
         const vendorNet = Math.max(0, (data.total || 1000) - comm - Math.round((data.total || 1000) * 0.02));
+        const escrowReleaseAt = Date.now() + 6 * 3600 * 1000; // 6 Hours from now
         try {
           await supabase.from('payouts').insert({
             vendor_id: vendorId,
@@ -972,9 +973,15 @@ export default async function handler(req: any, res: any) {
             amount: vendorNet,
             commission_deducted: comm,
             payment_method: 'telebirr',
-            status: 'paid', // Correct value allowed by CHECK constraint ('pending', 'processing', 'paid', 'failed', 'cancelled')
-            paid_at: nowIso,
-            notes: `Escrow released upon customer PIN verification (${pin}) for order #${data.order_number}`,
+            status: 'pending', // Pending 6-hour escrow hold
+            paid_at: null,
+            notes: JSON.stringify({
+              type: 'escrow_hold',
+              release_at: escrowReleaseAt,
+              order_number: data.order_number,
+              pin: pin,
+              message: '6-hour buyer inspection window escrow hold (auto-releases if no return/dispute)'
+            }),
           });
         } catch (err) {
           console.error('[PIN VERIFY] Vendor payout insert error:', err);
@@ -984,8 +991,10 @@ export default async function handler(req: any, res: any) {
         const bots = [ENV.BOT_TOKEN, ENV.VENDOR_BOT_TOKEN, ENV.ADMIN_BOT_TOKEN].filter(Boolean);
         // Customer
         if (data.customer_telegram_id) {
-          const custMsg = `🎉 <b>Delivery Confirmed & Escrow Released!</b>\n\n` +
-            `Thank you for shopping with Smart Shop! Your order #${data.order_number} is completed and payment has been released to your courier and seller.`;
+          const custMsg = `🎉 <b>Delivery Confirmed!</b>\n\n` +
+            `Thank you for shopping with Smart Shop! Your order #${data.order_number} is delivered.\n` +
+            `• Your courier has been paid instantly.\n` +
+            `• Your seller's revenue is held in 6-hour buyer inspection escrow protection.`;
           for (const bot of bots) {
             try { if (await tg(bot, data.customer_telegram_id, custMsg, 'HTML')) break; } catch {}
           }
@@ -1006,7 +1015,7 @@ export default async function handler(req: any, res: any) {
           } catch {}
         }
 
-        return ok({ success: true, verified: true, message: 'PIN verified! Escrow payment released to all stakeholders.' });
+        return ok({ success: true, verified: true, message: 'PIN verified! Driver paid instantly; vendor payout placed in 6-hour inspection escrow hold.' });
       }
       if (path === '/api/delivery/rate' && method === 'POST') {
         const b = req.body || {};
@@ -1688,7 +1697,39 @@ export default async function handler(req: any, res: any) {
         }
         const { data, error } = await query;
         if (error) return fail(error.message, 500);
-        return ok({ payouts: data || [] });
+
+        // AUTO-SETTLEMENT ENGINE: Check and release mature 6-hour escrow holds automatically
+        const nowMs = Date.now();
+        const payoutsList = data || [];
+        for (const p of payoutsList) {
+          if (p.status === 'pending') {
+            let releaseAtMs = 0;
+            try {
+              if (p.notes && p.notes.startsWith('{')) {
+                const meta = JSON.parse(p.notes);
+                if (meta.type === 'escrow_hold' && meta.release_at) {
+                  releaseAtMs = Number(meta.release_at);
+                }
+              }
+            } catch {}
+            if (!releaseAtMs && p.created_at) {
+              releaseAtMs = new Date(p.created_at).getTime() + 6 * 3600 * 1000;
+            }
+            if (releaseAtMs && nowMs >= releaseAtMs) {
+              p.status = 'paid';
+              p.paid_at = new Date().toISOString();
+              try {
+                await supabase.from('payouts').update({
+                  status: 'paid',
+                  paid_at: p.paid_at,
+                  notes: p.notes ? p.notes + ' [Auto-released after 6-hour escrow hold]' : '[Auto-released after 6-hour escrow hold]'
+                }).eq('id', p.id);
+                console.log(`[ESCROW AUTO-RELEASE] Payout ID #${p.id} (Br ${p.amount}) released to vendor after 6-hour hold.`);
+              } catch {}
+            }
+          }
+        }
+        return ok({ payouts: payoutsList });
       }
       if (method === 'POST') {
         const b = req.body || {};
@@ -1763,7 +1804,7 @@ export default async function handler(req: any, res: any) {
       } catch {}
       const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]);
       const v = await getV();
-      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-01-V47000' });
+      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-01-V48000' });
     }
     if (path === '/api/test-cleanup' && (method === 'POST' || method === 'GET')) {
       try {
