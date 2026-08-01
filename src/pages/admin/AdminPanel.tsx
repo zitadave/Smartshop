@@ -1072,10 +1072,90 @@ function AdminMarketplace() {
   const saveSetting = (key: string, val: any) => { const updated = { ...settings, [key]: val }; setSettings(updated as any); settingsApi.update(updated); };
   const sp = settings.sponsoredProducts || [];
   const addSponsored = () => { if (sponsoredPid) { saveSetting('sponsoredProducts', [...sp, Number(sponsoredPid)]); setSponsoredPid(''); toast('✅ Sponsored product added!', 'success'); } };
+
+  // Homepage Feature Cards Config
+  const bestSellerCfg = (settings as any).bestSellerCard || {};
+  const onSaleCfg = (settings as any).onSaleCard || {};
+  const [bsProdId, setBsProdId] = useState(bestSellerCfg.productId || '');
+  const [bsText, setBsText] = useState(bestSellerCfg.customText || '');
+  const [bsSub, setBsSub] = useState(bestSellerCfg.customSubtitle || 'BEST SELLER');
+  const [osText, setOsText] = useState(onSaleCfg.customText || '');
+  const [osSub, setOsSub] = useState(onSaleCfg.customSubtitle || 'ON SALE');
+  const [osUrl, setOsUrl] = useState(onSaleCfg.targetUrl || '/shop?sort=sale');
+
+  const saveFeatureCards = () => {
+    const updated = {
+      ...settings,
+      bestSellerCard: { productId: Number(bsProdId) || undefined, customText: bsText, customSubtitle: bsSub },
+      onSaleCard: { customText: osText, customSubtitle: osSub, targetUrl: osUrl },
+    };
+    setSettings(updated as any);
+    settingsApi.update(updated);
+    toast('✅ Homepage Feature Cards updated!', 'success');
+  };
+
   return (
     <div className="animate-fadeUp space-y-4 max-w-full overflow-x-hidden">
       <h2 className="text-lg font-bold">🚀 Marketplace Management</h2>
       <p className="text-[10px] text-slate-500">Manage flash sales, sponsored products, bundle deals, and cross-sell promotions</p>
+
+      {/* Homepage Feature Cards Config */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden space-y-4" data-admin-card>
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-bold">🏆 Homepage Feature Cards</h3>
+            <p className="text-[10px] text-slate-500">Configure Best Seller & On Sale cards floating under the Hero banner</p>
+          </div>
+          <button className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all" onClick={saveFeatureCards}>
+            💾 Save Feature Cards
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-slate-100 dark:border-slate-800 pt-3">
+          {/* Best Seller Config */}
+          <div className="space-y-2 bg-amber-500/5 p-3 rounded-xl border border-amber-500/20">
+            <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider block">🛍️ Best Seller Card</span>
+            <div>
+              <label className="text-[9px] font-semibold text-slate-500 block mb-1">Featured Product</label>
+              <select className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-900"
+                value={bsProdId} onChange={e => setBsProdId(e.target.value)}>
+                <option value="">Default (#1 Top Rated)</option>
+                {products.map(p => <option key={p.id} value={p.id}>{p.nameEn} ({formatPrice(p.price)})</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-[9px] font-semibold text-slate-500 block mb-1">Custom Title Text (optional)</label>
+              <input type="text" placeholder="e.g. Ethiopian Organic Coffee 1kg" className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-900"
+                value={bsText} onChange={e => setBsText(e.target.value)} />
+            </div>
+            <div>
+              <label className="text-[9px] font-semibold text-slate-500 block mb-1">Badge Subtitle</label>
+              <input type="text" placeholder="BEST SELLER" className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-900"
+                value={bsSub} onChange={e => setBsSub(e.target.value)} />
+            </div>
+          </div>
+
+          {/* On Sale Config */}
+          <div className="space-y-2 bg-rose-500/5 p-3 rounded-xl border border-rose-500/20">
+            <span className="text-[10px] font-bold text-rose-600 uppercase tracking-wider block">🔥 On Sale Card</span>
+            <div>
+              <label className="text-[9px] font-semibold text-slate-500 block mb-1">Custom Title Text</label>
+              <input type="text" placeholder="e.g. 6 deals" className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-900"
+                value={osText} onChange={e => setOsText(e.target.value)} />
+            </div>
+            <div>
+              <label className="text-[9px] font-semibold text-slate-500 block mb-1">Badge Subtitle</label>
+              <input type="text" placeholder="ON SALE" className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-900"
+                value={osSub} onChange={e => setOsSub(e.target.value)} />
+            </div>
+            <div>
+              <label className="text-[9px] font-semibold text-slate-500 block mb-1">Click Target Route</label>
+              <input type="text" placeholder="e.g. /shop?sort=sale" className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-900"
+                value={osUrl} onChange={e => setOsUrl(e.target.value)} />
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Sponsored Products */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>

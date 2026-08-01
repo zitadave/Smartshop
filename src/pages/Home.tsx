@@ -218,6 +218,18 @@ export default function Home() {
     } catch { toast('Refresh failed', 'error'); }
   }, []);
 
+  // Dynamically configurable Best Seller & On Sale feature cards from Admin Settings
+  const bestSellerCfg = (settings as any).bestSellerCard || {};
+  const onSaleCfg = (settings as any).onSaleCard || {};
+  const bsId = bestSellerCfg.productId || topProducts[0]?.id || 5;
+  const bsProd = products.find(p => p.id === bsId) || topProducts[0];
+  const bsTitle = bestSellerCfg.customText || bsProd?.nameEn || 'Ethiopian Organic Coffee 1kg';
+  const bsSubtitle = bestSellerCfg.customSubtitle || 'Best Seller';
+
+  const osTitle = onSaleCfg.customText || `${specialOffers.length || 6} deals`;
+  const osSubtitle = onSaleCfg.customSubtitle || 'On Sale';
+  const osUrl = onSaleCfg.targetUrl || '/shop?sort=sale';
+
   return (
     <div className="pb-6">
       <PullToRefresh onRefresh={handleRefresh}>
@@ -226,8 +238,8 @@ export default function Home() {
       {/* Best Seller & On Sale - HALF ON Hero section, HALF OUTSIDE Hero section */}
       <div className="flex gap-3 px-4 -mt-11 mb-4 relative z-20">
         {[
-          { icon: '🛍️', label: 'Best Seller', val: topProducts[0]?.nameEn || 'Loading...', gradient: 'from-amber-500 via-orange-500 to-red-500', onClick: () => navigate('/product/' + (topProducts[0]?.id || 5)) },
-          { icon: '🔥', label: 'On Sale', val: `${specialOffers.length} deals`, gradient: 'from-rose-500 via-pink-500 to-purple-500', onClick: () => navigate('/shop?sort=sale') },
+          { icon: '🛍️', label: bsSubtitle, val: bsTitle, gradient: 'from-amber-500 via-orange-500 to-red-500', onClick: () => navigate('/product/' + bsId) },
+          { icon: '🔥', label: osSubtitle, val: osTitle, gradient: 'from-rose-500 via-pink-500 to-purple-500', onClick: () => navigate(osUrl) },
         ].map((card, i) => (
           <div key={i}
             className={`flex-1 bg-gradient-to-br ${card.gradient} rounded-2xl p-4 text-white shadow-xl hover-lift cursor-pointer animate-scaleIn`}
