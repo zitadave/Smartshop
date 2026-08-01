@@ -570,7 +570,7 @@ export default function DriverDashboard() {
   var deliveriesCount = driver?.total_deliveries || 0;
   var currentTier = 'Bronze';
   var tierEmoji = '🥉';
-  var tierColor = 'from-amber-600 to-orange-700';
+  var tierColor = 'from-amber-700 via-amber-800 to-orange-950 text-white';
   var nextTier = 'Silver';
   var nextTierEmoji = '🥈';
   var targetDeliveries = 10;
@@ -578,21 +578,21 @@ export default function DriverDashboard() {
   if (deliveriesCount >= 50) {
     currentTier = 'Platinum';
     tierEmoji = '💎';
-    tierColor = 'from-indigo-600 via-purple-600 to-pink-600';
+    tierColor = 'from-indigo-700 via-purple-800 to-pink-950 text-white';
     nextTier = 'Supreme';
     nextTierEmoji = '👑';
     targetDeliveries = 100;
   } else if (deliveriesCount >= 25) {
     currentTier = 'Gold';
     tierEmoji = '🥇';
-    tierColor = 'from-yellow-400 via-amber-500 to-yellow-600';
+    tierColor = 'from-amber-600 via-yellow-600 to-amber-700 text-white';
     nextTier = 'Platinum';
     nextTierEmoji = '💎';
     targetDeliveries = 50;
   } else if (deliveriesCount >= 10) {
     currentTier = 'Silver';
     tierEmoji = '🥈';
-    tierColor = 'from-slate-300 via-slate-400 to-slate-500';
+    tierColor = 'from-slate-700 via-slate-800 to-slate-900 text-white';
     nextTier = 'Gold';
     nextTierEmoji = '🥇';
     targetDeliveries = 25;
@@ -609,9 +609,9 @@ export default function DriverDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-950 text-white gap-3">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground gap-3 transition-colors">
         <Loader size={36} className="animate-spin text-emerald-500" />
-        <span className="text-xs font-semibold tracking-wider text-slate-400">Loading Smartshop Express...</span>
+        <span className="text-xs font-semibold tracking-wider text-muted-foreground">Loading Smartshop Express...</span>
       </div>
     );
   }
@@ -619,17 +619,17 @@ export default function DriverDashboard() {
   // Handle Unregistered User
   if (!driver) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-950 flex items-center justify-center p-4">
-        <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl border dark:border-slate-800 animate-scaleIn">
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4 transition-colors">
+        <div className="bg-card text-card-foreground rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl border border-border animate-scaleIn">
           <div className="w-16 h-16 rounded-full bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/20">
             <Bike size={28} className="text-white animate-bounce" />
           </div>
-          <h1 className="text-lg font-bold text-slate-900 dark:text-white">Smart Shop Express</h1>
-          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 mb-5">Register as a delivery driver to start earning weekly payouts</p>
+          <h1 className="text-lg font-bold text-foreground">Smart Shop Express</h1>
+          <p className="text-[10px] text-muted-foreground mt-1 mb-5">Register as a delivery driver to start earning weekly payouts</p>
           <button className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition-all active:scale-[0.98]" onClick={function() { navigate('/driver-register'); }}>
             Register as Driver
           </button>
-          <button className="w-full py-3 mt-2 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors" onClick={function() { navigate('/profile'); }}>
+          <button className="w-full py-3 mt-2 border border-border rounded-xl text-xs text-muted-foreground hover:bg-muted transition-colors" onClick={function() { navigate('/profile'); }}>
             Back to Profile
           </button>
         </div>
@@ -705,7 +705,7 @@ export default function DriverDashboard() {
 
   // Handle Approved Screen (Dashboard Pro)
   return (
-    <div className="min-h-screen bg-slate-950 pb-20 text-white">
+    <div className="min-h-screen bg-background text-foreground pb-28 transition-colors">
       {/* Custom keyframe styles for radar effect */}
       <style>{`
         @keyframes radar-pulse {

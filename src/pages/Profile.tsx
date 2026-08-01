@@ -159,8 +159,8 @@ export default function Profile() {
     engagementItems.push({ icon: '📝', label: 'Become a Vendor', desc: 'Start selling products', onClick: function() { navigate('/vendor-register'); } });
   }
 
-  // Driver Status menu items (ONLY visible to registered and APPROVED drivers - not pending, not rejected, not vendors, not regular customers!)
-  if (driverStatus === 'approved' && vendorStatus !== 'approved' && vendorStatus !== 'pending') {
+  // Driver Status menu item (ONLY visible to APPROVED drivers - including users who are both an approved vendor and an approved driver!)
+  if (driverStatus === 'approved') {
     engagementItems.push({ icon: '🏍️', label: 'Smart Express', desc: 'Driver dashboard & active jobs', onClick: function() { navigate('/driver'); } });
   }
 
