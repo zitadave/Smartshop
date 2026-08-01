@@ -13,7 +13,9 @@ const ENV = {
   ADMIN_BOT_TOKEN: process.env.TELEGRAM_ADMIN_BOT_TOKEN || '8951025148:AAG456KIIBnyLBQqbkeDLajcT_TaPSYCIYc',
   VENDOR_BOT_TOKEN: process.env.VENDOR_BOT_TOKEN || '7761374287:AAHreFF93x92F4tMqRoA1swcNiJoDv5M-Rk',
   adminChatId: process.env.TELEGRAM_ADMIN_CHAT_ID || '336997351',
-  CHAPA_SECRET_KEY: process.env.CHAPA_SECRET_KEY || 'CHASECK_TEST-d0d6e765a19a5b19f4478b09a89ffd4cb42b5363',
+  CHAPA_SECRET_KEY: process.env.CHAPA_SECRET_KEY || 'CHASECK_TEST-a1y8t4NUlLoHF3ltfA7oczUIB777CJxz',
+  CHAPA_PUBLIC_KEY: process.env.CHAPA_PUBLIC_KEY || 'CHAPUBK_TEST-8QjyLYBTfvQHXakSwYOCaOyxxty3UZfv',
+  CHAPA_ENCRYPTION_KEY: process.env.CHAPA_ENCRYPTION_KEY || 'GyZtXJroHpl4ZOogcjZ7aFXl',
   BASE_URL: 'https://smartshop-steel.vercel.app',
 };
 const supabase = createClient(ENV.SUPABASE_URL, ENV.SUPABASE_KEY, { auth: { persistSession: false } });
@@ -1804,7 +1806,7 @@ export default async function handler(req: any, res: any) {
       } catch {}
       const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]);
       const v = await getV();
-      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-01-V48000' });
+      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-01-V49000' });
     }
     if (path === '/api/test-cleanup' && (method === 'POST' || method === 'GET')) {
       try {
@@ -1870,8 +1872,9 @@ export default async function handler(req: any, res: any) {
     if (path === '/api/commission/settings' && method === 'GET') { const { data: sd } = await supabase.from('settings').select('*').single(); const s = sd?.data || {}; return ok({ globalCommission: s.vendorCommission || 10, categoryCommission: s.categoryCommission || {}, vendorCommissionOverride: s.vendorCommissionOverride || {} }); }
     if (path === '/api/payment/initiate-chapa' && method === 'POST') {
       const { amount, email, firstName, lastName, phone, txRef, orderNumber } = req.body || {};
-      if (!amount || !email || !phone) return fail('required');
-      try { const cr = await fetchRetry('https://api.chapa.co/v1/transaction/initialize', { method: 'POST', timeout: 10000, headers: { 'Authorization': 'Bearer ' + ENV.CHAPA_SECRET_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ amount: String(amount), currency: 'ETB', email, first_name: firstName || 'Customer', last_name: lastName || '', phone, tx_ref: txRef, callback_url: ENV.BASE_URL + '/api/payment/verify', return_url: ENV.BASE_URL + '/confirmation/' + orderNumber, customization: { title: 'Smart Shop Order #' + orderNumber, description: 'Payment' } }) }); const cd = await cr.json(); if (cd.status === 'success' && cd.data?.checkout_url) return ok({ success: true, checkout_url: cd.data.checkout_url, tx_ref: txRef }); return ok({ success: false, error: cd.message || 'Failed' }); }
+      if (!amount || !phone) return fail('amount and phone required');
+      const validEmail = (email && email.includes('@') && email.includes('.')) ? email : 'customer@gmail.com';
+      try { const cr = await fetchRetry('https://api.chapa.co/v1/transaction/initialize', { method: 'POST', timeout: 10000, headers: { 'Authorization': 'Bearer ' + ENV.CHAPA_SECRET_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ amount: String(amount), currency: 'ETB', email: validEmail, first_name: firstName || 'Customer', last_name: lastName || '', phone, tx_ref: txRef, callback_url: ENV.BASE_URL + '/api/payment/verify', return_url: ENV.BASE_URL + '/confirmation/' + orderNumber, customization: { title: 'SmartShop', description: 'Order ' + String(orderNumber || txRef).replace(/[^a-zA-Z0-9-_]/g, '').slice(0, 30) } }) }); const cd = await cr.json(); if (cd.status === 'success' && cd.data?.checkout_url) return ok({ success: true, checkout_url: cd.data.checkout_url, tx_ref: txRef }); return ok({ success: false, error: cd.message || 'Failed' }); }
       catch (e: any) { return ok({ success: false, error: e.message }); }
     }
     if (path === '/api/payment/verify' && method === 'POST') { const { tx_ref } = req.body || {}; if (!tx_ref) return fail('required'); try { const vr = await fetchRetry('https://api.chapa.co/v1/transaction/verify/' + tx_ref, { headers: { 'Authorization': 'Bearer ' + ENV.CHAPA_SECRET_KEY }, timeout: 10000 }); const vd = await vr.json(); if (vd.status === 'success' && vd.data?.status === 'success') return ok({ status: 'completed', amount: vd.data.amount, reference: vd.data.reference || tx_ref, verified: true }); return ok({ status: 'failed', error: vd.message || 'Not completed', verified: false }); } catch (e: any) { return ok({ status: 'failed', error: e.message, verified: false }); } }
@@ -2073,11 +2076,12 @@ export default async function handler(req: any, res: any) {
     // ================================================================
     if (path === '/api/payment/initiate-chapa' && method === 'POST') {
       var { amount, email, firstName, lastName, phone, txRef, orderNumber } = req.body || {};
-      if (!amount || !email || !phone) return fail('amount, email, and phone required');
+      if (!amount || !phone) return fail('amount and phone required');
+      const validEmail = (email && email.includes('@') && email.includes('.')) ? email : 'customer@gmail.com';
       try {
         const chapaRes = await fetchRetry('https://api.chapa.co/v1/transaction/initialize', { method: 'POST', timeout: 10000,
           headers: { 'Authorization': 'Bearer ' + ENV.CHAPA_SECRET_KEY, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: String(amount), currency: 'ETB', email: email, first_name: firstName || 'Customer', last_name: lastName || '', phone: phone, tx_ref: txRef, callback_url: ENV.BASE_URL + '/api/payment/verify', return_url: ENV.BASE_URL + '/confirmation/' + orderNumber, customization: { title: 'Smart Shop Order #' + orderNumber, description: 'Payment' } }) });
+          body: JSON.stringify({ amount: String(amount), currency: 'ETB', email: validEmail, first_name: firstName || 'Customer', last_name: lastName || '', phone: phone, tx_ref: txRef, callback_url: ENV.BASE_URL + '/api/payment/verify', return_url: ENV.BASE_URL + '/confirmation/' + orderNumber, customization: { title: 'SmartShop', description: 'Order ' + String(orderNumber || txRef).replace(/[^a-zA-Z0-9-_]/g, '').slice(0, 30) } }) });
         const cd = await chapaRes.json();
         if (cd.status === 'success' && cd.data?.checkout_url) return ok({ success: true, checkout_url: cd.data.checkout_url, tx_ref: txRef });
         return ok({ success: false, error: cd.message || 'Failed' });

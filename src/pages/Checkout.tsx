@@ -288,7 +288,7 @@ export default function Checkout() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        amount: grandTotal, email: 'customer@email.com',
+        amount: grandTotal, email: 'customer@gmail.com',
         firstName: name.split(' ')[0], lastName: name.split(' ').slice(1).join(' '),
         phone, txRef, orderNumber: orderNum,
       }),
