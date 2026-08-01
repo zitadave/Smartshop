@@ -1075,7 +1075,24 @@ export default async function handler(req: any, res: any) {
         }
         return ok({ delivery: { ...del, driver: dr } });
       }
-      if (path.startsWith('/api/delivery/earnings/') && method === 'GET') { const { data, error } = await supabase.from('driver_earnings').select('*').eq('driver_id', pid(path)).order('created_at', { ascending: false }); if (error) return fail(error.message, 500); return ok({ earnings: data || [] }); }
+      if (path.startsWith('/api/delivery/earnings/') && method === 'GET') {
+        const drvId = pid(path);
+        const { data, error } = await supabase.from('driver_earnings').select('*').eq('driver_id', drvId).order('created_at', { ascending: false });
+        if (error) return fail(error.message, 500);
+        const total_pending = (data || []).reduce((sum: number, r: any) => sum + (Number(r.amount) || 0), 0);
+        const total_paid = (data || []).filter((r: any) => r.status === 'cashed_out' || r.status === 'paid_out').reduce((sum: number, r: any) => sum + (Number(r.amount) || 0), 0);
+        let total_from_profile = 0;
+        try {
+          const { data: drv } = await supabase.from('delivery_personnel').select('total_earnings').eq('id', drvId).maybeSingle();
+          if (drv && drv.total_earnings) total_from_profile = Number(drv.total_earnings) || 0;
+        } catch {}
+        return ok({
+          earnings: data || [],
+          total_pending: Math.max(total_pending, total_from_profile),
+          total_paid: total_paid,
+          total_deliveries: (data || []).length
+        });
+      }
       if (path.startsWith('/api/delivery/history/') && method === 'GET') { const { data, error } = await supabase.from('deliveries').select('*').eq('driver_id', pid(path)).order('created_at', { ascending: false }); if (error) return fail(error.message, 500); return ok({ deliveries: data || [] }); }
       if (path === '/api/delivery/create' && method === 'POST') {
         const b = req.body || {}; if (!b.pickup_address || !b.delivery_address) return fail('pickup_address and delivery_address required');
@@ -1750,7 +1767,7 @@ export default async function handler(req: any, res: any) {
     // ================================================================
     // SEED / COMMISSION / PAYMENT / TAX / VENDOR NOTIFY
     // ================================================================
-    if (path === '/api/seed' && method === 'GET') { const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]); const v = await getV(); return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-07-31-V12000' }); }
+    if (path === '/api/seed' && method === 'GET') { const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]); const v = await getV(); return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-07-31-V14000' }); }
     if (path === '/api/test-cleanup' && (method === 'POST' || method === 'GET')) {
       try {
         await Promise.all([

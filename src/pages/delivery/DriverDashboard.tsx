@@ -55,10 +55,14 @@ function DriverLiveMap({ delivery, driverLat, driverLng, onArrived }: { delivery
           src={embedUrl}
           className="w-full h-full filter contrast-125"
         />
-        <div className="absolute top-3 left-3 z-10 pointer-events-none">
-          <span className="bg-slate-900/95 backdrop-blur-md text-emerald-400 border border-emerald-500/40 text-[10px] font-mono font-black px-3 py-1 rounded-xl shadow-lg flex items-center gap-1.5">
+        <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 pointer-events-none">
+          <div className="bg-gradient-to-r from-emerald-500/30 to-teal-500/30 backdrop-blur-md border-2 border-emerald-400/60 px-3 py-1.5 rounded-2xl shadow-xl shadow-emerald-500/20 flex items-center gap-1.5">
+            <span className="text-[9px] uppercase font-extrabold tracking-wider text-emerald-300">NET:</span>
+            <span className="text-sm font-black text-white">Br {delivery.driver_payout || delivery.fee || 80}</span>
+          </div>
+          <span className="bg-slate-900/95 backdrop-blur-md text-slate-200 border border-slate-700 text-[10px] font-mono font-bold px-3 py-1.5 rounded-2xl shadow-lg flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-            {delivery.distance_km || '3.5'} km • ~{Math.max(5, Math.round((Number(delivery.distance_km) || 3.5) * 3))} min drive
+            {delivery.distance_km || '3.5'} km • ~{Math.max(5, Math.round((Number(delivery.distance_km) || 3.5) * 3))} min
           </span>
         </div>
         <div className="absolute top-3 right-3 z-10">
@@ -84,11 +88,14 @@ function DriverLiveMap({ delivery, driverLat, driverLng, onArrived }: { delivery
         <div className="fixed inset-0 z-[100] bg-slate-950 flex flex-col animate-fadeIn">
           {/* Top Header Bar */}
           <div className="h-16 bg-slate-900/95 border-b border-slate-800 px-4 flex items-center justify-between shadow-xl">
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-3">
               <span className="text-sm font-mono font-black text-emerald-400">#{delivery.order_number}</span>
-              <span className="bg-emerald-500/20 text-emerald-400 text-[10px] font-black px-2.5 py-0.5 rounded-full border border-emerald-500/30">
-                Br {delivery.driver_payout || delivery.fee || 80} Net
-              </span>
+              <div className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-500/25 via-emerald-500/20 to-teal-500/25 border-2 border-emerald-400/60 px-3 py-1.5 rounded-2xl shadow-lg shadow-emerald-500/20">
+                <span className="text-[10px] uppercase font-extrabold tracking-wider text-emerald-300">NET EARNING:</span>
+                <span className="text-base font-black text-white tracking-tight drop-shadow">
+                  Br {delivery.driver_payout || delivery.fee || 80}
+                </span>
+              </div>
             </div>
             <button
               onClick={() => {
