@@ -74,9 +74,9 @@ function DriverLiveMap({ delivery, driverLat, driverLng, onArrived }: { delivery
           {/* Top Header Bar */}
           <div className="h-16 bg-card/95 border-b border-border px-4 flex items-center justify-between shadow-xl">
             <div className="flex items-center gap-3">
-              <span className="text-sm font-mono font-black text-emerald-600 dark:text-emerald-400">#{delivery.order_number}</span>
-              <div className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-500/25 via-emerald-500/20 to-teal-500/25 border-2 border-emerald-400/60 px-3 py-1.5 rounded-2xl shadow-lg shadow-emerald-500/20">
-                <span className="text-[10px] uppercase font-extrabold tracking-wider text-emerald-600 dark:text-emerald-300">NET EARNING:</span>
+              <span className="text-sm font-mono font-black text-primary">#{delivery.order_number}</span>
+              <div className="flex items-center gap-1.5 bg-primary/20 border-2 border-primary/60 px-3 py-1.5 rounded-2xl shadow-lg shadow-primary/20">
+                <span className="text-[10px] uppercase font-extrabold tracking-wider text-primary">NET EARNING:</span>
                 <span className="text-base font-black text-foreground tracking-tight drop-shadow">
                   Br {delivery.driver_payout || delivery.fee || 80}
                 </span>
@@ -119,7 +119,7 @@ function DriverLiveMap({ delivery, driverLat, driverLng, onArrived }: { delivery
               {delivery.customer_phone && (
                 <a
                   href={`tel:${delivery.customer_phone}`}
-                  className="px-5 py-3.5 bg-muted hover:bg-muted/80 text-emerald-600 dark:text-emerald-400 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 border border-border active:scale-95 shadow"
+                  className="px-5 py-3.5 bg-muted hover:bg-muted/80 text-primary rounded-xl text-xs font-black flex items-center justify-center gap-1.5 border border-border active:scale-95 shadow"
                 >
                   <Phone size={15} /> Call
                 </a>
@@ -130,7 +130,7 @@ function DriverLiveMap({ delivery, driverLat, driverLng, onArrived }: { delivery
                   haptic('medium');
                   onArrived?.();
                 }}
-                className="flex-1 py-3.5 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white rounded-xl text-xs font-black shadow-lg shadow-emerald-500/25 transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                className="flex-1 py-3.5 bg-primary hover:opacity-90 text-primary-foreground rounded-xl text-xs font-black shadow-lg shadow-primary/20 transition-all active:scale-95 flex items-center justify-center gap-1.5"
               >
                 <Check size={16} /> 
                 {delivery.status === 'arrived' ? 'Verify Customer PIN' : '📍 Arrived — Verify PIN'}
@@ -610,7 +610,7 @@ export default function DriverDashboard() {
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground gap-3 transition-colors">
-        <Loader size={36} className="animate-spin text-emerald-500" />
+        <Loader size={36} className="animate-spin text-primary" />
         <span className="text-xs font-semibold tracking-wider text-muted-foreground">Loading Smartshop Express...</span>
       </div>
     );
@@ -621,12 +621,12 @@ export default function DriverDashboard() {
     return (
       <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4 transition-colors">
         <div className="bg-card text-card-foreground rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl border border-border animate-scaleIn">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/20">
-            <Bike size={28} className="text-white animate-bounce" />
+          <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary/20">
+            <Bike size={28} className="text-primary-foreground animate-bounce" />
           </div>
           <h1 className="text-lg font-bold text-foreground">Smart Shop Express</h1>
           <p className="text-[10px] text-muted-foreground mt-1 mb-5">Register as a delivery driver to start earning weekly payouts</p>
-          <button className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition-all active:scale-[0.98]" onClick={function() { navigate('/driver-register'); }}>
+          <button className="w-full py-3.5 bg-primary hover:opacity-90 text-primary-foreground rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition-all active:scale-[0.98]" onClick={function() { navigate('/driver-register'); }}>
             Register as Driver
           </button>
           <button className="w-full py-3 mt-2 border border-border rounded-xl text-xs text-muted-foreground hover:bg-muted transition-colors" onClick={function() { navigate('/profile'); }}>
@@ -718,26 +718,26 @@ export default function DriverDashboard() {
       <div className="bg-card text-card-foreground p-5 pt-6 pb-9 relative overflow-hidden border-b border-border shadow-md">
         {/* Soft glowing radar aura background when online */}
         {isOnline && (
-          <div className="absolute right-6 top-6 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl animate-pulse" />
+          <div className="absolute right-6 top-6 w-32 h-32 bg-primary/10 rounded-full blur-2xl animate-pulse" />
         )}
         
         <div className="max-w-lg mx-auto relative z-10">
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-3">
               <div className="relative">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center font-black text-white text-base shadow-md">
+                <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center font-black text-primary-foreground text-base shadow-md">
                   {driver?.full_name_latin?.charAt(0) || <User size={18} />}
                 </div>
                 {/* Active Pulsing Radar Circle */}
                 {isOnline && (
-                  <span className="absolute -inset-1.5 rounded-2xl border-2 border-emerald-400/50 pointer-events-none" style={{ animation: 'radar-pulse 2s cubic-bezier(0.16, 1, 0.3, 1) infinite' }} />
+                  <span className="absolute -inset-1.5 rounded-2xl border-2 border-primary/50 pointer-events-none" style={{ animation: 'radar-pulse 2s cubic-bezier(0.16, 1, 0.3, 1) infinite' }} />
                 )}
-                {isOnline && <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-400 border-2 border-background" />}
+                {isOnline && <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-primary border-2 border-background" />}
               </div>
               <div>
                 <h1 className="text-base font-black tracking-wide text-foreground">{driver?.full_name_latin}</h1>
                 <p className="text-[9px] text-muted-foreground font-semibold tracking-wider flex items-center gap-1">
-                  <Shield size={10} className="text-emerald-500" /> Smartshop Express Partner
+                  <Shield size={10} className="text-primary" /> Smartshop Express Partner
                 </p>
               </div>
             </div>
@@ -746,12 +746,12 @@ export default function DriverDashboard() {
               className={cn(
                 'px-4 py-2 rounded-2xl text-[10px] font-extrabold flex items-center gap-2 transition-all duration-300 shadow-md active:scale-95 border',
                 isOnline 
-                  ? 'bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-600 shadow-emerald-500/20' 
+                  ? 'bg-primary hover:opacity-90 text-primary-foreground border-primary shadow-primary/20' 
                   : 'bg-muted hover:bg-muted/80 text-muted-foreground border-border'
               )} 
               onClick={toggleOnline}
             >
-              <span className={cn('w-2 h-2 rounded-full animate-ping', isOnline ? 'bg-white' : 'bg-slate-500')} />
+              <span className={cn('w-2 h-2 rounded-full animate-ping', isOnline ? 'bg-primary-foreground' : 'bg-muted-foreground')} />
               {isOnline ? 'Online Radar' : 'Offline'}
             </button>
           </div>
@@ -804,7 +804,7 @@ export default function DriverDashboard() {
                 className={cn(
                   'flex-1 py-2.5 rounded-xl text-[10px] font-bold flex items-center justify-center gap-1.5 transition-all outline-none',
                   isSelected 
-                    ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/15' 
+                    ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20' 
                     : 'text-muted-foreground hover:text-foreground'
                 )} 
                 onClick={function() { setTab(t.id); haptic('light'); }}
@@ -812,7 +812,7 @@ export default function DriverDashboard() {
                 <Icon size={12} /> 
                 <span className="hidden xs:inline">{t.label}</span>
                 {t.badge !== undefined && t.badge > 0 && (
-                  <span className={cn('text-[7px] px-1.5 py-0.5 rounded-full font-black', isSelected ? 'bg-white text-emerald-600' : 'bg-emerald-500 text-white')}>
+                  <span className={cn('text-[7px] px-1.5 py-0.5 rounded-full font-black', isSelected ? 'bg-card text-primary' : 'bg-primary text-primary-foreground')}>
                     {t.badge}
                   </span>
                 )}
@@ -859,7 +859,7 @@ export default function DriverDashboard() {
                           </div>
                         </div>
                         <div className="text-right flex-shrink-0">
-                          <div className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400">Br {fee}</div>
+                          <div className="text-sm font-extrabold text-primary">Br {fee}</div>
                           <span className="text-[7.5px] text-muted-foreground uppercase font-black">Net earnings</span>
                         </div>
                       </div>
@@ -878,7 +878,7 @@ export default function DriverDashboard() {
                             Pass ✕
                           </button>
                           <button 
-                            className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-[9.5px] font-black shadow-md hover:shadow-lg transition-all flex items-center gap-1 active:scale-95" 
+                            className="px-4 py-2 bg-primary hover:opacity-90 text-primary-foreground rounded-xl text-[9.5px] font-black shadow-md shadow-primary/20 hover:shadow-lg transition-all flex items-center gap-1 active:scale-95" 
                             onClick={function() { acceptDelivery(del.id); }}
                           >
                             Accept <ArrowRight size={10} />
@@ -915,9 +915,9 @@ export default function DriverDashboard() {
                     </div>
                     <button 
                       onClick={optimizeRoute}
-                      className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[9px] font-bold shadow-md shadow-indigo-500/10 transition-all active:scale-95 flex items-center gap-1.5"
+                      className="px-3.5 py-2 bg-primary hover:opacity-90 text-primary-foreground rounded-xl text-[9px] font-bold shadow-md shadow-primary/10 transition-all active:scale-95 flex items-center gap-1.5"
                     >
-                      <Navigation size={10} className="animate-pulse text-indigo-200" /> Optimize TSP Path
+                      <Navigation size={10} className="animate-pulse" /> Optimize TSP Path
                     </button>
                   </div>
 
@@ -937,7 +937,7 @@ export default function DriverDashboard() {
                         >
                           <div className="flex items-center gap-2">
                             <span className="text-xs font-mono font-black text-primary">#{del.order_number}</span>
-                            <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">Br {fee}</span>
+                            <span className="text-sm font-black text-primary">Br {fee}</span>
                             {del.cod_amount > 0 && (
                               <span className="bg-rose-500/20 text-rose-500 text-[8px] font-extrabold px-2 py-0.5 rounded-full">
                                 COD Br {del.cod_amount}
@@ -961,7 +961,7 @@ export default function DriverDashboard() {
                               🏪 {del.pickup_address || 'Shop'} ➔ 🏠 {del.delivery_address || 'Customer'}
                             </span>
                             <button 
-                              className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 text-white rounded-xl text-[10px] font-black shadow transition-all active:scale-95 flex items-center gap-1"
+                              className="px-4 py-2 bg-primary hover:opacity-90 text-primary-foreground rounded-xl text-[10px] font-black shadow shadow-primary/20 transition-all active:scale-95 flex items-center gap-1"
                               onClick={function(e) {
                                 e.stopPropagation();
                                 if (del.status !== 'arrived') {
@@ -993,7 +993,7 @@ export default function DriverDashboard() {
                                 </div>
                               </div>
                               <div className="flex items-start gap-2.5">
-                                <span className="w-2 h-2 rounded-full bg-emerald-500 mt-1 flex-shrink-0" />
+                                <span className="w-2 h-2 rounded-full bg-primary mt-1 flex-shrink-0" />
                                 <div className="flex-1">
                                   <div className="text-[8px] text-muted-foreground uppercase tracking-wider font-extrabold">🏠 Customer Destination</div>
                                   <div className="text-xs font-bold text-foreground mt-0.5">{del.delivery_address || 'Customer Residence'}</div>
@@ -1012,9 +1012,9 @@ export default function DriverDashboard() {
                             </div>
 
                             {/* Payout Banner */}
-                            <div className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/20 px-3.5 py-2 rounded-xl">
-                              <span className="text-[9px] text-emerald-600 dark:text-emerald-300 font-bold uppercase tracking-wider">Net Delivery Payout</span>
-                              <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">Br {fee}</span>
+                            <div className="flex items-center justify-between bg-primary/10 border border-primary/20 px-3.5 py-2 rounded-xl">
+                              <span className="text-[9px] text-primary font-bold uppercase tracking-wider">Net Delivery Payout</span>
+                              <span className="text-sm font-black text-primary">Br {fee}</span>
                             </div>
 
                             {/* 1-Click Action Bar */}
@@ -1032,7 +1032,7 @@ export default function DriverDashboard() {
                                 </button>
                               )}
                               <button 
-                                className="flex-1 py-3 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white rounded-xl text-xs font-black shadow-lg shadow-emerald-500/20 transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                                className="flex-1 py-3 bg-primary hover:opacity-90 text-primary-foreground rounded-xl text-xs font-black shadow-lg shadow-primary/20 transition-all active:scale-95 flex items-center justify-center gap-1.5"
                                 onClick={function(e) {
                                   e.stopPropagation();
                                   if (del.status !== 'arrived') {
@@ -1073,15 +1073,15 @@ export default function DriverDashboard() {
             <div className="space-y-4 animate-scaleIn">
               {/* Financial Balance Summary Card */}
               <div className="bg-card text-card-foreground rounded-3xl p-5 border border-border shadow-xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl" />
+                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl" />
                 <div className="flex items-center justify-between">
                   <div>
                     <span className="text-[9px] text-muted-foreground font-extrabold uppercase tracking-wider">Available Balance</span>
-                    <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5">Br {(earnings?.total_pending || 0).toLocaleString()}</div>
+                    <div className="text-2xl font-black text-primary mt-0.5">Br {(earnings?.total_pending || 0).toLocaleString()}</div>
                     <span className="text-[8px] text-muted-foreground block mt-1">Calculated base fee + commission payouts</span>
                   </div>
                   <button 
-                    className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl text-xs font-bold shadow-md shadow-emerald-500/10 transition-all active:scale-95 flex items-center gap-1 flex-shrink-0"
+                    className="px-4 py-2.5 bg-primary hover:opacity-90 text-primary-foreground rounded-2xl text-xs font-bold shadow-md shadow-primary/20 transition-all active:scale-95 flex items-center gap-1 flex-shrink-0"
                     onClick={function() { setShowCashoutModal(true); haptic('light'); }}
                   >
                     💸 Cashout Balance <ArrowUpRight size={14} />
@@ -1095,7 +1095,7 @@ export default function DriverDashboard() {
                   </div>
                   <div className="text-right">
                     <span className="text-[8px] text-muted-foreground uppercase font-black">Next Auto-Payout</span>
-                    <div className="font-bold text-indigo-500 dark:text-indigo-400 mt-0.5">Friday, 12:00 AM</div>
+                    <div className="font-bold text-primary mt-0.5">Friday, 12:00 AM</div>
                   </div>
                 </div>
               </div>
@@ -1118,13 +1118,13 @@ export default function DriverDashboard() {
                     return (
                       <div key={item.day} className="flex-1 flex flex-col items-center gap-1.5 group cursor-pointer relative">
                         {/* Hover Tooltip */}
-                        <div className="absolute bottom-full mb-1.5 bg-indigo-600 text-white text-[8px] font-extrabold px-1.5 py-0.5 rounded shadow opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none">
+                        <div className="absolute bottom-full mb-1.5 bg-primary text-primary-foreground text-[8px] font-extrabold px-1.5 py-0.5 rounded shadow opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none">
                           Br {item.amount}
                         </div>
                         
                         {/* Visual Bar */}
                         <div 
-                          className="w-4 rounded-t-lg bg-gradient-to-t from-emerald-500 to-indigo-500 group-hover:from-emerald-400 group-hover:to-indigo-400 transition-all duration-500 shadow-inner"
+                          className="w-4 rounded-t-lg bg-primary group-hover:opacity-80 transition-all duration-500 shadow-inner"
                           style={{ height: `${barHeight}px` }}
                         />
                         <span className="text-[8px] font-extrabold text-muted-foreground group-hover:text-foreground">{item.day}</span>
@@ -1145,7 +1145,7 @@ export default function DriverDashboard() {
             <button className="absolute right-4 top-4 w-8 h-8 rounded-full bg-muted flex items-center justify-center font-bold text-muted-foreground hover:text-foreground text-sm" onClick={function() { setShowCashoutModal(false); }}>✕</button>
             
             <div className="text-center mb-5 border-b border-border pb-3">
-              <span className="text-[9px] bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 px-3 py-1 rounded-full font-black uppercase tracking-wider">Instant Cashout</span>
+              <span className="text-[9px] bg-primary/15 text-primary px-3 py-1 rounded-full font-black uppercase tracking-wider">Instant Cashout</span>
               <h3 className="text-sm font-black mt-2 text-foreground">Withdraw Earnings</h3>
               <p className="text-[10px] text-muted-foreground mt-1">Instantly cashout your pending balance via Telebirr.</p>
             </div>
@@ -1158,21 +1158,21 @@ export default function DriverDashboard() {
                   value={cashoutPhone} 
                   onChange={function(e) { setCashoutPhone(e.target.value); }}
                   placeholder="+251-..." 
-                  className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground outline-none focus:border-emerald-500 transition-colors font-bold"
+                  className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground outline-none focus:border-primary transition-colors font-bold"
                 />
               </div>
 
               <div>
                 <div className="flex justify-between text-[8px] text-muted-foreground font-extrabold uppercase mb-1">
                   <span>Amount to Withdraw (Br)</span>
-                  <span className="text-indigo-500 dark:text-indigo-400">Available: Br {earnings?.total_pending || 0}</span>
+                  <span className="text-primary">Available: Br {earnings?.total_pending || 0}</span>
                 </div>
                 <input 
                   type="number" 
                   value={cashoutAmount} 
                   onChange={function(e) { setCashoutAmount(e.target.value); }}
                   placeholder="e.g. 500" 
-                  className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground outline-none focus:border-emerald-500 transition-colors font-bold text-emerald-600 dark:text-emerald-400"
+                  className="w-full p-2.5 border border-border rounded-xl text-xs bg-background text-foreground outline-none focus:border-primary transition-colors font-bold text-primary"
                 />
               </div>
 
@@ -1184,7 +1184,7 @@ export default function DriverDashboard() {
                   Cancel
                 </button>
                 <button 
-                  className="flex-1 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-1"
+                  className="flex-1 py-3 bg-primary hover:opacity-90 text-primary-foreground rounded-xl text-xs font-bold shadow-md shadow-primary/20 hover:shadow-lg transition-all flex items-center justify-center gap-1"
                   onClick={submitTelebirrCashout}
                   disabled={cashoutLoading}
                 >
@@ -1207,11 +1207,11 @@ export default function DriverDashboard() {
       {/* PIN VERIFICATION MODAL */}
       {pinVerificationId !== null && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-fadeIn" onClick={function() { setPinVerificationId(null); }}>
-          <div className="bg-card text-card-foreground rounded-3xl border border-emerald-500/30 p-6 w-full max-w-sm shadow-2xl relative animate-scaleIn" onClick={function(e) { e.stopPropagation(); }}>
+          <div className="bg-card text-card-foreground rounded-3xl border border-primary/30 p-6 w-full max-w-sm shadow-2xl relative animate-scaleIn" onClick={function(e) { e.stopPropagation(); }}>
             <button className="absolute right-4 top-4 w-8 h-8 rounded-full bg-muted flex items-center justify-center font-bold text-muted-foreground hover:text-foreground text-sm" onClick={function() { setPinVerificationId(null); }}>✕</button>
             
             <div className="text-center mb-5 border-b border-border pb-3">
-              <span className="text-[9px] bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-3 py-1 rounded-full font-black uppercase tracking-wider">Security Control</span>
+              <span className="text-[9px] bg-primary/15 text-primary border border-primary/20 px-3 py-1 rounded-full font-black uppercase tracking-wider">Security Control</span>
               <h3 className="text-sm font-black mt-2 text-foreground">Complete Mission</h3>
               <p className="text-[10px] text-muted-foreground mt-1">Enter the 4-digit verification PIN provided by the customer to securely authorize delivery completion.</p>
             </div>
@@ -1225,7 +1225,7 @@ export default function DriverDashboard() {
                   value={verificationPinInput} 
                   onChange={function(e) { setVerificationPinInput(e.target.value.replace(/\D/g, '')); }}
                   placeholder="e.g. 1234" 
-                  className="w-full p-3 border border-border rounded-xl text-center text-lg bg-background text-foreground outline-none focus:border-emerald-500 transition-colors font-black tracking-[1em] pl-[1.2em]"
+                  className="w-full p-3 border border-border rounded-xl text-center text-lg bg-background text-foreground outline-none focus:border-primary transition-colors font-black tracking-[1em] pl-[1.2em]"
                 />
               </div>
 
@@ -1237,7 +1237,7 @@ export default function DriverDashboard() {
                   Cancel
                 </button>
                 <button 
-                  className="flex-1 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-1"
+                  className="flex-1 py-3 bg-primary hover:opacity-90 text-primary-foreground rounded-xl text-xs font-bold shadow-md shadow-primary/20 hover:shadow-lg transition-all flex items-center justify-center gap-1"
                   onClick={handleVerifyPin}
                   disabled={verifyingPin || verificationPinInput.length < 4}
                 >
