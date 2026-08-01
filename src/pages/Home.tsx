@@ -222,7 +222,7 @@ export default function Home() {
       <Hero productCount={products.length} topRating={topRating} />
 
       {/* Best Seller & On Sale - directly under Hero section */}
-      <div className="flex gap-3 px-4 -mt-5 mb-3 relative z-20">
+      <div className="flex gap-3 px-4 mt-3 mb-4 relative z-20">
         {[
           { icon: '🛍️', label: 'Best Seller', val: topProducts[0]?.nameEn || 'Loading...', gradient: 'from-amber-500 via-orange-500 to-red-500' },
           { icon: '🔥', label: 'On Sale', val: `${specialOffers.length} deals`, gradient: 'from-rose-500 via-pink-500 to-purple-500' },
