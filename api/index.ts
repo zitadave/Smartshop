@@ -193,44 +193,8 @@ async function createDeliveryForOrder(on: string, lat?: number, lng?: number, or
     let finalDropoffLat = ord.customer?.lat || null;
     let finalDropoffLng = ord.customer?.lng || null;
     if (!finalDropoffLat) {
-      const city = (ord.customer?.city || 'Addis Ababa').toLowerCase();
-      const centroids: Record<string, { lat: number; lng: number }> = {
-        'kechenie': { lat: 9.0450, lng: 38.7550 },
-        'semien': { lat: 9.0440, lng: 38.7530 },
-        'gulale': { lat: 9.0480, lng: 38.7490 },
-        'gulele': { lat: 9.0480, lng: 38.7490 },
-        'bole': { lat: 9.0030, lng: 38.7830 },
-        'merkato': { lat: 9.0300, lng: 38.7350 },
-        'piassa': { lat: 9.0360, lng: 38.7520 },
-        'summit': { lat: 9.0180, lng: 38.8350 },
-        'mexico': { lat: 9.0110, lng: 38.7450 },
-        'kazanchis': { lat: 9.0190, lng: 38.7680 },
-        'cmc': { lat: 9.0250, lng: 38.8250 },
-        'ayat': { lat: 9.0280, lng: 38.8550 },
-        'sarbet': { lat: 9.0020, lng: 38.7380 },
-        'megenagna': { lat: 9.0210, lng: 38.8020 },
-        'gerji': { lat: 9.0050, lng: 38.8050 },
-        'lideta': { lat: 9.0120, lng: 38.7450 },
-        'jemo': { lat: 8.9650, lng: 38.7180 },
-        'lebu': { lat: 8.9680, lng: 38.7250 },
-        '4 kilo': { lat: 9.0400, lng: 38.7630 },
-        '6 kilo': { lat: 9.0450, lng: 38.7600 },
-        'shiro meda': { lat: 9.0550, lng: 38.7650 },
-        'entoto': { lat: 9.0600, lng: 38.7650 },
-        'kera': { lat: 8.9950, lng: 38.7480 },
-        'saris': { lat: 8.9750, lng: 38.7600 },
-        'kaliti': { lat: 8.9200, lng: 38.7600 },
-        'urael': { lat: 9.0170, lng: 38.7750 },
-        'gurd shola': { lat: 9.0220, lng: 38.8150 },
-      };
-      const matchedZone = Object.keys(centroids).find(zone => city.includes(zone) || (ord.customer?.address || '').toLowerCase().includes(zone));
-      if (matchedZone) {
-        finalDropoffLat = centroids[matchedZone].lat;
-        finalDropoffLng = centroids[matchedZone].lng;
-      } else {
-        finalDropoffLat = 9.0315;
-        finalDropoffLng = 38.7485;
-      }
+      finalDropoffLat = 9.0315;
+      finalDropoffLng = 38.7485;
     }
 
     let { data: onlineDrivers } = await supabase
@@ -1792,7 +1756,7 @@ export default async function handler(req: any, res: any) {
       } catch {}
       const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]);
       const v = await getV();
-      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-01-V24000' });
+      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-01-V25000' });
     }
     if (path === '/api/test-cleanup' && (method === 'POST' || method === 'GET')) {
       try {

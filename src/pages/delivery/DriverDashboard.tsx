@@ -35,14 +35,11 @@ function DriverLiveMap({ delivery, driverLat, driverLng, onArrived }: { delivery
   const [isFullScreen, setIsFullScreen] = useState(false);
   const pLat = Number(delivery.pickup_lat) || 9.0190;
   const pLng = Number(delivery.pickup_lng) || 38.7680;
-  const isKechene = (delivery.delivery_address || '').toLowerCase().includes('kechenie') || (delivery.delivery_address || '').toLowerCase().includes('gulale') || (delivery.delivery_address || '').toLowerCase().includes('semien');
-  const dLat = isKechene ? 9.0450 : (Number(delivery.delivery_lat) || 9.0315);
-  const dLng = isKechene ? 38.7550 : (Number(delivery.delivery_lng) || 38.7485);
+  const dLat = Number(delivery.delivery_lat) || 9.0315;
+  const dLng = Number(delivery.delivery_lng) || 38.7485;
 
-  // Genuine Google Maps Directions Embed URL using clean address strings so it NEVER snaps to random businesses
-  const pStr = delivery.pickup_address ? `${delivery.pickup_address}, Addis Ababa` : 'Smart Shop, Addis Ababa';
-  const dStr = delivery.delivery_address || 'Addis Ababa, Ethiopia';
-  const embedUrl = `https://www.google.com/maps?f=d&source=s_d&saddr=${encodeURIComponent(pStr)}&daddr=${encodeURIComponent(dStr)}&hl=en&output=embed`;
+  // Genuine Google Maps Directions Embed URL between shipping start and shipping destination
+  const embedUrl = `https://www.google.com/maps?f=d&source=s_d&saddr=${pLat},${pLng}&daddr=${dLat},${dLng}&hl=en&output=embed`;
 
   return (
     <>
