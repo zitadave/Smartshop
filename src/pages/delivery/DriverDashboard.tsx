@@ -33,15 +33,13 @@ interface DailyEarning {
 
 function DriverLiveMap({ delivery, driverLat, driverLng, onArrived }: { delivery: any; driverLat?: number; driverLng?: number; onArrived?: () => void }) {
   const [isFullScreen, setIsFullScreen] = useState(false);
-  const pLat = Number(delivery.pickup_lat) || 9.0190;
-  const pLng = Number(delivery.pickup_lng) || 38.7680;
-  const dLat = Number(delivery.delivery_lat) || 9.0315;
-  const dLng = Number(delivery.delivery_lng) || 38.7485;
+  const pLat = Number(delivery.pickup_lat) || 9.0150;
+  const pLng = Number(delivery.pickup_lng) || 38.7650;
+  const dLat = Number(delivery.delivery_lat) || 9.0520;
+  const dLng = Number(delivery.delivery_lng) || 38.7580;
 
-  // Genuine Google Maps Directions Embed URL using clean address strings so it NEVER snaps to random businesses like Avira or Sudeis
-  const pStr = delivery.pickup_address ? `${delivery.pickup_address}, Kazanchis, Addis Ababa` : 'Kazanchis, Addis Ababa';
-  const dStr = delivery.delivery_address || 'Addis Ababa, Ethiopia';
-  const embedUrl = `https://www.google.com/maps?f=d&source=s_d&saddr=${encodeURIComponent(pStr)}&daddr=${encodeURIComponent(dStr)}&hl=en&output=embed`;
+  // Genuine Google Maps Directions Embed URL using exact numeric GPS coordinates from shipping start to shipping destination
+  const embedUrl = `https://www.google.com/maps?saddr=${pLat},${pLng}&daddr=${dLat},${dLng}&output=embed`;
 
   return (
     <>

@@ -113,8 +113,8 @@ export default function OrderTrackingMap({ orderNumber, compact }: OrderTracking
     const L = (window as any).L;
     if (!L) return;
 
-    const cLat = delivery?.delivery_lat || 9.0315;
-    const cLng = delivery?.delivery_lng || 38.7485;
+    const cLat = Number(delivery?.delivery_lat) || 9.0520;
+    const cLng = Number(delivery?.delivery_lng) || 38.7580;
 
     const container = L.DomUtil.get('leaflet-map');
     if (container) {
@@ -141,8 +141,8 @@ export default function OrderTrackingMap({ orderNumber, compact }: OrderTracking
       const customerMarker = L.marker([cLat, cLng], { icon: homeIcon }).addTo(map);
 
       // Shipping Start (Vendor Storefront / Pickup location)
-      const startLat = Number(delivery?.pickup_lat) || 9.0190;
-      const startLng = Number(delivery?.pickup_lng) || 38.7680;
+      const startLat = Number(delivery?.pickup_lat) || 9.0150;
+      const startLng = Number(delivery?.pickup_lng) || 38.7650;
 
       const storeIcon = L.divIcon({
         className: 'custom-store-icon',
