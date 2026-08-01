@@ -4,7 +4,8 @@
  */
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { productsApi, uploadApi } from '@/lib/api';
+import { useStore } from '@/stores/AppStore';
+import { productsApi, uploadApi, settingsApi } from '@/lib/api';
 import { formatPrice, cn, generateId } from '@/lib/utils';
 import {
   X, Check, Plus, Trash2, Upload, Image, RefreshCw, Save,
@@ -96,6 +97,7 @@ interface ProductStudioProps {
 }
 
 export default function ProductStudio({ editProduct, onClose, onSaved }: ProductStudioProps) {
+  const { settings, setSettings } = useStore();
   const [form, setForm] = useState<ProductForm>(initialForm);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'basic' | 'media' | 'variants' | 'pricing' | 'inventory' | 'seo'>('basic');
