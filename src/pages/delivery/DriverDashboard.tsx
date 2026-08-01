@@ -31,6 +31,114 @@ interface DailyEarning {
   amount: number;
 }
 
+function DriverLiveMap({ delivery, driverLat, driverLng }: { delivery: any; driverLat?: number; driverLng?: number }) {
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const mapId = `driver-map-${delivery.id}`;
+
+  useEffect(() => {
+    if ((window as any).L) {
+      setMapLoaded(true);
+      return;
+    }
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    document.head.appendChild(link);
+
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    script.onload = () => setMapLoaded(true);
+    document.head.appendChild(script);
+  }, []);
+
+  useEffect(() => {
+    if (!mapLoaded || !(window as any).L) return;
+    const L = (window as any).L;
+    const el = document.getElementById(mapId);
+    if (!el) return;
+
+    el.innerHTML = '';
+    const map = L.map(el, { zoomControl: false, attributionControl: false });
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19
+    }).addTo(map);
+
+    const pLat = Number(delivery.pickup_lat) || 9.0190;
+    const pLng = Number(delivery.pickup_lng) || 38.7680;
+    const dLat = Number(delivery.delivery_lat) || 9.0315;
+    const dLng = Number(delivery.delivery_lng) || 38.7485;
+    const myLat = Number(driverLat) || pLat;
+    const myLng = Number(driverLng) || pLng;
+
+    const storeIcon = L.divIcon({
+      className: 'custom-store-icon',
+      html: `<div class="w-8 h-8 rounded-full bg-blue-500 border-2 border-white flex items-center justify-center shadow-lg"><span class="text-sm">🏪</span></div>`,
+      iconSize: [32, 32],
+      iconAnchor: [16, 16]
+    });
+    const destIcon = L.divIcon({
+      className: 'custom-dest-icon',
+      html: `<div class="w-8 h-8 rounded-full bg-emerald-500 border-2 border-white flex items-center justify-center shadow-lg"><span class="text-sm">🏠</span></div>`,
+      iconSize: [32, 32],
+      iconAnchor: [16, 16]
+    });
+    const driverIcon = L.divIcon({
+      className: 'custom-driver-icon',
+      html: `<div class="w-8 h-8 rounded-full bg-indigo-600 border-2 border-white flex items-center justify-center shadow-lg animate-pulse"><span class="text-sm">🏍️</span></div>`,
+      iconSize: [32, 32],
+      iconAnchor: [16, 16]
+    });
+
+    const mStore = L.marker([pLat, pLng], { icon: storeIcon }).addTo(map);
+    const mDest = L.marker([dLat, dLng], { icon: destIcon }).addTo(map);
+    const mDriver = L.marker([myLat, myLng], { icon: driverIcon }).addTo(map);
+
+    fetch(`https://router.project-osrm.org/route/v1/driving/${pLng},${pLat};${dLng},${dLat}?overview=full&geometries=geojson`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.routes && data.routes[0]) {
+          const coordinates = data.routes[0].geometry.coordinates;
+          const latLngs = coordinates.map((coord: [number, number]) => [coord[1], coord[0]]);
+          
+          L.polyline(latLngs, { color: '#10B981', weight: 4, opacity: 0.9 }).addTo(map);
+          L.polyline(latLngs, { color: '#34D399', weight: 8, opacity: 0.3 }).addTo(map);
+
+          const group = new L.featureGroup([mStore, mDest, mDriver]);
+          map.fitBounds(group.getBounds().pad(0.25));
+        } else {
+          throw new Error('OSRM fallback');
+        }
+      })
+      .catch(() => {
+        L.polyline([[pLat, pLng], [dLat, dLng]], { color: '#10B981', weight: 3, dashArray: '6, 6' }).addTo(map);
+        const group = new L.featureGroup([mStore, mDest, mDriver]);
+        map.fitBounds(group.getBounds().pad(0.25));
+      });
+
+    return () => {
+      try { map.remove(); } catch {}
+    };
+  }, [mapLoaded, delivery.id, delivery.pickup_lat, delivery.delivery_lat, driverLat, driverLng]);
+
+  return (
+    <div className="relative w-full h-44 rounded-2xl overflow-hidden border border-slate-800 shadow-inner bg-slate-950">
+      <div id={mapId} className="w-full h-full" />
+      <div className="absolute top-2 right-2 z-10 flex gap-1.5">
+        <span className="bg-slate-900/90 backdrop-blur-md text-emerald-400 border border-emerald-500/30 text-[9px] font-mono font-bold px-2.5 py-1 rounded-lg shadow flex items-center gap-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+          {delivery.distance_km || '3.5'} km • ~{Math.max(5, Math.round((Number(delivery.distance_km) || 3.5) * 3))} min drive
+        </span>
+      </div>
+      <div className="absolute bottom-2 left-2 right-2 z-10 flex items-center justify-between pointer-events-none">
+        <span className="bg-slate-900/90 backdrop-blur text-slate-300 text-[8px] px-2 py-0.5 rounded-md font-semibold border border-slate-800">
+          🏪 {delivery.pickup_address || 'Smart Shop'} ➔ 🏠 {delivery.delivery_address || 'Customer'}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export default function DriverDashboard() {
   const navigate = useNavigate();
   const profile = useStore(state => state.profile);
@@ -803,76 +911,88 @@ export default function DriverDashboard() {
 
                   {deliveries.filter(function(d) { return d.status !== 'pending' && d.status !== 'delivered' && d.status !== 'failed' && d.status !== 'cancelled' && d.status !== 'returned'; }).map(function(del) {
                     var fee = del.driver_payout || del.fee || 0;
-                  
-                  // Device map navigation trigger — Opens deep linking coords or standard directions
-                  var navigationUrl = `https://www.google.com/maps/dir/?api=1&destination=${del.delivery_lat || 9.03},${del.delivery_lng || 38.74}`;
 
-                  return (
-                    <div key={del.id} className="bg-slate-900 rounded-3xl border border-emerald-500/20 p-4 shadow animate-scaleIn space-y-3">
-                      <div className="flex items-center justify-between border-b border-slate-800/85 pb-2.5">
-                        <div>
-                          <span className="text-[10px] text-emerald-400 font-extrabold font-mono">#{del.order_number}</span>
-                          <div className="text-[8px] text-slate-400">Assigned Partner Mission</div>
+                    return (
+                      <div key={del.id} className="bg-slate-900 rounded-3xl border border-emerald-500/30 p-4 shadow-xl animate-scaleIn space-y-3.5">
+                        <div className="flex items-center justify-between border-b border-slate-800/85 pb-2.5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-mono font-black text-emerald-400">#{del.order_number}</span>
+                            {del.cod_amount > 0 && (
+                              <span className="bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[8px] font-extrabold px-2 py-0.5 rounded-full">
+                                💵 COD: Br {del.cod_amount}
+                              </span>
+                            )}
+                          </div>
+                          <span className={'px-2 py-0.5 rounded text-[8px] font-black uppercase ' + getStatusColor(del.status)}>
+                            {del.status?.replace('_', ' ')}
+                          </span>
                         </div>
-                        <span className={'px-2 py-0.5 rounded text-[8px] font-black uppercase ' + getStatusColor(del.status)}>
-                          {del.status?.replace('_', ' ')}
-                        </span>
-                      </div>
 
-                      <div className="space-y-2">
-                        <div className="flex items-start gap-2.5">
-                          <span className="w-2 h-2 rounded-full bg-indigo-400 mt-1.5 flex-shrink-0 animate-ping" />
-                          <div>
-                            <div className="text-[8px] text-slate-500 uppercase tracking-wider font-extrabold">Pickup Vendor Address</div>
-                            <div className="text-xs font-bold text-slate-200 mt-0.5">{del.pickup_address || 'Smartshop Partner Shop'}</div>
+                        {/* INTEGRATED IN-APP LIVE STREET MAP */}
+                        <DriverLiveMap delivery={del} driverLat={driver?.current_lat} driverLng={driver?.current_lng} />
+
+                        {/* Clear Addresses Box */}
+                        <div className="space-y-2 bg-slate-950/60 rounded-2xl p-3 border border-slate-800/60">
+                          <div className="flex items-start gap-2.5">
+                            <span className="w-2 h-2 rounded-full bg-blue-400 mt-1 flex-shrink-0" />
+                            <div>
+                              <div className="text-[8px] text-slate-500 uppercase tracking-wider font-extrabold">🏪 Vendor Pickup Shop</div>
+                              <div className="text-xs font-bold text-slate-200 mt-0.5">{del.pickup_address || 'Smart Shop Partner Store'}</div>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-2.5">
+                            <span className="w-2 h-2 rounded-full bg-emerald-400 mt-1 flex-shrink-0" />
+                            <div className="flex-1">
+                              <div className="text-[8px] text-slate-500 uppercase tracking-wider font-extrabold">🏠 Customer Destination</div>
+                              <div className="text-xs font-bold text-slate-200 mt-0.5">{del.delivery_address || 'Customer Residence'}</div>
+                            </div>
+                            {del.customer_phone && (
+                              <a 
+                                href={`tel:${del.customer_phone}`}
+                                className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-xl text-[9px] font-black flex items-center gap-1 border border-slate-700 active:scale-95"
+                                title="Call Customer"
+                              >
+                                <Phone size={10} /> Call
+                              </a>
+                            )}
                           </div>
                         </div>
-                        <div className="flex items-start gap-2.5">
-                          <span className="w-2 h-2 rounded-full bg-red-400 mt-1.5 flex-shrink-0 animate-ping" style={{ animationDelay: '0.5s' }} />
-                          <div>
-                            <div className="text-[8px] text-slate-500 uppercase tracking-wider font-extrabold">Delivery Dropoff Address</div>
-                            <div className="text-xs font-bold text-slate-200 mt-0.5">{del.delivery_address || 'Customer Residence'}</div>
-                          </div>
-                        </div>
-                      </div>
 
-                      {/* Route Map Controls */}
-                      <div className="flex gap-2 pt-1">
-                        <a 
-                          href={navigationUrl} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-[9px] font-bold flex items-center justify-center gap-1 shadow transition-all active:scale-95 border border-slate-750"
-                        >
-                          <Navigation size={11} className="text-indigo-400" /> 🧭 Open GPS Nav
-                        </a>
-                        {(del.status === 'assigned' || del.status === 'accepted' || del.status === 'pending') && (
+                        {/* Payout Banner */}
+                        <div className="flex items-center justify-between bg-emerald-950/30 border border-emerald-500/20 px-3.5 py-2 rounded-xl">
+                          <span className="text-[9px] text-emerald-300 font-bold uppercase tracking-wider">Net Delivery Payout</span>
+                          <span className="text-sm font-black text-emerald-400">Br {fee}</span>
+                        </div>
+
+                        {/* 1-Click Action Bar */}
+                        <div className="flex items-center gap-2 pt-0.5">
+                          {(del.status === 'assigned' || del.status === 'accepted' || del.status === 'pending') && (
+                            <button 
+                              className="px-3.5 py-3 bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 rounded-xl text-[10px] font-black transition-all flex items-center justify-center gap-1 active:scale-95 border border-slate-700"
+                              onClick={function() { declineDelivery(del.id); }}
+                              title="Decline & pass to next partner"
+                            >
+                              Pass ✕
+                            </button>
+                          )}
                           <button 
-                            className="px-3 py-2.5 bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 rounded-xl text-[9px] font-bold transition-all flex items-center justify-center gap-1 active:scale-95 border border-slate-750"
-                            onClick={function() { declineDelivery(del.id); }}
-                            title="Decline & pass to next partner"
+                            className="flex-1 py-3 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white rounded-xl text-xs font-black shadow-lg shadow-emerald-500/20 transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                            onClick={function() {
+                              if (del.status !== 'arrived') {
+                                triggerStatusUpdate(del.id, 'arrived');
+                              } else {
+                                setPinVerificationId(del.id);
+                                setVerificationPinInput('');
+                              }
+                            }}
                           >
-                            Pass ✕
+                            <Check size={14} /> 
+                            {del.status === 'arrived' ? 'Verify Customer PIN' : '📍 Arrived — Verify PIN'}
                           </button>
-                        )}
-                        <button 
-                          className="flex-1 py-3 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white rounded-xl text-xs font-black shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5"
-                          onClick={function() {
-                            if (del.status !== 'arrived') {
-                              triggerStatusUpdate(del.id, 'arrived');
-                            } else {
-                              setPinVerificationId(del.id);
-                              setVerificationPinInput('');
-                            }
-                          }}
-                        >
-                          <Check size={13} /> 
-                          {del.status === 'arrived' ? 'Verify Customer PIN' : '📍 Arrived — Verify PIN'}
-                        </button>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
                 </>
               )}
             </div>
