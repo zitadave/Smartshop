@@ -38,7 +38,7 @@ function SubscriptionSection({ onNavigate }: { onNavigate: (path: string) => voi
         icon={<Package size={15} className="text-white" />}
         title="📦 Daily Subscriptions"
         subtitle="Auto-delivery. Save up to 15%"
-        gradient="from-blue-500 to-indigo-600"
+        gradient="bg-gradient-to-br from-blue-500 to-indigo-600"
         action={
           <button className="text-[10px] text-primary font-semibold flex items-center gap-1 opacity-60 hover:opacity-100 transition-opacity"
             onClick={() => onNavigate('/subscription-shop')}>
@@ -121,7 +121,7 @@ function TrendingSection({ products, settings, onAdd, onWish, btnAnim, wishAnim 
         icon={<TrendingUp size={15} className="text-white" />}
         title="🔥 Trending Products"
         subtitle="Most popular picks right now"
-        gradient="from-rose-500 to-pink-600"
+        gradient="bg-gradient-to-br from-rose-500 to-pink-600"
       />
       <HorizontalScroll>
         {trending.map((p: any) => (
@@ -231,7 +231,7 @@ export default function Home() {
             icon={<Zap size={15} className="text-white" />}
             title="⚡ Flash Deals"
             subtitle="Limited time offers - Hurry!"
-            gradient="from-orange-500 to-red-600"
+            gradient="bg-gradient-to-br from-orange-500 to-red-600"
           />
           <HorizontalScroll>
             {flashProducts.map((p) => {
@@ -258,7 +258,7 @@ export default function Home() {
             icon={<Users size={15} className="text-white" />}
             title="🤝 Active Group Buy (ማህበር ግዢ)"
             subtitle="Shop together with peers to save up to 25%!"
-            gradient="from-green-500 to-emerald-600"
+            gradient="bg-gradient-to-br from-green-500 to-emerald-600"
           />
           <HorizontalScroll>
             {groupDeals.map((deal) => {
@@ -375,7 +375,7 @@ export default function Home() {
             icon={<Sparkles size={15} className="text-white" />}
             title="Curated For You"
             subtitle="Personalized recommendations"
-            gradient="from-violet-500 to-purple-600"
+            gradient="bg-gradient-to-br from-violet-500 to-purple-600"
             action={
               <button className="text-[10px] text-primary font-semibold flex items-center gap-1 opacity-60 hover:opacity-100 transition-opacity"
                 onClick={() => navigate('/shop')}>
@@ -398,7 +398,7 @@ export default function Home() {
           <SectionHeader
             icon={<Clock size={15} className="text-white" />}
             title="Recently Viewed"
-            gradient="from-slate-500 to-slate-600"
+            gradient="bg-gradient-to-br from-slate-500 to-slate-600"
           />
           <HorizontalScroll>
             {recents.map((p) => (
@@ -415,7 +415,7 @@ export default function Home() {
           icon={<Star size={15} className="text-white" />}
           title="Featured Products"
           subtitle="Top picks from our collection"
-          gradient="from-amber-500 to-orange-600"
+          gradient="bg-gradient-to-br from-amber-500 to-orange-600"
         />
         <div className="grid grid-cols-2 gap-3 px-4 stagger">
           {topProducts.map(p => (
