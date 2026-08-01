@@ -255,6 +255,7 @@ export default function Profile() {
         <MenuItem icon="📍" label="Saved Addresses" badge={savedAddresses.length} desc={savedAddresses.length + ' addresses'} onClick={function() { navigate('/addresses'); }} />
 
         <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider px-1 mt-4 mb-1">Shopping</div>
+        <MenuItem icon="📸" label="AI Photo Studio" desc="AI-powered product photo enhancement" onClick={function() { navigate('/photo-studio'); }} />
         <MenuItem icon="📦" label="My Orders" badge={ordCount} desc={ordCount + ' total orders'} onClick={function() { navigate('/orders'); }} />
         <MenuItem icon="🗓" label="Subscriptions" desc="Daily, weekly & monthly delivery plans" onClick={function() { navigate('/subscriptions'); }} />
         <MenuItem icon="🤝" label="Group Buys" desc="My active group shopping deals" onClick={function() { navigate('/my-group-deals'); }} />

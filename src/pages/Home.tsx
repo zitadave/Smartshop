@@ -225,24 +225,6 @@ export default function Home() {
         <BroadcastBanner />
       </div>
 
-      {/* Quick Actions */}
-      <div className="px-4 mt-4">
-        <div className="grid grid-cols-4 gap-2">
-          {[
-            { icon: String.fromCodePoint(128700), label: "Photo Studio", href: "/photo-studio" },
-            { icon: String.fromCodePoint(129309), label: "Group Buy", href: "/my-group-deals" },
-            { icon: String.fromCodePoint(128230), label: "My Subs", href: "/subscriptions" },
-            { icon: String.fromCodePoint(127775), label: "Rewards", href: "/loyalty" },
-          ].map((f, i) => (
-            <button key={i} onClick={() => navigate(f.href)}
-              className="bg-white rounded-xl p-3 shadow-sm text-center hover:shadow-md transition-all active:scale-95">
-              <span className="text-xl block mb-1">{f.icon}</span>
-              <span className="text-[10px] font-medium text-slate-700">{f.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
       {flashProducts.length > 0 && (
         <section className="mt-2 animate-fadeUp">
           <SectionHeader

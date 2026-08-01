@@ -9,9 +9,13 @@ interface SectionHeaderProps {
 }
 
 export function SectionHeader({ icon, title, subtitle, action, gradient }: SectionHeaderProps) {
+  const bgClass = gradient
+    ? (gradient.includes('bg-') ? gradient : `bg-gradient-to-br ${gradient}`)
+    : 'bg-gradient-to-br from-primary to-blue-600';
+
   return (
     <div className="flex items-center gap-3 px-4 pt-6 pb-3">
-      <div className={`w-8 h-8 rounded-2xl ${gradient || 'bg-gradient-to-br from-primary to-blue-600'} flex items-center justify-center shadow-lg flex-shrink-0`}
+      <div className={`w-8 h-8 rounded-2xl ${bgClass} text-white flex items-center justify-center shadow-lg flex-shrink-0`}
         style={gradient ? undefined : { boxShadow: '0 4px 12px rgba(59,130,246,0.2)' }}>
         {icon}
       </div>
