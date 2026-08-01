@@ -715,7 +715,7 @@ export default function DriverDashboard() {
       `}</style>
 
       {/* Header Panel */}
-      <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/20 p-5 pt-6 pb-9 relative overflow-hidden border-b border-slate-800/60 shadow-xl">
+      <div className="bg-card text-card-foreground p-5 pt-6 pb-9 relative overflow-hidden border-b border-border shadow-md">
         {/* Soft glowing radar aura background when online */}
         {isOnline && (
           <div className="absolute right-6 top-6 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl animate-pulse" />
@@ -732,11 +732,11 @@ export default function DriverDashboard() {
                 {isOnline && (
                   <span className="absolute -inset-1.5 rounded-2xl border-2 border-emerald-400/50 pointer-events-none" style={{ animation: 'radar-pulse 2s cubic-bezier(0.16, 1, 0.3, 1) infinite' }} />
                 )}
-                {isOnline && <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-400 border-2 border-slate-900" />}
+                {isOnline && <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-400 border-2 border-background" />}
               </div>
               <div>
-                <h1 className="text-base font-black tracking-wide text-slate-100">{driver?.full_name_latin}</h1>
-                <p className="text-[9px] text-slate-400 font-semibold tracking-wider flex items-center gap-1">
+                <h1 className="text-base font-black tracking-wide text-foreground">{driver?.full_name_latin}</h1>
+                <p className="text-[9px] text-muted-foreground font-semibold tracking-wider flex items-center gap-1">
                   <Shield size={10} className="text-emerald-500" /> Smartshop Express Partner
                 </p>
               </div>
@@ -744,10 +744,10 @@ export default function DriverDashboard() {
             
             <button 
               className={cn(
-                'px-4 py-2 rounded-2xl text-[10px] font-extrabold flex items-center gap-2 transition-all duration-300 shadow-md active:scale-95',
+                'px-4 py-2 rounded-2xl text-[10px] font-extrabold flex items-center gap-2 transition-all duration-300 shadow-md active:scale-95 border',
                 isOnline 
-                  ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-500/20' 
-                  : 'bg-slate-800 hover:bg-slate-700 text-slate-400'
+                  ? 'bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-600 shadow-emerald-500/20' 
+                  : 'bg-muted hover:bg-muted/80 text-muted-foreground border-border'
               )} 
               onClick={toggleOnline}
             >
