@@ -251,6 +251,7 @@ export default function Profile() {
       {/* Menu Sections */}
       <div className="mx-3 mt-3 space-y-2">
         <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider px-1 mb-1">Account</div>
+        <MenuItem icon="🛡️" label="Admin Control Panel" desc="Manage marketplace & promotions" onClick={function() { navigate('/admin-panel'); }} />
         <MenuItem icon="✏️" label="Edit Profile" desc="Update your personal info" onClick={function() { openEdit(); }} />
         <MenuItem icon="📍" label="Saved Addresses" badge={savedAddresses.length} desc={savedAddresses.length + ' addresses'} onClick={function() { navigate('/addresses'); }} />
 

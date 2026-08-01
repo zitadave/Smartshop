@@ -1111,6 +1111,16 @@ function AdminMarketplace() {
           </button>
         </div>
 
+        {/* Help Banner */}
+        <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-3 text-xs text-indigo-700 dark:text-indigo-300 space-y-1">
+          <div className="font-bold">📖 How Dynamic Feature Cards Work:</div>
+          <p className="text-[11px] leading-relaxed opacity-90">
+            • <strong>Best Seller Card:</strong> Choose any product from the catalog dropdown or enter custom title text. Clicking the card on the homepage takes shoppers directly to that product's detail page (<code>/product/:id</code>).<br />
+            • <strong>On Sale Card:</strong> Customize the promotional badge text (e.g., <code>"6 deals"</code> or <code>"Flash Sale Live"</code>) and set any Click Target Route (e.g., <code>/shop?sort=sale</code>).<br />
+            • Changes take effect instantly for all shoppers when you click <strong>Save Feature Cards</strong>.
+          </p>
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-slate-100 dark:border-slate-800 pt-3">
           {/* Best Seller Config */}
           <div className="space-y-2 bg-amber-500/5 p-3 rounded-xl border border-amber-500/20">
