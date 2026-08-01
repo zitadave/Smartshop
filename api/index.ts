@@ -1586,6 +1586,13 @@ export default async function handler(req: any, res: any) {
         const b = req.body || {};
         const vs = await getV();
 
+        if (b.telegram_id) {
+          const dupTg = vs.find((v: any) => (v.telegram_id === b.telegram_id || v.telegram_id == b.telegram_id) && v.status !== 'rejected');
+          if (dupTg) {
+            return fail('You are already registered as a vendor (' + dupTg.status + '). You cannot register twice.', 409);
+          }
+        }
+
         const dupPhone = vs.find((v: any) => v.phone === b.phone && v.status !== 'rejected');
         if (dupPhone) {
           return fail('A vendor with this Phone number is already registered or pending review.', 409);
@@ -1756,7 +1763,7 @@ export default async function handler(req: any, res: any) {
       } catch {}
       const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]);
       const v = await getV();
-      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-01-V39000' });
+      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-01-V40000' });
     }
     if (path === '/api/test-cleanup' && (method === 'POST' || method === 'GET')) {
       try {

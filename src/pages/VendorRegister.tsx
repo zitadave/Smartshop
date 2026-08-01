@@ -42,6 +42,37 @@ export default function VendorRegister() {
   var [step, setStep] = useState(1); // Onboarding Steps (1: KYC Identity, 2: Business details)
   var [submitting, setSubmitting] = useState(false);
 
+  var [vendorStatus, setVendorStatus] = useState<string>('loading');
+
+  useEffect(function() {
+    var status = 'none';
+    try { status = localStorage.getItem('ss_vendor_status') || 'none'; } catch(e) {}
+    if (status === 'approved' || status === 'pending') {
+      setVendorStatus(status);
+      return;
+    }
+    var storedTgId = store.profile.telegramId || '';
+    try { var p = JSON.parse(localStorage.getItem('ss_profile') || '{}'); if (p.telegramId) storedTgId = p.telegramId; } catch(e) {}
+    var storedPhone = store.profile.phone || '';
+    try { storedPhone = localStorage.getItem('ss_user_phone') || ''; } catch(e) {}
+    if (storedTgId || storedPhone) {
+      fetch('/api/user/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telegram_id: storedTgId, phone: storedPhone || '' })
+      }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d && d.vendor_status) {
+          localStorage.setItem('ss_vendor_status', d.vendor_status);
+          setVendorStatus(d.vendor_status);
+        } else {
+          setVendorStatus('none');
+        }
+      }).catch(function() { setVendorStatus('none'); });
+    } else {
+      setVendorStatus('none');
+    }
+  }, [store.profile]);
+
   // Step 1: Legal Identity & KYC
   var [firstName, setFirstName] = useState('');
   var [middleName, setMiddleName] = useState('');
@@ -211,6 +242,66 @@ export default function VendorRegister() {
       toast('Error submitting: ' + e.message, 'error');
       setSubmitting(false);
     }
+  }
+
+  if (vendorStatus === 'approved') {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
+        <div className="bg-card text-card-foreground rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl border border-border animate-scaleIn">
+          <div className="w-16 h-16 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center mx-auto mb-4 shadow-lg">
+            <span className="text-3xl">🏪</span>
+          </div>
+          <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+            Verified Partner
+          </span>
+          <h1 className="text-lg font-extrabold mt-3 text-foreground">You Are an Approved Vendor!</h1>
+          <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+            Your store is fully registered and approved on Smart Shop. Approved vendors never see the registration form again and cannot register twice.
+          </p>
+          <div className="space-y-2 mt-6">
+            <button
+              className="w-full py-3.5 bg-primary text-primary-foreground rounded-xl text-xs font-extrabold shadow-md hover:opacity-95 transition-all"
+              onClick={() => nav('/vendor')}
+            >
+              Open Vendor Dashboard 🚀
+            </button>
+            <button
+              className="w-full py-3 border border-border rounded-xl text-xs font-semibold text-muted-foreground hover:bg-muted transition-colors"
+              onClick={() => nav('/profile')}
+            >
+              Back to Profile
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (vendorStatus === 'pending') {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
+        <div className="bg-card text-card-foreground rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl border border-border animate-scaleIn">
+          <div className="w-16 h-16 rounded-full bg-amber-500/15 border border-amber-500/30 flex items-center justify-center mx-auto mb-4 shadow-lg">
+            <span className="text-3xl">⏳</span>
+          </div>
+          <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+            Under Review
+          </span>
+          <h1 className="text-lg font-extrabold mt-3 text-foreground">Application Under Review</h1>
+          <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+            Your vendor application has already been submitted and is currently under review by our administrators. You cannot register twice.
+          </p>
+          <div className="space-y-2 mt-6">
+            <button
+              className="w-full py-3.5 bg-primary text-primary-foreground rounded-xl text-xs font-extrabold shadow-md hover:opacity-95 transition-all"
+              onClick={() => nav('/profile')}
+            >
+              Back to Profile
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
