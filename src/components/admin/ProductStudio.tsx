@@ -3,6 +3,7 @@
  * Multi-language, variant matrix, rich media, smart pricing, real-time preview
  */
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { productsApi, uploadApi } from '@/lib/api';
 import { formatPrice, cn, generateId } from '@/lib/utils';
 import {
@@ -282,8 +283,8 @@ export default function ProductStudio({ editProduct, onClose, onSaved }: Product
     { id: 'seo' as const, icon: Tag, label: 'SEO' },
   ];
 
-  return (
-    <div className="fixed inset-0 z-[200] bg-black/75 backdrop-blur-md flex items-start justify-center overflow-y-auto p-2 sm:p-4 md:py-8" onClick={onClose}>
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-md flex items-start justify-center overflow-y-auto p-2 sm:p-4 md:py-8" onClick={onClose}>
       <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-5xl my-auto shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden animate-scaleIn" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-slate-50 to-white dark:from-slate-900 dark:to-slate-900/80">
@@ -900,6 +901,7 @@ export default function ProductStudio({ editProduct, onClose, onSaved }: Product
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
