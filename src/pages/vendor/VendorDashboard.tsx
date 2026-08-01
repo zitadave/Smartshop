@@ -1145,7 +1145,7 @@ function VendorNotificationsView() {
 }
 
 function VendorPromotionsView() {
-  const [tab, setTab] = useState<"request" | "active" | "groupbuys" | "slots">("request");
+  const [tab, setTab] = useState<"flashstudio" | "request" | "active" | "groupbuys" | "slots">("flashstudio");
   const store = useStore();
   const { products } = store;
   const vendorId = parseInt(localStorage.getItem('ss_vendor_app_id') || '') || 1;
@@ -1320,15 +1320,125 @@ function VendorPromotionsView() {
 
   return (
     <div className="animate-fadeUp space-y-4">
-      <div><h2 className="text-lg font-bold text-slate-900 dark:text-white">🎯 Promotions</h2>
-      <p className="text-[10px] text-slate-500">Create promotions to boost your sales. Commission is always on original price.</p></div>
+      <div><h2 className="text-lg font-bold text-slate-900 dark:text-white">🎯 Promotions & Flash Deals</h2>
+      <p className="text-[10px] text-slate-500">Create promotions to boost your sales. Platform commission is calculated on the actual discounted selling price.</p></div>
 
-      <div className="flex gap-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl p-0.5 w-fit">
-        {[["request","✍️ Request"],["active","✅ Active"],["groupbuys","🤝 Group Buys"],["slots","💎 Slots"]].map(([t, l]) => (
+      <div className="flex gap-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl p-0.5 w-fit flex-wrap">
+        {[["flashstudio","⚡ Flash Deal Studio"],["request","✍️ Request"],["active","✅ Active"],["groupbuys","🤝 Group Buys"],["slots","💎 Slots"]].map(([t, l]) => (
           <button key={t} className={cn("px-3 py-1.5 rounded-lg text-[9px] font-semibold transition-all", tab === t ? "bg-white dark:bg-slate-700 shadow-sm" : "text-slate-500")}
             onClick={() => setTab(t as any)}>{l}</button>
         ))}
       </div>
+
+      {tab === "flashstudio" && (
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                <Zap size={16} className="text-rose-500" /> Flash Deal Studio — Live Offer Manager
+              </h3>
+              <p className="text-[10px] text-slate-500">Manage time-limited discount offers across all your store products. Platform commission is calculated on the discounted selling price.</p>
+            </div>
+            <span className="text-[10px] bg-rose-500/10 text-rose-600 dark:text-rose-400 px-2.5 py-1 rounded-full font-extrabold border border-rose-500/20">
+              {Object.keys(store.settings.flashSales || {}).length} Live Offers
+            </span>
+          </div>
+
+          {vendorProducts.length === 0 ? (
+            <p className="text-center py-8 text-xs text-slate-400">No products in your store yet. Add a product first!</p>
+          ) : (
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
+              {vendorProducts.map(p => {
+                const fs = store.settings.flashSales && store.settings.flashSales[String(p.id)];
+                const isActive = !!fs;
+                const origPrice = p.originalPrice || Math.round(p.price * 1.2);
+                const discount = fs?.discount || Math.round((1 - p.price / origPrice) * 100) || 15;
+                return (
+                  <div key={p.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <img src={p.image} className="w-10 h-10 rounded-xl object-cover border border-slate-200 dark:border-slate-700" alt="" />
+                      <div>
+                        <div className="text-xs font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                          <span>{p.nameEn}</span>
+                          {isActive && <span className="bg-rose-500 text-white text-[8px] font-extrabold px-1.5 py-0.5 rounded-full">⚡ {fs.discount}% OFF</span>}
+                        </div>
+                        <div className="text-[10px] text-slate-500">
+                          Price: <strong className="text-emerald-600">Br {p.price}</strong>
+                          {p.originalPrice && <span className="line-through text-slate-400 ml-1">Br {p.originalPrice}</span>}
+                          {isActive && <span className="ml-2 text-rose-600 font-semibold">· Ends {new Date(fs.end).toLocaleDateString()}</span>}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        className={cn("px-3 py-1.5 rounded-xl text-[10px] font-bold transition-all border",
+                          isActive
+                            ? "bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 border-rose-500/30"
+                            : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                        )}
+                        onClick={() => {
+                          const pid = String(p.id);
+                          const current = { ...(store.settings.flashSales || {}) };
+                          if (isActive) {
+                            delete current[pid];
+                            toast(`⚡ Flash Deal ended for ${p.nameEn}`, "info");
+                          } else {
+                            current[pid] = {
+                              end: Date.now() + 86400000 * 3, // 3 Days
+                              startedAt: Date.now(),
+                              discount: discount,
+                              maxQty: 50
+                            };
+                            toast(`⚡ Flash Deal launched for ${p.nameEn}!`, "success");
+                          }
+                          const updated = { ...store.settings, flashSales: current };
+                          store.setSettings(updated as any);
+                          settingsApi.update(updated);
+                        }}
+                      >
+                        {isActive ? "🛑 End Deal" : "⚡ Launch Deal (3 Days)"}
+                      </button>
+
+                      {isActive && (
+                        <div className="flex gap-1">
+                          {[
+                            { label: "+24h", ms: 86400000 },
+                            { label: "+7d", ms: 86400000 * 7 }
+                          ].map((dur, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              className="px-2 py-1 bg-indigo-50 dark:bg-indigo-950/30 hover:bg-indigo-100 text-indigo-600 dark:text-indigo-400 rounded-lg text-[9px] font-bold border border-indigo-200 dark:border-indigo-800"
+                              onClick={() => {
+                                const pid = String(p.id);
+                                const current = { ...(store.settings.flashSales || {}) };
+                                if (current[pid]) {
+                                  current[pid] = {
+                                    ...current[pid],
+                                    end: Date.now() + dur.ms
+                                  };
+                                  const updated = { ...store.settings, flashSales: current };
+                                  store.setSettings(updated as any);
+                                  settingsApi.update(updated);
+                                  toast(`⚡ Extended by ${dur.label}!`, "success");
+                                }
+                              }}
+                            >
+                              {dur.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {tab === "request" && (
         <div className="grid sm:grid-cols-3 gap-3">
@@ -1341,7 +1451,7 @@ function VendorPromotionsView() {
               onClick={() => openRequestModal(s.type)}>
               <div className="text-lg font-bold mb-1">{s.title}</div>
               <p className="text-[9px] opacity-80">{s.desc}</p>
-              <div className="mt-2 text-[8px] opacity-60">Commission based on original price</div>
+              <div className="mt-2 text-[8px] opacity-60">Commission based on discounted selling price</div>
             </button>
           ))}
         </div>
