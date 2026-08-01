@@ -1491,7 +1491,7 @@ export default async function handler(req: any, res: any) {
             console.warn('[STOCK] Non-blocking stock update error for prod ' + item.productId);
           }
         }
-        const orderPayload = {
+        const orderPayload: Record<string, any> = {
           order_number: on,
           telegram_id: req.body.telegram_id || req.body.telegramId || req.body.customer?.telegram_id || req.body.customer?.telegramId || null,
           items: req.body.items || [],
@@ -1523,7 +1523,7 @@ export default async function handler(req: any, res: any) {
           if (oe && oe.message && oe.message.includes('schema cache')) {
             const m = oe.message.match(/Could not find the '([^']+)' column/i);
             if (m && m[1]) {
-              delete orderPayload[m[1]];
+              delete (orderPayload as Record<string, any>)[m[1]];
               console.warn(`[ORDERS] Schema mismatch: removed column '${m[1]}', retrying insert (attempt ${attempt + 1})...`);
               continue;
             }
@@ -1767,7 +1767,7 @@ export default async function handler(req: any, res: any) {
     // ================================================================
     // SEED / COMMISSION / PAYMENT / TAX / VENDOR NOTIFY
     // ================================================================
-    if (path === '/api/seed' && method === 'GET') { const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]); const v = await getV(); return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-07-31-V16000' }); }
+    if (path === '/api/seed' && method === 'GET') { const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]); const v = await getV(); return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-07-31-V17000' }); }
     if (path === '/api/test-cleanup' && (method === 'POST' || method === 'GET')) {
       try {
         await Promise.all([
