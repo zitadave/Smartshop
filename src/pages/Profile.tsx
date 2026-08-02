@@ -145,23 +145,23 @@ export default function Profile() {
   }
 
   var engagementItems: any[] = [
-    { icon: '🏆', label: 'Loyalty & Rewards', desc: 'Earn points & rewards', onClick: function() { navigate('/loyalty'); } },
+    { icon: '🏆', label: t('loyaltyRewardsMenu', language), desc: t('loyaltyRewardsMenuDesc', language), onClick: function() { navigate('/loyalty'); } },
   ];
 
   if (vendorStatus === 'loading') {
     // Still checking - show nothing special
-    engagementItems.push({ icon: '📝', label: 'Become a Vendor', desc: 'Start selling products', onClick: function() { navigate('/vendor-register'); } });
+    engagementItems.push({ icon: '📝', label: t('becomeVendor', language), desc: t('becomeVendorDesc', language), onClick: function() { navigate('/vendor-register'); } });
   } else if (vendorStatus === 'approved') {
-    engagementItems.push({ icon: '🏪', label: 'Vendor Dashboard', desc: 'Manage your store', onClick: function() { navigate('/vendor'); } });
+    engagementItems.push({ icon: '🏪', label: t('vendorDashboard', language), desc: t('vendorDashboardDesc', language), onClick: function() { navigate('/vendor'); } });
   } else if (vendorStatus === 'pending') {
-    engagementItems.push({ icon: '⏳', label: 'Application Pending', desc: 'Under review by admin', onClick: function() { toast('Your application is being reviewed.', 'info'); } });
+    engagementItems.push({ icon: '⏳', label: t('appPending', language), desc: t('appPendingDesc', language), onClick: function() { toast('Your application is being reviewed.', 'info'); } });
   } else {
-    engagementItems.push({ icon: '📝', label: 'Become a Vendor', desc: 'Start selling products', onClick: function() { navigate('/vendor-register'); } });
+    engagementItems.push({ icon: '📝', label: t('becomeVendor', language), desc: t('becomeVendorDesc', language), onClick: function() { navigate('/vendor-register'); } });
   }
 
   // Driver Status menu item (ONLY visible to APPROVED drivers - including users who are both an approved vendor and an approved driver!)
   if (driverStatus === 'approved') {
-    engagementItems.push({ icon: '🏍️', label: 'Smart Express', desc: 'Driver dashboard & active jobs', onClick: function() { navigate('/driver'); } });
+    engagementItems.push({ icon: '🏍️', label: t('smartExpress', language), desc: t('smartExpressDesc', language), onClick: function() { navigate('/driver'); } });
   }
 
   var isAuthorizedAdmin = 
@@ -182,9 +182,9 @@ export default function Profile() {
     })();
 
   engagementItems.push(
-    { icon: '📉', label: 'Price Alerts', badge: store.priceAlerts.length, desc: 'Track price drops', onClick: function() { navigate('/price-alerts'); } },
-    { icon: '🔔', label: 'Notifications', badge: notifications.length, desc: notifications.length + ' unread', onClick: function() { navigate('/notifications'); } },
-    { icon: '❓', label: 'Help & Support', desc: 'Get assistance', onClick: function() { navigate('/help'); } },
+    { icon: '📉', label: t('priceAlertsMenu', language), badge: store.priceAlerts.length, desc: t('priceAlertsMenuDesc', language), onClick: function() { navigate('/price-alerts'); } },
+    { icon: '🔔', label: t('notificationsMenu', language), badge: notifications.length, desc: `${notifications.length} ${t('notificationsMenuDesc', language)}`, onClick: function() { navigate('/notifications'); } },
+    { icon: '❓', label: t('helpSupportMenu', language), desc: t('helpSupportMenuDesc', language), onClick: function() { navigate('/help'); } },
   );
 
   return (
@@ -204,10 +204,10 @@ export default function Profile() {
                 {displayPhone && <span className="flex items-center gap-1 bg-white/10 px-2 py-0.5 rounded-full"><Phone size={10} /> {displayPhone}</span>}
                 {tgUser && <span className="flex items-center gap-1 bg-white/10 px-2 py-0.5 rounded-full"><AtSign size={10} /> @{tgUser}</span>}
                 {tgId && <span className="font-mono text-[8px] text-white/50 bg-white/5 px-2 py-0.5 rounded-full">ID: {tgId}</span>}
-                {vendorStatus === 'approved' && <span className="bg-emerald-400/30 px-2 py-0.5 rounded-full text-[9px]">🏪 Vendor</span>}
+                {vendorStatus === 'approved' && <span className="bg-emerald-400/30 px-2 py-0.5 rounded-full text-[9px]">🏪 {t('vendorDashboard', language)}</span>}
               </div>
               <p className="text-[9px] text-white/60 mt-1.5 flex items-center gap-1">
-                <Calendar size={9} /> Joined {displayJoined ? new Date(displayJoined).toLocaleDateString() : 'Today'}
+                <Calendar size={9} /> {t('joinedLabel', language)} {displayJoined ? new Date(displayJoined).toLocaleDateString() : t('todayLabel', language)}
               </p>
             </div>
             <button className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center hover:bg-white/30 transition-all flex-shrink-0" onClick={openEdit}>
@@ -217,16 +217,16 @@ export default function Profile() {
           {vendorStatus === 'approved' && (
             <div className="mt-3 bg-emerald-400/20 backdrop-blur-sm rounded-xl p-2.5 flex items-center gap-2 border border-emerald-400/20">
               <Store size={14} />
-              <span className="text-[10px] font-medium">Vendor account active</span>
+              <span className="text-[10px] font-medium">{t('vendorAccountActive', language)}</span>
               <button className="ml-auto text-[9px] bg-white/20 px-2.5 py-1 rounded-lg font-semibold hover:bg-white/30 transition-all" onClick={function() { navigate('/vendor'); }}>
-                Dashboard →
+                {t('dashboardBtn', language)} →
               </button>
             </div>
           )}
           {vendorStatus === 'pending' && (
             <div className="mt-3 bg-amber-400/20 backdrop-blur-sm rounded-xl p-2.5 flex items-center gap-2 border border-amber-400/20">
               <span className="text-[10px]">⏳</span>
-              <span className="text-[10px] font-medium">Application pending - admin will review shortly</span>
+              <span className="text-[10px] font-medium">{t('appPendingBanner', language)}</span>
             </div>
           )}
         </div>
@@ -236,15 +236,15 @@ export default function Profile() {
       <div className="mx-3 mt-3 grid grid-cols-3 gap-2">
         <div className="bg-card rounded-xl border border-border p-3 text-center cursor-pointer hover:border-primary hover:shadow-md transition-all" onClick={function() { navigate('/orders'); }}>
           <div className="text-lg font-bold text-primary">{ordCount}</div>
-          <div className="text-[8px] text-muted-foreground uppercase tracking-wider mt-0.5">Orders</div>
+          <div className="text-[8px] text-muted-foreground uppercase tracking-wider mt-0.5">{t('ordersStat', language)}</div>
         </div>
         <div className="bg-card rounded-xl border border-border p-3 text-center cursor-pointer hover:border-primary hover:shadow-md transition-all" onClick={function() { navigate('/wishlist'); }}>
           <div className="text-lg font-bold text-primary">{wishlist.length}</div>
-          <div className="text-[8px] text-muted-foreground uppercase tracking-wider mt-0.5">Wishlist</div>
+          <div className="text-[8px] text-muted-foreground uppercase tracking-wider mt-0.5">{t('wishlistStat', language)}</div>
         </div>
         <div className="bg-card rounded-xl border border-border p-3 text-center cursor-pointer hover:border-primary hover:shadow-md transition-all" onClick={function() { navigate('/cart'); }}>
           <div className="text-lg font-bold text-primary">{cartCount}</div>
-          <div className="text-[8px] text-muted-foreground uppercase tracking-wider mt-0.5">Cart</div>
+          <div className="text-[8px] text-muted-foreground uppercase tracking-wider mt-0.5">{t('cartStat', language)}</div>
         </div>
       </div>
 
@@ -255,11 +255,11 @@ export default function Profile() {
             <div>
               <Wallet size={18} className="mb-1 opacity-80" />
               <div className="text-lg font-extrabold">Br {walletBalance.toLocaleString()}</div>
-              <div className="text-[8px] opacity-70">Wallet Balance</div>
+              <div className="text-[8px] opacity-70">{t('walletBalance', language)}</div>
             </div>
             <div className="text-right opacity-60">
               <div className="text-2xl">💰</div>
-              <div className="text-[7px] uppercase tracking-wider mt-1">Tap to view</div>
+              <div className="text-[7px] uppercase tracking-wider mt-1">{t('tapToView', language)}</div>
             </div>
           </div>
         </div>
@@ -267,23 +267,23 @@ export default function Profile() {
 
       {/* Menu Sections */}
       <div className="mx-3 mt-3 space-y-2">
-        <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider px-1 mb-1">Account</div>
+        <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider px-1 mb-1">{t('accountSection', language)}</div>
         {isAuthorizedAdmin && (
-          <MenuItem icon="🛡️" label="Admin Control Panel" desc="Manage marketplace & promotions" onClick={function() { navigate('/admin-panel'); }} />
+          <MenuItem icon="🛡️" label={t('adminControlPanel', language)} desc={t('adminControlPanelDesc', language)} onClick={function() { navigate('/admin-panel'); }} />
         )}
-        <MenuItem icon="✏️" label="Edit Profile" desc="Update your personal info" onClick={function() { openEdit(); }} />
-        <MenuItem icon="📍" label="Saved Addresses" badge={savedAddresses.length} desc={savedAddresses.length + ' addresses'} onClick={function() { navigate('/addresses'); }} />
+        <MenuItem icon="✏️" label={t('editProfile', language)} desc={t('editProfileDesc', language)} onClick={function() { openEdit(); }} />
+        <MenuItem icon="📍" label={t('savedAddresses', language)} badge={savedAddresses.length} desc={`${savedAddresses.length} ${t('savedAddressesDesc', language)}`} onClick={function() { navigate('/addresses'); }} />
 
-        <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider px-1 mt-4 mb-1">Shopping</div>
-        <MenuItem icon="📸" label="AI Photo Studio" desc="AI-powered product photo enhancement" onClick={function() { navigate('/photo-studio'); }} />
-        <MenuItem icon="📦" label="My Orders" badge={ordCount} desc={ordCount + ' total orders'} onClick={function() { navigate('/orders'); }} />
-        <MenuItem icon="🗓" label="Subscriptions" desc="Daily, weekly & monthly delivery plans" onClick={function() { navigate('/subscriptions'); }} />
-        <MenuItem icon="🤝" label="Group Buys" desc="My active group shopping deals" onClick={function() { navigate('/my-group-deals'); }} />
-        <MenuItem icon="❤️" label="Wishlist" badge={wishlist.length} desc={wishlist.length + ' items'} onClick={function() { navigate('/wishlist'); }} />
-        <MenuItem icon="🎁" label="Gift Cards" desc="Redeem & send gifts" onClick={function() { navigate('/gift-cards'); }} />
-        <MenuItem icon="🤝" label="Affiliate Program" desc="Earn commissions" onClick={function() { navigate('/affiliate'); }} />
+        <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider px-1 mt-4 mb-1">{t('shoppingSection', language)}</div>
+        <MenuItem icon="📸" label={t('aiPhotoStudio', language)} desc={t('aiPhotoStudioDesc', language)} onClick={function() { navigate('/photo-studio'); }} />
+        <MenuItem icon="📦" label={t('myOrders', language)} badge={ordCount} desc={`${ordCount} ${t('myOrdersDesc', language)}`} onClick={function() { navigate('/orders'); }} />
+        <MenuItem icon="🗓" label={t('subscriptionsMenu', language)} desc={t('subscriptionsMenuDesc', language)} onClick={function() { navigate('/subscriptions'); }} />
+        <MenuItem icon="🤝" label={t('groupBuysMenu', language)} desc={t('groupBuysMenuDesc', language)} onClick={function() { navigate('/my-group-deals'); }} />
+        <MenuItem icon="❤️" label={t('wishlist', language)} badge={wishlist.length} desc={`${wishlist.length} ${t('wishlistMenuDesc', language)}`} onClick={function() { navigate('/wishlist'); }} />
+        <MenuItem icon="🎁" label={t('giftCardsMenu', language)} desc={t('giftCardsMenuDesc', language)} onClick={function() { navigate('/gift-cards'); }} />
+        <MenuItem icon="🤝" label={t('affiliateMenu', language)} desc={t('affiliateMenuDesc', language)} onClick={function() { navigate('/affiliate'); }} />
 
-        <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider px-1 mt-4 mb-1">Engagement</div>
+        <div className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider px-1 mt-4 mb-1">{t('engagementSection', language)}</div>
         {engagementItems.map(function(item, i) {
           return <MenuItem key={i} icon={item.icon} label={item.label} badge={item.badge} desc={item.desc} onClick={item.onClick} />;
         })}
@@ -296,11 +296,11 @@ export default function Profile() {
             <CurrencySelector />
           </div>
           <div className="bg-card rounded-xl border border-border p-3">
-            <div className="flex items-center gap-2 mb-2"><Palette size={14} className="text-primary" /><span className="text-[10px] font-medium">Theme</span></div>
+            <div className="flex items-center gap-2 mb-2"><Palette size={14} className="text-primary" /><span className="text-[10px] font-medium">{t('themeLabel', language)}</span></div>
             <ThemePicker />
             <div className="flex gap-1 mt-2">
-              <button className={cn('flex-1 py-1.5 rounded-lg text-[9px] font-semibold', !darkMode ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-white shadow-md' : 'bg-muted text-muted-foreground')} onClick={function() { setDarkMode(false); }}><Sun size={10} className="inline mr-1" />Light</button>
-              <button className={cn('flex-1 py-1.5 rounded-lg text-[9px] font-semibold', darkMode ? 'bg-gradient-to-r from-indigo-800 to-slate-900 text-white shadow-md' : 'bg-muted text-muted-foreground')} onClick={function() { setDarkMode(true); }}><Moon size={10} className="inline mr-1" />Dark</button>
+              <button className={cn('flex-1 py-1.5 rounded-lg text-[9px] font-semibold', !darkMode ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-white shadow-md' : 'bg-muted text-muted-foreground')} onClick={function() { setDarkMode(false); }}><Sun size={10} className="inline mr-1" />{t('light', language)}</button>
+              <button className={cn('flex-1 py-1.5 rounded-lg text-[9px] font-semibold', darkMode ? 'bg-gradient-to-r from-indigo-800 to-slate-900 text-white shadow-md' : 'bg-muted text-muted-foreground')} onClick={function() { setDarkMode(true); }}><Moon size={10} className="inline mr-1" />{t('dark', language)}</button>
             </div>
           </div>
         </div>
@@ -314,7 +314,7 @@ export default function Profile() {
       <div className="mx-3 mt-4 mb-6">
         <div className="flex items-center gap-3 px-3 py-3 bg-card rounded-xl border border-border cursor-pointer hover:border-destructive/50 hover:bg-destructive/5 transition-all" onClick={function() { setShowLogout(true); }}>
           <LogOut size={16} className="text-destructive" />
-          <span className="text-xs font-medium text-destructive flex-1">Logout</span>
+          <span className="text-xs font-medium text-destructive flex-1">{t('logoutMenu', language)}</span>
           <ChevronRight size={14} className="text-destructive/50" />
         </div>
       </div>
@@ -327,12 +327,12 @@ export default function Profile() {
           <div className="bg-card rounded-3xl w-full max-w-sm p-6 shadow-2xl animate-bounce-in" onClick={function(e) { e.stopPropagation(); }}>
             <div className="text-center mb-5">
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-blue-700 text-white flex items-center justify-center text-xl font-bold mx-auto shadow-md">{initials}</div>
-              <h3 className="text-base font-bold mt-2">Edit Profile</h3>
+              <h3 className="text-base font-bold mt-2">{t('editProfileTitle', language)}</h3>
             </div>
             <div className="space-y-4">
-              <div><label className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Full Name</label>
+              <div><label className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">{t('profileName', language)}</label>
                 <input className="w-full mt-1 p-3 border border-input rounded-xl text-sm bg-card focus:outline-none focus:ring-2 focus:ring-primary/30" value={editName} onChange={function(e) { setEditName(e.target.value); }} placeholder="Your name" /></div>
-              <div><label className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Phone Number</label>
+              <div><label className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">{t('phone', language)}</label>
                 <input className="w-full mt-1 p-3 border border-input rounded-xl text-sm bg-card focus:outline-none focus:ring-2 focus:ring-primary/30" value={editPhone} onChange={function(e) { setEditPhone(e.target.value); }} placeholder="09XXXXXXXX" /></div>
               {tgId && <div className="bg-muted/30 rounded-xl p-3 space-y-1.5">
                 <div className="flex items-center justify-between text-[10px]"><span className="text-muted-foreground">Telegram ID</span><span className="font-mono font-semibold">{tgId}</span></div>
@@ -340,8 +340,8 @@ export default function Profile() {
               </div>}
             </div>
             <div className="flex gap-2 mt-5">
-              <button className="flex-1 py-3 bg-primary text-white rounded-xl text-xs font-bold" onClick={saveEdit}>💾 Save</button>
-              <button className="px-5 py-3 border border-border rounded-xl text-xs" onClick={function() { setShowEdit(false); }}>Cancel</button>
+              <button className="flex-1 py-3 bg-primary text-white rounded-xl text-xs font-bold" onClick={saveEdit}>💾 {t('saveChanges', language)}</button>
+              <button className="px-5 py-3 border border-border rounded-xl text-xs" onClick={function() { setShowEdit(false); }}>{t('cancelBtn', language)}</button>
             </div>
           </div>
         </div>
@@ -355,11 +355,11 @@ export default function Profile() {
               <div className="w-14 h-14 rounded-full bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center mx-auto mb-3 shadow-lg">
                 <Wallet size={22} className="text-white" />
               </div>
-              <h3 className="text-sm font-bold">Wallet</h3>
+              <h3 className="text-sm font-bold">{t('walletBalance', language)}</h3>
               <p className="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">Br {walletBalance.toLocaleString()}</p>
-              <p className="text-[9px] text-muted-foreground mt-0.5">Available balance</p>
+              <p className="text-[9px] text-muted-foreground mt-0.5">{t('tapToView', language)}</p>
             </div>
-            <button className="w-full py-2.5 bg-primary text-white rounded-xl text-xs font-bold" onClick={function() { setShowWallet(false); }}>Done</button>
+            <button className="w-full py-2.5 bg-primary text-white rounded-xl text-xs font-bold" onClick={function() { setShowWallet(false); }}>{t('doneBtn', language)}</button>
           </div>
         </div>
       )}
@@ -370,11 +370,12 @@ export default function Profile() {
           <div className="bg-card rounded-3xl w-full max-w-sm p-6 shadow-2xl" onClick={function(e) { e.stopPropagation(); }}>
             <div className="text-center mb-4">
               <div className="text-4xl mb-2">🚪</div>
-              <h3 className="text-sm font-bold">Logout</h3>
+              <h3 className="text-sm font-bold">{t('logoutConfirmTitle', language)}</h3>
+              <p className="text-[11px] text-muted-foreground mt-1">{t('logoutConfirmDesc', language)}</p>
             </div>
             <div className="flex gap-2">
-              <button className="flex-1 py-3 bg-destructive text-white rounded-xl text-xs font-bold" onClick={function() { store.setProfile({ name: '', phone: '', email: '', registered: false, joinedAt: '' }); setShowLogout(false); }}>Yes</button>
-              <button className="flex-1 py-3 border border-border rounded-xl text-xs" onClick={function() { setShowLogout(false); }}>Cancel</button>
+              <button className="flex-1 py-3 bg-destructive text-white rounded-xl text-xs font-bold" onClick={function() { store.setProfile({ name: '', phone: '', email: '', registered: false, joinedAt: '' }); setShowLogout(false); }}>{t('yesLogout', language)}</button>
+              <button className="flex-1 py-3 border border-border rounded-xl text-xs" onClick={function() { setShowLogout(false); }}>{t('cancelBtn', language)}</button>
             </div>
           </div>
         </div>
