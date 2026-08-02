@@ -27,6 +27,7 @@ export default function Checkout() {
  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
 
  useEffect(() => {
+   window.scrollTo(0, 0);
    // Check local storage first for instant testing on the same device (admins/testers)
    try {
      const local = localStorage.getItem('ss_bank_accounts');

@@ -19,6 +19,10 @@ export default function SubscriptionShop() {
   const [tgId, setTgId] = useState(0);
   const [mySubs, setMySubs] = useState<Subscription[]>([]);
 
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   // Time selector states
   const [isCustomTime, setIsCustomTime] = useState(false);
   const [customTime, setCustomTime] = useState('08:00');

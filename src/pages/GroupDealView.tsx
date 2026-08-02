@@ -141,6 +141,7 @@ export default function GroupDealView() {
   }, [products.length]);
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     loadDeal();
   }, [token, store.profile?.telegramId, store.profile?.phone]);
 
