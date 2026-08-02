@@ -28,6 +28,7 @@ import ProductAnalytics from '@/components/admin/ProductAnalytics';
 import InventoryForecast from '@/components/admin/InventoryForecast';
 import ActivityLog from '@/components/admin/ActivityLog';
 import OrderFulfillment from '@/components/admin/OrderFulfillment';
+import { sendEmailNotification } from '@/lib/emailNotifier';
 import SLAMonitor from '@/components/admin/SLAMonitor';
 import DriverTracker from '@/components/admin/DriverTracker';
 import ReturnsManager from '@/components/admin/ReturnsManager';
@@ -2021,6 +2022,63 @@ function AdminSettings() {
               placeholder="e.g. Smart Marketplace"
             />
             <p className="text-[9px] text-slate-400">Shown under platform name</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Resend Email API & Marketing Configuration Card */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4" data-admin-card>
+        <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+          <h3 className="text-sm font-bold flex items-center gap-2">
+            <span>📧</span> Resend Email API & Marketing Engine
+          </h3>
+          <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-full font-bold">
+            ✅ Resend Sandbox Ready (3,000 Free/Month)
+          </span>
+        </div>
+        <p className="text-[10px] text-slate-500 mb-4">
+          Configures transactional email receipts (Order PINs, KYC, Payouts) and high-conversion batch marketing blasts (Flash Deals, Group Buys, Vouchers).
+        </p>
+
+        <div className="grid sm:grid-cols-2 gap-4 items-center">
+          <div className="space-y-2">
+            <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">Default Sender Address</label>
+            <input
+              type="text"
+              className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-slate-50 dark:bg-slate-800/40 text-foreground font-mono"
+              readOnly
+              value="Smart Shop <onboarding@resend.dev>"
+            />
+            <p className="text-[9px] text-slate-400">Uses Resend serverless free tier (RESEND_API_KEY)</p>
+          </div>
+
+          <div className="flex gap-2 pt-2 sm:pt-6">
+            <button
+              type="button"
+              className="flex-1 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-xs font-bold shadow-md hover:opacity-95 transition-all flex items-center justify-center gap-1.5"
+              onClick={async () => {
+                toast('📧 Testing Resend email dispatch...', 'info');
+                const res = await sendEmailNotification({
+                  to: 'admin@smartshop.et',
+                  subject: '⚡ Test Marketing Blast from Smart Shop!',
+                  templateType: 'marketing_blast',
+                  data: {
+                    title: '⚡ Flash Deals Email Test!',
+                    subtitle: 'Verified Resend Email Engine integration.',
+                    description: 'This test confirms that your Smart Shop transactional and marketing email engine is active.',
+                    ctaText: 'Visit Admin Control Panel',
+                    targetUrl: window.location.origin + '/admin-panel'
+                  }
+                });
+                if (res.success) {
+                  toast(res.simulated ? '✅ Email simulated in Resend Sandbox (Logged in console & audit log)!' : '🎉 Live HTML Email sent via Resend API!', 'success');
+                } else {
+                  toast('Error: ' + res.error, 'error');
+                }
+              }}
+            >
+              ✉️ Test Send Sample Email
+            </button>
           </div>
         </div>
       </div>

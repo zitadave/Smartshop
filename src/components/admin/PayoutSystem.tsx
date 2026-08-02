@@ -4,6 +4,7 @@ import { vendorsApi } from '@/lib/api';
 import { DollarSign, CheckCircle, Clock, AlertTriangle, Download, Filter, Search, ChevronRight, Wallet, ChevronDown, Check, XCircle, Loader } from 'lucide-react';
 import { toast } from '@/components/Toast';
 import { sendAdminTelegram } from '@/lib/adminNotifier';
+import { sendEmailNotification } from '@/lib/emailNotifier';
 
 interface Payout {
   id: string;
@@ -147,6 +148,12 @@ export default function PayoutSystem() {
         `Destination: ${payoutToDisburse.account_number}\n` +
         `Status: Successfully Paid Out`
       );
+      sendEmailNotification({
+        to: 'vendor@smartshop.et',
+        subject: `💸 Payout Disbursed: Br ${(payoutToDisburse.amount || 0).toLocaleString()}`,
+        templateType: 'payout_advice',
+        data: { payout: payoutToDisburse }
+      });
       fetchPayoutsData();
     } catch (err: any) {
       setDisbursing(false);

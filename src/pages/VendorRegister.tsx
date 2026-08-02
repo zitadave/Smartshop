@@ -5,6 +5,7 @@ import { toast } from '@/components/Toast';
 import { haptic } from '@/lib/confetti';
 import { cn } from '@/lib/utils';
 import { sendAdminTelegram } from '@/lib/adminNotifier';
+import { sendEmailNotification } from '@/lib/emailNotifier';
 import {
   ArrowLeft, Store, Save, Smartphone, Mail, FileText, Store as StoreIcon,
   Loader, Camera, Shield, CheckCircle, FileSpreadsheet, MapPin, Upload, X,
@@ -344,6 +345,15 @@ export default function VendorRegister() {
         `<b>Logo / Banner:</b> ${logo ? 'Yes' : 'No'} / ${backgroundImage ? 'Yes' : 'No'}\n\n` +
         `Review in Admin Control Panel: https://smartshop-steel.vercel.app/admin-panel`
       );
+
+      if (storeEmail && storeEmail.includes('@')) {
+        sendEmailNotification({
+          to: storeEmail,
+          subject: `🏪 Welcome to Smart Shop Vendor Network (${storeName})`,
+          templateType: 'vendor_welcome',
+          data: { vendor: { storeName, storePhone, tinNumber, licenseNumber, storeAddress, logo, backgroundImage } }
+        });
+      }
 
       try {
         await fetch('/api/vendors/register', {

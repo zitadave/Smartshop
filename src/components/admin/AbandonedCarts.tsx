@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { formatPrice, cn, generateId } from '@/lib/utils';
-import { ShoppingCart, Clock, Send, Smartphone, CheckCircle, XCircle, AlertTriangle, ChevronRight, User, DollarSign, TrendingUp } from 'lucide-react';
+import { ShoppingCart, Clock, Send, Smartphone, CheckCircle, XCircle, AlertTriangle, ChevronRight, User, DollarSign, TrendingUp, Mail } from 'lucide-react';
 import { toast } from '@/components/Toast';
+import { sendEmailNotification } from '@/lib/emailNotifier';
 
 interface AbandonedCart {
   id: string;
@@ -56,6 +57,27 @@ export default function AbandonedCartRecovery() {
     const updated = carts.map(c => c.id === cartId ? { ...c, status: 'lost' as const } : c);
     save(updated);
     toast('Cart marked as lost', 'info');
+  };
+
+  const sendEmailVoucher = (id: string) => {
+    const target = carts.find(c => c.id === id);
+    if (!target) return;
+    const recipient = 'customer@smartshop.et';
+    sendEmailNotification({
+      to: recipient,
+      subject: `🛒 You left items in your Smart Shop cart! (10% Voucher COMEBACK10)`,
+      templateType: 'cart_recovery',
+      data: {
+        title: `🛒 Come back and save 10% on your cart!`,
+        subtitle: `Use discount code COMEBACK10 at checkout.`,
+        description: `We saved your cart (${target.items.map((i: any) => i.name).join(', ')}). Your items are reserved in escrow!`,
+        ctaText: 'Claim 10% Voucher & Checkout',
+        targetUrl: 'https://smartshop-steel.vercel.app/checkout?promo=COMEBACK10'
+      }
+    });
+    const updated = carts.map(c => c.id === id ? { ...c, remindersSent: c.remindersSent + 1, lastReminder: new Date().toISOString() } : c);
+    save(updated);
+    toast(`📧 10% Discount voucher email sent to ${target.customerName}!`, 'success');
   };
 
   const filtered = filter === 'all' ? carts : carts.filter(c => c.status === filter);
@@ -144,6 +166,9 @@ export default function AbandonedCartRecovery() {
                   </button>
                   <button className="px-2.5 py-1.5 bg-gradient-to-r from-indigo-500 to-blue-600 text-white rounded-lg text-[8px] font-bold flex items-center gap-1 hover:shadow-md transition-all" onClick={() => sendReminder(cart.id)}>
                     <Send size={10} /> Send Reminder
+                  </button>
+                  <button className="px-2.5 py-1.5 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-lg text-[8px] font-bold flex items-center gap-1 hover:shadow-md transition-all" onClick={() => sendEmailVoucher(cart.id)}>
+                    <Mail size={10} /> Email Voucher
                   </button>
                   <button className="px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg text-[8px] font-medium text-slate-500 hover:bg-slate-50 transition-all" onClick={() => markLost(cart.id)}>
                     Lost

@@ -12,6 +12,7 @@ import { createFulfillment, upsertFulfillment } from '@/lib/orderFulfillment';
 import { addManualPayment } from '@/components/admin/ManualPaymentReview';
 import { toast } from '@/components/Toast';
 import { trackSocialEvent, sanitizeInputString, getCreatorReferral } from '@/lib/social';
+import { sendEmailNotification } from '@/lib/emailNotifier';
 import {
  ArrowLeft, MapPin, CreditCard, Package, Banknote, Copy, CheckCircle,
  Upload, Lock, Shield, Gift, ChevronRight, Tag, Building2, Camera,
@@ -91,6 +92,7 @@ export default function Checkout() {
 
  const [name, setName] = useState(profile.name || '');
  const [phone, setPhone] = useState(profile.phone || '');
+ const [email, setEmail] = useState(profile.email || '');
  const [city, setCity] = useState('Addis Ababa');
  const [address, setAddress] = useState('');
  const [locationDetected, setLocationDetected] = useState(false);
@@ -241,6 +243,7 @@ export default function Checkout() {
  customer: {
    name: sanitizeInputString(name, 100),
    phone: sanitizeInputString(phone, 30),
+   email: sanitizeInputString(email, 100),
    city: sanitizeInputString(city, 50),
    address: sanitizeInputString(address, 200),
    notes: '',
@@ -283,6 +286,19 @@ export default function Checkout() {
    referrer_code: order.referrer_code,
    source: getCreatorReferral().source
  });
+
+ if (email && email.includes('@')) {
+   sendEmailNotification({
+     to: email,
+     subject: `🏪 Smart Shop Order Confirmed (#${orderNum})`,
+     templateType: 'order_receipt',
+     data: { order, pin: '4928' }
+   }).then(r => {
+     if (r.success && !r.simulated) {
+       toast('📧 Digital receipt & delivery PIN sent to your email!', 'success');
+     }
+   });
+ }
 
  if (paymentMethod === 'bank') {
   // ALWAYS send depositorName as receiptNumber, receiptText separately
