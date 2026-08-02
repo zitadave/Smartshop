@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useStore } from '@/stores/AppStore';
 import { cn } from '@/lib/utils';
-import { ChevronDown, Check, Globe } from 'lucide-react';
-import { SUPPORTED_LANGUAGES, getLanguageMeta, type LanguageMeta } from '@/i18n/translations';
+import { ChevronDown, Check, Globe, X } from 'lucide-react';
+import { SUPPORTED_LANGUAGES, getLanguageMeta, type LanguageMeta, t } from '@/i18n/translations';
 import { toast } from '@/components/Toast';
 
 export default function LanguageSelector() {
@@ -22,7 +22,7 @@ export default function LanguageSelector() {
       <button
         type="button"
         className="w-full flex items-center justify-between gap-2 p-2.5 border border-input rounded-xl text-xs bg-card hover:border-primary/50 hover:shadow-sm transition-all active:scale-[0.99]"
-        onClick={() => setOpen(!open)}
+        onClick={() => setOpen(true)}
         aria-label="Select language"
         aria-expanded={open}
       >
@@ -33,44 +33,81 @@ export default function LanguageSelector() {
             <span className="text-[10px] text-muted-foreground leading-tight">{current.subtitle}</span>
           </div>
         </div>
-        <ChevronDown size={14} className={cn('text-muted-foreground transition-transform duration-200', open && 'rotate-180')} />
+        <ChevronDown size={14} className="text-muted-foreground transition-transform duration-200" />
       </button>
 
+      {/* Modal Dialog / Bottom-Sheet — Fixed z-[200] above all navigation bars */}
       {open && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute top-full left-0 right-0 mt-1.5 bg-card border border-border/80 rounded-2xl shadow-2xl z-50 py-1.5 overflow-hidden backdrop-blur-md animate-in fade-in-0 zoom-in-95 duration-150">
-            <div className="px-3 py-1.5 border-b border-border/40 mb-1 flex items-center gap-1.5 text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">
-              <Globe size={12} className="text-primary" />
-              <span>Select Language (5 Supported)</span>
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4 animate-in fade-in-0 duration-200"
+          onClick={() => setOpen(false)}
+        >
+          <div
+            className="bg-card border border-border rounded-3xl w-full max-w-sm p-5 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 max-h-[85vh] flex flex-col"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 mb-3 border-b border-border/60">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                  <Globe size={18} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold leading-tight">{t('language', language)}</h3>
+                  <p className="text-[10px] text-muted-foreground">5 Supported Languages</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="w-7 h-7 rounded-full bg-muted/60 flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
+                onClick={() => setOpen(false)}
+                aria-label="Close modal"
+              >
+                <X size={14} />
+              </button>
             </div>
-            {SUPPORTED_LANGUAGES.map(l => {
-              const isActive = language === l.code;
-              return (
-                <button
-                  key={l.code}
-                  type="button"
-                  className={cn(
-                    'w-full flex items-center gap-2.5 px-3 py-2 text-xs hover:bg-primary/5 transition-colors text-left group',
-                    isActive && 'bg-primary/10 font-bold text-primary'
-                  )}
-                  onClick={() => handleSelect(l)}
-                >
-                  <span className="text-base flex-shrink-0">{l.flag}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-xs text-foreground group-hover:text-primary transition-colors">{l.nativeName}</div>
-                    <div className="text-[10px] text-muted-foreground truncate">{l.subtitle}</div>
-                  </div>
-                  {isActive && (
-                    <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center">
-                      <Check size={12} className="text-primary" />
+
+            {/* Language Options List — Never covered by bottom nav */}
+            <div className="space-y-2 overflow-y-auto py-1 pr-1 max-h-[55vh] scrollbar-thin">
+              {SUPPORTED_LANGUAGES.map(l => {
+                const isActive = language === l.code;
+                return (
+                  <button
+                    key={l.code}
+                    type="button"
+                    className={cn(
+                      'w-full flex items-center gap-3 p-3 rounded-2xl border transition-all text-left group cursor-pointer',
+                      isActive
+                        ? 'bg-primary/10 border-primary/50 text-primary font-bold shadow-sm'
+                        : 'bg-card border-border/60 hover:border-primary/40 hover:bg-primary/5 text-foreground'
+                    )}
+                    onClick={() => handleSelect(l)}
+                  >
+                    <span className="text-xl flex-shrink-0">{l.flag}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-xs group-hover:text-primary transition-colors">{l.nativeName}</div>
+                      <div className="text-[10px] text-muted-foreground truncate">{l.subtitle}</div>
                     </div>
-                  )}
-                </button>
-              );
-            })}
+                    {isActive && (
+                      <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-white shadow-sm">
+                        <Check size={14} />
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Cancel Button */}
+            <button
+              type="button"
+              className="w-full mt-3 py-2.5 border border-border rounded-xl text-xs font-semibold hover:bg-muted transition-colors"
+              onClick={() => setOpen(false)}
+            >
+              {t('cancelBtn', language)}
+            </button>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
