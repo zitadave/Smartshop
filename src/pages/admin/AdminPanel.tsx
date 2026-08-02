@@ -117,7 +117,7 @@ export default function AdminLayout() {
         { id: 'heroslots', label: '🌟 Hero Ad Slots & Carousel' },
         { id: 'marketplace', label: '🏆 Homepage Feature Cards' },
         { id: 'flashdeals', label: '⚡ Flash Deals Manager' },
-        { id: 'groupbuy', label: '🤝 Group Buy (ማህበር)' },
+        { id: 'groupbuy', label: '🤝 Active Group Buy' },
         { id: 'coupons', label: '🎟️ Coupons & Promo Codes' },
         { id: 'promotions', label: '📢 All Promotions' },
         { id: 'broadcast', label: '📣 Telegram Broadcasts' },

@@ -39,7 +39,7 @@ export default function AdminGroupBuyTab() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div><h2 className="text-lg font-bold text-slate-800">🤝 Group Buying (ማህበር ግዢ)</h2><p className="text-xs text-slate-400">Manage all group deal campaigns</p></div>
+        <div><h2 className="text-lg font-bold text-slate-800">🤝 Active Group Buy</h2><p className="text-xs text-slate-400">Manage all group deal campaigns</p></div>
         <button onClick={load} className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 transition-colors"><RefreshCw size={16} className={loading ? 'animate-spin' : ''} /></button>
       </div>
 

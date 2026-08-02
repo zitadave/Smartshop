@@ -283,12 +283,67 @@ export default function Home() {
         </section>
       )}
 
-      {/* Dedicated Group Buy Section */}
+
+
+      {/* Sponsored / Promoted Products */}
+      <TrendingSection
+        products={products}
+        settings={settings}
+        onAdd={handleAdd}
+        onWish={handleWish}
+        btnAnim={btnAnim}
+        wishAnim={wishAnim}
+      />
+
+
+
+      {recommendations.length > 0 && (
+        <section className="animate-fadeUp">
+          <SectionHeader
+            icon={<Sparkles size={15} className="text-white" />}
+            title="Curated For You"
+            subtitle="Personalized recommendations"
+            gradient="bg-gradient-to-br from-violet-500 to-purple-600"
+            action={
+              <button className="text-[10px] text-primary font-semibold flex items-center gap-1 opacity-60 hover:opacity-100 transition-opacity"
+                onClick={() => navigate('/shop')}>
+                View All <ChevronRight size={12} />
+              </button>
+            }
+          />
+          <HorizontalScroll>
+            {recommendations.map((p) => (
+              <ProductCard key={p.id} product={p} variant="mini"
+                onAdd={handleAdd} onWish={handleWish}
+                addingId={btnAnim.activeId} wishAnimId={wishAnim.activeId} />
+            ))}
+          </HorizontalScroll>
+        </section>
+      )}
+
+      {recents.length > 0 && (
+        <section className="animate-fadeUp">
+          <SectionHeader
+            icon={<Clock size={15} className="text-white" />}
+            title="Recently Viewed"
+            gradient="bg-gradient-to-br from-slate-500 to-slate-600"
+          />
+          <HorizontalScroll>
+            {recents.map((p) => (
+              <ProductCard key={p.id} product={p} variant="mini"
+                onAdd={handleAdd} onWish={handleWish}
+                addingId={btnAnim.activeId} wishAnimId={wishAnim.activeId} />
+            ))}
+          </HorizontalScroll>
+        </section>
+      )}
+
+      {/* Dedicated Group Buy Section — ALWAYS DIRECTLY ABOVE SMART SUBSCRIPTIONS */}
       {groupDeals.length > 0 && (
         <section className="mt-4 animate-fadeUp">
           <SectionHeader
             icon={<Users size={15} className="text-white" />}
-            title="🤝 Active Group Buy (ማህበር ግዢ)"
+            title="🤝 Active Group Buy"
             subtitle="Shop together with peers to save up to 25%!"
             gradient="bg-gradient-to-br from-green-500 to-emerald-600"
           />
@@ -347,59 +402,6 @@ export default function Home() {
                 </div>
               );
             })}
-          </HorizontalScroll>
-        </section>
-      )}
-
-      {/* Sponsored / Promoted Products */}
-      <TrendingSection
-        products={products}
-        settings={settings}
-        onAdd={handleAdd}
-        onWish={handleWish}
-        btnAnim={btnAnim}
-        wishAnim={wishAnim}
-      />
-
-
-
-      {recommendations.length > 0 && (
-        <section className="animate-fadeUp">
-          <SectionHeader
-            icon={<Sparkles size={15} className="text-white" />}
-            title="Curated For You"
-            subtitle="Personalized recommendations"
-            gradient="bg-gradient-to-br from-violet-500 to-purple-600"
-            action={
-              <button className="text-[10px] text-primary font-semibold flex items-center gap-1 opacity-60 hover:opacity-100 transition-opacity"
-                onClick={() => navigate('/shop')}>
-                View All <ChevronRight size={12} />
-              </button>
-            }
-          />
-          <HorizontalScroll>
-            {recommendations.map((p) => (
-              <ProductCard key={p.id} product={p} variant="mini"
-                onAdd={handleAdd} onWish={handleWish}
-                addingId={btnAnim.activeId} wishAnimId={wishAnim.activeId} />
-            ))}
-          </HorizontalScroll>
-        </section>
-      )}
-
-      {recents.length > 0 && (
-        <section className="animate-fadeUp">
-          <SectionHeader
-            icon={<Clock size={15} className="text-white" />}
-            title="Recently Viewed"
-            gradient="bg-gradient-to-br from-slate-500 to-slate-600"
-          />
-          <HorizontalScroll>
-            {recents.map((p) => (
-              <ProductCard key={p.id} product={p} variant="mini"
-                onAdd={handleAdd} onWish={handleWish}
-                addingId={btnAnim.activeId} wishAnimId={wishAnim.activeId} />
-            ))}
           </HorizontalScroll>
         </section>
       )}
