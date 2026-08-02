@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { toast } from '@/components/Toast';
 import { sendAdminTelegram } from '@/lib/adminNotifier';
+import { autoTranslateCategoryName } from '@/i18n/translations';
 
 interface ProductForm {
   name: string;          // Amharic
@@ -432,7 +433,16 @@ export default function ProductStudio({ editProduct, onClose, onSaved }: Product
                               onClick={() => {
                                 if (!newCatLabel) return;
                                 const catId = newCatLabel.toLowerCase().replace(/[^a-z0-9]/g, '-');
-                                const newCatObj = { id: catId, icon: newCatIcon || '🛍️', label: newCatLabel, labelAm: newCatLabel };
+                                const auto = autoTranslateCategoryName(newCatLabel);
+                                const newCatObj = {
+                                  id: catId,
+                                  icon: newCatIcon || '🛍️',
+                                  label: auto.en || newCatLabel,
+                                  labelAm: auto.am || newCatLabel,
+                                  labelOm: auto.om || newCatLabel,
+                                  labelTi: auto.ti || newCatLabel,
+                                  labelSo: auto.so || newCatLabel,
+                                };
                                 const updatedCustom = [...((settings as any).customCategories || []), newCatObj];
                                 const updatedSettings = { ...settings, customCategories: updatedCustom };
                                 setSettings(updatedSettings as any);

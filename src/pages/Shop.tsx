@@ -12,7 +12,7 @@ import { CATEGORIES, SORT_OPTIONS } from '@/types';
 import { cn } from '@/lib/utils';
 import { toast } from '@/components/Toast';
 import { Search, X, Filter, ArrowUp, Sparkles, RefreshCw, Mic, Loader2 } from 'lucide-react';
-import { getLanguageMeta } from '@/i18n/translations';
+import { getLanguageMeta, getCategoryLabel } from '@/i18n/translations';
 import type { Product, CategoryId, SortMode } from '@/types';
 
 export default function Shop() {
@@ -239,7 +239,7 @@ export default function Shop() {
                 onClick={() => setCategory(cat.id as CategoryId)}
                 aria-label={`Filter by ${cat.label}`}
               >
-                <span className="text-xs">{cat.icon}</span> {cat.label}
+                <span className="text-xs">{cat.icon}</span> {getCategoryLabel(cat.id, language, cat.label, cat)}
               </button>
             ))}
           </div>

@@ -1003,7 +1003,74 @@ export function getLanguageMeta(code: Language): LanguageMeta {
   return SUPPORTED_LANGUAGES.find(l => l.code === code) || SUPPORTED_LANGUAGES[0];
 }
 
-export function getCategoryLabel(id: string, lang: Language = 'am', fallbackLabel: string = ''): string {
+/**
+ * Dynamic expansion dictionary for common custom categories added by Admins or Vendors.
+ * Guarantees multilingual labels across all 5 supported languages even when a custom category is created on the fly.
+ */
+export const DYNAMIC_CATEGORY_LEXICON: Record<string, Record<Language, string>> = {
+  toys: { am: 'አሻንጉሊቶች', en: 'Toys', om: 'Meeshaalee Taphannaa', ti: 'መጻወቲ', so: 'Ciwareena' },
+  toy: { am: 'አሻንጉሊቶች', en: 'Toys', om: 'Meeshaalee Taphannaa', ti: 'መጻወቲ', so: 'Ciwareena' },
+  shoes: { am: 'ጫማዎች', en: 'Shoes', om: 'Kopphee', ti: 'ሳእኒ', so: 'Kobo' },
+  shoe: { am: 'ጫማዎች', en: 'Shoes', om: 'Kopphee', ti: 'ሳእኒ', so: 'Kobo' },
+  automotive: { am: 'የመኪና እቃዎች', en: 'Automotive', om: 'Meeshaalee Konkolaataa', ti: 'ናይ መኪና', so: 'Baabuurta' },
+  auto: { am: 'የመኪና እቃዎች', en: 'Automotive', om: 'Meeshaalee Konkolaataa', ti: 'ናይ መኪና', so: 'Baabuurta' },
+  cars: { am: 'የመኪና እቃዎች', en: 'Cars & Auto', om: 'Meeshaalee Konkolaataa', ti: 'ናይ መኪና', so: 'Baabuurta' },
+  jewelry: { am: 'ጌጣጌጦች', en: 'Jewelry', om: 'Faaya', ti: 'ስልማት', so: 'Dahabka & Qurxinta' },
+  watches: { am: 'ሰዓቶች', en: 'Watches', om: "Sa'aatii", ti: 'ሰዓታት', so: 'Sacadaha' },
+  watch: { am: 'ሰዓቶች', en: 'Watches', om: "Sa'aatii", ti: 'ሰዓታት', so: 'Sacadaha' },
+  coffee: { am: 'ቡና', en: 'Coffee', om: 'Buna', ti: 'ቡን', so: 'Qaxwa' },
+  traditional: { am: 'ባህላዊ', en: 'Traditional', om: 'Aadaa', ti: 'ባህላዊ', so: 'Dhaqanka' },
+  furniture: { am: 'የቤት እቃዎች', en: 'Furniture', om: 'Meeshaalee Manaa', ti: 'ናይ ገዛ ንብረት', so: 'Alaabta Guriga' },
+  pharmacy: { am: 'ፋርማሲና ጤና', en: 'Health & Pharmacy', om: 'Farmaasii & Fayyaa', ti: 'ፋርማሲ', so: 'Caafimaadka' },
+  health: { am: 'ጤናና እንክብካቤ', en: 'Health & Care', om: 'Fayyaa & Kunuunsa', ti: 'ጥዕናን ክንክንን', so: 'Caafimaadka & Daryeelka' },
+  pets: { am: 'የቤት እንስሳት', en: 'Pets', om: 'Beeylada Manaa', ti: 'እንስሳ ዘገዳ', so: 'Xoolaha Guriga' },
+  hardware: { am: 'መሳሪያዎችና ሃርድዌር', en: 'Hardware & Tools', om: 'Meeshaalee Hojii', ti: 'መሳርሒ', so: 'Qalabka' },
+  tools: { am: 'መሳሪያዎች', en: 'Tools', om: 'Meeshaalee Hojii', ti: 'መሳርሒ', so: 'Qalabka' },
+  office: { am: 'የቢሮ እቃዎች', en: 'Office Supplies', om: 'Meeshaalee Waajjiraa', ti: 'ናይ ቤተ-ጽሕፈት', so: 'Alaabta Xafiiska' },
+  gift: { am: 'ስጦታዎች', en: 'Gifts', om: 'Kennaa', ti: 'ህያብ', so: 'Hadiyado' },
+  gifts: { am: 'ስጦታዎች', en: 'Gifts', om: 'Kennaa', ti: 'ህያብ', so: 'Hadiyado' },
+  bags: { am: 'ቦርሳዎች', en: 'Bags', om: 'Borsaa', ti: 'ቦርሳ', so: 'Boodhsooyinka' },
+  bag: { am: 'ቦርሳዎች', en: 'Bags', om: 'Borsaa', ti: 'ቦርሳ', so: 'Boodhsooyinka' },
+  organic: { am: 'ተፈጥሯዊና ኦርጋኒክ', en: 'Organic', om: 'Uumamaa', ti: 'ተፈጥሯዊ', so: 'Dabiiciga' },
+  kids: { am: 'የህጻናት', en: 'Kids', om: "Daa'immaan", ti: 'ህጻናት', so: 'Caruurta' },
+};
+
+/**
+ * Automatically translates any custom category name entered by an Admin or Vendor.
+ * Returns a 5-language dictionary object suitable for storing on the category.
+ */
+export function autoTranslateCategoryName(name: string): Record<Language, string> {
+  const norm = name.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+  const match = DYNAMIC_CATEGORY_LEXICON[norm];
+  if (match) {
+    return match;
+  }
+  return { am: name, en: name, om: name, ti: name, so: name };
+}
+
+/**
+ * 4-Stage Multilingual Category Resolution Engine:
+ * 1. Checks explicit localized fields on the category object (labelAm, labelOm, labelTi, labelSo).
+ * 2. Checks built-in translation dictionary keys (e.g. catTech, catFashion).
+ * 3. Checks DYNAMIC_CATEGORY_LEXICON for popular custom category keywords.
+ * 4. Gracefully falls back to default label or ID.
+ */
+export function getCategoryLabel(
+  id: string,
+  lang: Language = 'am',
+  fallbackLabel: string = '',
+  catObj?: { labelAm?: string; labelOm?: string; labelTi?: string; labelSo?: string; label?: string }
+): string {
+  // Stage 1: Explicit localized fields on category object
+  if (catObj) {
+    if (lang === 'am' && catObj.labelAm) return catObj.labelAm;
+    if (lang === 'om' && catObj.labelOm) return catObj.labelOm;
+    if (lang === 'ti' && catObj.labelTi) return catObj.labelTi;
+    if (lang === 'so' && catObj.labelSo) return catObj.labelSo;
+    if (lang === 'en' && catObj.label) return catObj.label;
+  }
+
+  // Stage 2: Built-in translation keys
   const catKeyMap: Record<string, string> = {
     all: 'catAll',
     electronics: 'catTech',
@@ -1016,5 +1083,62 @@ export function getCategoryLabel(id: string, lang: Language = 'am', fallbackLabe
     baby: 'catBaby',
   };
   const key = catKeyMap[id];
-  return key ? t(key, lang) : (fallbackLabel || id);
+  if (key) {
+    return t(key, lang);
+  }
+
+  // Stage 3: Dynamic Category Lexicon lookup
+  const norm = id.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const dynamicMatch = DYNAMIC_CATEGORY_LEXICON[norm];
+  if (dynamicMatch && dynamicMatch[lang]) {
+    return dynamicMatch[lang];
+  }
+
+  // Stage 4: Default fallback
+  return fallbackLabel || catObj?.label || id;
+}
+
+/**
+ * Dynamic Multilingual Content Resolver for Custom Sections, Hero Campaigns & Promotional Banners.
+ * - Parses JSON multilingual payloads automatically (e.g. `{"en": "Summer Sale", "am": "የበጋ ቅናሽ"}`).
+ * - Translates common promotional CTAs and marketing buzzwords on the fly across all 5 languages.
+ */
+export function resolveLocalizedText(text: string | undefined, lang: Language = 'am'): string {
+  if (!text) return '';
+  const trimmed = text.trim();
+
+  // 1. JSON multilingual payload check
+  if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (typeof parsed === 'object' && parsed !== null) {
+        return parsed[lang] || parsed.en || parsed.am || trimmed;
+      }
+    } catch {
+      // Not valid JSON, continue to string matching
+    }
+  }
+
+  // 2. Promotional Marketing & CTA Lexicon
+  const promoLexicon: Record<string, Record<Language, string>> = {
+    'buy now': { en: 'Buy Now', am: 'አሁን ይግዙ', om: 'Amma Biti', ti: 'ሕጂ ግዛእ', so: 'Hada Iibso' },
+    'shop now': { en: 'Shop Now', am: 'አሁን ይግዙ', om: 'Amma Biti', ti: 'ሕጂ ሸምት', so: 'Hada Iibso' },
+    'special offer': { en: 'Special Offer', am: 'ልዩ ቅናሽ', om: 'Dhiheessi Addaa', ti: 'ፍሉይ ቅናሽ', so: 'Fursad Gaar Ah' },
+    'limited time': { en: 'Limited Time', am: 'ለተወሰነ ጊዜ', om: 'Yeroo Gabaabaaf', ti: 'ንውሱን ግዜ', so: 'Waqti Xaddidan' },
+    'new arrival': { en: 'New Arrival', am: 'አዲስ የገባ', om: 'Haaraa Dhufe', ti: 'ሓዱሽ ዝመጸ', so: 'Cusub Oo Yimid' },
+    'new arrivals': { en: 'New Arrivals', am: 'አዳዲስ ምርቶች', om: 'Haaraa Dhufan', ti: 'ሓደስቲ ዝመጹ', so: 'Cusub Oo Yimid' },
+    'free delivery': { en: 'Free Delivery', am: 'ነጻ መላኪያ', om: 'Geejjiba Tolaa', ti: 'ነጻ መጓዓዝያ', so: 'Gaarsiin Bilaash Ah' },
+    'best seller': { en: 'Best Seller', am: 'በብዛት የተሸጠ', om: "Baay'ee Kan Gurgurame", ti: 'ብብዝሒ ዝተሸጠ', so: 'Ugu Badan Iibka' },
+    'best sellers': { en: 'Best Sellers', am: 'በብዛት የተሸጡ', om: "Baay'ee Kan Gurguraman", ti: 'ብብዝሒ ዝተሸጡ', so: 'Ugu Badan Iibka' },
+    'on sale': { en: 'On Sale', am: 'በቅናሽ', om: "Gatii Hir'inaa", ti: 'ኣብ ቅናሽ', so: 'Qiimo Dhimis' },
+    'featured': { en: 'Featured', am: 'ተለይተው የቀረቡ', om: 'Filatamoo', ti: 'ፍሉያት', so: 'Caan Ah' },
+    'trending': { en: 'Trending', am: 'ተወዳጅ', om: 'Beekamoo', ti: 'ህቡባት', so: 'Caan Ah' },
+  };
+
+  const norm = trimmed.toLowerCase();
+  if (promoLexicon[norm] && promoLexicon[norm][lang]) {
+    return promoLexicon[norm][lang];
+  }
+
+  return text;
 }

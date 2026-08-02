@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/stores/AppStore';
 import { getHeroCarouselConfig } from '@/lib/heroAds';
+import { resolveLocalizedText } from '@/i18n/translations';
 import type { HeroAd } from '@/types';
 
 interface HeroProps {
@@ -11,7 +12,7 @@ interface HeroProps {
 
 export function Hero({ productCount, topRating }: HeroProps) {
   const navigate = useNavigate();
-  const { settings, products } = useStore();
+  const { settings, products, language } = useStore();
   const config = getHeroCarouselConfig(settings);
 
   // Filter active ads up to maxActiveAds limit (>6), and automatically hydrate imageUrl from store products if missing or default!
@@ -116,16 +117,16 @@ export function Hero({ productCount, topRating }: HeroProps) {
             {slide.imageUrl ? (
               <img
                 src={slide.imageUrl}
-                alt={slide.title}
+                alt={resolveLocalizedText(slide.title, language) || 'Hero Banner'}
                 className="w-full h-full object-cover select-none transition-transform duration-700 group-hover:scale-[1.01]"
                 draggable={false}
               />
             ) : (
               /* Fallback gradient if no picture URL is provided */
               <div className={`w-full h-full bg-gradient-to-br ${slide.bgGradient || 'from-[#0f172a] via-[#1e293b] to-[#334155]'} p-6 flex flex-col justify-end text-white`}>
-                <div className="text-xs font-bold opacity-80">{slide.tagline || '🌟 Featured Special'}</div>
-                <h3 className="text-xl sm:text-2xl font-extrabold mt-1">{slide.title}</h3>
-                <p className="text-xs opacity-75 mt-0.5">{slide.subtitle}</p>
+                <div className="text-xs font-bold opacity-80">{resolveLocalizedText(slide.tagline, language) || '🌟 Featured Special'}</div>
+                <h3 className="text-xl sm:text-2xl font-extrabold mt-1">{resolveLocalizedText(slide.title, language)}</h3>
+                <p className="text-xs opacity-75 mt-0.5">{resolveLocalizedText(slide.subtitle, language)}</p>
               </div>
             )}
           </div>

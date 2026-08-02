@@ -47,6 +47,10 @@ export interface Category {
   id: CategoryId;
   icon: string;
   label: string;
+  labelAm?: string;
+  labelOm?: string;
+  labelTi?: string;
+  labelSo?: string;
 }
 
 export interface CartItem {

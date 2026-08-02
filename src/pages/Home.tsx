@@ -247,7 +247,7 @@ export default function Home() {
               aria-label={`Browse ${cat.label} category`}
             >
               <span className="text-sm">{cat.icon}</span>
-              <span>{getCategoryLabel(cat.id, language, cat.label)}</span>
+              <span>{getCategoryLabel(cat.id, language, cat.label, cat)}</span>
             </button>
           ))}
         </div>
