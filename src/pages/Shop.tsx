@@ -12,6 +12,7 @@ import { CATEGORIES, SORT_OPTIONS } from '@/types';
 import { cn } from '@/lib/utils';
 import { toast } from '@/components/Toast';
 import { Search, X, Filter, ArrowUp, Sparkles, RefreshCw, Mic, Loader2 } from 'lucide-react';
+import { getLanguageMeta } from '@/i18n/translations';
 import type { Product, CategoryId, SortMode } from '@/types';
 
 export default function Shop() {
@@ -52,7 +53,7 @@ export default function Shop() {
       
       if (SpeechRecognition) {
         const recognition = new SpeechRecognition();
-        recognition.lang = language === 'am' ? 'am-ET' : 'en-US';
+        recognition.lang = getLanguageMeta(language).speechCode;
         recognition.interimResults = false;
         recognition.maxAlternatives = 1;
 

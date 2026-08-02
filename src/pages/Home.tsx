@@ -9,6 +9,7 @@ import { PullToRefresh } from '@/components/ui/PullToRefresh';
 import { CardSkeleton } from '@/components/ui/Skeletons';
 import { showQuickView } from '@/components/ui/QuickView';
 import { CATEGORIES } from '@/types';
+import { t, getCategoryLabel } from '@/i18n/translations';
 import { cn } from '@/lib/utils';
 import { Sparkles, Clock, Star, ChevronRight, Zap, Megaphone, TrendingUp, Package, ArrowRight, Users } from 'lucide-react';
 import { useButtonAnimation, useWishlistAnimation } from '@/hooks/useAnimations';
@@ -23,6 +24,7 @@ import { parseSerializedName } from '@/lib/groupBuying';
 
 /** Subscription Plans Section - static data, no API calls */
 function SubscriptionSection({ onNavigate }: { onNavigate: (path: string) => void }) {
+  const { language } = useStore();
   const SAMPLE_PLANS: SubscriptionPlan[] = [
     { id: 1, name: 'Fresh Cow Milk', nameAmharic: 'የከብት ወተት', emoji: '🥛', description: 'Fresh milk every morning', category: 'dairy', unit: '1', unitLabel: 'liter', dailyPrice: 60, weeklyPrice: 380, monthlyPrice: 1520, vendorName: 'Smart Shop', image: '', tags: ['popular', 'essential'], isActive: true, minQuantity: 1, maxQuantity: 10, createdAt: '' },
     { id: 2, name: 'Brown Eggs (6pcs)', nameAmharic: 'እንቁላል (6ቱ)', emoji: '🥚', description: 'Farm-fresh eggs', category: 'dairy', unit: '6', unitLabel: 'pieces', dailyPrice: 0, weeklyPrice: 150, monthlyPrice: 560, vendorName: 'Smart Shop', image: '', tags: ['popular'], isActive: true, minQuantity: 1, maxQuantity: 10, createdAt: '' },
@@ -36,8 +38,8 @@ function SubscriptionSection({ onNavigate }: { onNavigate: (path: string) => voi
     <section className="mt-4 animate-fadeUp">
       <SectionHeader
         icon={<Package size={15} className="text-white" />}
-        title="📦 Smart Subscriptions"
-        subtitle="Auto-delivery on your schedule • Save up to 15%"
+        title={t('smartSubscriptionsTitle', language)}
+        subtitle={t('smartSubscriptionsSub', language)}
         gradient="bg-gradient-to-br from-blue-500 to-indigo-600"
         action={
           <button className="text-[10px] text-primary font-semibold flex items-center gap-1 opacity-60 hover:opacity-100 transition-opacity"
@@ -113,6 +115,7 @@ function SubscriptionSection({ onNavigate }: { onNavigate: (path: string) => voi
 
 /** Trending Products Section - shows sponsored/featured items *//** Trending Products Section - shows sponsored/featured items */
 function TrendingSection({ products, settings, onAdd, onWish, btnAnim, wishAnim }: any) {
+  const { language } = useStore();
   const sponsoredIds = settings.sponsoredProducts || [];
   if (sponsoredIds.length === 0) return null;
   const trending = products.filter((p: any) => sponsoredIds.includes(p.id));
@@ -121,8 +124,8 @@ function TrendingSection({ products, settings, onAdd, onWish, btnAnim, wishAnim 
     <section className="mt-2 animate-fadeUp">
       <SectionHeader
         icon={<TrendingUp size={15} className="text-white" />}
-        title="🔥 Trending Products"
-        subtitle="Most popular picks right now"
+        title={t('trendingProductsTitle', language)}
+        subtitle={t('trendingProductsSub', language)}
         gradient="bg-gradient-to-br from-rose-500 to-pink-600"
       />
       <HorizontalScroll>
@@ -244,7 +247,7 @@ export default function Home() {
               aria-label={`Browse ${cat.label} category`}
             >
               <span className="text-sm">{cat.icon}</span>
-              <span>{cat.label}</span>
+              <span>{getCategoryLabel(cat.id, language, cat.label)}</span>
             </button>
           ))}
         </div>
@@ -261,8 +264,8 @@ export default function Home() {
         <section className="mt-2 animate-fadeUp">
           <SectionHeader
             icon={<Zap size={15} className="text-white" />}
-            title="⚡ Flash Deals"
-            subtitle="Limited time offers - Hurry!"
+            title={t('flashDealsTitle', language)}
+            subtitle={t('flashDealsSub', language)}
             gradient="bg-gradient-to-br from-orange-500 to-red-600"
           />
           <HorizontalScroll>
@@ -301,8 +304,8 @@ export default function Home() {
         <section className="animate-fadeUp">
           <SectionHeader
             icon={<Sparkles size={15} className="text-white" />}
-            title="Curated For You"
-            subtitle="Personalized recommendations"
+            title={t('curatedForYouTitle', language)}
+            subtitle={t('curatedForYouSub', language)}
             gradient="bg-gradient-to-br from-violet-500 to-purple-600"
             action={
               <button className="text-[10px] text-primary font-semibold flex items-center gap-1 opacity-60 hover:opacity-100 transition-opacity"
@@ -325,7 +328,7 @@ export default function Home() {
         <section className="animate-fadeUp">
           <SectionHeader
             icon={<Clock size={15} className="text-white" />}
-            title="Recently Viewed"
+            title={t('recentlyViewedTitle', language)}
             gradient="bg-gradient-to-br from-slate-500 to-slate-600"
           />
           <HorizontalScroll>
@@ -343,8 +346,8 @@ export default function Home() {
         <section className="mt-4 animate-fadeUp">
           <SectionHeader
             icon={<Users size={15} className="text-white" />}
-            title="🤝 Active Group Buy"
-            subtitle="Shop together with peers to save up to 25%!"
+            title={t('groupBuyTitle', language)}
+            subtitle={t('groupBuySub', language)}
             gradient="bg-gradient-to-br from-green-500 to-emerald-600"
           />
           <HorizontalScroll>
@@ -412,8 +415,8 @@ export default function Home() {
       <section className="mt-2 animate-fadeUp">
         <SectionHeader
           icon={<Star size={15} className="text-white" />}
-          title="Featured Products"
-          subtitle="Top picks from our collection"
+          title={t('featuredProductsTitle', language)}
+          subtitle={t('featuredProductsSub', language)}
           gradient="bg-gradient-to-br from-amber-500 to-orange-600"
         />
         <div className="grid grid-cols-2 gap-3 px-4 stagger">
