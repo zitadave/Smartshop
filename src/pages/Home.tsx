@@ -36,7 +36,7 @@ function SubscriptionSection({ onNavigate }: { onNavigate: (path: string) => voi
     <section className="mt-4 animate-fadeUp">
       <SectionHeader
         icon={<Package size={15} className="text-white" />}
-        title="📦 Smart Subscriptions (Daily, Weekly & Monthly)"
+        title="📦 Smart Subscriptions"
         subtitle="Auto-delivery on your schedule • Save up to 15%"
         gradient="bg-gradient-to-br from-blue-500 to-indigo-600"
         action={
@@ -227,18 +227,6 @@ export default function Home() {
     } catch { toast('Refresh failed', 'error'); }
   }, []);
 
-  // Dynamically configurable Best Seller & On Sale feature cards from Admin Settings
-  const bestSellerCfg = (settings as any).bestSellerCard || {};
-  const onSaleCfg = (settings as any).onSaleCard || {};
-  const bsId = bestSellerCfg.productId || topProducts[0]?.id || 5;
-  const bsProd = products.find(p => p.id === bsId) || topProducts[0];
-  const bsTitle = bestSellerCfg.customText || bsProd?.nameEn || 'Ethiopian Organic Coffee 1kg';
-  const bsSubtitle = bestSellerCfg.customSubtitle || 'Best Seller';
-
-  const osTitle = onSaleCfg.customText || `${specialOffers.length || 6} deals`;
-  const osSubtitle = onSaleCfg.customSubtitle || 'On Sale';
-  const osUrl = onSaleCfg.targetUrl || '/shop?sort=sale';
-
   return (
     <div className="pb-6">
       <PullToRefresh onRefresh={handleRefresh}>
@@ -264,25 +252,6 @@ export default function Home() {
 
       {/* 2. LANDSCAPE HORIZONTAL HERO CAROUSEL */}
       <Hero productCount={products.length} topRating={topRating} />
-
-      {/* Best Seller & On Sale Feature Cards right below high-quality photo banner */}
-      <div className="flex gap-3 px-4 mt-1 mb-4 relative z-20">
-        {[
-          { icon: '🛍️', label: bsSubtitle, val: bsTitle, gradient: 'from-amber-500 via-orange-500 to-red-500', onClick: () => navigate('/product/' + bsId) },
-          { icon: '🔥', label: osSubtitle, val: osTitle, gradient: 'from-rose-500 via-pink-500 to-purple-500', onClick: () => navigate(osUrl) },
-        ].map((card, i) => (
-          <div key={i}
-            className={`flex-1 bg-gradient-to-br ${card.gradient} rounded-2xl p-4 text-white shadow-xl hover-lift cursor-pointer animate-scaleIn`}
-            onClick={card.onClick}
-            style={{ animationDelay: `${0.3 + i * 0.12}s` }}
-            role="button" tabIndex={0}
-          >
-            <div className="text-xl mb-1 opacity-90">{card.icon}</div>
-            <div className="text-[9px] text-white/60 font-medium uppercase tracking-wider">{card.label}</div>
-            <div className="text-xs font-bold truncate mt-1 leading-tight">{card.val}</div>
-          </div>
-        ))}
-      </div>
 
       <div className="px-4 mt-2">
         <BroadcastBanner />

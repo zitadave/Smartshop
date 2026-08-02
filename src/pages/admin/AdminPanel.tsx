@@ -133,7 +133,7 @@ export default function AdminLayout() {
       tabs: [
         { id: 'products', label: '📦 Product Catalog' },
         { id: 'bulkProducts', label: '📥 Bulk Import / Export' },
-        { id: 'subscriptions', label: '📅 Daily Subscriptions' },
+        { id: 'subscriptions', label: '📦 Smart Subscriptions' },
         { id: 'preorders', label: '⏳ Pre-Orders' },
       ],
     },

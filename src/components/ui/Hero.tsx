@@ -93,7 +93,7 @@ export function Hero({ productCount, topRating }: HeroProps) {
             onClick={() => handleBannerClick(slide)}
             role="button"
             tabIndex={0}
-            className="relative w-[90%] sm:w-[92%] md:w-[95%] flex-shrink-0 snap-center rounded-[24px] sm:rounded-3xl overflow-hidden shadow-xl border border-border/30 bg-slate-900 aspect-[2.35/1] sm:aspect-[2.8/1] md:aspect-[3.2/1] cursor-pointer hover:shadow-2xl transition-all group"
+            className="relative w-[90%] sm:w-[92%] md:w-[95%] flex-shrink-0 snap-center rounded-[24px] sm:rounded-3xl overflow-hidden shadow-xl border border-border/30 bg-slate-900 aspect-[1.95/1] sm:aspect-[2.35/1] md:aspect-[2.65/1] cursor-pointer hover:shadow-2xl transition-all group"
           >
             {/* High-quality background picture banner */}
             {slide.imageUrl ? (
