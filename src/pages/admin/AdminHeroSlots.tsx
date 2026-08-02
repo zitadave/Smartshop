@@ -26,6 +26,7 @@ export default function AdminHeroSlots() {
   const [tagline, setTagline] = useState('🌟 Sponsored Feature Special');
   const [priceText, setPriceText] = useState('');
   const [ctaText, setCtaText] = useState('🛍️ Shop Now');
+  const [imageUrl, setImageUrl] = useState('');
   const [durationDays, setDurationDays] = useState(30);
   const [commissionRate, setCommissionRate] = useState(defaultCommissionRate);
   const [bgGradient, setBgGradient] = useState('from-[#0f172a] via-[#1e293b] to-[#334155]');
@@ -65,6 +66,7 @@ export default function AdminHeroSlots() {
     setTagline('🌟 Sponsored Feature Special');
     setPriceText('Br 1,200');
     setCtaText('🛍️ Shop Now');
+    setImageUrl('/banners/banner-1.jpg');
     setDurationDays(30);
     setCommissionRate(defaultCommissionRate);
     setBgGradient('from-[#0f172a] via-[#1e293b] to-[#334155]');
@@ -79,6 +81,7 @@ export default function AdminHeroSlots() {
     setTagline(ad.tagline || '🌟 Sponsored Feature Special');
     setPriceText(ad.priceText || '');
     setCtaText(ad.ctaText || '🛍️ Shop Now');
+    setImageUrl(ad.imageUrl || '');
     setDurationDays(ad.durationDays || 30);
     setCommissionRate(ad.commissionRate || defaultCommissionRate);
     setBgGradient(ad.bgGradient || 'from-[#0f172a] via-[#1e293b] to-[#334155]');
@@ -102,6 +105,7 @@ export default function AdminHeroSlots() {
               tagline: tagline.trim(),
               priceText: priceText.trim(),
               ctaText: ctaText.trim(),
+              imageUrl: imageUrl.trim(),
               durationDays,
               commissionRate,
               bgGradient,
@@ -117,6 +121,7 @@ export default function AdminHeroSlots() {
         tagline: tagline.trim(),
         priceText: priceText.trim(),
         ctaText: ctaText.trim(),
+        imageUrl: imageUrl.trim() || '/banners/banner-1.jpg',
         durationDays,
         commissionRate,
         bgGradient,
@@ -353,6 +358,16 @@ export default function AdminHeroSlots() {
                   value={ctaText}
                   onChange={e => setCtaText(e.target.value)}
                   placeholder="🛍️ Shop Now"
+                  className="w-full p-2.5 border rounded-xl text-xs bg-white dark:bg-slate-900"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-semibold text-slate-500 block mb-1">Banner Image URL *</label>
+                <input
+                  type="text"
+                  value={imageUrl}
+                  onChange={e => setImageUrl(e.target.value)}
+                  placeholder="e.g. /banners/banner-1.jpg or https://..."
                   className="w-full p-2.5 border rounded-xl text-xs bg-white dark:bg-slate-900"
                 />
               </div>

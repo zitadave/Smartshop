@@ -265,8 +265,8 @@ export default function Home() {
       {/* 2. LANDSCAPE HORIZONTAL HERO CAROUSEL */}
       <Hero productCount={products.length} topRating={topRating} />
 
-      {/* Best Seller & On Sale - HALF ON Hero section, HALF OUTSIDE Hero section */}
-      <div className="flex gap-3 px-4 -mt-11 mb-4 relative z-20">
+      {/* Best Seller & On Sale Feature Cards right below high-quality photo banner */}
+      <div className="flex gap-3 px-4 mt-1 mb-4 relative z-20">
         {[
           { icon: '🛍️', label: bsSubtitle, val: bsTitle, gradient: 'from-amber-500 via-orange-500 to-red-500', onClick: () => navigate('/product/' + bsId) },
           { icon: '🔥', label: osSubtitle, val: osTitle, gradient: 'from-rose-500 via-pink-500 to-purple-500', onClick: () => navigate(osUrl) },

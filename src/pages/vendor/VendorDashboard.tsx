@@ -1199,6 +1199,7 @@ function VendorPromotionsView() {
   const [heroSubtitle, setHeroSubtitle] = useState('');
   const [heroTagline, setHeroTagline] = useState('🌟 Featured Partner Special');
   const [heroPriceText, setHeroPriceText] = useState('');
+  const [heroImageUrl, setHeroImageUrl] = useState('/banners/banner-1.jpg');
   const [heroDuration, setHeroDuration] = useState(heroConfig.allowedDurations?.[0] || 7);
   const [heroBgGradient, setHeroBgGradient] = useState('from-[#0f172a] via-[#1e293b] to-[#334155]');
   const [heroProductId, setHeroProductId] = useState('');
@@ -1554,6 +1555,19 @@ function VendorPromotionsView() {
 
             <div>
               <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">
+                Banner Image URL *
+              </label>
+              <input
+                type="text"
+                value={heroImageUrl}
+                onChange={e => setHeroImageUrl(e.target.value)}
+                placeholder="e.g. /banners/banner-1.jpg or https://..."
+                className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-white dark:bg-slate-900"
+              />
+            </div>
+
+            <div>
+              <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">
                 Banner Color Theme
               </label>
               <select
@@ -1584,6 +1598,7 @@ function VendorPromotionsView() {
                     subtitle: heroSubtitle.trim(),
                     tagline: heroTagline.trim(),
                     priceText: heroPriceText.trim(),
+                    imageUrl: heroImageUrl.trim() || '/banners/banner-1.jpg',
                     ctaText: '🛍️ Shop Now',
                     bgGradient: heroBgGradient,
                     status: 'active' as const,

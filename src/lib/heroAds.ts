@@ -4,64 +4,81 @@ export const DEFAULT_HERO_ADS: HeroAd[] = [
   {
     id: 'hero-default-1',
     productId: 5,
-    title: 'Ethiopian Organic Coffee 1kg',
-    subtitle: '100% Yirgacheffe Arabica Beans • Direct from Farm',
+    title: 'Trailblazers Tina Mart Exclusive',
+    subtitle: 'New Ethiopian Streetwear Collection',
     tagline: '🌟 Featured Sponsor Special',
-    priceText: 'Br 800 (Standard Br 950)',
-    ctaText: '🛍️ Shop Now',
+    priceText: 'Br 800',
+    ctaText: 'አሁን ይግዙ',
+    imageUrl: '/banners/banner-1.jpg',
     bgGradient: 'from-[#0f172a] via-[#1e293b] to-[#334155]',
     status: 'active',
     commissionRate: 25,
     durationDays: 30,
-    vendorName: 'Yirgacheffe Coffee Union',
+    vendorName: 'Trailblazers Official',
   },
   {
     id: 'hero-default-2',
     productId: 1,
-    title: 'Farm-Fresh Cow Milk (1 Liter)',
-    subtitle: 'Delivered directly to your doorstep every morning',
-    tagline: '🥛 Daily Smart Subscription',
-    priceText: 'Br 60 / liter • Save 15%',
-    ctaText: '📦 Subscribe Now',
+    title: 'Valentine’s Day Luxury Jewelry Gift',
+    subtitle: 'Special Gift Collection for Your Loved Ones',
+    tagline: '💎 Exclusive Holiday Gift',
+    priceText: 'Br 2,499',
+    ctaText: 'አሁን ይግዙ',
+    imageUrl: '/banners/banner-2.jpg',
     bgGradient: 'from-[#1e3a8a] via-[#2563eb] to-[#3b82f6]',
     status: 'active',
-    commissionRate: 20,
+    commissionRate: 25,
     durationDays: 14,
-    vendorName: 'Smart Shop Dairy',
+    vendorName: 'Smart Jewelry Ethiopia',
   },
   {
     id: 'hero-default-3',
     productId: 2,
-    title: 'Brown Eggs (6-Pack Farm Fresh)',
-    subtitle: 'Organic & rich in vitamins • Zero breakage guarantee',
-    tagline: '⚡ Limited Time Offer',
-    priceText: 'Br 150 / pack',
-    ctaText: '🔥 Order Today',
+    title: 'Ethiopian Organic Coffee 1kg',
+    subtitle: '100% Yirgacheffe Arabica Beans • Direct from Farm',
+    tagline: '☕ Premium Roast',
+    priceText: 'Br 850',
+    ctaText: 'አሁን ይግዙ',
+    imageUrl: '/banners/banner-3.jpg',
     bgGradient: 'from-[#7c2d12] via-[#9a3412] to-[#ea580c]',
     status: 'active',
     commissionRate: 25,
     durationDays: 7,
-    vendorName: 'Smart Shop Farm',
+    vendorName: 'Yirgacheffe Coffee Union',
   },
   {
     id: 'hero-default-4',
     productId: 6,
-    title: 'Pure Ethiopian Honey (500g)',
-    subtitle: 'Raw, unfiltered forest honey from highland apiaries',
-    tagline: '🍯 Premium Harvest',
-    priceText: 'Br 600',
-    ctaText: '✨ View Special',
+    title: 'Farm-Fresh Dairy & Organic Harvest',
+    subtitle: 'Delivered directly to your doorstep every morning',
+    tagline: '🥛 Daily Smart Subscription',
+    priceText: 'Br 60 / liter',
+    ctaText: 'አሁን ይግዙ',
+    imageUrl: '/banners/banner-4.jpg',
     bgGradient: 'from-[#065f46] via-[#059669] to-[#10b981]',
     status: 'active',
     commissionRate: 25,
     durationDays: 30,
-    vendorName: 'Highland Honey Producers',
+    vendorName: 'Smart Shop Farm',
   }
+];
+
+const FALLBACK_BANNERS = [
+  '/banners/banner-1.jpg',
+  '/banners/banner-2.jpg',
+  '/banners/banner-3.jpg',
+  '/banners/banner-4.jpg'
 ];
 
 export function getHeroCarouselConfig(settings: AppSettings): HeroCarouselConfig {
   const cfg = settings.heroCarousel;
   const maxActiveAds = typeof cfg?.maxActiveAds === 'number' ? Math.max(7, cfg.maxActiveAds) : 12; // Enforce explicitly > 6 per user request
+  let ads = Array.isArray(cfg?.ads) && cfg.ads.length > 0 ? cfg.ads : DEFAULT_HERO_ADS;
+  // Ensure every ad has a high-quality background picture URL
+  ads = ads.map((ad, idx) => ({
+    ...ad,
+    imageUrl: ad.imageUrl || FALLBACK_BANNERS[idx % FALLBACK_BANNERS.length],
+  }));
   return {
     slideDuration: typeof cfg?.slideDuration === 'number' ? cfg.slideDuration : 6,
     maxActiveAds,
@@ -69,7 +86,7 @@ export function getHeroCarouselConfig(settings: AppSettings): HeroCarouselConfig
     allowedDurations: Array.isArray(cfg?.allowedDurations) && cfg.allowedDurations.length > 0
       ? cfg.allowedDurations
       : [3, 7, 14, 30, 90],
-    ads: Array.isArray(cfg?.ads) && cfg.ads.length > 0 ? cfg.ads : DEFAULT_HERO_ADS,
+    ads,
   };
 }
 
