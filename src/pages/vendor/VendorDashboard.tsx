@@ -17,6 +17,7 @@ import {
   Heart, Share2, ChevronDown, MessageCircle, Video, ExternalLink, Loader
 } from 'lucide-react';
 import { parseSerializedName } from '@/lib/groupBuying';
+import { sendAdminTelegram } from '@/lib/adminNotifier';
 import ProductStudio from '@/components/admin/ProductStudio';
 
 function compressImage(base64Str: string, maxWidth: number = 800): Promise<string> {
@@ -1022,6 +1023,14 @@ function VendorPayoutsView({ stats }: { stats: any }) {
     localStorage.setItem('ss_vendor_payouts', JSON.stringify(updated));
     setPayouts(updated);
     toast('✅ Payout requested! Admin has been notified.', 'success');
+    sendAdminTelegram(
+      `💰 <b>New Vendor Payout Request</b>\n\n` +
+      `Vendor ID: #${vendorId}\n` +
+      `Amount: ${formatPrice(p.amount)}\n` +
+      `Method: ${payoutMethod}\n` +
+      `Destination: ${payoutDetails}\n\n` +
+      `Review in Admin Control Panel: https://smartshop-steel.vercel.app/admin-panel`
+    );
   };
 
   return (

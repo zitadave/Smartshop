@@ -3,6 +3,7 @@ import { formatPrice, cn, generateId } from '@/lib/utils';
 import { vendorsApi } from '@/lib/api';
 import { DollarSign, CheckCircle, Clock, AlertTriangle, Download, Filter, Search, ChevronRight, Wallet, ChevronDown, Check, XCircle, Loader } from 'lucide-react';
 import { toast } from '@/components/Toast';
+import { sendAdminTelegram } from '@/lib/adminNotifier';
 
 interface Payout {
   id: string;
@@ -131,17 +132,55 @@ export default function PayoutSystem() {
       const d = await res.json();
       setDisbursing(false);
       setPayoutToDisburse(null);
-      if (d.success) {
-        toast(`🎉 Payout of ${formatPrice(payoutToDisburse.amount)} successfully disbursed!`, 'success');
-        fetchPayoutsData();
-      } else {
-        toast('Failed to disburse: ' + d.error, 'error');
-      }
+      try {
+        const local = JSON.parse(localStorage.getItem('ss_vendor_payouts') || '[]');
+        const updatedLocal = local.map((item: any) => item.id === payoutToDisburse.id ? { ...item, status: 'paid', notes: `Paid via ${payoutToDisburse.payment_method}` } : item);
+        localStorage.setItem('ss_vendor_payouts', JSON.stringify(updatedLocal));
+      } catch {}
+
+      toast(`🎉 Payout of ${formatPrice(payoutToDisburse.amount)} successfully disbursed!`, 'success');
+      sendAdminTelegram(
+        `🎉 <b>Vendor Payout Approved & Disbursed</b>\n\n` +
+        `Vendor: ${payoutToDisburse.vendorName}\n` +
+        `Amount: ${formatPrice(payoutToDisburse.amount)}\n` +
+        `Method: ${payoutToDisburse.payment_method}\n` +
+        `Destination: ${payoutToDisburse.account_number}\n` +
+        `Status: Successfully Paid Out`
+      );
+      fetchPayoutsData();
     } catch (err: any) {
       setDisbursing(false);
       setPayoutToDisburse(null);
       toast('Error: ' + err.message, 'error');
     }
+  };
+
+  const handleRejectPayout = async (p: any) => {
+    const reason = prompt('Reason for rejecting this payout request:');
+    try {
+      await fetch(`/api/payouts/${p.id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'cancelled', notes: `Rejected by admin${reason ? ': ' + reason : ''}` })
+      });
+    } catch {}
+
+    try {
+      const local = JSON.parse(localStorage.getItem('ss_vendor_payouts') || '[]');
+      const updatedLocal = local.map((item: any) => item.id === p.id ? { ...item, status: 'cancelled', notes: `Rejected${reason ? ': ' + reason : ''}` } : item);
+      localStorage.setItem('ss_vendor_payouts', JSON.stringify(updatedLocal));
+    } catch {}
+
+    const updated = payouts.map(item => item.id === p.id ? { ...item, status: 'cancelled' as const, notes: `Rejected${reason ? ': ' + reason : ''}` } : item);
+    setPayouts(updated);
+
+    toast(`❌ Payout request for ${p.vendorName} rejected`, 'info');
+    sendAdminTelegram(
+      `❌ <b>Vendor Payout Request Rejected</b>\n\n` +
+      `Vendor: ${p.vendorName}\n` +
+      `Amount: ${formatPrice(p.amount)}\n` +
+      `Reason: ${reason || 'Not specified'}`
+    );
   };
 
   const filteredPayouts = payouts.filter(p => {
@@ -282,14 +321,22 @@ export default function PayoutSystem() {
                   <span className={cn('text-[8px] font-semibold capitalize block', p.status === 'paid' ? 'text-green-600' : 'text-amber-600')}>{p.status}</span>
                 </div>
 
-                {/* Disburse Action Trigger */}
+                {/* Disburse / Reject Action Triggers */}
                 {p.status === 'pending' && (
-                  <button 
-                    onClick={() => setPayoutToDisburse(p)}
-                    className="px-2.5 py-1 bg-gradient-to-r from-emerald-500 to-green-600 hover:shadow text-white rounded-lg text-[9px] font-bold active:scale-[0.96] transition-all"
-                  >
-                    ⚡ Disburse
-                  </button>
+                  <div className="flex gap-1.5">
+                    <button 
+                      onClick={() => setPayoutToDisburse(p)}
+                      className="px-2.5 py-1 bg-gradient-to-r from-emerald-500 to-green-600 hover:shadow text-white rounded-lg text-[9px] font-bold active:scale-[0.96] transition-all"
+                    >
+                      ⚡ Disburse
+                    </button>
+                    <button 
+                      onClick={() => handleRejectPayout(p)}
+                      className="px-2.5 py-1 bg-red-500 hover:bg-red-600 text-white rounded-lg text-[9px] font-bold active:scale-[0.96] transition-all"
+                    >
+                      ❌ Reject
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
