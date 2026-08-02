@@ -224,9 +224,12 @@ export default function AdminLayout() {
     (function() {
       try {
         const adminUsers = JSON.parse(localStorage.getItem('ss_admin_users') || '[]');
-        return adminUsers.some(function(u: any) { 
+        const cloudAdmins = (store.settings as any).adminUsers || [];
+        const allAdmins = [...adminUsers, ...cloudAdmins];
+        return allAdmins.some(function(u: any) { 
           return u.status === 'active' && 
-            (u.telegramId === profile.telegramId || u.telegramId === String(profile.telegramId));
+            (u.telegramId === profile.telegramId || u.telegramId === String(profile.telegramId) ||
+             (profile.phone && u.phone && u.phone === profile.phone));
         });
       } catch(e) {
         return false;

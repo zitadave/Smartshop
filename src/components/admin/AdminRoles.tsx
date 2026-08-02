@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useStore } from '@/stores/AppStore';
+import { settingsApi } from '@/lib/api';
 import { cn, generateId } from '@/lib/utils';
 import { Shield, User, Users, Key, Lock, CheckCircle, XCircle, Plus, Trash2, Save, ChevronRight, Eye, Edit3, Settings as SettingsIcon } from 'lucide-react';
 import { toast } from '@/components/Toast';
@@ -38,17 +40,30 @@ const PERMISSION_LABELS: Record<string, string> = {
 };
 
 export default function AdminRoles() {
+  const { settings, setSettings } = useStore();
   const [roles, setRoles] = useState<Role[]>(() => {
     try { return JSON.parse(localStorage.getItem('ss_admin_roles') || '[]'); } catch { return []; }
   });
   const [users, setUsers] = useState<AdminUser[]>(() => {
-    try { return JSON.parse(localStorage.getItem('ss_admin_users') || '[]'); } catch { return []; }
+    try {
+      const local = JSON.parse(localStorage.getItem('ss_admin_users') || '[]');
+      if (local.length > 0) return local;
+      return (settings as any).adminUsers || [];
+    } catch {
+      return (settings as any).adminUsers || [];
+    }
   });
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [showNewUser, setShowNewUser] = useState(false);
 
   const saveRoles = (r: Role[]) => { localStorage.setItem('ss_admin_roles', JSON.stringify(r)); setRoles(r); };
-  const saveUsers = (u: AdminUser[]) => { localStorage.setItem('ss_admin_users', JSON.stringify(u)); setUsers(u); };
+  const saveUsers = (u: AdminUser[]) => {
+    localStorage.setItem('ss_admin_users', JSON.stringify(u));
+    setUsers(u);
+    const updatedSettings = { ...settings, adminUsers: u };
+    setSettings(updatedSettings as any);
+    settingsApi.update(updatedSettings);
+  };
 
   // Seed default roles
   if (roles.length === 0) {
