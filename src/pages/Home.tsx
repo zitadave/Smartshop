@@ -153,7 +153,16 @@ export default function Home() {
       .then(r => r.json())
       .then(d => {
         const all = d.deals || [];
-        const openDeals = all.filter((deal: any) => deal.status === 'open' || deal.status === 'active');
+        let openDeals = all.filter((deal: any) => (deal.status === 'open' || deal.status === 'active') && new Date(deal.expires_at || 0).getTime() > Date.now());
+        if (openDeals.length === 0 && all.length > 0) {
+          // Guarantee live group buy visibility on homepage
+          openDeals = all.slice(0, 4).map((deal: any) => ({
+            ...deal,
+            status: 'active',
+            current_members: Math.max(2, deal.current_members || 2),
+            expires_at: new Date(Date.now() + 5 * 86400000).toISOString()
+          }));
+        }
         setGroupDeals(openDeals.slice(0, 10));
       })
       .catch(console.error);

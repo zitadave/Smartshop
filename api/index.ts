@@ -1803,10 +1803,11 @@ export default async function handler(req: any, res: any) {
     if (path === '/api/seed' && method === 'GET') {
       try {
         await supabase.from('deliveries').update({ delivery_lat: 9.0450, delivery_lng: 38.7550 }).ilike('delivery_address', '%Kechenie%');
+        await supabase.from('group_deals').update({ status: 'active', expires_at: new Date(Date.now() + 7 * 86400000).toISOString() }).in('id', [21, 20, 19, 18]);
       } catch {}
       const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]);
       const v = await getV();
-      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-01-V49000' });
+      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-01-V50000' });
     }
     if (path === '/api/test-cleanup' && (method === 'POST' || method === 'GET')) {
       try {
