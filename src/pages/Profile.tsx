@@ -322,7 +322,14 @@ export default function Profile() {
         </div>
       </div>
 
-      <p className="text-center text-[9px] text-muted-foreground pb-4">🏪 Smart Shop</p>
+      <div className="flex items-center justify-center gap-1.5 pb-4 text-[10px] text-muted-foreground font-semibold">
+        {(store.settings as any)?.platformLogo ? (
+          <img src={(store.settings as any).platformLogo} alt="Logo" className="w-4 h-4 rounded-md object-cover" />
+        ) : (
+          <span>🏪</span>
+        )}
+        <span>{(store.settings as any)?.platformName || 'Smart Shop'}</span>
+      </div>
 
       {/* Edit Modal */}
       {showEdit && (

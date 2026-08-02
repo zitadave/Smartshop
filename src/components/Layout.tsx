@@ -23,7 +23,7 @@ export default function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
   const social = detectSocialEnvironment();
-  const { language, darkMode, setDarkMode, getCartCount, wishlist } = useStore();
+  const { language, darkMode, setDarkMode, getCartCount, wishlist, settings } = useStore();
   const cartCount = getCartCount();
   const wishlistCount = wishlist.length;
 
@@ -40,10 +40,14 @@ export default function Layout() {
       <header className={cn("fixed top-0 left-0 right-0 h-14 z-50 glass-strong border-b border-border/40", social.safeAreaTopClass)}>
         <div className="max-w-2xl mx-auto h-full flex items-center px-4 gap-2">
           <div className="flex items-center gap-3 flex-1 cursor-pointer group" onClick={() => navigate('/')}>
-            <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-primary to-blue-600 text-white flex items-center justify-center text-lg shadow-lg shadow-primary/20 group-hover:shadow-xl group-hover:scale-105 transition-all duration-300">🏪</div>
+            {(settings as any)?.platformLogo ? (
+              <img src={(settings as any).platformLogo} alt="Logo" className="w-9 h-9 rounded-2xl object-cover shadow-lg shadow-primary/20 group-hover:shadow-xl group-hover:scale-105 transition-all duration-300 border border-border" />
+            ) : (
+              <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-primary to-blue-600 text-white flex items-center justify-center text-lg shadow-lg shadow-primary/20 group-hover:shadow-xl group-hover:scale-105 transition-all duration-300">🏪</div>
+            )}
             <div className="hidden sm:block">
-              <div className="text-sm font-bold leading-tight text-foreground tracking-tight">{t('appName', language)}</div>
-              <div className="text-[7px] text-muted-foreground/60 uppercase tracking-[0.2em] font-medium">{t('appSub', language)}</div>
+              <div className="text-sm font-bold leading-tight text-foreground tracking-tight">{(settings as any)?.platformName || t('appName', language)}</div>
+              <div className="text-[7px] text-muted-foreground/60 uppercase tracking-[0.2em] font-medium">{(settings as any)?.platformSub || t('appSub', language)}</div>
             </div>
           </div>
 

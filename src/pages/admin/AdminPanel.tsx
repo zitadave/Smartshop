@@ -1897,6 +1897,23 @@ function AdminSettings() {
   const [newVendKey, setNewVendorKey] = useState('');
   const [newVendVal, setNewVendorVal] = useState('');
   const [priceAlertEnabled, setPriceAlertEnabled] = useState(settings.priceAlertEnabled !== false);
+  const [platformLogoUrl, setPlatformLogoUrl] = useState(settings.platformLogo || '');
+  const [platformName, setPlatformName] = useState(settings.platformName || 'Smart Shop');
+  const [platformSub, setPlatformSub] = useState(settings.platformSub || 'Smart Marketplace');
+
+  const handleLogoUpload = (e: any) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      toast('⏳ Optimizing platform logo...', 'info');
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPlatformLogoUrl(reader.result as string);
+        saveSetting('platformLogo', reader.result as string);
+        toast('✅ Platform logo updated and saved!', 'success');
+      };
+      reader.readAsDataURL(file);
+    }
+  };
   const saveSetting = (key: string, val: any) => { const updated = { ...settings, [key]: val }; setSettings(updated as any); settingsApi.update(updated); };
   const gameSettings = (settings as any)?.gameSettings || {};
   const wheelSegments = (settings as any)?.wheelSegments || [];
@@ -1939,6 +1956,74 @@ function AdminSettings() {
   return (
     <div className="animate-fadeUp space-y-4">
       <h2 className="text-lg font-bold flex items-center gap-2"><SettingsIcon size={20} /> Settings</h2>
+
+      {/* Platform Branding & Logo Customizer */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4" data-admin-card>
+        <h3 className="text-sm font-bold mb-1 flex items-center gap-2">
+          <Store size={18} className="text-indigo-500" /> Platform Branding & Logo
+        </h3>
+        <p className="text-[10px] text-slate-500 mb-4">
+          Customize the platform logo, name, and subtitle shown across the customer header, sidebar, and footer.
+        </p>
+
+        <div className="grid sm:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">Platform Logo</label>
+            <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-800">
+              {platformLogoUrl ? (
+                <img src={platformLogoUrl} alt="Logo Preview" className="w-12 h-12 rounded-xl object-cover shadow-md border" />
+              ) : (
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-blue-600 text-white flex items-center justify-center text-xl shadow-md font-bold">
+                  🏪
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <label className="inline-block px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-[10px] font-bold cursor-pointer hover:bg-indigo-700 transition-colors shadow-sm">
+                  Upload Logo File
+                  <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+                </label>
+                <div className="text-[9px] text-slate-400 mt-1">Or paste URL below</div>
+              </div>
+            </div>
+            <input
+              type="text"
+              placeholder="Paste image URL (https://...)"
+              className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-foreground"
+              value={platformLogoUrl}
+              onChange={(e) => {
+                setPlatformLogoUrl(e.target.value);
+                saveSetting('platformLogo', e.target.value);
+              }}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">Platform Name</label>
+            <input
+              type="text"
+              className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-foreground font-bold"
+              value={platformName}
+              onChange={(e) => setPlatformName(e.target.value)}
+              onBlur={() => saveSetting('platformName', platformName)}
+              placeholder="e.g. Smart Shop"
+            />
+            <p className="text-[9px] text-slate-400">Replaces default app title in navbar</p>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">Platform Subtitle</label>
+            <input
+              type="text"
+              className="w-full p-3 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-foreground"
+              value={platformSub}
+              onChange={(e) => setPlatformSub(e.target.value)}
+              onBlur={() => saveSetting('platformSub', platformSub)}
+              placeholder="e.g. Smart Marketplace"
+            />
+            <p className="text-[9px] text-slate-400">Shown under platform name</p>
+          </div>
+        </div>
+      </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
         <h3 className="text-sm font-bold mb-3">💰 Commission & Delivery</h3>

@@ -25,7 +25,15 @@ export default function Storefront() {
 
   const vendorInfo = useMemo(() => {
     const p = products.find(pr => pr.vendorId === vid);
-    if (!p) return { name: 'Unknown Shop', description: '', productCount: 0, totalSold: 0, avgRating: 0 };
+    let logo = '';
+    let backgroundImage = '';
+    try {
+      const vs = JSON.parse(localStorage.getItem('ss_vendor_settings') || '{}');
+      if (vs.logo) logo = vs.logo;
+      if (vs.backgroundImage) backgroundImage = vs.backgroundImage;
+    } catch {}
+
+    if (!p) return { name: 'Unknown Shop', description: '', productCount: 0, totalSold: 0, avgRating: 0, logo, backgroundImage };
     return {
       name: p.vendorName || 'Shop',
       description: p.description || '',
@@ -34,6 +42,8 @@ export default function Storefront() {
       avgRating: vendorProducts.length > 0
         ? vendorProducts.reduce((s, pr) => s + (pr.rating || 0), 0) / vendorProducts.length
         : 0,
+      logo,
+      backgroundImage
     };
   }, [products, vid, vendorProducts]);
 
@@ -71,18 +81,27 @@ export default function Storefront() {
   return (
     <div className="pb-8 animate-fadeUp">
       {/* Cover Header */}
-      <div className="bg-gradient-to-br from-primary via-blue-700 to-indigo-900 text-white px-5 pt-14 pb-6 relative overflow-hidden">
-        <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/[0.03] animate-float" />
-        <div className="absolute -bottom-8 -left-8 w-28 h-28 rounded-full bg-white/[0.02] animate-float" style={{ animationDelay: '1s' }} />
+      <div className="relative overflow-hidden text-white px-5 pt-14 pb-6 bg-slate-900">
+        {vendorInfo.backgroundImage ? (
+          <img src={vendorInfo.backgroundImage} alt="Store Banner" className="absolute inset-0 w-full h-full object-cover opacity-50" />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-primary via-blue-700 to-indigo-900" />
+        )}
+        <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/[0.03] animate-float pointer-events-none" />
+        <div className="absolute -bottom-8 -left-8 w-28 h-28 rounded-full bg-white/[0.02] animate-float pointer-events-none" style={{ animationDelay: '1s' }} />
         
         <button className="relative z-10 mb-4 w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors" onClick={() => navigate(-1)}>
           <ArrowLeft size={18} />
         </button>
 
         <div className="relative z-10 flex items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center text-3xl shadow-lg flex-shrink-0">
-            🏪
-          </div>
+          {vendorInfo.logo ? (
+            <img src={vendorInfo.logo} alt="Store Logo" className="w-16 h-16 rounded-2xl object-cover shadow-xl border-2 border-white/30 flex-shrink-0 bg-white" />
+          ) : (
+            <div className="w-16 h-16 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center text-3xl shadow-lg flex-shrink-0">
+              🏪
+            </div>
+          )}
           <div className="flex-1 min-w-0">
             <h1 className="text-xl font-extrabold tracking-tight">{vendorInfo.name}</h1>
             {vendorInfo.description && (
