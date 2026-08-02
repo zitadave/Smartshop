@@ -36,8 +36,8 @@ function SubscriptionSection({ onNavigate }: { onNavigate: (path: string) => voi
     <section className="mt-4 animate-fadeUp">
       <SectionHeader
         icon={<Package size={15} className="text-white" />}
-        title="📦 Daily Subscriptions"
-        subtitle="Auto-delivery. Save up to 15%"
+        title="📦 Smart Subscriptions (Daily, Weekly & Monthly)"
+        subtitle="Auto-delivery on your schedule • Save up to 15%"
         gradient="bg-gradient-to-br from-blue-500 to-indigo-600"
         action={
           <button className="text-[10px] text-primary font-semibold flex items-center gap-1 opacity-60 hover:opacity-100 transition-opacity"
@@ -242,6 +242,27 @@ export default function Home() {
   return (
     <div className="pb-6">
       <PullToRefresh onRefresh={handleRefresh}>
+      {/* 1. TOP CATEGORY RIBBON — ALWAYS ABOVE HERO BANNER */}
+      <div className="px-4 pt-3 pb-2.5 bg-background/95 backdrop-blur-sm border-b border-border/40 sticky top-0 z-30">
+        <div className="flex gap-2 overflow-x-auto scrollbar-none snap-x">
+          {[...CATEGORIES, ...((settings as any).customCategories || [])].map(cat => (
+            <button key={cat.id}
+              className={cn('flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap border transition-all duration-300 flex-shrink-0 snap-start',
+                activeCat === cat.id
+                  ? 'bg-primary text-white border-primary shadow-md shadow-primary/25 scale-105'
+                  : 'bg-card text-muted-foreground/80 border-border/60 hover:border-primary/40 hover:text-primary hover:bg-primary/5'
+              )}
+              onClick={() => handleCatClick(cat.id)}
+              aria-label={`Browse ${cat.label} category`}
+            >
+              <span className="text-sm">{cat.icon}</span>
+              <span>{cat.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 2. LANDSCAPE HORIZONTAL HERO CAROUSEL */}
       <Hero productCount={products.length} topRating={topRating} />
 
       {/* Best Seller & On Sale - HALF ON Hero section, HALF OUTSIDE Hero section */}
@@ -371,24 +392,7 @@ export default function Home() {
         wishAnim={wishAnim}
       />
 
-      <div className="px-4 py-4">
-        <div className="flex gap-2.5 overflow-x-auto scrollbar-none snap-x">
-          {[...CATEGORIES, ...((settings as any).customCategories || [])].map(cat => (
-            <button key={cat.id}
-              className={cn('flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-medium whitespace-nowrap border transition-all duration-300 flex-shrink-0 snap-start hover-lift',
-                activeCat === cat.id
-                  ? 'bg-primary text-white border-primary shadow-xl shadow-primary/20 scale-105'
-                  : 'bg-card text-muted-foreground/70 border-border/60 hover:border-primary/30 hover:text-primary hover:bg-primary/5'
-              )}
-              onClick={() => handleCatClick(cat.id)}
-              aria-label={`Browse ${cat.label} category`}
-            >
-              <span className="text-sm">{cat.icon}</span>
-              <span>{cat.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+
 
       {recommendations.length > 0 && (
         <section className="animate-fadeUp">

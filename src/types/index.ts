@@ -125,6 +125,33 @@ export interface DigitalReceipt {
   storeAddress: string;
 }
 
+export interface HeroAd {
+  id: string;
+  productId?: number;
+  title: string;
+  subtitle?: string;
+  tagline?: string;
+  priceText?: string;
+  ctaText?: string;
+  bgGradient?: string;
+  imageUrl?: string;
+  status: 'active' | 'pending' | 'paused' | 'expired';
+  commissionRate?: number; // e.g. 25 for 25%
+  durationDays?: number; // e.g. 7, 14, 30, 90
+  startDate?: string;
+  endDate?: string;
+  vendorId?: string;
+  vendorName?: string;
+}
+
+export interface HeroCarouselConfig {
+  slideDuration: number; // in seconds (e.g. 6)
+  maxActiveAds: number; // e.g. 12 (> 6)
+  defaultCommissionRate: number; // e.g. 25%
+  allowedDurations: number[]; // e.g. [3, 7, 14, 30, 90]
+  ads?: HeroAd[];
+}
+
 export interface FlashDeal {
   productId: number;
   endTime: number; // timestamp
@@ -175,6 +202,10 @@ export interface AppSettings {
   /** Price drop alert settings */
   priceAlertEnabled?: boolean;
   priceAlertCheckInterval?: number; // minutes
+  /** Hero Carousel & Prime Ad Slots */
+  heroCarousel?: HeroCarouselConfig;
+  /** Custom Categories */
+  customCategories?: Category[];
 }
 
 export interface Profile {

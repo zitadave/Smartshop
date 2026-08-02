@@ -1184,9 +1184,25 @@ function VendorNotificationsView() {
 }
 
 function VendorPromotionsView() {
-  const [tab, setTab] = useState<"flashstudio" | "request" | "active" | "groupbuys" | "slots">("flashstudio");
+  const [tab, setTab] = useState<"herostudio" | "flashstudio" | "request" | "active" | "groupbuys" | "slots">("herostudio");
   const store = useStore();
-  const { products } = store;
+  const { products, settings, setSettings } = store;
+  const heroConfig = settings.heroCarousel || {
+    slideDuration: 6,
+    maxActiveAds: 12,
+    defaultCommissionRate: 25,
+    allowedDurations: [3, 7, 14, 30, 90],
+    ads: [],
+  };
+  const activeHeroAdsCount = (heroConfig.ads || []).filter((a: any) => a.status === 'active').length;
+  const [heroTitle, setHeroTitle] = useState('');
+  const [heroSubtitle, setHeroSubtitle] = useState('');
+  const [heroTagline, setHeroTagline] = useState('🌟 Featured Partner Special');
+  const [heroPriceText, setHeroPriceText] = useState('');
+  const [heroDuration, setHeroDuration] = useState(heroConfig.allowedDurations?.[0] || 7);
+  const [heroBgGradient, setHeroBgGradient] = useState('from-[#0f172a] via-[#1e293b] to-[#334155]');
+  const [heroProductId, setHeroProductId] = useState('');
+
   const vendorId = parseInt(localStorage.getItem('ss_vendor_app_id') || '') || 1;
   const vendorProducts = products.filter(p => p.vendorId === vendorId || !p.vendorId);
   const vendorName = vendorProducts[0]?.vendorName || 'My Store';
@@ -1363,11 +1379,244 @@ function VendorPromotionsView() {
       <p className="text-[10px] text-slate-500">Create promotions to boost your sales. Platform commission is calculated on the actual discounted selling price.</p></div>
 
       <div className="flex gap-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl p-0.5 w-fit flex-wrap">
-        {[["flashstudio","⚡ Flash Deal Studio"],["request","✍️ Request"],["active","✅ Active"],["groupbuys","🤝 Group Buys"],["slots","💎 Slots"]].map(([t, l]) => (
+        {[["herostudio","🌟 Hero Ad Studio"],["flashstudio","⚡ Flash Deal Studio"],["request","✍️ Request"],["active","✅ Active"],["groupbuys","🤝 Group Buys"],["slots","💎 Slots"]].map(([t, l]) => (
           <button key={t} className={cn("px-3 py-1.5 rounded-lg text-[9px] font-semibold transition-all", tab === t ? "bg-white dark:bg-slate-700 shadow-sm" : "text-slate-500")}
             onClick={() => setTab(t as any)}>{l}</button>
         ))}
       </div>
+
+      {tab === "herostudio" && (
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-5">
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 flex-wrap gap-2">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                <Sparkles size={16} className="text-amber-500" /> 🌟 Hero Banner Ad Studio
+              </h3>
+              <p className="text-[10px] text-slate-500">
+                Showcase your products on the customer homepage auto-sliding landscape carousel
+              </p>
+            </div>
+            <span className="text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-400 px-3 py-1 rounded-full font-extrabold border border-amber-500/20">
+              {activeHeroAdsCount} / {heroConfig.maxActiveAds || 12} Slots Currently Active
+            </span>
+          </div>
+
+          {/* 1. DYNAMIC UPFRONT TRANSPARENCY NOTICE BOX */}
+          <div className="bg-gradient-to-r from-amber-500/10 via-indigo-500/10 to-purple-500/10 border border-amber-400/30 rounded-2xl p-4 text-xs space-y-2">
+            <div className="font-extrabold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+              <span>📢 Prime Homepage Hero Banner Ad Terms (Dynamically set by Admin):</span>
+            </div>
+            <ul className="text-[10px] text-slate-600 dark:text-slate-300 space-y-1 pl-4 list-disc">
+              <li>
+                <strong>Special Commission Rate:</strong> <span className="text-emerald-600 font-extrabold">{heroConfig.defaultCommissionRate || 25}%</span> applied to all orders placed while this ad is active.
+              </li>
+              <li>
+                <strong>Display Time per View:</strong> Each ad is displayed for <span className="text-indigo-600 font-extrabold">{heroConfig.slideDuration || 6} seconds</span> in the automatic landscape rotation.
+              </li>
+              <li>
+                <strong>Available Capacity:</strong> <span className="font-bold">{activeHeroAdsCount} of {heroConfig.maxActiveAds || 12} slots</span> filled. Up to {heroConfig.maxActiveAds || 12} total slides allowed.
+              </li>
+              <li>
+                <strong>High Visibility:</strong> Guaranteed prominent top-of-homepage placement across all customer mobile &amp; desktop screens.
+              </li>
+            </ul>
+          </div>
+
+          {/* 2. LIVE LANDSCAPE BANNER PREVIEW */}
+          <div className="space-y-1.5">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+              👁️ Live Customer Homepage Banner Preview
+            </span>
+            <div className={`rounded-2xl bg-gradient-to-br ${heroBgGradient} p-6 text-white text-center shadow-lg border border-white/10 relative overflow-hidden`}>
+              <div className="inline-flex items-center gap-2 px-3 py-0.5 rounded-full bg-white/10 backdrop-blur-md text-[9px] font-bold tracking-wide mb-2 border border-white/15">
+                <Sparkles size={11} className="text-amber-300" />
+                <span>{heroTagline || '🌟 Featured Partner Special'}</span>
+              </div>
+              <h4 className="text-lg sm:text-xl font-extrabold mb-1 tracking-tight leading-tight">
+                {heroTitle || 'Ethiopian Organic Coffee 1kg'}
+              </h4>
+              <p className="text-xs text-white/80 mb-2 max-w-sm mx-auto">
+                {heroSubtitle || '100% Yirgacheffe Beans • Direct from Farm'}
+              </p>
+              {heroPriceText && (
+                <div className="inline-block px-3 py-1 rounded-lg bg-amber-500/20 border border-amber-400/40 text-amber-200 text-[10px] font-extrabold mb-3">
+                  {heroPriceText}
+                </div>
+              )}
+              <div>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 px-6 py-2 bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 text-slate-950 rounded-xl text-xs font-black shadow-lg"
+                >
+                  <span>🛍️ Shop Now</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. SELF-SERVE HERO AD FORM */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 border-t border-slate-100 dark:border-slate-800 pt-4">
+            <div className="sm:col-span-2">
+              <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">
+                Select Product to Advertise *
+              </label>
+              <select
+                value={heroProductId}
+                onChange={e => {
+                  const pid = e.target.value;
+                  setHeroProductId(pid);
+                  const prod = vendorProducts.find(p => String(p.id) === pid);
+                  if (prod) {
+                    setHeroTitle(prod.nameEn || prod.name);
+                    setHeroSubtitle(`Quality product by ${vendorName}`);
+                    setHeroPriceText(`Br ${prod.price}`);
+                  }
+                }}
+                className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-white dark:bg-slate-900 font-medium"
+              >
+                <option value="">Select a product from your store...</option>
+                {vendorProducts.map(p => (
+                  <option key={p.id} value={String(p.id)}>
+                    {p.nameEn} — {formatPrice(p.price)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">
+                Campaign Duration
+              </label>
+              <select
+                value={heroDuration}
+                onChange={e => setHeroDuration(Number(e.target.value))}
+                className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-white dark:bg-slate-900 font-bold"
+              >
+                {(heroConfig.allowedDurations || [3, 7, 14, 30, 90]).map((d: number) => (
+                  <option key={d} value={d}>
+                    {d === 7 ? '7 Days (1 Week)' : d === 14 ? '14 Days (2 Weeks)' : d === 30 ? '30 Days (1 Month)' : d === 90 ? '90 Days (3 Months)' : `${d} Days`}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">
+                Slide Title *
+              </label>
+              <input
+                type="text"
+                value={heroTitle}
+                onChange={e => setHeroTitle(e.target.value)}
+                placeholder="e.g. Ethiopian Organic Coffee 1kg"
+                className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-white dark:bg-slate-900"
+              />
+            </div>
+
+            <div>
+              <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">
+                Subtitle
+              </label>
+              <input
+                type="text"
+                value={heroSubtitle}
+                onChange={e => setHeroSubtitle(e.target.value)}
+                placeholder="e.g. 100% Yirgacheffe Beans • Direct from Farm"
+                className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-white dark:bg-slate-900"
+              />
+            </div>
+
+            <div>
+              <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">
+                Top Tagline Badge
+              </label>
+              <input
+                type="text"
+                value={heroTagline}
+                onChange={e => setHeroTagline(e.target.value)}
+                placeholder="🌟 Featured Partner Special"
+                className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-white dark:bg-slate-900"
+              />
+            </div>
+
+            <div>
+              <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">
+                Price / Offer Badge Text
+              </label>
+              <input
+                type="text"
+                value={heroPriceText}
+                onChange={e => setHeroPriceText(e.target.value)}
+                placeholder="Br 800 (Standard Br 950)"
+                className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-white dark:bg-slate-900"
+              />
+            </div>
+
+            <div>
+              <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">
+                Banner Color Theme
+              </label>
+              <select
+                value={heroBgGradient}
+                onChange={e => setHeroBgGradient(e.target.value)}
+                className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-white dark:bg-slate-900 font-semibold"
+              >
+                <option value="from-[#0f172a] via-[#1e293b] to-[#334155]">Midnight Slate</option>
+                <option value="from-[#1e3a8a] via-[#2563eb] to-[#3b82f6]">Royal Sapphire Blue</option>
+                <option value="from-[#7c2d12] via-[#9a3412] to-[#ea580c]">Warm Sunset Amber</option>
+                <option value="from-[#065f46] via-[#059669] to-[#10b981]">Emerald Forest Green</option>
+                <option value="from-[#4c1d95] via-[#6d28d9] to-[#8b5cf6]">Imperial Violet Purple</option>
+              </select>
+            </div>
+
+            <div className="sm:col-span-2 lg:col-span-3 flex justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (!heroTitle.trim() || !heroProductId) {
+                    toast('❌ Please select a product and enter a Title', 'error');
+                    return;
+                  }
+                  const newAd = {
+                    id: `hero-vendor-${Date.now()}`,
+                    productId: Number(heroProductId),
+                    title: heroTitle.trim(),
+                    subtitle: heroSubtitle.trim(),
+                    tagline: heroTagline.trim(),
+                    priceText: heroPriceText.trim(),
+                    ctaText: '🛍️ Shop Now',
+                    bgGradient: heroBgGradient,
+                    status: 'active' as const,
+                    commissionRate: heroConfig.defaultCommissionRate || 25,
+                    durationDays: heroDuration,
+                    vendorId: String(vendorId),
+                    vendorName: vendorName,
+                    startDate: new Date().toISOString(),
+                  };
+                  const existingAds = heroConfig.ads || [];
+                  const updatedAds = [newAd, ...existingAds];
+                  const updatedSettings = {
+                    ...settings,
+                    heroCarousel: {
+                      ...heroConfig,
+                      ads: updatedAds,
+                    },
+                  };
+                  setSettings(updatedSettings as any);
+                  settingsApi.update(updatedSettings);
+                  setHeroTitle('');
+                  setHeroSubtitle('');
+                  setHeroProductId('');
+                  toast('🎉 Hero Banner Ad submitted & published to customer homepage!', 'success');
+                }}
+                className="px-8 py-3 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-slate-950 rounded-xl text-xs font-black shadow-lg hover:shadow-xl transition-all"
+              >
+                🚀 Submit &amp; Launch Hero Banner Ad ({heroDuration} Days • {heroConfig.defaultCommissionRate || 25}% Commission)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {tab === "flashstudio" && (
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 space-y-4">

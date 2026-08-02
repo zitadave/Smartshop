@@ -42,8 +42,9 @@ import { sendAdminTelegram, notifyProductCreated, notifyProductUpdated, notifyPr
 import AdminDeliveryTab from './AdminDeliveryTab';
 import AdminGroupBuyTab from './AdminGroupBuyTab';
 import AdminSubscriptionsTab from './AdminSubscriptionsTab';
+import AdminHeroSlots from './AdminHeroSlots';
 
-type Tab = 'overview' | 'products' | 'orders' | 'vendors' | 'delivery' | 'marketplace' | 'reviews' | 'subscriptions' | 'groupbuy' 
+type Tab = 'overview' | 'heroslots' | 'products' | 'orders' | 'vendors' | 'delivery' | 'marketplace' | 'reviews' | 'subscriptions' | 'groupbuy' 
   | 'broadcast' | 'flashdeals' | 'preorders' | 'tracking' | 'themes' | 'coupons' 
   | 'settings' | 'alerts' | 'abandoned' | 'roles' | 'backup' 
   | 'bulkProducts' | 'analytics' | 'forecast' | 'activity' | 'security' | 'telegram' 
@@ -111,8 +112,9 @@ export default function AdminLayout() {
       icon: Zap,
       label: '5. Promotions & Deals',
       desc: 'All promotional campaigns, feature cards & social commerce',
-      defaultTab: 'marketplace',
+      defaultTab: 'heroslots',
       tabs: [
+        { id: 'heroslots', label: '🌟 Hero Ad Slots & Carousel' },
         { id: 'marketplace', label: '🏆 Homepage Feature Cards' },
         { id: 'flashdeals', label: '⚡ Flash Deals Manager' },
         { id: 'groupbuy', label: '🤝 Group Buy (ማህበር)' },
@@ -281,6 +283,7 @@ export default function AdminLayout() {
 
   const NAV_ITEMS: { id: Tab; icon: any; label: string }[] = [
     { id: 'overview', icon: LayoutDashboard, label: 'Overview' },
+    { id: 'heroslots', icon: Rocket, label: 'Hero Ad Slots' },
     { id: 'products', icon: Package, label: 'Products' },
     { id: 'orders', icon: ShoppingCart, label: 'Orders' },
     { id: 'vendors', icon: Store, label: 'Vendors' },
@@ -435,6 +438,7 @@ export default function AdminLayout() {
           </div>
 
           {tab === 'overview' && <Overview onNavigate={handleCmdNavigate} />}
+          {tab === 'heroslots' && <AdminHeroSlots />}
           {tab === 'products' && <AdminProducts />}
           {tab === 'orders' && <AdminOrders />}
           {tab === 'vendors' && <AdminVendors />}
