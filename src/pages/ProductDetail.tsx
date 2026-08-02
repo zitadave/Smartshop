@@ -352,6 +352,18 @@ export default function ProductDetail() {
             <button className={cn('py-3.5 px-4 rounded-2xl border text-sm transition-all', wis ? 'bg-destructive/10 border-destructive/30 text-destructive' : 'border-border text-muted-foreground hover:bg-muted')} onClick={() => toggleWishlist(product)}>
               {wis ? '❤️' : '♡'}
             </button>
+            <button
+              type="button"
+              className="py-3.5 px-3 rounded-2xl border border-pink-500/30 bg-pink-500/10 hover:bg-pink-500/20 text-pink-600 dark:text-pink-400 font-bold text-xs transition-all flex items-center gap-1"
+              onClick={() => {
+                const link = `${window.location.origin}/product/${product.id}?utm_source=tiktok`;
+                navigator.clipboard.writeText(link);
+                toast('🎵 TikTok share link copied!', 'success');
+              }}
+              title="Copy TikTok Share Link"
+            >
+              🎵 TikTok
+            </button>
             <button className="py-3.5 px-4 rounded-2xl border border-border text-muted-foreground hover:bg-muted transition-all" onClick={() => { const text = `Check out ${product.nameEn} at Smart Shop! ${formatPrice(product.price)}`; if (navigator.share) navigator.share({ title: product.nameEn, text }); else navigator.clipboard.writeText(text + ' ' + window.location.href); }}>
               <Share2 size={15} />
             </button>

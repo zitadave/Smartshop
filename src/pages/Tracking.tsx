@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { useStore } from '@/stores/AppStore';
 import { formatPrice, cn } from '@/lib/utils';
 import OrderTrackingMap from '@/components/features/OrderTrackingMap';
-import { MapPin, Search, Package, Truck } from 'lucide-react';
+import { MapPin, Search, Package, Truck, Loader } from 'lucide-react';
 
 export default function Tracking() {
   const { orders, orderTracking, setOrderTracking } = useStore();
   const [search, setSearch] = useState('');
   const [found, setFound] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
 
   useEffect(() => {
@@ -35,16 +36,45 @@ export default function Tracking() {
     }
   }, [orders]);
 
-  const lookup = () => {
-    const order = orders.find(o => 
-      o.orderNumber?.toLowerCase().includes(search.toLowerCase()) ||
-      o.customer?.phone?.includes(search)
+  const lookup = async () => {
+    const cleanSearch = search.trim();
+    if (!cleanSearch) return;
+    setLoading(true);
+
+    // 1. Check local orders first
+    const localMatch = orders.find(o => 
+      o.orderNumber?.toLowerCase().includes(cleanSearch.toLowerCase()) ||
+      o.customer?.phone?.includes(cleanSearch)
     );
-    if (order) {
-      setFound(order);
-    } else {
-      setFound({ error: true });
+    if (localMatch) {
+      setFound(localMatch);
+      setLoading(false);
+      return;
     }
+
+    // 2. Fallback: Query live Vercel /api/orders database for TikTok/Guest buyers
+    try {
+      const res = await fetch('/api/orders');
+      if (res.ok) {
+        const data = await res.json();
+        const serverOrders = data.orders || [];
+        const serverMatch = serverOrders.find((o: any) =>
+          o.orderNumber?.toLowerCase().includes(cleanSearch.toLowerCase()) ||
+          o.customer?.phone?.includes(cleanSearch) ||
+          o.phone?.includes(cleanSearch)
+        );
+        if (serverMatch) {
+          setFound(serverMatch);
+          setLoading(false);
+          return;
+        }
+      }
+    } catch {
+      // API error fallback
+    }
+
+    setFound({ error: true });
+    setLoading(false);
   };
 
   return (
@@ -64,8 +94,8 @@ export default function Tracking() {
             onChange={e => setSearch(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && lookup()}
           />
-          <button className="px-4 py-2 bg-primary text-white rounded-lg text-xs font-semibold" onClick={lookup}>
-            <Search size={16} />
+          <button className="px-4 py-2 bg-primary text-white rounded-lg text-xs font-semibold flex items-center justify-center disabled:opacity-50" onClick={lookup} disabled={loading}>
+            {loading ? <Loader size={16} className="animate-spin" /> : <Search size={16} />}
           </button>
         </div>
       </div>

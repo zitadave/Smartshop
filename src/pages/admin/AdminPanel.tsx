@@ -215,6 +215,51 @@ export default function AdminLayout() {
   const store = useStore();
   const globalDarkMode = store.darkMode;
 
+  const profile = store.profile;
+  const isAuthorizedAdmin = 
+    profile.telegramId === '336997351' || 
+    profile.telegramId === 336997351 ||
+    profile.role === 'admin' || 
+    profile.role === 'super_admin' ||
+    (function() {
+      try {
+        const adminUsers = JSON.parse(localStorage.getItem('ss_admin_users') || '[]');
+        return adminUsers.some(function(u: any) { 
+          return u.status === 'active' && 
+            (u.telegramId === profile.telegramId || u.telegramId === String(profile.telegramId));
+        });
+      } catch(e) {
+        return false;
+      }
+    })();
+
+  if (!isAuthorizedAdmin) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-6">
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 max-w-md w-full text-center shadow-2xl space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center text-3xl mx-auto shadow-inner">
+            🔒
+          </div>
+          <h2 className="text-xl font-bold tracking-tight">403 Forbidden</h2>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            Administrative Access Required. This control panel is restricted to verified platform administrators and security personnel.
+          </p>
+          <div className="pt-2">
+            <button
+              onClick={() => navigate('/')}
+              className="w-full py-3 bg-gradient-to-r from-primary to-blue-600 hover:opacity-95 text-white rounded-xl text-xs font-bold shadow-md transition-all active:scale-98 flex items-center justify-center gap-2"
+            >
+              ← Return to Storefront
+            </button>
+          </div>
+          <div className="text-[10px] text-slate-600 font-mono">
+            ID: {profile.telegramId || 'Anonymous Guest'} • Access Logged
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // NUCLEAR OPTION: Inject a <style> tag that overrides ALL admin panel styling
   // This covers layout (panel bg, sidebar, header) AND cards
   // CSS selectors match dynamically — all current and future elements

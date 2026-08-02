@@ -279,6 +279,21 @@ export default function Home() {
                   <div className="absolute top-1 left-1 z-10">
                     <FlashDealTimer endTime={deal?.endTime || 0} discount={deal?.discount} compact />
                   </div>
+                  <div className="absolute top-1 right-1 z-10">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const link = `${window.location.origin}/product/${p.id}?utm_source=tiktok`;
+                        navigator.clipboard.writeText(link);
+                        toast('🎵 Flash Deal TikTok link copied!', 'success');
+                      }}
+                      className="px-2 py-0.5 bg-pink-500/90 text-white rounded-full text-[8px] font-bold shadow-md hover:scale-105 transition-all flex items-center gap-0.5"
+                      title="Copy TikTok Share Link"
+                    >
+                      🎵 TikTok
+                    </button>
+                  </div>
                 </div>
               );
             })}
@@ -397,7 +412,19 @@ export default function Home() {
 
                   {/* Overlay Join Action CTA */}
                   <div className="mt-3 flex items-center justify-between text-[9px] text-slate-400 border-t border-slate-50 dark:border-slate-800 pt-2">
-                    <span className="truncate max-w-[100px]">By {deal.creator_name?.split(' ')[0] || 'Anonymous'}</span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const link = `${window.location.origin}/group-deal/${deal.share_token}?utm_source=tiktok`;
+                        navigator.clipboard.writeText(link);
+                        toast('🎵 Group Buy TikTok link copied! Share to unlock 25% off!', 'success');
+                      }}
+                      className="px-2 py-1 bg-pink-500/10 hover:bg-pink-500/20 text-pink-600 dark:text-pink-400 rounded-lg font-extrabold flex items-center gap-1 transition-all"
+                      title="Copy TikTok Share Link"
+                    >
+                      🎵 TikTok
+                    </button>
                     <span className="bg-green-100 text-green-600 dark:bg-green-950/40 dark:text-green-400 px-2 py-1 rounded-lg font-extrabold">
                       Join Group →
                     </span>
