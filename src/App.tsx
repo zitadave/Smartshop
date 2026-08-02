@@ -111,6 +111,19 @@ function TelegramStartParamHandler() {
   return null;
 }
 
+/**
+ * Global router scroll reset handler.
+ * Guarantees that ANY page, sub-page, modal view, or route in Smart Shop
+ * ALWAYS opens cleanly at (0, 0) top of window when navigated to.
+ */
+function ScrollToTopHandler() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [pathname]);
+  return null;
+}
+
 export default function App() {
   var { darkMode, setProducts, setSettings, settings, products, setProfile } = useStore();
 
@@ -192,6 +205,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <ScrollToTopHandler />
       <TelegramStartParamHandler />
       {TG && <TelegramBackButton />}
       <ToastContainer />
