@@ -88,6 +88,23 @@ export default function AffiliateProducts() {
     haptic('light');
   };
 
+  const copyTikTokLink = (product: any) => {
+    const baseUrl = window.location.origin;
+    const link = `${baseUrl}/product/${product.id}?ref=${userCode}&utm_source=tiktok`;
+    navigator.clipboard.writeText(link);
+    
+    const prod = productStats[product.id] || { clicks: 0, sales: 0, commission: 0 };
+    const newProdStats = { ...productStats, [product.id]: { ...prod, clicks: prod.clicks + 1 } };
+    const newTotals = { ...totalStats, clicks: totalStats.clicks + 1 };
+    setProductStats(newProdStats);
+    setTotalStats(newTotals);
+    saveStats(product.id, newProdStats, newTotals);
+    
+    const rate = getProductCommissionRate(product);
+    toast(`🎵 TikTok Creator Link copied! (${rate}% commission)`, 'success');
+    haptic('light');
+  };
+
   const openShareModal = (product: any) => {
     setShareProduct(product);
     haptic('light');
@@ -256,6 +273,11 @@ export default function AffiliateProducts() {
                     onClick={() => copyProductLink(p)}>
                     <Copy size={9} /> Copy Link
                   </button>
+                  <button className="py-1.5 px-2 bg-gradient-to-r from-pink-500 to-violet-600 hover:opacity-95 text-white rounded-lg text-[8.5px] font-bold flex items-center justify-center gap-0.5 shadow-sm active:scale-95 transition-all"
+                    onClick={() => copyTikTokLink(p)}
+                    title="Copy TikTok Creator Bio Link">
+                    🎵 TikTok
+                  </button>
                   <button className="p-1.5 rounded-lg border border-border hover:bg-slate-50 dark:hover:bg-slate-850 text-slate-500 dark:text-slate-300 transition-colors active:scale-95" onClick={() => openShareModal(p)}>
                     <Share2 size={10} />
                   </button>
@@ -336,6 +358,12 @@ export default function AffiliateProducts() {
                 className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-600 text-[9px] font-bold flex items-center gap-0.5 whitespace-nowrap"
               >
                 <Copy size={10} /> Copy
+              </button>
+              <button 
+                onClick={() => copyTikTokLink(shareProductItem)}
+                className="p-1.5 rounded-lg bg-pink-500/10 text-pink-600 text-[9px] font-bold flex items-center gap-0.5 whitespace-nowrap"
+              >
+                🎵 TikTok
               </button>
             </div>
           </div>

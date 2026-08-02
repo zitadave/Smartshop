@@ -5,6 +5,7 @@ import { joinGroupDeal, shareToTelegram, calculateGroupPrice, parseSerializedNam
 import { useStore } from '@/stores/AppStore';
 import { ArrowLeft, Users, Share2, Tag, Clock, CheckCircle, ArrowRight, ShoppingCart, MessageCircle, Star, Sparkles, AlertCircle, Sparkle, Heart, Flame, ShieldCheck, HeartHandshake, Compass } from 'lucide-react';
 import { toast } from '@/components/Toast';
+import { trackSocialEvent, sanitizeInputString } from '@/lib/social';
 import { formatPrice } from '@/lib/utils';
 
 // custom high-fidelity Star renderer
@@ -173,6 +174,7 @@ export default function GroupDealView() {
         }
         
         loadDeal();
+        trackSocialEvent('JoinGroupBuy', { deal_id: deal.id, product_name: deal.product_name, group_price: deal.group_price });
         setTimeout(() => navigate('/checkout'), 800);
       } else {
         toast(result.error || 'Failed to join group deal', 'error');

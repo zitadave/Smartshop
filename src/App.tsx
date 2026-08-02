@@ -7,6 +7,7 @@ import { initSentry } from '@/lib/sentry';
 import { initAnalytics, trackEvent } from '@/lib/analytics';
 import { getSampleBroadcasts, getSampleFlashDeals } from '@/lib/seed';
 import { isRunningInTelegram } from '@/lib/telegram';
+import { detectSocialEnvironment, trackSocialEvent } from '@/lib/social';
 import Layout from '@/components/Layout';
 import ToastContainer from '@/components/Toast';
 import { applyThemeToDocument } from '@/components/features/ThemePicker';
@@ -116,12 +117,11 @@ export default function App() {
   useEffect(function() { initSentry(); initAnalytics(); }, []);
   useEffect(function() { applySavedTheme(); }, []);
   useEffect(function() {
-    const params = new URLSearchParams(window.location.search);
-    const ref = params.get('ref');
-    if (ref) {
-      localStorage.setItem('ss_referrer', ref.trim().toUpperCase());
-      console.log(`[REFERRAL] Captured referrer code: ${ref}`);
+    const social = detectSocialEnvironment();
+    if (social.creatorRef) {
+      localStorage.setItem('ss_referrer', social.creatorRef.toUpperCase());
     }
+    trackSocialEvent('PageView', { platform: social.platform });
   }, []);
   useEffect(function() {
     if (darkMode) document.documentElement.classList.add('dark');

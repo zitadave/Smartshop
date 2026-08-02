@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { useStore } from '@/stores/AppStore';
 import { t } from '@/i18n/translations';
+import { trackSocialEvent } from '@/lib/social';
 import { toast } from '@/components/Toast';
 import { formatPrice, stars, getDeliveryEstimate, cn, calcDiscount, isFlashDealActive } from '@/lib/utils';
 import { ShoppingCart, Heart, Share2, Minus, Plus, ChevronLeft, ChevronRight, Store, Clock, Truck, TrendingDown,  Camera, Zap, Users, Gift } from 'lucide-react';
@@ -345,7 +346,7 @@ export default function ProductDetail() {
           )}
 
           <div className="flex gap-1.5">
-            <button className="flex-1 py-3.5 bg-primary text-primary-foreground rounded-2xl text-xs font-bold hover:shadow-lg hover:shadow-primary/20 active:scale-[0.99] transition-all flex items-center justify-center gap-1.5" onClick={() => { addToCart(product, qty); store.addNotification('🛒', `Added ${product.nameEn} to cart`); }}>
+            <button className="flex-1 py-3.5 bg-primary text-primary-foreground rounded-2xl text-xs font-bold hover:shadow-lg hover:shadow-primary/20 active:scale-[0.99] transition-all flex items-center justify-center gap-1.5" onClick={() => { addToCart(product, qty); trackSocialEvent('AddToCart', { content_id: product.id, content_name: product.nameEn, value: product.price, currency: 'ETB' }); store.addNotification('🛒', `Added ${product.nameEn} to cart`); }}>
               <ShoppingCart size={15} /> {t('addToCart', language)}
             </button>
             <button className={cn('py-3.5 px-4 rounded-2xl border text-sm transition-all', wis ? 'bg-destructive/10 border-destructive/30 text-destructive' : 'border-border text-muted-foreground hover:bg-muted')} onClick={() => toggleWishlist(product)}>
@@ -391,7 +392,7 @@ export default function ProductDetail() {
             </div>
           )}
 
-          <button className="w-full py-2.5 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-lg text-xs font-semibold shadow-sm hover:shadow active:scale-95 transition-all" onClick={() => { addToCart(product, qty); navigate('/checkout'); }}>
+          <button className="w-full py-2.5 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-lg text-xs font-semibold shadow-sm hover:shadow active:scale-95 transition-all" onClick={() => { addToCart(product, qty); trackSocialEvent('AddToCart', { content_id: product.id, content_name: product.nameEn, value: product.price, currency: 'ETB' }); navigate('/checkout'); }}>
             ⚡ Buy Now
           </button>
         </div>

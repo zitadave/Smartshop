@@ -11,6 +11,7 @@ import { haptic, burstConfetti } from '@/lib/confetti';
 import { createFulfillment, upsertFulfillment } from '@/lib/orderFulfillment';
 import { addManualPayment } from '@/components/admin/ManualPaymentReview';
 import { toast } from '@/components/Toast';
+import { trackSocialEvent, sanitizeInputString, getCreatorReferral } from '@/lib/social';
 import {
  ArrowLeft, MapPin, CreditCard, Package, Banknote, Copy, CheckCircle,
  Upload, Lock, Shield, Gift, ChevronRight, Tag, Building2, Camera,
@@ -236,9 +237,16 @@ export default function Checkout() {
  items: cart.map(i => ({ id: i.id, name: i.nameEn, quantity: i.qty, price: i.price, total: i.price * i.qty, vendorId: i.vendorId || undefined, vendorName: i.vendorName })),
  total: grandTotal, subtotal: total, discount: promoDiscount, delivery: deliveryFee,
  paymentMethod: paymentMethod === 'chapa' ? 'chapa' : 'manual',
- customer: { name, phone, city, address, notes: '', telegram_id: tgId },
+ customer: {
+   name: sanitizeInputString(name, 100),
+   phone: sanitizeInputString(phone, 30),
+   city: sanitizeInputString(city, 50),
+   address: sanitizeInputString(address, 200),
+   notes: '',
+   telegram_id: tgId
+ },
  date: new Date().toLocaleDateString(), createdAt: new Date().toISOString(), currency: 'ETB', language,
- referrer_code: localStorage.getItem('ss_referrer') || undefined,
+ referrer_code: getCreatorReferral().code || localStorage.getItem('ss_referrer') || undefined,
  };
 
  try {
@@ -266,6 +274,14 @@ export default function Checkout() {
  const fulfillment = createFulfillment({ orderNumber: orderNum, items: order.items, total: order.total, customer: order.customer, createdAt: order.createdAt, status: order.status });
  upsertFulfillment(fulfillment);
  addOrder(order);
+ trackSocialEvent('CompletePayment', {
+   value: grandTotal,
+   currency: 'ETB',
+   content_ids: cart.map(i => i.id),
+   order_id: orderNum,
+   referrer_code: order.referrer_code,
+   source: getCreatorReferral().source
+ });
 
  if (paymentMethod === 'bank') {
   // ALWAYS send depositorName as receiptNumber, receiptText separately

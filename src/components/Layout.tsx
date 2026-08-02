@@ -2,6 +2,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '@/stores/AppStore';
 import { t } from '@/i18n/translations';
 import { isRunningInTelegram } from '@/lib/telegram';
+import { detectSocialEnvironment } from '@/lib/social';
 import QuickView from './ui/QuickView';
 import AIChat from '@/components/ai/AIChat';
 import { ShoppingCart, Package, User, Home, Store, Moon, Sun, Search, Heart } from 'lucide-react';
@@ -21,6 +22,7 @@ const ANIM_CLASS = TG ? '' : 'animate-fadeIn';
 export default function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const social = detectSocialEnvironment();
   const { language, darkMode, setDarkMode, getCartCount, wishlist } = useStore();
   const cartCount = getCartCount();
   const wishlistCount = wishlist.length;
@@ -35,7 +37,7 @@ export default function Layout() {
       <QuickView />
       <AIChat />
 
-      <header className="fixed top-0 left-0 right-0 h-14 z-50 glass-strong border-b border-border/40">
+      <header className={cn("fixed top-0 left-0 right-0 h-14 z-50 glass-strong border-b border-border/40", social.safeAreaTopClass)}>
         <div className="max-w-2xl mx-auto h-full flex items-center px-4 gap-2">
           <div className="flex items-center gap-3 flex-1 cursor-pointer group" onClick={() => navigate('/')}>
             <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-primary to-blue-600 text-white flex items-center justify-center text-lg shadow-lg shadow-primary/20 group-hover:shadow-xl group-hover:scale-105 transition-all duration-300">🏪</div>
@@ -77,7 +79,7 @@ export default function Layout() {
         <div className="max-w-2xl mx-auto"><Outlet /></div>
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 h-16 glass-strong border-t border-border/40 z-50 safe-area-bottom">
+      <nav className={cn("fixed bottom-0 left-0 right-0 h-16 glass-strong border-t border-border/40 z-50 safe-area-bottom", social.safeAreaBottomClass)}>
         <div className="max-w-lg mx-auto h-full flex items-center justify-around px-2">
           {NAV_ITEMS.map(({ path, icon: Icon, label }) => {
             const active = isActive(path);
