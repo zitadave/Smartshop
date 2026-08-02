@@ -8,8 +8,9 @@ import { Sparkles, Trash2, Plus, Edit3, CheckCircle, PauseCircle, Clock, ShieldC
 import { sendAdminTelegram } from '@/lib/adminNotifier';
 
 export default function AdminHeroSlots() {
-  const { settings, setSettings } = useStore();
+  const { settings, setSettings, products } = useStore();
   const config = getHeroCarouselConfig(settings);
+  const [selectedProductId, setSelectedProductId] = useState('');
 
   const [slideDuration, setSlideDuration] = useState(config.slideDuration);
   const [maxActiveAds, setMaxActiveAds] = useState(config.maxActiveAds);
@@ -116,6 +117,7 @@ export default function AdminHeroSlots() {
     } else {
       const newAd: HeroAd = {
         id: `hero-${Date.now()}`,
+        productId: Number(selectedProductId) || undefined,
         title: title.trim(),
         subtitle: subtitle.trim(),
         tagline: tagline.trim(),
@@ -311,6 +313,32 @@ export default function AdminHeroSlots() {
               {editingAd ? `Edit Slide: ${editingAd.title}` : '➕ Create New Landscape Hero Slide'}
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="sm:col-span-2">
+                <label className="text-[10px] font-semibold text-slate-500 block mb-1">Select Product to Advertise (Auto-fills Image & Title)</label>
+                <select
+                  value={selectedProductId}
+                  onChange={e => {
+                    const pid = e.target.value;
+                    setSelectedProductId(pid);
+                    const prod = (products || []).find((p: any) => String(p.id) === pid);
+                    if (prod) {
+                      setTitle(prod.nameEn || prod.name);
+                      setSubtitle(`Quality product by ${prod.vendorName || 'Smart Shop'}`);
+                      setPriceText(`Br ${prod.price}`);
+                      setImageUrl(prod.image || '/banners/banner-1.jpg');
+                      setVendorName(prod.vendorName || 'Smart Shop Partner');
+                    }
+                  }}
+                  className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-white dark:bg-slate-900 font-medium"
+                >
+                  <option value="">Choose a product from store catalog...</option>
+                  {(products || []).map((p: any) => (
+                    <option key={p.id} value={String(p.id)}>
+                      {p.nameEn} — Br {p.price}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div>
                 <label className="text-[10px] font-semibold text-slate-500 block mb-1">Slide Title *</label>
                 <input

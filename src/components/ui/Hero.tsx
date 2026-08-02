@@ -11,11 +11,28 @@ interface HeroProps {
 
 export function Hero({ productCount, topRating }: HeroProps) {
   const navigate = useNavigate();
-  const { settings } = useStore();
+  const { settings, products } = useStore();
   const config = getHeroCarouselConfig(settings);
 
-  // Filter active ads up to maxActiveAds limit (>6)
-  const activeAds = (config.ads || []).filter(a => a.status === 'active').slice(0, config.maxActiveAds);
+  // Filter active ads up to maxActiveAds limit (>6), and automatically hydrate imageUrl from store products if missing or default!
+  const activeAds = (config.ads || []).filter(a => a.status === 'active').slice(0, config.maxActiveAds).map(ad => {
+    if (ad.productId) {
+      const match = products.find(p => p.id === ad.productId || String(p.id) === String(ad.productId));
+      if (match) {
+        const isDefaultBanner = !ad.imageUrl || ad.imageUrl === '/banners/banner-1.jpg' || ad.imageUrl === '/banners/banner-2.jpg' || ad.imageUrl === '/banners/banner-3.jpg' || ad.imageUrl === '/banners/banner-4.jpg';
+        return {
+          ...ad,
+          imageUrl: isDefaultBanner ? (match.image || '/banners/banner-1.jpg') : ad.imageUrl,
+          title: ad.title || match.nameEn || match.name,
+          priceText: ad.priceText || `Br ${match.price.toLocaleString()}`,
+        };
+      }
+    }
+    return {
+      ...ad,
+      imageUrl: ad.imageUrl || '/banners/banner-1.jpg',
+    };
+  });
   const slides = activeAds.length > 0 ? activeAds : [];
 
   const scrollRef = useRef<HTMLDivElement | null>(null);

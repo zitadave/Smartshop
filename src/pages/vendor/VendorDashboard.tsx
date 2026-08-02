@@ -1199,7 +1199,7 @@ function VendorPromotionsView() {
   const [heroSubtitle, setHeroSubtitle] = useState('');
   const [heroTagline, setHeroTagline] = useState('🌟 Featured Partner Special');
   const [heroPriceText, setHeroPriceText] = useState('');
-  const [heroImageUrl, setHeroImageUrl] = useState('/banners/banner-1.jpg');
+  const [heroImageUrl, setHeroImageUrl] = useState('');
   const [heroDuration, setHeroDuration] = useState(heroConfig.allowedDurations?.[0] || 7);
   const [heroBgGradient, setHeroBgGradient] = useState('from-[#0f172a] via-[#1e293b] to-[#334155]');
   const [heroProductId, setHeroProductId] = useState('');
@@ -1471,6 +1471,7 @@ function VendorPromotionsView() {
                     setHeroTitle(prod.nameEn || prod.name);
                     setHeroSubtitle(`Quality product by ${vendorName}`);
                     setHeroPriceText(`Br ${prod.price}`);
+                    setHeroImageUrl(prod.image || '');
                   }
                 }}
                 className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-white dark:bg-slate-900 font-medium"
@@ -1591,6 +1592,7 @@ function VendorPromotionsView() {
                     toast('❌ Please select a product and enter a Title', 'error');
                     return;
                   }
+                  const prod = vendorProducts.find(p => String(p.id) === heroProductId);
                   const newAd = {
                     id: `hero-vendor-${Date.now()}`,
                     productId: Number(heroProductId),
@@ -1598,7 +1600,7 @@ function VendorPromotionsView() {
                     subtitle: heroSubtitle.trim(),
                     tagline: heroTagline.trim(),
                     priceText: heroPriceText.trim(),
-                    imageUrl: heroImageUrl.trim() || '/banners/banner-1.jpg',
+                    imageUrl: heroImageUrl.trim() || prod?.image || '/banners/banner-1.jpg',
                     ctaText: '🛍️ Shop Now',
                     bgGradient: heroBgGradient,
                     status: 'active' as const,
