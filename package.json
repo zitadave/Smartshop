@@ -26,9 +26,13 @@
     "react-router-dom": "^7.18.1",
     "react-window": "^2.3.0",
     "tailwind-merge": "^3.6.0",
-    "zustand": "^5.0.14"
+    "zustand": "^5.0.14",
+    "@capacitor/core": "^6.2.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "^6.2.0",
+    "@capacitor/android": "^6.2.0",
+    "@capacitor/ios": "^6.2.0",
     "@playwright/test": "^1.61.1",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^24.13.3",
