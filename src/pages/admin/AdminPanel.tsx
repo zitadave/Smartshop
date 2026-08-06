@@ -28,7 +28,7 @@ import ProductAnalytics from '@/components/admin/ProductAnalytics';
 import InventoryForecast from '@/components/admin/InventoryForecast';
 import ActivityLog from '@/components/admin/ActivityLog';
 import OrderFulfillment from '@/components/admin/OrderFulfillment';
-import { sendEmailNotification } from '@/lib/emailNotifier';
+import { sendEmailNotification, getCustomEmailTemplate, saveCustomEmailTemplate, resetCustomEmailTemplate, DEFAULT_EMAIL_TEMPLATES } from '@/lib/emailNotifier';
 import SLAMonitor from '@/components/admin/SLAMonitor';
 import DriverTracker from '@/components/admin/DriverTracker';
 import ReturnsManager from '@/components/admin/ReturnsManager';
@@ -918,7 +918,31 @@ function AdminOrders() {
     } catch {}
   };
   useEffect(fetchOrders, []);
-  const updateStatus = async (n: string, s: string) => { await ordersApi.updateStatus(n, s); setOrders(orders.map(o => o.orderNumber === n ? { ...o, status: s } : o)); };
+  const updateStatus = async (n: string, s: string) => {
+    await ordersApi.updateStatus(n, s);
+    const target = orders.find(o => o.orderNumber === n);
+    setOrders(orders.map(o => o.orderNumber === n ? { ...o, status: s } : o));
+    if (target) {
+      try {
+        const custEmail = target.customer?.email || 'customer@smartshop.et';
+        if (s === 'shipped' || s === 'dispatched') {
+          sendEmailNotification({
+            to: custEmail,
+            subject: `🚚 Order #${n} is on the way! Smart Express Courier Assigned`,
+            templateType: 'order_dispatched',
+            data: { order: target }
+          });
+        } else if (s === 'delivered' || s === 'completed') {
+          sendEmailNotification({
+            to: custEmail,
+            subject: `🎉 Order #${n} Delivered! Escrow Released`,
+            templateType: 'order_delivered',
+            data: { order: target }
+          });
+        }
+      } catch {}
+    }
+  };
   const filtered = statusFilter ? orders.filter(o => o.status === statusFilter) : orders;
   const statuses = ['all', 'pending', 'confirmed', 'processing', 'shipped', 'delivered', 'completed', 'cancelled'];
 
@@ -1055,6 +1079,14 @@ function AdminVendors() {
     }).then(function(r) { return r.json(); }).then(function(d) {
       if (d.success) {
         toast('✅ Vendor approved! They can now access their dashboard.', 'success');
+        try {
+          sendEmailNotification({
+            to: 'vendor@smartshop.et',
+            subject: '🎉 Store Approved! Your Smart Shop Marketplace Store is Now LIVE',
+            templateType: 'vendor_approved',
+            data: { vendor: { storeName: name || 'Merchant Store' } }
+          });
+        } catch {}
         window.location.reload();
       } else { toast('Error: ' + (d.error || 'unknown'), 'error'); }
     }).catch(function(e) { toast('Error: ' + e.message, 'error'); });
@@ -1970,6 +2002,28 @@ function AdminThemes() {
 
 function AdminEmailEngineView() {
   const store = useStore();
+  const [selectedTplType, setSelectedTplType] = useState<string>('order_receipt');
+  const [dynSubject, setDynSubject] = useState<string>('');
+  const [dynTitle, setDynTitle] = useState<string>('');
+  const [dynSubtitle, setDynSubtitle] = useState<string>('');
+  const [dynIntro, setDynIntro] = useState<string>('');
+  const [dynFooter, setDynFooter] = useState<string>('');
+  const [dynColor, setDynColor] = useState<string>('#2563eb');
+
+  const loadTplToForm = (type: string) => {
+    const t = getCustomEmailTemplate(type);
+    setDynSubject(t.subject || '');
+    setDynTitle(t.headerTitle || '');
+    setDynSubtitle(t.headerSubtitle || '');
+    setDynIntro(t.introCopy || '');
+    setDynFooter(t.footerCopy || '');
+    setDynColor(t.accentColor || '#2563eb');
+  };
+
+  useEffect(() => {
+    loadTplToForm(selectedTplType);
+  }, [selectedTplType]);
+
   const [blastSubject, setBlastSubject] = useState('⚡ 24-Hour Flash Deals Live! 50% Off Electronics');
   const [blastSubtitle, setBlastSubtitle] = useState('Exclusive deals & collaborative shopping savings across Ethiopia.');
   const [blastDesc, setBlastDesc] = useState('Discover our latest curated arrivals, Active Group Buy collaborative deals, and limited-time Flash Sales across Tech, Fashion, Food & Daily Subscriptions.');
@@ -2069,6 +2123,219 @@ function AdminEmailEngineView() {
             >
               ✉️ Test Send Sample Email
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Dynamic Email Notification Template Studio (All 8 Touchpoints) */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4" data-admin-card>
+        <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+          <div>
+            <h3 className="text-sm font-bold flex items-center gap-1.5">
+              🎨 Dynamic Email Template & Notification Studio
+            </h3>
+            <p className="text-[10px] text-slate-500">
+              Customize subject lines, header titles, body copy, and brand colors for all 8 automated email touchpoints.
+            </p>
+          </div>
+          <select
+            value={selectedTplType}
+            onChange={(e) => setSelectedTplType(e.target.value)}
+            className="p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold bg-slate-50 dark:bg-slate-800 text-foreground outline-none"
+          >
+            <option value="order_receipt">1. Customer Order Receipt & PIN</option>
+            <option value="order_dispatched">2. Order Shipped / Courier En Route</option>
+            <option value="order_delivered">3. Order Delivered & Escrow Released</option>
+            <option value="vendor_welcome">4. Vendor KYC Application Received</option>
+            <option value="vendor_approved">5. Vendor Store Approved & Live</option>
+            <option value="payout_advice">6. Revenue Payout Advice & Tax Record</option>
+            <option value="cart_recovery">7. Abandoned Cart Voucher (10% Off COMEBACK10)</option>
+            <option value="marketing_blast">8. Email Marketing Blast / Flash Deals</option>
+          </select>
+        </div>
+
+        <div className="space-y-3">
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">Email Subject Template</label>
+              <input
+                type="text"
+                className="w-full mt-1 p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold bg-transparent text-foreground"
+                value={dynSubject}
+                onChange={(e) => setDynSubject(e.target.value)}
+              />
+              <p className="text-[9px] text-slate-400 mt-0.5">Placeholders: {'{orderNumber}'}, {'{amount}'}, {'{storeName}'}, {'{name}'}, {'{pin}'}</p>
+            </div>
+            <div>
+              <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">Primary Brand Accent Color</label>
+              <div className="flex items-center gap-2 mt-1">
+                <input
+                  type="color"
+                  className="w-9 h-8 rounded-lg border-0 cursor-pointer bg-transparent"
+                  value={dynColor}
+                  onChange={(e) => setDynColor(e.target.value)}
+                />
+                <input
+                  type="text"
+                  className="flex-1 p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono bg-transparent text-foreground"
+                  value={dynColor}
+                  onChange={(e) => setDynColor(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">Header Title</label>
+              <input
+                type="text"
+                className="w-full mt-1 p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold bg-transparent text-foreground"
+                value={dynTitle}
+                onChange={(e) => setDynTitle(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">Header Subtitle</label>
+              <input
+                type="text"
+                className="w-full mt-1 p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-foreground"
+                value={dynSubtitle}
+                onChange={(e) => setDynSubtitle(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">Main Introduction Copy</label>
+            <textarea
+              rows={2}
+              className="w-full mt-1 p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-foreground resize-none"
+              value={dynIntro}
+              onChange={(e) => setDynIntro(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">Footer Support Notice</label>
+            <input
+              type="text"
+              className="w-full mt-1 p-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-foreground"
+              value={dynFooter}
+              onChange={(e) => setDynFooter(e.target.value)}
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-2 pt-2">
+            <button
+              type="button"
+              className="flex-1 min-w-[140px] py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center justify-center gap-1.5"
+              onClick={() => {
+                saveCustomEmailTemplate(selectedTplType, {
+                  subject: dynSubject,
+                  headerTitle: dynTitle,
+                  headerSubtitle: dynSubtitle,
+                  introCopy: dynIntro,
+                  footerCopy: dynFooter,
+                  accentColor: dynColor
+                });
+                toast('💾 Custom template saved for ' + selectedTplType + '!', 'success');
+              }}
+            >
+              💾 Save Dynamic Template
+            </button>
+            <button
+              type="button"
+              className="py-2.5 px-4 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-foreground rounded-xl text-xs font-semibold transition-all"
+              onClick={() => {
+                resetCustomEmailTemplate(selectedTplType);
+                loadTplToForm(selectedTplType);
+                toast('🔄 Reset to default clean template', 'info');
+              }}
+            >
+              🔄 Reset Default
+            </button>
+            <button
+              type="button"
+              className="py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-1"
+              onClick={async () => {
+                const testEmail = prompt('Enter recipient email address to test the dynamic "' + selectedTplType + '" template:', store.profile?.email || '');
+                if (!testEmail || !testEmail.includes('@')) {
+                  toast('Please enter a valid email address!', 'error');
+                  return;
+                }
+                toast('✉️ Sending dynamic "' + selectedTplType + '" email to ' + testEmail + '...', 'info');
+                const res = await sendEmailNotification({
+                  to: testEmail.trim(),
+                  templateType: selectedTplType as any,
+                  data: {
+                    orderNumber: 'ORD-2026-991',
+                    total: 3450,
+                    amount: 3450,
+                    pin: '4928',
+                    storeName: 'Selam Organic Coffee Shop',
+                    name: 'Smart Shop Admin',
+                    order: {
+                      orderNumber: 'ORD-2026-991',
+                      total: 3450,
+                      items: [
+                        { name: 'Ethiopian Organic Yirgacheffe Coffee (1kg)', qty: 2, price: 950 },
+                        { name: 'Smart Shop Premium Leather Wallet', qty: 1, price: 1550 }
+                      ],
+                      customer: {
+                        name: 'Smart Shop Admin',
+                        phone: '+251-911-234567',
+                        address: 'Bole, Addis Ababa, Ethiopia'
+                      }
+                    },
+                    vendor: {
+                      storeName: 'Selam Organic Coffee Shop',
+                      storePhone: '+251-911-889900',
+                      tinNumber: '0012345678',
+                      licenseNumber: 'TL-8591',
+                      storeAddress: 'Bole, Addis Ababa'
+                    },
+                    payout: {
+                      amount: 14500,
+                      vendorName: 'Selam Organic Coffee Shop',
+                      payment_method: 'Telebirr',
+                      account_number: '+251-911-889900'
+                    },
+                    title: dynTitle,
+                    subtitle: dynSubtitle,
+                    description: dynIntro
+                  }
+                });
+                reloadLogs();
+                if (res.success) {
+                  toast('🎉 Dynamic "' + selectedTplType + '" HTML Email delivered to ' + testEmail + '!', 'success');
+                } else {
+                  toast('❌ Email failed: ' + res.error, 'error');
+                }
+              }}
+            >
+              ✉️ Test Send Selected
+            </button>
+          </div>
+
+          {/* Live Preview */}
+          <div className="mt-3 p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60">
+            <div className="text-[9px] uppercase font-bold text-slate-400 mb-2">👁️ Live Template Preview ({selectedTplType})</div>
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 text-left shadow-sm">
+              <div className="text-center border-b-2 pb-2.5 mb-2.5" style={{ borderColor: dynColor }}>
+                <div className="font-bold text-sm" style={{ color: dynColor }}>{dynTitle || 'Header Title'}</div>
+                <div className="text-[10px] text-slate-500">{dynSubtitle || 'Header Subtitle'}</div>
+              </div>
+              <div className="text-[11px] font-semibold text-slate-700 dark:text-slate-200 mb-1">
+                Subject: <span className="font-normal text-slate-500">{dynSubject || 'Email Subject'}</span>
+              </div>
+              <div className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed py-2">
+                {dynIntro || 'Introduction body copy...'}
+              </div>
+              <div className="text-center text-[9px] text-slate-400 border-t border-slate-200 dark:border-slate-800 pt-2.5 mt-2.5">
+                {dynFooter || 'Footer support copy'}
+              </div>
+            </div>
           </div>
         </div>
       </div>
