@@ -176,32 +176,32 @@ export default function Profile() {
     engagementItems.push({ icon: '🏍️', label: t('smartExpress', language), desc: t('smartExpressDesc', language), onClick: function() { navigate('/driver'); } });
   }
 
-  var isAuthorizedAdmin = 
-    localStorage.getItem('ss_founder_unlocked') === 'true' ||
-    profile.telegramId === '336997351' || 
-    profile.telegramId === 336997351 ||
-    String(profile.telegramId) === '336997351' ||
-    profile.role === 'admin' || 
-    profile.role === 'super_admin' ||
-    (function() {
-      try {
-        var ls = JSON.parse(localStorage.getItem('ss_profile') || '{}');
-        if (ls.telegramId === '336997351' || ls.telegramId === 336997351 || ls.role === 'admin' || ls.role === 'super_admin') return true;
-        var adminUsers = JSON.parse(localStorage.getItem('ss_admin_users') || '[]');
-        var cloudAdmins = (store.settings as any).adminUsers || [];
-        var allAdmins = [...adminUsers, ...cloudAdmins];
-        var tgId = String(profile.telegramId || ls.telegramId || '').trim();
-        var phone = String(profile.phone || ls.phone || '').trim();
-        return allAdmins.some(function(u: any) { 
-          if (!u || u.status !== 'active') return false;
-          if (tgId && Boolean(u.telegramId) && String(u.telegramId).trim() === tgId) return true;
-          if (phone && Boolean(u.phone) && String(u.phone).trim() === phone) return true;
-          return false;
-        });
-      } catch(e) {
-        return false;
+  var isAuthorizedAdmin = (function() {
+    try {
+      var tgUser = (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+      var ls = JSON.parse(localStorage.getItem('ss_profile') || '{}');
+      var liveTgId = String(tgUser?.id || profile.telegramId || ls.telegramId || '').trim();
+      if (liveTgId === '336997351' || Number(liveTgId) === 336997351) {
+        try { localStorage.setItem('ss_founder_unlocked', 'true'); } catch {}
+        return true;
       }
-    })();
+      if (localStorage.getItem('ss_founder_unlocked') === 'true') return true;
+      if (profile.role === 'admin' || profile.role === 'super_admin' || ls.role === 'admin' || ls.role === 'super_admin') return true;
+
+      var adminUsers = JSON.parse(localStorage.getItem('ss_admin_users') || '[]');
+      var cloudAdmins = (store.settings as any).adminUsers || [];
+      var allAdmins = [...adminUsers, ...cloudAdmins];
+      var phone = String(profile.phone || ls.phone || '').trim();
+      return allAdmins.some(function(u: any) { 
+        if (!u || u.status !== 'active') return false;
+        if (liveTgId && Boolean(u.telegramId) && String(u.telegramId).trim() === liveTgId) return true;
+        if (phone && Boolean(u.phone) && String(u.phone).trim() === phone) return true;
+        return false;
+      });
+    } catch(e) {
+      return false;
+    }
+  })();
 
   engagementItems.push(
     { icon: '📉', label: t('priceAlertsMenu', language), badge: store.priceAlerts.length, desc: t('priceAlertsMenuDesc', language), onClick: function() { navigate('/price-alerts'); } },
