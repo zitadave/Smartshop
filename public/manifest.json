@@ -4,7 +4,7 @@
   "short_name": "Smart Shop",
   "description": "Ethiopia's premier e-commerce marketplace — curated products at exceptional prices with free delivery",
   "background_color": "#0f172a",
-  "theme_color": "#3b82f6",
+  "theme_color": "#0f172a",
   "lang": "en",
   "dir": "ltr",
   "display": "standalone",

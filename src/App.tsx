@@ -137,8 +137,15 @@ export default function App() {
     trackSocialEvent('PageView', { platform: social.platform });
   }, []);
   useEffect(function() {
-    if (darkMode) document.documentElement.classList.add('dark');
-    else document.documentElement.classList.remove('dark');
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+      const meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.setAttribute('content', '#0f172a');
+    } else {
+      document.documentElement.classList.remove('dark');
+      const meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.setAttribute('content', '#f8fafc');
+    }
   }, [darkMode]);
 
   // Read Telegram data from localStorage (set by index.html script)
