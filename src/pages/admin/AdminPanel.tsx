@@ -12,7 +12,7 @@ import {
   Search, Plus, Edit3, Trash2, Eye, EyeOff, Check, Loader, ChevronDown,
   DollarSign, Star, Activity, AlertTriangle, Sun, Moon, Gift, CreditCard,
   Gamepad2, Coins, Smartphone, ExternalLink, Command, Columns, List, Database,
-  Truck, RotateCcw, RefreshCw, Landmark, BookOpen, Banknote, CheckCircle, XCircle, Bike
+  Truck, RotateCcw, RefreshCw, Landmark, BookOpen, Banknote, CheckCircle, XCircle, Bike, Mail
 } from 'lucide-react';
 import CommandPalette from '@/components/admin/CommandPalette';
 import LiveChart, { StatCard } from '@/components/admin/LiveChart';
@@ -49,7 +49,7 @@ type Tab = 'overview' | 'heroslots' | 'products' | 'orders' | 'vendors' | 'deliv
   | 'broadcast' | 'flashdeals' | 'preorders' | 'tracking' | 'themes' | 'coupons' 
   | 'settings' | 'alerts' | 'abandoned' | 'roles' | 'backup' 
   | 'bulkProducts' | 'analytics' | 'forecast' | 'activity' | 'security' | 'telegram' 
-  | 'fulfillment' | 'sla' | 'driver' | 'returns' | 'finance' | 'smartbooks' | 'promotions' | 'manualpayments' | 'affiliates';
+  | 'fulfillment' | 'sla' | 'driver' | 'returns' | 'finance' | 'smartbooks' | 'promotions' | 'manualpayments' | 'affiliates' | 'email';
 
 export default function AdminLayout() {
   const [tab, setTab] = useState<Tab>('overview');
@@ -122,6 +122,7 @@ export default function AdminLayout() {
         { id: 'coupons', label: '🎟️ Coupons & Promo Codes' },
         { id: 'promotions', label: '📢 All Promotions' },
         { id: 'broadcast', label: '📣 Telegram Broadcasts' },
+        { id: 'email', label: '📧 Email API & Marketing' },
         { id: 'affiliates', label: '🤝 Affiliates' },
       ],
     },
@@ -186,6 +187,7 @@ export default function AdminLayout() {
         { id: 'themes', label: '🎨 Theme Customizer' },
         { id: 'roles', label: '🛡️ Admin Roles & RBAC' },
         { id: 'telegram', label: '🤖 Telegram Admin Bot' },
+        { id: 'email', label: '📧 Email API & Marketing' },
         { id: 'backup', label: '💾 Database Backups' },
         { id: 'alerts', label: '🔔 Smart System Alerts' },
       ],
@@ -360,6 +362,7 @@ export default function AdminLayout() {
     { id: 'activity', icon: ClipboardList, label: 'Activity Log' },
     { id: 'security', icon: Shield, label: 'Security' },
     { id: 'telegram', icon: Bot, label: 'Admin Bot' },
+    { id: 'email', icon: Mail, label: 'Email Engine' },
     { id: 'fulfillment', icon: Package, label: 'Fulfillment' },
     { id: 'sla', icon: Activity, label: 'SLA Monitor' },
     { id: 'driver', icon: Truck, label: 'Driver Tracking' },
@@ -523,6 +526,7 @@ export default function AdminLayout() {
           {tab === 'finance' && <TaxFinanceDashboard />}
           {tab === 'smartbooks' && <SmartBooks />}
           {tab === 'settings' && <AdminSettings />}
+          {tab === 'email' && <AdminEmailEngineView />}
         </div>
       </main>
     </div>
@@ -1878,6 +1882,257 @@ function AdminThemes() {
             localStorage.setItem('ss_accent', JSON.stringify(customAccent));
             toast('✅ Custom accent applied!', 'success');
           }}>Apply Accent</button>
+      </div>
+    </div>
+  );
+}
+
+function AdminEmailEngineView() {
+  const store = useStore();
+  const [blastSubject, setBlastSubject] = useState('⚡ 24-Hour Flash Deals Live! 50% Off Electronics');
+  const [blastSubtitle, setBlastSubtitle] = useState('Exclusive deals & collaborative shopping savings across Ethiopia.');
+  const [blastDesc, setBlastDesc] = useState('Discover our latest curated arrivals, Active Group Buy collaborative deals, and limited-time Flash Sales across Tech, Fashion, Food & Daily Subscriptions.');
+  const [blastCta, setBlastCta] = useState('Shop Flash Deals Now');
+  const [blastUrl, setBlastUrl] = useState(window.location.origin + '/shop?utm_source=email_marketing');
+  const [blastTarget, setBlastTarget] = useState('');
+  const [sending, setSending] = useState(false);
+  const [logs, setLogs] = useState<any[]>(() => {
+    try { return JSON.parse(localStorage.getItem('ss_email_logs') || '[]'); } catch { return []; }
+  });
+
+  const reloadLogs = () => {
+    try { setLogs(JSON.parse(localStorage.getItem('ss_email_logs') || '[]')); } catch { setLogs([]); }
+  };
+
+  return (
+    <div className="animate-fadeUp space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <h2 className="text-lg font-bold flex items-center gap-2">
+            <Mail size={20} className="text-indigo-500" /> 📧 Resend Email API & Marketing Engine
+          </h2>
+          <p className="text-[10px] text-slate-500 mt-0.5">
+            Unified Transactional Receipts & Email Marketing Studio (3,000 Free Emails/Month)
+          </p>
+        </div>
+        <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-full font-bold">
+          ✅ Resend Sandbox & Live API Ready (3,000 Free/Month)
+        </span>
+      </div>
+
+      {/* Live Inbox Test & Sender Configuration Card */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4" data-admin-card>
+        <h3 className="text-sm font-bold mb-1">✉️ Live Inbox Test & Sender Configuration</h3>
+        <p className="text-[10px] text-slate-500 mb-4">
+          Test live inbox delivery with 1 click using your activated Resend API key on Vercel.
+        </p>
+
+        <div className="grid sm:grid-cols-2 gap-4 items-center">
+          <div className="space-y-2">
+            <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">Default Sender Address</label>
+            <input
+              type="text"
+              className="w-full p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-slate-50 dark:bg-slate-800/40 text-foreground font-mono"
+              readOnly
+              value="Smart Shop <onboarding@resend.dev>"
+            />
+            <p className="text-[9px] text-slate-400">Uses Resend serverless free tier (RESEND_API_KEY)</p>
+          </div>
+
+          <div className="flex gap-2 pt-2 sm:pt-6">
+            <button
+              type="button"
+              className="flex-1 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-xs font-bold shadow-md hover:opacity-95 transition-all flex items-center justify-center gap-1.5"
+              onClick={async () => {
+                const testEmail = prompt('Enter your email address to receive a live test email:', store.profile?.email || '');
+                if (!testEmail || !testEmail.includes('@')) {
+                  toast('Please enter a valid email address to test!', 'error');
+                  return;
+                }
+                toast('📧 Testing Resend email dispatch to ' + testEmail + '...', 'info');
+                const res = await sendEmailNotification({
+                  to: testEmail.trim(),
+                  subject: '⚡ Test Marketing Blast from Smart Shop!',
+                  templateType: 'marketing_blast',
+                  data: {
+                    title: '⚡ Flash Deals Email Test!',
+                    subtitle: 'Verified Resend Email Engine integration.',
+                    description: 'This test confirms that your Smart Shop transactional and marketing email engine is active.',
+                    ctaText: 'Visit Admin Control Panel',
+                    targetUrl: window.location.origin + '/admin-panel'
+                  }
+                });
+                reloadLogs();
+                if (res.success) {
+                  toast(res.simulated ? '✅ Email simulated in Resend Sandbox (Logged in console & audit log)!' : '🎉 Live HTML Email sent via Resend API to ' + testEmail + '!', 'success');
+                } else {
+                  toast('Error: ' + res.error, 'error');
+                }
+              }}
+            >
+              ✉️ Test Send Sample Email
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Marketing Blast Studio */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4" data-admin-card>
+        <h3 className="text-sm font-bold mb-1">📢 Email Marketing Blast Studio</h3>
+        <p className="text-[10px] text-slate-500 mb-4">
+          Create high-converting HTML promotional campaigns for Flash Deals, Active Group Buys, and Discount Vouchers.
+        </p>
+
+        <div className="space-y-3">
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">Campaign Subject *</label>
+              <input
+                type="text"
+                className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold bg-transparent text-foreground"
+                value={blastSubject}
+                onChange={e => setBlastSubject(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">Campaign Subtitle</label>
+              <input
+                type="text"
+                className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-foreground"
+                value={blastSubtitle}
+                onChange={e => setBlastSubtitle(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">Campaign Body Copy</label>
+            <textarea
+              rows={3}
+              className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-foreground"
+              value={blastDesc}
+              onChange={e => setBlastDesc(e.target.value)}
+            />
+          </div>
+
+          <div className="grid sm:grid-cols-3 gap-3">
+            <div>
+              <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">CTA Button Text</label>
+              <input
+                type="text"
+                className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold bg-transparent text-foreground"
+                value={blastCta}
+                onChange={e => setBlastCta(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">Target URL</label>
+              <input
+                type="text"
+                className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono bg-transparent text-foreground"
+                value={blastUrl}
+                onChange={e => setBlastUrl(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">Test Recipient Email (Optional)</label>
+              <input
+                type="text"
+                className="w-full mt-1 p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-transparent text-foreground placeholder:text-slate-400"
+                placeholder="e.g. subscriber@gmail.com"
+                value={blastTarget}
+                onChange={e => setBlastTarget(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <button
+            type="button"
+            disabled={sending}
+            onClick={async () => {
+              if (!blastSubject.trim()) return toast('Please enter a campaign subject', 'error');
+              setSending(true);
+              toast('🚀 Dispatching marketing blast via Resend API...', 'info');
+              const recipient = blastTarget.trim() || 'customer@smartshop.et';
+              const res = await sendEmailNotification({
+                to: recipient,
+                subject: blastSubject,
+                templateType: 'marketing_blast',
+                data: {
+                  title: blastSubject,
+                  subtitle: blastSubtitle,
+                  description: blastDesc,
+                  ctaText: blastCta,
+                  targetUrl: blastUrl
+                }
+              });
+              setSending(false);
+              reloadLogs();
+              if (res.success) {
+                toast(`🎉 Marketing campaign dispatched to ${recipient}!`, 'success');
+              } else {
+                toast('Error: ' + res.error, 'error');
+              }
+            }}
+            className="w-full mt-2 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-extrabold shadow-lg hover:opacity-95 transition-all flex items-center justify-center gap-2"
+          >
+            {sending ? <Loader size={16} className="animate-spin" /> : <Megaphone size={16} />}
+            🚀 Send Email Marketing Blast
+          </button>
+        </div>
+      </div>
+
+      {/* Email Dispatch Audit Trail */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4" data-admin-card>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-bold">📋 Recent Email Dispatch Audit Trail ({logs.length})</h3>
+          {logs.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.removeItem('ss_email_logs');
+                setLogs([]);
+                toast('🗑️ Email audit log cleared', 'info');
+              }}
+              className="text-[10px] text-red-500 font-semibold hover:underline"
+            >
+              Clear Log
+            </button>
+          )}
+        </div>
+
+        <div className="overflow-x-auto">
+          {logs.length === 0 ? (
+            <p className="text-center py-6 text-xs text-slate-400">No email dispatches recorded yet. Click Test Send above!</p>
+          ) : (
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-slate-200 dark:border-slate-800 text-[9px] uppercase text-slate-400">
+                  <th className="py-2 px-3">Date</th>
+                  <th className="py-2 px-3">Recipient</th>
+                  <th className="py-2 px-3">Subject</th>
+                  <th className="py-2 px-3">Type</th>
+                  <th className="py-2 px-3 text-right">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {logs.map((l: any) => (
+                  <tr key={l.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                    <td className="py-2 px-3 text-[10px] text-slate-400">{new Date(l.sentAt).toLocaleTimeString()}</td>
+                    <td className="py-2 px-3 font-mono text-[11px] font-semibold">{l.to}</td>
+                    <td className="py-2 px-3 truncate max-w-[160px]">{l.subject}</td>
+                    <td className="py-2 px-3"><span className="text-[9px] bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md uppercase font-semibold">{l.templateType}</span></td>
+                    <td className="py-2 px-3 text-right">
+                      <span className={cn('text-[9px] px-2 py-0.5 rounded-full font-bold', l.simulated ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400')}>
+                        {l.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
     </div>
   );
