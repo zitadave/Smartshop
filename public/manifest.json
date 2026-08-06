@@ -104,21 +104,21 @@
       "short_name": "Shop",
       "description": "Explore curated products across all categories",
       "url": "/shop",
-      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" }]
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     },
     {
       "name": "Active Group Buys",
       "short_name": "Group Buy",
       "description": "Collaborate with peers to save up to 25%",
       "url": "/my-group-deals",
-      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" }]
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     },
     {
       "name": "Track Orders",
       "short_name": "Orders",
       "description": "Live GPS tracking and delivery PIN",
       "url": "/orders",
-      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" }]
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     }
   ],
   "share_target": {
@@ -147,11 +147,5 @@
       "protocol": "web+smartshop",
       "url": "/product/%s"
     }
-  ],
-  "edge_side_panel": {
-    "preferred_width": 400
-  },
-  "note_taking": {
-    "new_note_url": "/help"
-  }
+  ]
 }
