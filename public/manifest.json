@@ -1,63 +1,107 @@
 {
-  "name": "Smart Shop Ethiopia \u2014 Premium Marketplace",
+  "name": "Smart Shop Ethiopia — Premium Marketplace",
   "short_name": "Smart Shop",
-  "description": "Ethiopia's premier e-commerce marketplace \u2014 curated products at exceptional prices with free delivery",
-  "background_color": "#f8fafc",
-  "theme_color": "#6C63FF",
+  "description": "Ethiopia's premier e-commerce marketplace — curated products at exceptional prices with free delivery",
+  "background_color": "#0f172a",
+  "theme_color": "#3b82f6",
   "lang": "en",
   "dir": "auto",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "start_url": "/",
+  "scope": "/",
   "categories": [
     "shopping",
     "lifestyle",
-    "ecommerce"
+    "ecommerce",
+    "business"
   ],
   "icons": [
     {
-      "src": "/icons/icon-48x48.svg",
+      "src": "/icons/icon-48x48.png",
       "sizes": "48x48",
-      "type": "image/svg+xml"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "/icons/icon-72x72.svg",
+      "src": "/icons/icon-72x72.png",
       "sizes": "72x72",
-      "type": "image/svg+xml"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "/icons/icon-96x96.svg",
+      "src": "/icons/icon-96x96.png",
       "sizes": "96x96",
-      "type": "image/svg+xml"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "/icons/icon-128x128.svg",
+      "src": "/icons/icon-128x128.png",
       "sizes": "128x128",
-      "type": "image/svg+xml"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "/icons/icon-144x144.svg",
+      "src": "/icons/icon-144x144.png",
       "sizes": "144x144",
-      "type": "image/svg+xml"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "/icons/icon-152x152.svg",
+      "src": "/icons/icon-152x152.png",
       "sizes": "152x152",
-      "type": "image/svg+xml"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "/icons/icon-192x192.svg",
+      "src": "/icons/icon-192x192.png",
       "sizes": "192x192",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/icons/icon-384x384.svg",
+      "src": "/icons/icon-384x384.png",
       "sizes": "384x384",
-      "type": "image/svg+xml"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "/icons/icon-512x512.svg",
+      "src": "/icons/icon-512x512.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Browse Marketplace",
+      "short_name": "Shop",
+      "description": "Explore curated products across all categories",
+      "url": "/shop",
+      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Active Group Buys",
+      "short_name": "Group Buy",
+      "description": "Collaborate with peers to save up to 25%",
+      "url": "/my-group-deals",
+      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Track Orders",
+      "short_name": "Orders",
+      "description": "Live GPS tracking and delivery PIN",
+      "url": "/orders",
+      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
+    }
+  ],
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "protocol_handlers": [
+    {
+      "protocol": "web+smartshop",
+      "url": "/product/%s"
     }
   ]
 }
