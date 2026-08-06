@@ -65,18 +65,20 @@ class AdminErrorBoundary extends React.Component<{ children: React.ReactNode }, 
   render() {
     if (this.state.hasError) {
       return (
-        <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-red-500/30 m-6 max-w-md mx-auto">
-          <div className="text-3xl mb-2">⚠️</div>
-          <h2 className="text-base font-bold text-slate-900 dark:text-white">Dashboard Display Alert</h2>
-          <p className="text-xs text-slate-500 mt-1">
-            A display widget encountered an issue ({String(this.state.error?.message || 'unknown')}). Click below to reset view.
-          </p>
-          <button
-            className="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow"
-            onClick={() => { this.setState({ hasError: false, error: null }); window.location.href = '/admin-panel'; }}
-          >
-            🔄 Reset Dashboard View
-          </button>
+        <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-6">
+          <div className="bg-slate-900 border border-red-500/40 rounded-3xl p-8 max-w-md w-full text-center shadow-2xl space-y-4">
+            <div className="text-4xl mb-2">⚠️</div>
+            <h2 className="text-lg font-bold text-white">Dashboard Display Alert</h2>
+            <p className="text-xs text-slate-300 mt-1">
+              A display component encountered an issue: <code className="text-red-300">{String(this.state.error?.message || 'unknown')}</code>
+            </p>
+            <button
+              className="mt-4 w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow"
+              onClick={() => { this.setState({ hasError: false, error: null }); localStorage.removeItem('ss_founder_unlocked'); window.location.href = '/admin-panel'; }}
+            >
+              🔄 Reset Admin Session & Reload
+            </button>
+          </div>
         </div>
       );
     }
@@ -85,6 +87,14 @@ class AdminErrorBoundary extends React.Component<{ children: React.ReactNode }, 
 }
 
 export default function AdminLayout() {
+  return (
+    <AdminErrorBoundary>
+      <AdminLayoutInner />
+    </AdminErrorBoundary>
+  );
+}
+
+function AdminLayoutInner() {
   const [tab, setTab] = useState<Tab>('overview');
   const [menuOpen, setMenuOpen] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
@@ -439,7 +449,6 @@ export default function AdminLayout() {
   ];
 
   return (
-    <AdminErrorBoundary>
       <div className="min-h-screen font-sans bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors opacity-100" id="admin-panel" data-admin-root style={{ minHeight: '100vh', backgroundColor: globalDarkMode ? '#0f172a' : '#f8fafc', color: globalDarkMode ? '#f1f5f9' : '#0f172a' }}>
         {/* Toast notifications for admin panel */}
         {/* Command Palette */}
@@ -616,7 +625,6 @@ export default function AdminLayout() {
           </div>
         </main>
       </div>
-    </AdminErrorBoundary>
   );
 }
 
