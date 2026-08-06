@@ -2068,9 +2068,48 @@ function AdminEmailEngineView() {
           <button
             type="button"
             onClick={() => {
-              const scriptCode = `function doPost(e) {\n  var data = JSON.parse(e.postData.contents);\n  MailApp.sendEmail({\n    to: data.to,\n    subject: data.subject,\n    htmlBody: data.html || data.htmlBody,\n    name: "Smart Shop Support"\n  });\n  return ContentService.createTextOutput(JSON.stringify({success: true, delivered: true})).setMimeType(ContentService.MimeType.JSON);\n}`;
+              const scriptCode = `// ==========================================
+// SMART SHOP FREE GMAIL WEBHOOK (Code.gs)
+// ==========================================
+// IMPORTANT:
+// 1. SELECT ALL existing text in Code.gs (Ctrl+A / Cmd+A) and DELETE IT!
+// 2. PASTE this entire block into empty Code.gs.
+// 3. Click "Deploy" -> "New Deployment" -> "Web App"
+//    - Execute as: "Me"
+//    - Who has access: "Anyone"
+// ==========================================
+
+function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents);
+    var recipient = data.to || "customer@smartshop.et";
+    var subject = data.subject || "Notification from Smart Shop";
+    var html = data.html || data.htmlBody || "<p>" + subject + "</p>";
+    
+    MailApp.sendEmail({
+      to: recipient,
+      subject: subject,
+      htmlBody: html,
+      name: "Smart Shop Support"
+    });
+    
+    return ContentService
+      .createTextOutput(JSON.stringify({ success: true, delivered: true }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ success: false, error: err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function doGet(e) {
+  return ContentService
+    .createTextOutput(JSON.stringify({ status: "Smart Shop Gmail Webhook Active", success: true }))
+    .setMimeType(ContentService.MimeType.JSON);
+}`;
               navigator.clipboard.writeText(scriptCode);
-              toast('📋 10-line Google Apps Script copied! Paste into script.google.com and deploy.', 'success');
+              toast('📋 Foolproof Google Apps Script copied! Replace everything in Code.gs and deploy.', 'success');
             }}
             className="py-1.5 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-bold shadow transition-all flex items-center gap-1 flex-shrink-0"
           >
@@ -2088,6 +2127,7 @@ function AdminEmailEngineView() {
             </p>
             <ol className="list-decimal list-inside text-[10px] text-slate-500 mt-1.5 space-y-0.5">
               <li>Click <strong>Copy Script</strong> above & open <code>script.google.com</code>.</li>
+              <li><strong className="text-red-500">IMPORTANT:</strong> Select ALL existing code in Code.gs (Ctrl+A) and DELETE it before pasting!</li>
               <li>Paste code & click <strong>Deploy ➔ Web App</strong> (Anyone access).</li>
               <li>Add <code>GOOGLE_EMAIL_WEBHOOK_URL=https://.../exec</code> in Vercel!</li>
             </ol>
