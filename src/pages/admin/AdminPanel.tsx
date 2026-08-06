@@ -268,8 +268,16 @@ export default function AdminLayout() {
   }, []);
 
   const profile = store.profile;
+  const [unlocked, setUnlocked] = useState(() => {
+    try {
+      const ls = JSON.parse(localStorage.getItem('ss_profile') || '{}');
+      return ls.telegramId === '336997351' || Number(ls.telegramId) === 336997351;
+    } catch { return false; }
+  });
+
   const isAuthorizedAdmin = (function() {
     try {
+      if (unlocked) return true;
       const tgUser = (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
       const ls = JSON.parse(localStorage.getItem('ss_profile') || '{}');
       const liveTgId = String(tgUser?.id || profile.telegramId || ls.telegramId || '').trim();
@@ -333,6 +341,7 @@ export default function AdminLayout() {
                       p.role = 'super_admin';
                       localStorage.setItem('ss_profile', JSON.stringify(p));
                       store.setProfile({ ...store.profile, telegramId: '336997351', role: 'super_admin' } as any);
+                      setUnlocked(true);
                       toast('🔓 Administrator authentication verified! Welcome back.', 'success');
                     } else {
                       toast('❌ Invalid Admin Passkey. Unauthorized attempt logged.', 'error');
@@ -355,6 +364,7 @@ export default function AdminLayout() {
                   p.role = 'super_admin';
                   localStorage.setItem('ss_profile', JSON.stringify(p));
                   store.setProfile({ ...store.profile, telegramId: '336997351', role: 'super_admin' } as any);
+                  setUnlocked(true);
                   toast('🔓 Administrator authentication verified! Welcome back.', 'success');
                 } else {
                   toast('❌ Invalid Admin Passkey. Unauthorized attempt logged.', 'error');
@@ -430,7 +440,7 @@ export default function AdminLayout() {
 
   return (
     <AdminErrorBoundary>
-      <div className={cn("min-h-screen font-sans transition-colors", globalDarkMode ? "dark bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-900")} id="admin-panel" data-admin-root data-admin-mode={globalDarkMode ? 'dark' : 'light'}>
+      <div className="min-h-screen font-sans bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors" id="admin-panel" data-admin-root>
         {/* Toast notifications for admin panel */}
         {/* Command Palette */}
         <CommandPalette onNavigate={handleCmdNavigate} />
@@ -532,7 +542,7 @@ export default function AdminLayout() {
       {menuOpen && <div className="fixed inset-0 bg-black/40 z-30 xl:hidden backdrop-blur-sm" onClick={() => setMenuOpen(false)} />}
 
       <main className="xl:ml-60 pt-14 min-h-screen transition-all duration-300 overflow-x-visible">
-        <div className="p-4 md:p-6 max-w-7xl mx-auto animate-fadeUp">
+        <div className="p-4 md:p-6 max-w-7xl mx-auto ">
             {/* Department Header & Horizontal Sub-Tabs Command Bar */}
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 mb-6 shadow-sm">
               <div className="flex items-center gap-3 mb-3">
@@ -637,7 +647,7 @@ function Overview({ onNavigate }: { onNavigate?: (tab: string) => void }) {
   const generateSpark = (base: number) => Array.from({length: 8}, (_, i) => ({ label: `${i+1}h`, value: Math.round(base * (0.7 + Math.random() * 0.6)) }));
 
   return (
-    <div className="space-y-5 animate-fadeUp">
+    <div className="space-y-5 ">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-slate-900 dark:text-white">👋 Welcome back, Admin</h2>
@@ -761,7 +771,7 @@ function AdminProducts() {
   if (loading) return <div className="text-center py-12"><Loader size={24} className="animate-spin mx-auto text-indigo-500" /></div>;
 
   return (
-    <div className="animate-fadeUp">
+    <div className="">
       {showStudio && (
         <ProductStudio
           editProduct={editingProduct}
@@ -943,7 +953,7 @@ function AdminOrders() {
   const statuses = ['all', 'pending', 'confirmed', 'processing', 'shipped', 'delivered', 'completed', 'cancelled'];
 
   return (
-    <div className="animate-fadeUp">
+    <div className="">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-bold">📋 Orders ({orders.length})</h2>
         <div className="flex items-center gap-2">
@@ -1125,7 +1135,7 @@ function AdminVendors() {
   if (loading) return <div className="text-center py-12"><Loader size={24} className="animate-spin mx-auto text-indigo-500" /></div>;
 
   return (
-    <div className="animate-fadeUp space-y-4 max-w-full overflow-x-hidden">
+    <div className=" space-y-4 max-w-full overflow-x-hidden">
       <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
         <div><h2 className="text-lg font-bold">🏪 Vendor Management ({apiApps.length})</h2><p className="text-[10px] text-slate-500">Manage vendor registrations, commissions, payouts and storefronts</p></div>
         <div className="flex gap-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl p-0.5">
@@ -1416,7 +1426,7 @@ function AdminMarketplace() {
   };
 
   return (
-    <div className="animate-fadeUp space-y-4 max-w-full overflow-x-hidden">
+    <div className=" space-y-4 max-w-full overflow-x-hidden">
       <h2 className="text-lg font-bold">🚀 Marketplace Management</h2>
       <p className="text-[10px] text-slate-500">Manage flash sales, sponsored products, bundle deals, and cross-sell promotions</p>
 
@@ -1541,7 +1551,7 @@ function AdminReviews() {
   const store = useStore();
   const { photoReviews, removePhotoReview } = store;
   return (
-    <div className="animate-fadeUp">
+    <div className="">
       <h2 className="text-lg font-bold mb-4">📸 Reviews ({photoReviews.length})</h2>
       <div className="grid sm:grid-cols-2 gap-2">
         {photoReviews.slice(0, 20).map(r => (
@@ -1618,7 +1628,7 @@ function AdminBroadcast() {
   const activeCount = broadcastMessages.filter((m: any) => !m.expiresAt || new Date(m.expiresAt) > new Date()).length;
 
   return (
-    <div className="animate-fadeUp space-y-4 max-w-full overflow-x-hidden">
+    <div className=" space-y-4 max-w-full overflow-x-hidden">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h2 className="text-lg font-bold">📢 Broadcast Studio ({broadcastMessages.length})</h2>
@@ -1756,7 +1766,7 @@ function AdminFlashDeals() {
   const saveSetting = (key: string, val: any) => { const updated = { ...settings, [key]: val }; setSettings(updated as any); settingsApi.update(updated); };
   const flashSales = settings.flashSales || {};
   return (
-    <div className="animate-fadeUp space-y-4 max-w-full overflow-x-hidden">
+    <div className=" space-y-4 max-w-full overflow-x-hidden">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div><h2 className="text-lg font-bold">⚡ Flash Deal Studio</h2><p className="text-[10px] text-slate-500">Create time-limited discounts to drive urgency</p></div>
         <span className="text-[9px] text-slate-400">{Object.values(flashSales).filter((d: any) => isFlashDealActive(d)).length} live now</span>
@@ -1847,7 +1857,7 @@ function AdminPreOrders() {
   const store = useStore(); const { preOrders, settings, setSettings } = store;
   const saveSetting = (key: string, val: any) => { const updated = { ...settings, [key]: val }; setSettings(updated as any); settingsApi.update(updated); };
   return (
-    <div className="animate-fadeUp space-y-4">
+    <div className=" space-y-4">
       <h2 className="text-lg font-bold">🚀 Pre-Orders ({preOrders.length})</h2>
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
         <h3 className="text-sm font-bold mb-3">⚙️ Settings</h3>
@@ -1885,7 +1895,7 @@ function AdminTracking() {
     toast('✅ Tracking added!', 'success');
   };
   return (
-    <div className="animate-fadeUp space-y-4">
+    <div className=" space-y-4">
       <h2 className="text-lg font-bold">📍 Order Tracking</h2>
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 overflow-x-hidden" data-admin-card>
         <h3 className="text-sm font-bold mb-3">Add Tracking to Order</h3>
@@ -1936,7 +1946,7 @@ function AdminThemes() {
   };
   const currentTheme = THEMES.find(t => t.id === themePreset) || THEMES[0];
   return (
-    <div className="animate-fadeUp space-y-4 max-w-full overflow-x-hidden">
+    <div className=" space-y-4 max-w-full overflow-x-hidden">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div><h2 className="text-lg font-bold">🎨 Store Theme Studio</h2><p className="text-[10px] text-slate-500">Customize colors for the CUSTOMER-FACING storefront. (Admin panel colors are in "Admin Theme" tab.)</p></div>
         <div className="flex gap-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl p-0.5">
@@ -2036,7 +2046,7 @@ function AdminEmailEngineView() {
   };
 
   return (
-    <div className="animate-fadeUp space-y-4">
+    <div className=" space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h2 className="text-lg font-bold flex items-center gap-2">
@@ -2659,7 +2669,7 @@ function AdminSettings() {
   };
 
   return (
-    <div className="animate-fadeUp space-y-4">
+    <div className=" space-y-4">
       <h2 className="text-lg font-bold flex items-center gap-2"><SettingsIcon size={20} /> Settings</h2>
 
       {/* Platform Branding & Logo Customizer */}
@@ -3071,7 +3081,7 @@ function AdminAffiliatesTab() {
   if (loading) return <div className="text-center py-12"><Loader size={24} className="animate-spin mx-auto text-indigo-500" /></div>;
 
   return (
-    <div className="animate-fadeUp space-y-4">
+    <div className=" space-y-4">
       <div>
         <h2 className="text-lg font-bold flex items-center gap-2">🤝 Affiliate Performance & Audits</h2>
         <p className="text-[10px] text-slate-500 mt-0.5">Real-time program performance, referred transactions, and top promoters</p>

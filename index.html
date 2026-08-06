@@ -18,6 +18,9 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Smart Shop Ethiopia — Premium Marketplace" />
     <meta name="twitter:description" content="Ethiopia's premier e-commerce marketplace." />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <link rel="canonical" href="https://smartshop-steel.vercel.app" />
     <link rel="manifest" href="/manifest.json" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -25,9 +28,12 @@
     <script>
       (function() {
         try {
-          var ver = 'v80';
+          var ver = 'v91_cache_bust';
           if (localStorage.getItem('ss_app_version') !== ver) {
             localStorage.setItem('ss_app_version', ver);
+            localStorage.removeItem('ss_founder_unlocked');
+            var oldS = document.getElementById('ap-theme-style');
+            if (oldS) oldS.remove();
           }
         } catch(e) {}
 
