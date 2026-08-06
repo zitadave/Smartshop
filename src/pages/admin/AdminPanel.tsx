@@ -264,6 +264,18 @@ function AdminLayoutInner() {
   useEffect(() => {
     try {
       const params = new URLSearchParams(window.location.search);
+      if (params.get('reset_cache') === 'true' || params.get('clear_cache') === 'true') {
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
+        }
+        if ('caches' in window) {
+          caches.keys().then(names => names.forEach(n => caches.delete(n)));
+        }
+        localStorage.clear();
+        sessionStorage.clear();
+        window.location.href = '/admin-panel';
+        return;
+      }
       const f = params.get('founder') || params.get('admin');
       if (f === '336997351') {
         localStorage.setItem('ss_founder_unlocked', 'true');
@@ -392,6 +404,31 @@ function AdminLayoutInner() {
               className="w-full py-3 border border-slate-800 text-slate-400 hover:text-white rounded-xl text-xs font-semibold transition-colors"
             >
               ← Return to Storefront
+            </button>
+
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  if ('serviceWorker' in navigator) {
+                    const regs = await navigator.serviceWorker.getRegistrations();
+                    for (const r of regs) await r.unregister();
+                  }
+                  if ('caches' in window) {
+                    const names = await caches.keys();
+                    for (const n of names) await caches.delete(n);
+                  }
+                  localStorage.clear();
+                  sessionStorage.clear();
+                  toast('🧹 All app caches & service workers purged! Loading fresh build...', 'success');
+                  window.location.href = '/admin-panel';
+                } catch {
+                  window.location.reload();
+                }
+              }}
+              className="w-full py-2 bg-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-slate-200 rounded-xl text-[11px] font-semibold transition-colors flex items-center justify-center gap-1.5"
+            >
+              🧹 Clear Stale App Cache & Reset Service Worker
             </button>
           </div>
 
