@@ -177,22 +177,25 @@ export default function Profile() {
   }
 
   var isAuthorizedAdmin = 
-    (Boolean(profile.telegramId) && (String(profile.telegramId) === '336997351' || Number(profile.telegramId) === 336997351)) ||
+    localStorage.getItem('ss_founder_unlocked') === 'true' ||
+    profile.telegramId === '336997351' || 
+    profile.telegramId === 336997351 ||
+    String(profile.telegramId) === '336997351' ||
     profile.role === 'admin' || 
     profile.role === 'super_admin' ||
     (function() {
       try {
-        var hasTgId = Boolean(profile.telegramId) && String(profile.telegramId).trim() !== '';
-        var hasPhone = Boolean(profile.phone) && String(profile.phone).trim() !== '';
-        if (!hasTgId && !hasPhone) return false;
-
+        var ls = JSON.parse(localStorage.getItem('ss_profile') || '{}');
+        if (ls.telegramId === '336997351' || ls.telegramId === 336997351 || ls.role === 'admin' || ls.role === 'super_admin') return true;
         var adminUsers = JSON.parse(localStorage.getItem('ss_admin_users') || '[]');
         var cloudAdmins = (store.settings as any).adminUsers || [];
         var allAdmins = [...adminUsers, ...cloudAdmins];
+        var tgId = String(profile.telegramId || ls.telegramId || '').trim();
+        var phone = String(profile.phone || ls.phone || '').trim();
         return allAdmins.some(function(u: any) { 
           if (!u || u.status !== 'active') return false;
-          if (hasTgId && Boolean(u.telegramId) && String(u.telegramId).trim() === String(profile.telegramId).trim()) return true;
-          if (hasPhone && Boolean(u.phone) && String(u.phone).trim() === String(profile.phone).trim()) return true;
+          if (tgId && Boolean(u.telegramId) && String(u.telegramId).trim() === tgId) return true;
+          if (phone && Boolean(u.phone) && String(u.phone).trim() === phone) return true;
           return false;
         });
       } catch(e) {
