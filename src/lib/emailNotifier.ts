@@ -564,6 +564,29 @@ export function generateMarketingBlastHtml(campaign: any): string {
   `;
 }
 
+function wrapHtmlEmailDoc(bodyHtml: string, titleText: string = 'Smart Shop Notification'): string {
+  if (!bodyHtml) return '';
+  if (bodyHtml.trim().toLowerCase().startsWith('<!doctype')) return bodyHtml;
+  return `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>${titleText}</title>
+</head>
+<body style="margin:0; padding:20px 10px; background-color:#f8fafc; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing:antialiased;">
+  <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width:620px; margin:0 auto;">
+    <tr>
+      <td align="center">
+        ${bodyHtml}
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
 /**
  * Send an email notification (or simulate safely if RESEND_API_KEY is unset)
  * Logs all email activity in localStorage for audit trail.
@@ -606,6 +629,8 @@ export async function sendEmailNotification(
     htmlContent = generateMarketingBlastHtml(payload.data || {});
   }
 
+  const wrappedHtml = wrapHtmlEmailDoc(htmlContent, resolvedSubject);
+
   try {
     const res = await fetch('/api/email/send', {
       method: 'POST',
@@ -613,7 +638,7 @@ export async function sendEmailNotification(
       body: JSON.stringify({
         to: payload.to,
         subject: resolvedSubject,
-        html: htmlContent,
+        html: wrappedHtml,
         type: payload.templateType
       })
     });
