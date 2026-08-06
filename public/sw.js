@@ -1,10 +1,10 @@
 // ============================================
-// Smart Shop — Service Worker (v1)
+// Smart Shop — Service Worker (v92 - NETWORK FIRST)
 // Enables PWA install on Android & iOS
-// Strategy: Network-first with cache fallback
+// Strategy: NETWORK-FIRST for 100% freshness, cache fallback offline
 // ============================================
 
-const CACHE_NAME = 'ss-cache-v1';
+const CACHE_NAME = 'ss-cache-v92-netfirst';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
@@ -24,7 +24,7 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// ── Activate: clean old caches ────────────────────────────────
+// ── Activate: delete ALL old caches immediately ──────────────
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -39,7 +39,7 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// ── Fetch: network first, cache fallback ──────────────────────
+// ── Fetch: NETWORK FIRST for all requests ─────────────────────
 self.addEventListener('fetch', (event) => {
   // Skip non-GET requests
   if (event.request.method !== 'GET') return;
@@ -56,39 +56,23 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Navigation requests: network first
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          // Cache the response for offline fallback
+  // ALL GET requests: Network first, fallback to cache if offline
+  event.respondWith(
+    fetch(event.request)
+      .then((response) => {
+        // Cache successful valid responses for offline fallback
+        if (response && response.status === 200) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(event.request, clone);
           });
-          return response;
-        })
-        .catch(() => {
-          return caches.match(event.request).then((cached) => {
-            return cached || caches.match('/');
-          });
-        })
-    );
-    return;
-  }
-
-  // Static assets: cache-first (faster)
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      
-      return fetch(event.request).then((response) => {
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, clone);
-        });
+        }
         return response;
-      });
-    })
+      })
+      .catch(() => {
+        return caches.match(event.request).then((cached) => {
+          return cached || caches.match('/');
+        });
+      })
   );
 });

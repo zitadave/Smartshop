@@ -440,7 +440,7 @@ export default function AdminLayout() {
 
   return (
     <AdminErrorBoundary>
-      <div className="min-h-screen font-sans bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors" id="admin-panel" data-admin-root>
+      <div className="min-h-screen font-sans bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors opacity-100" id="admin-panel" data-admin-root style={{ minHeight: '100vh', backgroundColor: globalDarkMode ? '#0f172a' : '#f8fafc', color: globalDarkMode ? '#f1f5f9' : '#0f172a' }}>
         {/* Toast notifications for admin panel */}
         {/* Command Palette */}
         <CommandPalette onNavigate={handleCmdNavigate} />
@@ -456,9 +456,9 @@ export default function AdminLayout() {
               </div>
               <div>
                 <h1 className="text-sm font-bold text-slate-900 dark:text-white leading-tight">Admin Panel</h1>
-              <p className="text-[8px] text-slate-500 dark:text-slate-400 uppercase tracking-[0.15em] font-medium">Smart Shop Management</p>
+                <p className="text-[8px] text-slate-500 dark:text-slate-400 uppercase tracking-[0.15em] font-medium">Smart Shop Management</p>
+              </div>
             </div>
-          </div>
           <div className="ml-auto flex items-center gap-2">
             <button className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-[10px] font-medium"
               onClick={() => setCmdOpen(true)}>

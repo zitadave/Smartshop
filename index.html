@@ -119,14 +119,21 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
-      // PWA Service Worker for "Add to Home Screen" installability
+      // Force Purge Stale Service Workers & Caches on v93 update
       if ('serviceWorker' in navigator) {
+        if (localStorage.getItem('ss_sw_purged_v93') !== 'true') {
+          localStorage.setItem('ss_sw_purged_v93', 'true');
+          caches.keys().then(function(names) {
+            for (var i = 0; i < names.length; i++) { caches.delete(names[i]); }
+          });
+          navigator.serviceWorker.getRegistrations().then(function(regs) {
+            for (var i = 0; i < regs.length; i++) { regs[i].unregister(); }
+          });
+        }
         window.addEventListener('load', function() {
           navigator.serviceWorker.register('/sw.js').then(function(reg) {
-            console.log('[PWA] SW registered:', reg.scope);
-          }).catch(function(err) {
-            console.warn('[PWA] SW registration failed:', err);
-          });
+            reg.update();
+          }).catch(function() {});
         });
       }
     </script>
