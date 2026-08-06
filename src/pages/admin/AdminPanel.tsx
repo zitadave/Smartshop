@@ -2057,9 +2057,14 @@ function AdminSettings() {
               type="button"
               className="flex-1 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-xs font-bold shadow-md hover:opacity-95 transition-all flex items-center justify-center gap-1.5"
               onClick={async () => {
-                toast('📧 Testing Resend email dispatch...', 'info');
+                const testEmail = prompt('Enter your email address to receive a live test email:', store.profile?.email || '');
+                if (!testEmail || !testEmail.includes('@')) {
+                  toast('Please enter a valid email address to test!', 'error');
+                  return;
+                }
+                toast('📧 Testing Resend email dispatch to ' + testEmail + '...', 'info');
                 const res = await sendEmailNotification({
-                  to: 'admin@smartshop.et',
+                  to: testEmail.trim(),
                   subject: '⚡ Test Marketing Blast from Smart Shop!',
                   templateType: 'marketing_blast',
                   data: {
@@ -2071,7 +2076,7 @@ function AdminSettings() {
                   }
                 });
                 if (res.success) {
-                  toast(res.simulated ? '✅ Email simulated in Resend Sandbox (Logged in console & audit log)!' : '🎉 Live HTML Email sent via Resend API!', 'success');
+                  toast(res.simulated ? '✅ Email simulated in Resend Sandbox (Logged in console & audit log)!' : '🎉 Live HTML Email sent via Resend API to ' + testEmail + '!', 'success');
                 } else {
                   toast('Error: ' + res.error, 'error');
                 }
