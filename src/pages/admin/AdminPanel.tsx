@@ -352,67 +352,6 @@ export default function AdminLayout() {
     );
   }
 
-  // NUCLEAR OPTION: Inject a <style> tag that overrides ALL admin panel styling
-  // This covers layout (panel bg, sidebar, header) AND cards
-  // CSS selectors match dynamically — all current and future elements
-  // Targets BOTH [data-admin-card] AND card-like divs (bg-white + rounded-2xl)
-  useEffect(() => {
-    const old = document.getElementById('ap-theme-style');
-    if (old) old.remove();
-    const style = document.createElement('style');
-    style.id = 'ap-theme-style';
-    const CARD = '[data-admin-card], #admin-panel [class*="bg-white"][class*="rounded-2xl"]';
-    if (globalDarkMode) {
-      style.textContent = [
-        '#admin-panel { background: linear-gradient(135deg, #0a0e17, #0f172a) !important; }',
-        '[data-admin-header] { background: rgba(15,23,42,0.8) !important; border-color: #1e293b !important; }',
-        '[data-admin-sidebar] { background: #0f172a !important; border-color: #1e293b !important; }',
-        '[data-admin-sidebar] .text-slate-400, [data-admin-sidebar] .text-slate-500 { color: #94a3b8 !important; }',
-        '[data-admin-sidebar] .hover\\:text-slate-900:hover { color: #f1f5f9 !important; }',
-        CARD + ' { background-color: #1e293b !important; border-color: #334155 !important; }',
-        CARD + ' .text-slate-400, ' + CARD + ' .text-slate-500, ' + CARD + ' .text-slate-600 { color: #94a3b8 !important; }',
-        CARD + ' .text-slate-700, ' + CARD + ' .text-slate-800, ' + CARD + ' .text-slate-900 { color: #e2e8f0 !important; }',
-        CARD + ' .font-bold, ' + CARD + ' .font-semibold, ' + CARD + ' .font-medium { color: #e2e8f0 !important; }',
-        CARD + ' h1, ' + CARD + ' h2, ' + CARD + ' h3, ' + CARD + ' h4, ' + CARD + ' label { color: #e2e8f0 !important; }',
-        CARD + ' input, ' + CARD + ' select, ' + CARD + ' textarea { background-color: #0f172a !important; border-color: #475569 !important; color: #e2e8f0 !important; }',
-        CARD + ' .text-indigo-600, ' + CARD + ' .text-indigo-700 { color: #818cf8 !important; }',
-        CARD + ' .text-emerald-600 { color: #34d399 !important; }',
-        CARD + ' .text-red-500, ' + CARD + ' .text-red-600 { color: #f87171 !important; }',
-        CARD + ' .text-amber-600, ' + CARD + ' .text-amber-700 { color: #fbbf24 !important; }',
-        CARD + ' .text-green-600, ' + CARD + ' .text-green-700 { color: #34d399 !important; }',
-        CARD + ' .text-blue-500, ' + CARD + ' .text-blue-600 { color: #60a5fa !important; }',
-        CARD + ' .text-purple-600, ' + CARD + ' .text-purple-700 { color: #a78bfa !important; }',
-        CARD + ' .bg-white { background-color: #1e293b !important; }',
-        CARD + ' .border-slate-200 { border-color: #334155 !important; }',
-      ].join('\n');
-    } else {
-      style.textContent = [
-        '#admin-panel { background: linear-gradient(135deg, #f8fafc, #f1f5f9) !important; }',
-        '[data-admin-header] { background: rgba(255,255,255,0.8) !important; border-color: #e2e8f0 !important; }',
-        '[data-admin-sidebar] { background: #ffffff !important; border-color: #e2e8f0 !important; }',
-        '[data-admin-sidebar] .text-slate-400, [data-admin-sidebar] .text-slate-500 { color: #94a3b8 !important; }',
-        '[data-admin-sidebar] .hover\\:text-slate-900:hover { color: #0f172a !important; }',
-        CARD + ' { background-color: #ffffff !important; border-color: #e2e8f0 !important; }',
-        CARD + ' .text-slate-400, ' + CARD + ' .text-slate-500, ' + CARD + ' .text-slate-600 { color: #64748b !important; }',
-        CARD + ' .text-slate-700, ' + CARD + ' .text-slate-800, ' + CARD + ' .text-slate-900 { color: #0f172a !important; }',
-        CARD + ' .font-bold, ' + CARD + ' .font-semibold, ' + CARD + ' .font-medium { color: #0f172a !important; }',
-        CARD + ' h1, ' + CARD + ' h2, ' + CARD + ' h3, ' + CARD + ' h4, ' + CARD + ' label { color: #0f172a !important; }',
-        CARD + ' input, ' + CARD + ' select, ' + CARD + ' textarea { background-color: #ffffff !important; border-color: #e2e8f0 !important; color: #0f172a !important; }',
-        CARD + ' .text-indigo-600, ' + CARD + ' .text-indigo-700 { color: #4f46e5 !important; }',
-        CARD + ' .text-emerald-600 { color: #059669 !important; }',
-        CARD + ' .text-red-500, ' + CARD + ' .text-red-600 { color: #dc2626 !important; }',
-        CARD + ' .text-amber-600, ' + CARD + ' .text-amber-700 { color: #d97706 !important; }',
-        CARD + ' .text-green-600, ' + CARD + ' .text-green-700 { color: #059669 !important; }',
-        CARD + ' .text-blue-500, ' + CARD + ' .text-blue-600 { color: #2563eb !important; }',
-        CARD + ' .text-purple-600, ' + CARD + ' .text-purple-700 { color: #7c3aed !important; }',
-        CARD + ' .bg-white { background-color: #ffffff !important; }',
-        CARD + ' .border-slate-200 { border-color: #e2e8f0 !important; }',
-      ].join('\n');
-    }
-    document.head.appendChild(style);
-    return () => { const s = document.getElementById('ap-theme-style'); if (s) s.remove(); };
-  }, [globalDarkMode]);
-
   const handleCmdNavigate = (t: string) => {
     setTab(t as Tab);
     setCmdOpen(false);
