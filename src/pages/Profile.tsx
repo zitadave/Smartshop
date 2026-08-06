@@ -181,17 +181,23 @@ export default function Profile() {
       var tgUser = (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
       var ls = JSON.parse(localStorage.getItem('ss_profile') || '{}');
       var liveTgId = String(tgUser?.id || profile.telegramId || ls.telegramId || '').trim();
+      var phone = String(profile.phone || ls.phone || '').trim();
+
+      // 1. Strict Founder ID Check: ONLY Telegram ID 336997351 is Founder Super Admin
       if (liveTgId === '336997351' || Number(liveTgId) === 336997351) {
-        try { localStorage.setItem('ss_founder_unlocked', 'true'); } catch {}
         return true;
       }
-      if (localStorage.getItem('ss_founder_unlocked') === 'true') return true;
-      if (profile.role === 'admin' || profile.role === 'super_admin' || ls.role === 'admin' || ls.role === 'super_admin') return true;
 
+      // 2. Strict Guest / Customer / Vendor Anti-Spoofing Guard:
+      // If the user has no explicit Telegram ID or Phone, never grant admin access
+      if (!liveTgId && !phone) {
+        return false;
+      }
+
+      // 3. Check if exact Telegram ID or Phone matches an active Admin User in RBAC
       var adminUsers = JSON.parse(localStorage.getItem('ss_admin_users') || '[]');
       var cloudAdmins = (store.settings as any).adminUsers || [];
       var allAdmins = [...adminUsers, ...cloudAdmins];
-      var phone = String(profile.phone || ls.phone || '').trim();
       return allAdmins.some(function(u: any) { 
         if (!u || u.status !== 'active') return false;
         if (liveTgId && Boolean(u.telegramId) && String(u.telegramId).trim() === liveTgId) return true;

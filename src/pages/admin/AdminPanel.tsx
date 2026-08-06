@@ -240,17 +240,22 @@ export default function AdminLayout() {
       const tgUser = (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
       const ls = JSON.parse(localStorage.getItem('ss_profile') || '{}');
       const liveTgId = String(tgUser?.id || profile.telegramId || ls.telegramId || '').trim();
+      const phone = String(profile.phone || ls.phone || '').trim();
+
+      // 1. Strict Founder ID Check: ONLY Telegram ID 336997351 is Founder Super Admin
       if (liveTgId === '336997351' || Number(liveTgId) === 336997351) {
-        try { localStorage.setItem('ss_founder_unlocked', 'true'); } catch {}
         return true;
       }
-      if (localStorage.getItem('ss_founder_unlocked') === 'true') return true;
-      if (profile.role === 'admin' || profile.role === 'super_admin' || ls.role === 'admin' || ls.role === 'super_admin') return true;
 
+      // 2. Strict Guest / Customer / Vendor Anti-Spoofing Guard:
+      if (!liveTgId && !phone) {
+        return false;
+      }
+
+      // 3. Check if exact Telegram ID or Phone matches an active Admin User in RBAC
       const adminUsers = JSON.parse(localStorage.getItem('ss_admin_users') || '[]');
       const cloudAdmins = (store.settings as any).adminUsers || [];
       const allAdmins = [...adminUsers, ...cloudAdmins];
-      const phone = String(profile.phone || ls.phone || '').trim();
       return allAdmins.some(function(u: any) { 
         if (!u || u.status !== 'active') return false;
         if (liveTgId && Boolean(u.telegramId) && String(u.telegramId).trim() === liveTgId) return true;
@@ -489,6 +494,25 @@ export default function AdminLayout() {
               setTimeout(function(){ window.location.reload(); }, 100);
             }} title={globalDarkMode ? 'Switch to Light' : 'Switch to Dark'}>
               {globalDarkMode ? <Sun size={16} className="text-amber-500" /> : <Moon size={16} className="text-indigo-500" />}
+            </button>
+            <button
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors text-[10px] font-bold"
+              onClick={() => {
+                if (window.confirm('Lock Administrator Session and return to normal customer profile?')) {
+                  localStorage.removeItem('ss_founder_unlocked');
+                  const p = JSON.parse(localStorage.getItem('ss_profile') || '{}');
+                  delete p.role;
+                  if (p.telegramId === '336997351') delete p.telegramId;
+                  localStorage.setItem('ss_profile', JSON.stringify(p));
+                  store.setProfile({ ...store.profile, role: undefined, telegramId: undefined } as any);
+                  toast('🔒 Administrator session locked.', 'info');
+                  window.location.href = '/profile';
+                }
+              }}
+              title="Lock Admin Session & Return to Profile"
+            >
+              <Lock size={12} />
+              <span className="hidden sm:inline">Lock Admin</span>
             </button>
             <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-950/30 rounded-xl">
               <Activity size={12} className="text-indigo-500" />
