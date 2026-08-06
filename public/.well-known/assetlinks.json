@@ -1,0 +1,35 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "et.smartshop.app",
+      "sha256_cert_fingerprints": [
+        "FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C",
+        "30:93:22:98:81:AE:A2:3B:7D:61:C4:64:FA:B5:18:2D:10:E2:21:52:90:75:18:8E:22:9A:89:E2:B6:22:F6:C1"
+      ]
+    }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.smartshop.twa",
+      "sha256_cert_fingerprints": [
+        "FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C",
+        "30:93:22:98:81:AE:A2:3B:7D:61:C4:64:FA:B5:18:2D:10:E2:21:52:90:75:18:8E:22:9A:89:E2:B6:22:F6:C1"
+      ]
+    }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "smartshop.steel.vercel.app",
+      "sha256_cert_fingerprints": [
+        "FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C",
+        "30:93:22:98:81:AE:A2:3B:7D:61:C4:64:FA:B5:18:2D:10:E2:21:52:90:75:18:8E:22:9A:89:E2:B6:22:F6:C1"
+      ]
+    }
+  }
+]
