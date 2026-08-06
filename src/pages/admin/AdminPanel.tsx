@@ -51,6 +51,39 @@ type Tab = 'overview' | 'heroslots' | 'products' | 'orders' | 'vendors' | 'deliv
   | 'bulkProducts' | 'analytics' | 'forecast' | 'activity' | 'security' | 'telegram' 
   | 'fulfillment' | 'sla' | 'driver' | 'returns' | 'finance' | 'smartbooks' | 'promotions' | 'manualpayments' | 'affiliates' | 'email';
 
+class AdminErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error: any }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: any, info: any) {
+    console.error('[AdminPanel Crash Caught]:', error, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-red-500/30 m-6 max-w-md mx-auto">
+          <div className="text-3xl mb-2">⚠️</div>
+          <h2 className="text-base font-bold text-slate-900 dark:text-white">Dashboard Display Alert</h2>
+          <p className="text-xs text-slate-500 mt-1">
+            A display widget encountered an issue ({String(this.state.error?.message || 'unknown')}). Click below to reset view.
+          </p>
+          <button
+            className="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow"
+            onClick={() => { this.setState({ hasError: false, error: null }); window.location.href = '/admin-panel'; }}
+          >
+            🔄 Reset Dashboard View
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function AdminLayout() {
   const [tab, setTab] = useState<Tab>('overview');
   const [menuOpen, setMenuOpen] = useState(false);
@@ -301,7 +334,6 @@ export default function AdminLayout() {
                       localStorage.setItem('ss_profile', JSON.stringify(p));
                       store.setProfile({ ...store.profile, telegramId: '336997351', role: 'super_admin' } as any);
                       toast('🔓 Administrator authentication verified! Welcome back.', 'success');
-                      window.location.reload();
                     } else {
                       toast('❌ Invalid Admin Passkey. Unauthorized attempt logged.', 'error');
                       el.value = '';
@@ -324,7 +356,6 @@ export default function AdminLayout() {
                   localStorage.setItem('ss_profile', JSON.stringify(p));
                   store.setProfile({ ...store.profile, telegramId: '336997351', role: 'super_admin' } as any);
                   toast('🔓 Administrator authentication verified! Welcome back.', 'success');
-                  window.location.reload();
                 } else {
                   toast('❌ Invalid Admin Passkey. Unauthorized attempt logged.', 'error');
                   if (el) el.value = '';
@@ -398,22 +429,23 @@ export default function AdminLayout() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900" id="admin-panel" data-admin-root data-admin-mode={globalDarkMode ? 'dark' : 'light'}>
-      {/* Toast notifications for admin panel */}
-      {/* Command Palette */}
-      <CommandPalette onNavigate={handleCmdNavigate} />
+    <AdminErrorBoundary>
+      <div className={cn("min-h-screen font-sans transition-colors", globalDarkMode ? "dark bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-900")} id="admin-panel" data-admin-root data-admin-mode={globalDarkMode ? 'dark' : 'light'}>
+        {/* Toast notifications for admin panel */}
+        {/* Command Palette */}
+        <CommandPalette onNavigate={handleCmdNavigate} />
 
-      <header className="fixed top-0 left-0 right-0 h-14 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-700/50" data-admin-header>
-        <div className="max-w-7xl mx-auto h-full flex items-center px-4 gap-3">
-          <button className="xl:hidden p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors" onClick={() => setMenuOpen(!menuOpen)}>
-            {menuOpen ? <X size={18} /> : <Menu size={18} />}
-          </button>
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white flex items-center justify-center text-lg shadow-lg shadow-indigo-500/20">
-              <Rocket size={16} />
-            </div>
-            <div>
-              <h1 className="text-sm font-bold text-slate-900 dark:text-white leading-tight">Admin Panel</h1>
+        <header className="fixed top-0 left-0 right-0 h-14 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-700/50" data-admin-header>
+          <div className="max-w-7xl mx-auto h-full flex items-center px-4 gap-3">
+            <button className="xl:hidden p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors" onClick={() => setMenuOpen(!menuOpen)}>
+              {menuOpen ? <X size={18} /> : <Menu size={18} />}
+            </button>
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white flex items-center justify-center text-lg shadow-lg shadow-indigo-500/20">
+                <Rocket size={16} />
+              </div>
+              <div>
+                <h1 className="text-sm font-bold text-slate-900 dark:text-white leading-tight">Admin Panel</h1>
               <p className="text-[8px] text-slate-500 dark:text-slate-400 uppercase tracking-[0.15em] font-medium">Smart Shop Management</p>
             </div>
           </div>
@@ -501,79 +533,80 @@ export default function AdminLayout() {
 
       <main className="xl:ml-60 pt-14 min-h-screen transition-all duration-300 overflow-x-visible">
         <div className="p-4 md:p-6 max-w-7xl mx-auto animate-fadeUp">
-          {/* Department Header & Horizontal Sub-Tabs Command Bar */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 mb-6 shadow-sm">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-                <currentDept.icon size={20} />
+            {/* Department Header & Horizontal Sub-Tabs Command Bar */}
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 mb-6 shadow-sm">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                  <currentDept.icon size={20} />
+                </div>
+                <div>
+                  <h2 className="text-base font-extrabold text-slate-900 dark:text-white">{currentDept.label}</h2>
+                  <p className="text-[10px] text-slate-500">{currentDept.desc}</p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-base font-extrabold text-slate-900 dark:text-white">{currentDept.label}</h2>
-                <p className="text-[10px] text-slate-500">{currentDept.desc}</p>
+              <div className="flex gap-1.5 overflow-x-auto scrollbar-none border-t border-slate-100 dark:border-slate-800 pt-3">
+                {currentDept.tabs.map((t) => {
+                  const isSelected = tab === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => setTab(t.id)}
+                      className={cn(
+                        'px-3.5 py-2 rounded-xl text-xs font-extrabold whitespace-nowrap transition-all border',
+                        isSelected
+                          ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-indigo-600 shadow-md'
+                          : 'bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-300'
+                      )}
+                    >
+                      {t.label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
-            <div className="flex gap-1.5 overflow-x-auto scrollbar-none border-t border-slate-100 dark:border-slate-800 pt-3">
-              {currentDept.tabs.map((t) => {
-                const isSelected = tab === t.id;
-                return (
-                  <button
-                    key={t.id}
-                    onClick={() => setTab(t.id)}
-                    className={cn(
-                      'px-3.5 py-2 rounded-xl text-xs font-extrabold whitespace-nowrap transition-all border',
-                      isSelected
-                        ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-indigo-600 shadow-md'
-                        : 'bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-300'
-                    )}
-                  >
-                    {t.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
 
-          {tab === 'overview' && <Overview onNavigate={handleCmdNavigate} />}
-          {tab === 'heroslots' && <AdminHeroSlots />}
-          {tab === 'products' && <AdminProducts />}
-          {tab === 'orders' && <AdminOrders />}
-          {tab === 'vendors' && <AdminVendors />}
-          {tab === 'subscriptions' && <AdminSubscriptionsTab />}
-          {tab === 'groupbuy' && <AdminGroupBuyTab />}
-          {tab === 'delivery' && <AdminDeliveryTab />}
-          {tab === 'marketplace' && <AdminMarketplace />}
-          {tab === 'reviews' && <AdminReviews />}
-          {tab === 'broadcast' && <AdminBroadcast />}
-          {tab === 'flashdeals' && <AdminFlashDeals />}
-          {tab === 'preorders' && <AdminPreOrders />}
-          {tab === 'tracking' && <AdminTracking />}
-          {tab === 'themes' && <AdminThemes />}
-          {tab === 'affiliates' && <AdminAffiliatesTab />}
-          {tab === 'coupons' && <CouponAnalytics />}
-          {tab === 'alerts' && <SmartAlerts />}
-          {tab === 'abandoned' && <AbandonedCartRecovery />}
-          {tab === 'roles' && <AdminRoles />}
-          {tab === 'backup' && <DatabaseBackup />}
-          {/* Admin Theme moved to Settings */}
-          {tab === 'bulkProducts' && <BulkProductManager />}
-          {tab === 'analytics' && <ProductAnalytics />}
-          {tab === 'forecast' && <InventoryForecast />}
-          {tab === 'activity' && <ActivityLog />}
-          {tab === 'security' && <AdminSecurity />}
-          {tab === 'telegram' && <AdminBotManager />}
-          {tab === 'fulfillment' && <OrderFulfillment />}
-          {tab === 'sla' && <SLAMonitor />}
-          {tab === 'driver' && <DriverTracker />}
-          {tab === 'returns' && <ReturnsManager />}
-          {tab === 'promotions' && <AdminPromotions />}
-          {tab === 'manualpayments' && <ManualPaymentReview />}
-          {tab === 'finance' && <TaxFinanceDashboard />}
-          {tab === 'smartbooks' && <SmartBooks />}
-          {tab === 'settings' && <AdminSettings />}
-          {tab === 'email' && <AdminEmailEngineView />}
-        </div>
-      </main>
-    </div>
+            {tab === 'overview' && <Overview onNavigate={handleCmdNavigate} />}
+            {tab === 'heroslots' && <AdminHeroSlots />}
+            {tab === 'products' && <AdminProducts />}
+            {tab === 'orders' && <AdminOrders />}
+            {tab === 'vendors' && <AdminVendors />}
+            {tab === 'subscriptions' && <AdminSubscriptionsTab />}
+            {tab === 'groupbuy' && <AdminGroupBuyTab />}
+            {tab === 'delivery' && <AdminDeliveryTab />}
+            {tab === 'marketplace' && <AdminMarketplace />}
+            {tab === 'reviews' && <AdminReviews />}
+            {tab === 'broadcast' && <AdminBroadcast />}
+            {tab === 'flashdeals' && <AdminFlashDeals />}
+            {tab === 'preorders' && <AdminPreOrders />}
+            {tab === 'tracking' && <AdminTracking />}
+            {tab === 'themes' && <AdminThemes />}
+            {tab === 'affiliates' && <AdminAffiliatesTab />}
+            {tab === 'coupons' && <CouponAnalytics />}
+            {tab === 'alerts' && <SmartAlerts />}
+            {tab === 'abandoned' && <AbandonedCartRecovery />}
+            {tab === 'roles' && <AdminRoles />}
+            {tab === 'backup' && <DatabaseBackup />}
+            {/* Admin Theme moved to Settings */}
+            {tab === 'bulkProducts' && <BulkProductManager />}
+            {tab === 'analytics' && <ProductAnalytics />}
+            {tab === 'forecast' && <InventoryForecast />}
+            {tab === 'activity' && <ActivityLog />}
+            {tab === 'security' && <AdminSecurity />}
+            {tab === 'telegram' && <AdminBotManager />}
+            {tab === 'fulfillment' && <OrderFulfillment />}
+            {tab === 'sla' && <SLAMonitor />}
+            {tab === 'driver' && <DriverTracker />}
+            {tab === 'returns' && <ReturnsManager />}
+            {tab === 'promotions' && <AdminPromotions />}
+            {tab === 'manualpayments' && <ManualPaymentReview />}
+            {tab === 'finance' && <TaxFinanceDashboard />}
+            {tab === 'smartbooks' && <SmartBooks />}
+            {tab === 'settings' && <AdminSettings />}
+            {tab === 'email' && <AdminEmailEngineView />}
+          </div>
+        </main>
+      </div>
+    </AdminErrorBoundary>
   );
 }
 
