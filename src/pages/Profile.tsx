@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/stores/AppStore';
 import { t } from '@/i18n/translations';
 import { cn } from '@/lib/utils';
-import { ChevronRight, Palette, Sun, Moon, Wallet, Phone, AtSign, Calendar, Store, LogOut, HelpCircle, Bell, TrendingDown, Trophy } from 'lucide-react';
+import { ChevronRight, Palette, Sun, Moon, Wallet, Phone, AtSign, Calendar, Store, LogOut, HelpCircle, Bell, TrendingDown, Trophy, Mail } from 'lucide-react';
 import ThemePicker from '@/components/features/ThemePicker';
 import CurrencySelector from '@/components/features/CurrencySelector';
 import LanguageSelector from '@/components/features/LanguageSelector';
@@ -19,15 +19,18 @@ export default function Profile() {
   var [showLogout, setShowLogout] = useState(false);
   var [editName, setEditName] = useState('');
   var [editPhone, setEditPhone] = useState('');
+  var [editEmail, setEditEmail] = useState('');
 
   // Read localStorage data
   var ls: any = {};
   try { ls = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
   var lsPhone = localStorage.getItem('ss_user_phone') || '';
+  var lsEmail = localStorage.getItem('ss_user_email') || '';
   
   var tgId = profile.telegramId || ls.telegramId || '';
   var tgUser = profile.telegramUsername || ls.telegramUsername || '';
   var displayPhone = profile.phone || ls.phone || lsPhone || '';
+  var displayEmail = profile.email || ls.email || lsEmail || '';
   var displayName = profile.name || ls.name || 'Guest';
   var displayJoined = profile.joinedAt || ls.joinedAt || '';
   var initials = displayName.substring(0, 2).toUpperCase() || '?';
@@ -120,6 +123,7 @@ export default function Profile() {
   function openEdit() {
     setEditName(displayName === 'Guest' ? '' : displayName);
     setEditPhone(displayPhone);
+    setEditEmail(displayEmail);
     setShowEdit(true);
   }
 
@@ -127,7 +131,7 @@ export default function Profile() {
     if (editName.trim()) {
       var newProfile = { ...profile, name: editName.trim() };
       store.setProfile(newProfile);
-      var lsP = {};
+      var lsP: any = {};
       try { lsP = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
       lsP.name = editName.trim();
       localStorage.setItem('ss_profile', JSON.stringify(lsP));
@@ -135,10 +139,18 @@ export default function Profile() {
     if (editPhone.trim()) {
       store.setProfile({ ...profile, phone: editPhone.trim() });
       localStorage.setItem('ss_user_phone', editPhone.trim());
-      var lsP2 = {};
+      var lsP2: any = {};
       try { lsP2 = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
       lsP2.phone = editPhone.trim();
       localStorage.setItem('ss_profile', JSON.stringify(lsP2));
+    }
+    if (editEmail.trim() || editEmail === '') {
+      store.setProfile({ ...profile, email: editEmail.trim() });
+      localStorage.setItem('ss_user_email', editEmail.trim());
+      var lsP3: any = {};
+      try { lsP3 = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
+      lsP3.email = editEmail.trim();
+      localStorage.setItem('ss_profile', JSON.stringify(lsP3));
     }
     setShowEdit(false);
     toast('✅ Profile updated!', 'success');
@@ -165,19 +177,23 @@ export default function Profile() {
   }
 
   var isAuthorizedAdmin = 
-    profile.telegramId === '336997351' || 
-    profile.telegramId === 336997351 ||
+    (Boolean(profile.telegramId) && (String(profile.telegramId) === '336997351' || Number(profile.telegramId) === 336997351)) ||
     profile.role === 'admin' || 
     profile.role === 'super_admin' ||
     (function() {
       try {
+        var hasTgId = Boolean(profile.telegramId) && String(profile.telegramId).trim() !== '';
+        var hasPhone = Boolean(profile.phone) && String(profile.phone).trim() !== '';
+        if (!hasTgId && !hasPhone) return false;
+
         var adminUsers = JSON.parse(localStorage.getItem('ss_admin_users') || '[]');
         var cloudAdmins = (store.settings as any).adminUsers || [];
         var allAdmins = [...adminUsers, ...cloudAdmins];
         return allAdmins.some(function(u: any) { 
-          return u.status === 'active' && 
-            (u.telegramId === profile.telegramId || u.telegramId === String(profile.telegramId) ||
-             (profile.phone && u.phone && u.phone === profile.phone));
+          if (!u || u.status !== 'active') return false;
+          if (hasTgId && Boolean(u.telegramId) && String(u.telegramId).trim() === String(profile.telegramId).trim()) return true;
+          if (hasPhone && Boolean(u.phone) && String(u.phone).trim() === String(profile.phone).trim()) return true;
+          return false;
         });
       } catch(e) {
         return false;
@@ -205,6 +221,7 @@ export default function Profile() {
               <h2 className="text-lg font-bold truncate">{displayName}</h2>
               <div className="flex flex-wrap items-center gap-2 mt-1.5 text-[10px] text-white/80">
                 {displayPhone && <span className="flex items-center gap-1 bg-white/10 px-2 py-0.5 rounded-full"><Phone size={10} /> {displayPhone}</span>}
+                {displayEmail && <span className="flex items-center gap-1 bg-white/10 px-2 py-0.5 rounded-full"><Mail size={10} /> {displayEmail}</span>}
                 {tgUser && <span className="flex items-center gap-1 bg-white/10 px-2 py-0.5 rounded-full"><AtSign size={10} /> @{tgUser}</span>}
                 {tgId && <span className="font-mono text-[8px] text-white/50 bg-white/5 px-2 py-0.5 rounded-full">ID: {tgId}</span>}
                 {vendorStatus === 'approved' && <span className="bg-emerald-400/30 px-2 py-0.5 rounded-full text-[9px]">🏪 {t('vendorDashboard', language)}</span>}
@@ -344,6 +361,8 @@ export default function Profile() {
                 <input className="w-full mt-1 p-3 border border-input rounded-xl text-sm bg-card focus:outline-none focus:ring-2 focus:ring-primary/30" value={editName} onChange={function(e) { setEditName(e.target.value); }} placeholder="Your name" /></div>
               <div><label className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">{t('phone', language)}</label>
                 <input className="w-full mt-1 p-3 border border-input rounded-xl text-sm bg-card focus:outline-none focus:ring-2 focus:ring-primary/30" value={editPhone} onChange={function(e) { setEditPhone(e.target.value); }} placeholder="09XXXXXXXX" /></div>
+              <div><label className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">Email Address (For Receipts & 4-Digit Security PINs)</label>
+                <input type="email" className="w-full mt-1 p-3 border border-input rounded-xl text-sm bg-card focus:outline-none focus:ring-2 focus:ring-primary/30 text-foreground" value={editEmail} onChange={function(e) { setEditEmail(e.target.value); }} placeholder="e.g. customer@gmail.com" /></div>
               {tgId && <div className="bg-muted/30 rounded-xl p-3 space-y-1.5">
                 <div className="flex items-center justify-between text-[10px]"><span className="text-muted-foreground">Telegram ID</span><span className="font-mono font-semibold">{tgId}</span></div>
                 {tgUser && <div className="flex items-center justify-between text-[10px]"><span className="text-muted-foreground">Username</span><span className="font-semibold">@{tgUser}</span></div>}

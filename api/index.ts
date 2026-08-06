@@ -1807,7 +1807,7 @@ export default async function handler(req: any, res: any) {
       } catch {}
       const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]);
       const v = await getV();
-      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-02-V73000' });
+      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-02-V78000' });
     }
     if (path === '/api/test-cleanup' && (method === 'POST' || method === 'GET')) {
       try {
@@ -1844,10 +1844,64 @@ export default async function handler(req: any, res: any) {
       try {
         const { to, subject, html, type, data } = req.body || {};
         const recipient = (to && typeof to === 'string' && to.includes('@')) ? to : 'customer@smartshop.et';
+        
+        // 1. Check Google Apps Script / Gmail Free Webhook (100% Free: 500/day = 15,000/mo, zero domain, zero credit card!)
+        const googleWebhook = process.env.GOOGLE_EMAIL_WEBHOOK_URL || process.env.FREE_EMAIL_WEBHOOK_URL;
+        if (googleWebhook) {
+          try {
+            const webhookRes = await fetch(googleWebhook, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                to: recipient,
+                subject: subject || 'Notification from Smart Shop',
+                html: html || `<p>${subject}</p>`,
+                templateType: type || 'general',
+                source: 'smartshop_vercel'
+              })
+            });
+            if (webhookRes.ok) {
+              console.log(`[Google/Gmail Free Email Success] Delivered to ${recipient}`);
+              return ok({ success: true, delivered: true, provider: 'google_gmail_free', id: 'gmail-' + Date.now(), recipient, subject });
+            }
+          } catch (e: any) {
+            console.warn('[Google/Gmail Free Email Fallback Error]', e.message);
+          }
+        }
+
+        // 2. Check Oracle Cloud / Self-Hosted Open-Source Email Webhook (Postal / BillionMail / OCI)
+        const customWebhook = process.env.ORACLE_EMAIL_WEBHOOK_URL || process.env.CUSTOM_EMAIL_WEBHOOK_URL;
+        if (customWebhook) {
+          try {
+            const webhookRes = await fetch(customWebhook, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${process.env.EMAIL_WEBHOOK_SECRET || ''}`
+              },
+              body: JSON.stringify({
+                to: recipient,
+                subject: subject || 'Notification from Smart Shop',
+                html: html || `<p>${subject}</p>`,
+                templateType: type || 'general',
+                source: 'smartshop_vercel'
+              })
+            });
+            if (webhookRes.ok) {
+              const d = await webhookRes.json().catch(() => ({}));
+              console.log(`[Oracle/Open-Source Email Success] Delivered to ${recipient}`);
+              return ok({ success: true, delivered: true, provider: 'oracle_opensource', id: d.id || 'oci-' + Date.now(), recipient, subject });
+            }
+          } catch (e: any) {
+            console.warn('[Oracle/Open-Source Email Fallback Error]', e.message);
+          }
+        }
+
+        // 3. Fallback to Resend API (RESEND_API_KEY)
         const apiKey = process.env.RESEND_API_KEY;
         if (!apiKey) {
           console.log(`[Email Simulator] Simulating email to ${recipient}: ${subject} (Type: ${type || 'general'})`);
-          return ok({ success: true, simulated: true, recipient, subject, message: 'Email simulated successfully (RESEND_API_KEY not configured)' });
+          return ok({ success: true, simulated: true, provider: 'sandbox', recipient, subject, message: 'Email simulated successfully (No live email API configured)' });
         }
 
         const resendRes = await fetch('https://api.resend.com/emails', {
@@ -1866,23 +1920,73 @@ export default async function handler(req: any, res: any) {
 
         const resendData = await resendRes.json();
         if (resendRes.ok) {
-          return ok({ success: true, id: resendData.id, recipient, subject });
+          console.log(`[Resend API Success] Delivered email to ${recipient} (ID: ${resendData.id})`);
+          return ok({ success: true, delivered: true, id: resendData.id, recipient, subject });
         } else {
-          console.warn('[Resend API Warning]', resendData);
-          return ok({ success: true, simulated: true, error: resendData.message, recipient, subject });
+          console.warn('[Resend API Error]', resendData);
+          const rawMsg = resendData.message || resendData.error || 'Resend API rejected request';
+          let friendlyError = rawMsg;
+          if (typeof rawMsg === 'string' && rawMsg.toLowerCase().includes('own email address')) {
+            friendlyError = 'Resend Free Tier Rule: On onboarding@resend.dev, you can ONLY send emails to the email address registered on your Resend account. Please test with your own account email or verify a domain on Resend.';
+          }
+          return ok({ success: false, error: friendlyError, rawError: resendData, recipient, subject });
         }
       } catch (err: any) {
-        return ok({ success: true, simulated: true, error: err.message });
+        return ok({ success: false, error: err.message });
       }
     }
 
     if (path === '/api/email/broadcast' && method === 'POST') {
       try {
         const { subject, html, campaignType, target } = req.body || {};
+        const googleWebhook = process.env.GOOGLE_EMAIL_WEBHOOK_URL || process.env.FREE_EMAIL_WEBHOOK_URL;
+        if (googleWebhook) {
+          try {
+            const webhookRes = await fetch(googleWebhook, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                to: target || 'all_subscribers',
+                subject: subject || 'Smart Shop Special Announcement',
+                html: html || `<p>${subject}</p>`,
+                templateType: 'broadcast',
+                campaignType
+              })
+            });
+            if (webhookRes.ok) {
+              return ok({ success: true, delivered: true, provider: 'google_gmail_free', id: 'gmail-' + Date.now(), campaignType, subject, count: 1 });
+            }
+          } catch {}
+        }
+
+        const customWebhook = process.env.ORACLE_EMAIL_WEBHOOK_URL || process.env.CUSTOM_EMAIL_WEBHOOK_URL;
+        if (customWebhook) {
+          try {
+            const webhookRes = await fetch(customWebhook, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${process.env.EMAIL_WEBHOOK_SECRET || ''}`
+              },
+              body: JSON.stringify({
+                to: target || 'all_subscribers',
+                subject: subject || 'Smart Shop Special Announcement',
+                html: html || `<p>${subject}</p>`,
+                templateType: 'broadcast',
+                campaignType
+              })
+            });
+            if (webhookRes.ok) {
+              const d = await webhookRes.json().catch(() => ({}));
+              return ok({ success: true, delivered: true, provider: 'oracle_opensource', id: d.id || 'oci-' + Date.now(), campaignType, subject, count: 1 });
+            }
+          } catch {}
+        }
+
         const apiKey = process.env.RESEND_API_KEY;
         if (!apiKey) {
           console.log(`[Email Campaign Simulator] Simulating marketing blast (${campaignType}): ${subject}`);
-          return ok({ success: true, simulated: true, campaignType, subject, count: 42, message: 'Batch email campaign simulated successfully' });
+          return ok({ success: true, simulated: true, provider: 'sandbox', campaignType, subject, count: 42, message: 'Batch email campaign simulated successfully' });
         }
 
         const resendRes = await fetch('https://api.resend.com/emails', {
@@ -1893,16 +1997,25 @@ export default async function handler(req: any, res: any) {
           },
           body: JSON.stringify({
             from: 'Smart Shop Marketing <onboarding@resend.dev>',
-            to: ['onboarding@resend.dev'],
+            to: [target || 'onboarding@resend.dev'],
             subject: subject || 'Smart Shop Special Announcement',
             html: html || `<p>${subject}</p>`
           })
         });
 
         const resendData = await resendRes.json();
-        return ok({ success: true, id: resendData.id, campaignType, subject, count: 1 });
+        if (resendRes.ok) {
+          return ok({ success: true, delivered: true, id: resendData.id, campaignType, subject, count: 1 });
+        } else {
+          const rawMsg = resendData.message || resendData.error || 'Resend API rejected request';
+          let friendlyError = rawMsg;
+          if (typeof rawMsg === 'string' && rawMsg.toLowerCase().includes('own email address')) {
+            friendlyError = 'Resend Free Tier Rule: On onboarding@resend.dev, you can ONLY send emails to the email address registered on your Resend account. Please test with your own account email or verify a domain on Resend.';
+          }
+          return ok({ success: false, error: friendlyError, rawError: resendData });
+        }
       } catch (err: any) {
-        return ok({ success: true, simulated: true, error: err.message });
+        return ok({ success: false, error: err.message });
       }
     }
 

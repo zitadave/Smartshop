@@ -220,19 +220,23 @@ export default function AdminLayout() {
 
   const profile = store.profile;
   const isAuthorizedAdmin = 
-    profile.telegramId === '336997351' || 
-    profile.telegramId === 336997351 ||
+    (Boolean(profile.telegramId) && (String(profile.telegramId) === '336997351' || Number(profile.telegramId) === 336997351)) ||
     profile.role === 'admin' || 
     profile.role === 'super_admin' ||
     (function() {
       try {
+        const hasTgId = Boolean(profile.telegramId) && String(profile.telegramId).trim() !== '';
+        const hasPhone = Boolean(profile.phone) && String(profile.phone).trim() !== '';
+        if (!hasTgId && !hasPhone) return false;
+
         const adminUsers = JSON.parse(localStorage.getItem('ss_admin_users') || '[]');
         const cloudAdmins = (store.settings as any).adminUsers || [];
         const allAdmins = [...adminUsers, ...cloudAdmins];
         return allAdmins.some(function(u: any) { 
-          return u.status === 'active' && 
-            (u.telegramId === profile.telegramId || u.telegramId === String(profile.telegramId) ||
-             (profile.phone && u.phone && u.phone === profile.phone));
+          if (!u || u.status !== 'active') return false;
+          if (hasTgId && Boolean(u.telegramId) && String(u.telegramId).trim() === String(profile.telegramId).trim()) return true;
+          if (hasPhone && Boolean(u.phone) && String(u.phone).trim() === String(profile.phone).trim()) return true;
+          return false;
         });
       } catch(e) {
         return false;
@@ -1920,6 +1924,18 @@ function AdminEmailEngineView() {
         </span>
       </div>
 
+      <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-3 text-[11px] text-amber-700 dark:text-amber-300">
+        <strong>💡 Resend Free Tier Notice:</strong> When sending from <code>onboarding@resend.dev</code>, Resend only allows sending emails <strong>to the exact email address you registered your Resend account with</strong>. To send emails to any customer, verify your custom domain on Resend.
+      </div>
+
+      <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-3 text-[11px] text-emerald-700 dark:text-emerald-300">
+        <strong>🚀 100% Free Without Credit Card or Custom Domain (Google Apps Script Webhook):</strong> You can send up to <strong>500 free emails per day (15,000/month)</strong> from your own Gmail account by creating a 10-line Google Apps Script Web App (using <code>MailApp.sendEmail</code>) and setting <code>GOOGLE_EMAIL_WEBHOOK_URL=https://script.google.com/macros/s/.../exec</code> in Vercel! Zero credit card and zero domain required!
+      </div>
+
+      <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-3 text-[11px] text-blue-700 dark:text-blue-300">
+        <strong>☁️ Oracle Cloud / Self-Hosted Open-Source Mail Server (Postal / BillionMail):</strong> Smart Shop supports setting <code>ORACLE_EMAIL_WEBHOOK_URL</code> or <code>CUSTOM_EMAIL_WEBHOOK_URL</code> in Vercel to route unlimited emails to your self-hosted Oracle Cloud ARM/AMD Always-Free server!
+      </div>
+
       {/* Live Inbox Test & Sender Configuration Card */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4" data-admin-card>
         <h3 className="text-sm font-bold mb-1">✉️ Live Inbox Test & Sender Configuration</h3>
@@ -1944,7 +1960,7 @@ function AdminEmailEngineView() {
               type="button"
               className="flex-1 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-xs font-bold shadow-md hover:opacity-95 transition-all flex items-center justify-center gap-1.5"
               onClick={async () => {
-                const testEmail = prompt('Enter your email address to receive a live test email:', store.profile?.email || '');
+                const testEmail = prompt('Enter your email address to receive a live test email:\n(Note: On onboarding@resend.dev, use your registered Resend email)', store.profile?.email || '');
                 if (!testEmail || !testEmail.includes('@')) {
                   toast('Please enter a valid email address to test!', 'error');
                   return;
@@ -1964,9 +1980,14 @@ function AdminEmailEngineView() {
                 });
                 reloadLogs();
                 if (res.success) {
-                  toast(res.simulated ? '✅ Email simulated in Resend Sandbox (Logged in console & audit log)!' : '🎉 Live HTML Email sent via Resend API to ' + testEmail + '!', 'success');
+                  if (res.delivered) {
+                    toast('🎉 Live HTML Email sent via Resend API to ' + testEmail + '! Check your inbox/spam folder.', 'success');
+                  } else {
+                    toast('✅ Email simulated in Resend Sandbox (Logged in console & audit log)!', 'success');
+                  }
                 } else {
-                  toast('Error: ' + res.error, 'error');
+                  toast('❌ Email failed: ' + res.error, 'error');
+                  alert('Resend API Error:\n' + (res.error || 'Failed to send test email. Make sure you use your registered Resend account email!'));
                 }
               }}
             >

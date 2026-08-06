@@ -423,6 +423,7 @@ export default function Checkout() {
  <div className="space-y-2.5">
  <input className="w-full p-2.5 border border-border rounded-xl text-xs bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30" placeholder="Full Name *" value={name} onChange={e => setName(e.target.value)} />
  <input className="w-full p-2.5 border border-border rounded-xl text-xs bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30" placeholder="Phone Number *" value={phone} onChange={e => setPhone(e.target.value)} />
+ <input type="email" className="w-full p-2.5 border border-border rounded-xl text-xs bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30" placeholder="Email Address (Optional — For Receipt & 4-Digit Security PIN)" value={email} onChange={e => { setEmail(e.target.value); try { localStorage.setItem('ss_user_email', e.target.value); } catch {} }} />
 
  {/* GPS Geolocation Auto-Detection Banner (Full Width - Premium UX) */}
  <div className="space-y-2">
