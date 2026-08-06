@@ -1807,7 +1807,7 @@ export default async function handler(req: any, res: any) {
       } catch {}
       const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]);
       const v = await getV();
-      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-02-V81000' });
+      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-02-V82000' });
     }
     if (path === '/api/test-cleanup' && (method === 'POST' || method === 'GET')) {
       try {
@@ -1904,6 +1904,7 @@ export default async function handler(req: any, res: any) {
           return ok({ success: true, simulated: true, provider: 'sandbox', recipient, subject, message: 'Email simulated successfully (No live email API configured)' });
         }
 
+        const cleanText = (html || subject || '').replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim() || subject || 'Smart Shop Notification';
         const resendRes = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
@@ -1911,10 +1912,17 @@ export default async function handler(req: any, res: any) {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            from: 'Smart Shop <onboarding@resend.dev>',
+            from: 'Smart Shop Support <onboarding@resend.dev>',
+            reply_to: 'support@smartshop.et',
             to: [recipient],
             subject: subject || 'Notification from Smart Shop',
-            html: html || `<p>${subject}</p>`
+            html: html || `<p>${subject}</p>`,
+            text: cleanText,
+            headers: {
+              'X-Entity-Ref-ID': `smartshop-${Date.now()}`,
+              'X-Priority': '1 (Highest)',
+              'Importance': 'High'
+            }
           })
         });
 
@@ -1989,6 +1997,7 @@ export default async function handler(req: any, res: any) {
           return ok({ success: true, simulated: true, provider: 'sandbox', campaignType, subject, count: 42, message: 'Batch email campaign simulated successfully' });
         }
 
+        const cleanText = (html || subject || '').replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim() || subject || 'Smart Shop Special Announcement';
         const resendRes = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
@@ -1996,10 +2005,17 @@ export default async function handler(req: any, res: any) {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            from: 'Smart Shop Marketing <onboarding@resend.dev>',
+            from: 'Smart Shop Support <onboarding@resend.dev>',
+            reply_to: 'support@smartshop.et',
             to: [target || 'onboarding@resend.dev'],
             subject: subject || 'Smart Shop Special Announcement',
-            html: html || `<p>${subject}</p>`
+            html: html || `<p>${subject}</p>`,
+            text: cleanText,
+            headers: {
+              'X-Entity-Ref-ID': `smartshop-${Date.now()}`,
+              'X-Priority': '1 (Highest)',
+              'Importance': 'High'
+            }
           })
         });
 
