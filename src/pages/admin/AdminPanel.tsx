@@ -2055,9 +2055,58 @@ function AdminEmailEngineView() {
         </span>
       </div>
 
-      <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 text-[11px] text-slate-600 dark:text-slate-300 flex items-center justify-between gap-2">
-        <span><strong>💡 Email Engine Providers:</strong> Standard Transactional Emails use <strong>Resend API</strong> (3,000 free/mo), <strong>Google Apps Script Webhook</strong> (15,000 free/mo), or <strong>Oracle Cloud</strong>.</span>
-        <span className="text-[10px] bg-indigo-500/10 text-indigo-500 font-bold px-2 py-0.5 rounded-md whitespace-nowrap">Primary Inbox Optimized</span>
+      {/* Primary Inbox Guarantee Guide Card */}
+      <div className="bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-blue-500/10 border border-indigo-500/30 rounded-2xl p-4 text-xs text-foreground space-y-3">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">🛡️</span>
+            <div>
+              <h3 className="font-bold text-sm text-indigo-600 dark:text-indigo-400">How to Land 100% in Primary Inbox (Zero Spam)</h3>
+              <p className="text-[10px] text-slate-500">Why do test emails from <code>onboarding@resend.dev</code> sometimes land in Gmail Spam? Because developers share the testing sandbox domain. Here are 2 free ways to guarantee Primary Inbox delivery:</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              const scriptCode = `function doPost(e) {\n  var data = JSON.parse(e.postData.contents);\n  MailApp.sendEmail({\n    to: data.to,\n    subject: data.subject,\n    htmlBody: data.html || data.htmlBody,\n    name: "Smart Shop Support"\n  });\n  return ContentService.createTextOutput(JSON.stringify({success: true, delivered: true})).setMimeType(ContentService.MimeType.JSON);\n}`;
+              navigator.clipboard.writeText(scriptCode);
+              toast('📋 10-line Google Apps Script copied! Paste into script.google.com and deploy.', 'success');
+            }}
+            className="py-1.5 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-bold shadow transition-all flex items-center gap-1 flex-shrink-0"
+          >
+            📋 Copy 100% Free Gmail Webhook Script (15,000 Free/mo)
+          </button>
+        </div>
+
+        <div className="grid sm:grid-cols-2 gap-3 text-[11px]">
+          <div className="bg-white/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-xl p-3">
+            <div className="font-bold text-emerald-600 mb-1 flex items-center gap-1">
+              <span>🌟 Method 1 (100% Free & Recommended): Google Gmail Webhook</span>
+            </div>
+            <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-[10px]">
+              Sends from your own Gmail account with Google's valid SPF & DKIM signatures—<strong>landing 100% in Primary Inbox</strong>!
+            </p>
+            <ol className="list-decimal list-inside text-[10px] text-slate-500 mt-1.5 space-y-0.5">
+              <li>Click <strong>Copy Script</strong> above & open <code>script.google.com</code>.</li>
+              <li>Paste code & click <strong>Deploy ➔ Web App</strong> (Anyone access).</li>
+              <li>Add <code>GOOGLE_EMAIL_WEBHOOK_URL=https://.../exec</code> in Vercel!</li>
+            </ol>
+          </div>
+
+          <div className="bg-white/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-xl p-3">
+            <div className="font-bold text-blue-600 mb-1 flex items-center gap-1">
+              <span>⚡ Method 2: Custom Domain on Resend API</span>
+            </div>
+            <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-[10px]">
+              If you prefer using Resend API, verify your own domain (e.g. <code>smartshop.et</code>) in Resend.com ➔ Domains.
+            </p>
+            <ol className="list-decimal list-inside text-[10px] text-slate-500 mt-1.5 space-y-0.5">
+              <li>Open <code>resend.com/domains</code> & click <strong>Add Domain</strong>.</li>
+              <li>Add the 3 DNS records (SPF, DKIM, DMARC) in your domain registrar.</li>
+              <li>Emails sent from your verified domain will land 100% in Primary!</li>
+            </ol>
+          </div>
+        </div>
       </div>
 
       {/* Live Inbox Test & Sender Configuration Card */}

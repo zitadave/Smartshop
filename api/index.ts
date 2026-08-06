@@ -1807,7 +1807,7 @@ export default async function handler(req: any, res: any) {
       } catch {}
       const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]);
       const v = await getV();
-      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-02-V83000' });
+      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-02-V84000' });
     }
     if (path === '/api/test-cleanup' && (method === 'POST' || method === 'GET')) {
       try {
@@ -1920,8 +1920,7 @@ export default async function handler(req: any, res: any) {
             text: cleanText,
             headers: {
               'X-Entity-Ref-ID': `smartshop-${Date.now()}`,
-              'X-Priority': '1 (Highest)',
-              'Importance': 'High'
+              'X-Auto-Response-Suppress': 'OOF, DR, RN, NRN, AutoReply'
             }
           })
         });
@@ -2013,8 +2012,7 @@ export default async function handler(req: any, res: any) {
             text: cleanText,
             headers: {
               'X-Entity-Ref-ID': `smartshop-${Date.now()}`,
-              'X-Priority': '1 (Highest)',
-              'Importance': 'High'
+              'X-Auto-Response-Suppress': 'OOF, DR, RN, NRN, AutoReply'
             }
           })
         });
