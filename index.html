@@ -28,10 +28,9 @@
     <script>
       (function() {
         try {
-          var ver = 'v91_cache_bust';
+          var ver = 'v102_cache_bust';
           if (localStorage.getItem('ss_app_version') !== ver) {
             localStorage.setItem('ss_app_version', ver);
-            localStorage.removeItem('ss_founder_unlocked');
             var oldS = document.getElementById('ap-theme-style');
             if (oldS) oldS.remove();
           }
