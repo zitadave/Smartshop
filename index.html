@@ -119,13 +119,15 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
-      // Force Purge Stale Service Workers & Caches on v93 update
+      // Self-destruct all legacy Service Workers and clear caches (v100)
       if ('serviceWorker' in navigator) {
-        if (localStorage.getItem('ss_sw_purged_v93') !== 'true') {
-          localStorage.setItem('ss_sw_purged_v93', 'true');
-          caches.keys().then(function(names) {
-            for (var i = 0; i < names.length; i++) { caches.delete(names[i]); }
-          });
+        if (localStorage.getItem('ss_sw_purged_v100') !== 'true') {
+          localStorage.setItem('ss_sw_purged_v100', 'true');
+          if ('caches' in window) {
+            caches.keys().then(function(names) {
+              for (var i = 0; i < names.length; i++) { caches.delete(names[i]); }
+            });
+          }
           navigator.serviceWorker.getRegistrations().then(function(regs) {
             for (var i = 0; i < regs.length; i++) { regs[i].unregister(); }
           });
