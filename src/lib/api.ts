@@ -58,14 +58,19 @@ async function request<T = any>(path: string, options: CustomRequestInit = {}): 
     const abortHelper = getSafeSignal(timeoutLimit);
 
     try {
+      const safeHeaders: Record<string, string> = {};
+      Object.keys(headers).forEach(k => {
+        if (typeof headers[k] === 'string') safeHeaders[k] = headers[k];
+      });
       const fetchOpts: RequestInit = {
-        ...options,
-        headers
+        method: method,
+        headers: safeHeaders,
       };
+      if (options.body) fetchOpts.body = options.body;
       if (abortHelper.signal) {
         fetchOpts.signal = abortHelper.signal;
       }
-      const res = await fetch(url, fetchOpts);
+      const res = await fetch(String(url), fetchOpts);
 
       abortHelper.cleanup();
 
@@ -84,7 +89,7 @@ async function request<T = any>(path: string, options: CustomRequestInit = {}): 
 
       return res as unknown as T;
     } catch (err: any) {
-      clearTimeout(timeoutId);
+      abortHelper.cleanup();
 
       const isTimeout = err.name === 'AbortError';
       const isNetworkError = err.message?.includes('network') || err.message?.includes('failed to fetch');

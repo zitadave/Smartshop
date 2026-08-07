@@ -61,6 +61,7 @@ class AdminErrorBoundary extends React.Component<{ children: React.ReactNode }, 
   }
   componentDidCatch(error: any, info: any) {
     console.error('[AdminPanel Crash Caught]:', error, info);
+    this.setState({ componentStack: info?.componentStack } as any);
   }
   render() {
     if (this.state.hasError) {
@@ -72,6 +73,11 @@ class AdminErrorBoundary extends React.Component<{ children: React.ReactNode }, 
             <p className="text-xs text-slate-300 mt-1">
               A display component encountered an issue: <code className="text-red-300">{String(this.state.error?.message || 'unknown')}</code>
             </p>
+            <div className="text-left bg-black/80 border border-slate-800 p-3 rounded-xl text-[10px] font-mono text-red-300 max-h-40 overflow-y-auto break-all whitespace-pre-wrap mt-2">
+              <strong>ERROR:</strong> {String(this.state.error?.message || 'unknown')}{'\n\n'}
+              <strong>STACK:</strong> {String(this.state.error?.stack || 'no stack')}{'\n\n'}
+              <strong>COMPONENT STACK:</strong> {String((this.state as any).componentStack || 'no component stack')}
+            </div>
             <button
               className="mt-4 w-full py-3.5 bg-gradient-to-r from-red-600 to-indigo-600 hover:opacity-95 text-white rounded-xl text-xs font-extrabold shadow-lg"
               onClick={async () => {
