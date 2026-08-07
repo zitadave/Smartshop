@@ -15,6 +15,22 @@ function generateUuid(): string {
   return Math.random().toString(36).substring(2) + Date.now().toString(36);
 }
 
+function getSafeSignal(timeoutLimit: number): { signal?: AbortSignal; cleanup: () => void } {
+  try {
+    if (typeof AbortController !== 'undefined') {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => { try { controller.abort(); } catch {} }, timeoutLimit);
+      return {
+        signal: controller.signal,
+        cleanup: () => clearTimeout(timeoutId)
+      };
+    }
+  } catch (e) {
+    // Protect against TypeError: Illegal constructor in Android Telegram Mini App WebViews
+  }
+  return { signal: undefined, cleanup: () => {} };
+}
+
 async function request<T = any>(path: string, options: CustomRequestInit = {}): Promise<T> {
   const url = `${API_BASE}${path}`;
   const method = options.method?.toUpperCase() || 'GET';
@@ -39,17 +55,16 @@ async function request<T = any>(path: string, options: CustomRequestInit = {}): 
   let attempt = 0;
   while (true) {
     attempt++;
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutLimit);
+    const abortHelper = getSafeSignal(timeoutLimit);
 
     try {
       const res = await fetch(url, {
         ...options,
         headers,
-        signal: controller.signal
+        signal: abortHelper.signal
       });
 
-      clearTimeout(timeoutId);
+      abortHelper.cleanup();
 
       if (!res.ok) {
         const text = await res.text();
