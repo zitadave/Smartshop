@@ -58,11 +58,14 @@ async function request<T = any>(path: string, options: CustomRequestInit = {}): 
     const abortHelper = getSafeSignal(timeoutLimit);
 
     try {
-      const res = await fetch(url, {
+      const fetchOpts: RequestInit = {
         ...options,
-        headers,
-        signal: abortHelper.signal
-      });
+        headers
+      };
+      if (abortHelper.signal) {
+        fetchOpts.signal = abortHelper.signal;
+      }
+      const res = await fetch(url, fetchOpts);
 
       abortHelper.cleanup();
 
