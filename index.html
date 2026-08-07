@@ -42,6 +42,16 @@
         
         var profile = {};
         try { profile = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
+        try {
+          var badPhone = localStorage.getItem('ss_user_phone') || '';
+          if (badPhone.includes('@')) {
+            localStorage.removeItem('ss_user_phone');
+            if (profile.phone && profile.phone.includes('@')) {
+              delete profile.phone;
+              localStorage.setItem('ss_profile', JSON.stringify(profile));
+            }
+          }
+        } catch(e) {}
 
         // Try Telegram.WebApp
         try {
@@ -62,7 +72,7 @@
             fetch('/api/user/contact?telegram_id=' + profile.telegramId)
               .then(function(r) { return r.json(); })
               .then(function(d) {
-                if (d && d.phone) {
+                if (d && d.phone && !String(d.phone).includes('@')) {
                   var p = JSON.parse(localStorage.getItem('ss_profile') || '{}');
                   p.phone = d.phone;
                   localStorage.setItem('ss_profile', JSON.stringify(p));
@@ -82,7 +92,7 @@
             profile.telegramId = tgId;
             if (params.get('username')) profile.telegramUsername = params.get('username');
             if (params.get('name')) profile.name = params.get('name');
-            if (params.get('phone')) {
+            if (params.get('phone') && !String(params.get('phone')).includes('@')) {
               profile.phone = params.get('phone');
               localStorage.setItem('ss_user_phone', params.get('phone'));
               localStorage.setItem('ss_phone_shared', 'true');
@@ -102,7 +112,7 @@
           fetch('/api/user/contact?telegram_id=' + profile.telegramId)
             .then(function(r) { return r.json(); })
             .then(function(d) {
-              if (d && d.phone) {
+              if (d && d.phone && !String(d.phone).includes('@')) {
                 var p = JSON.parse(localStorage.getItem('ss_profile') || '{}');
                 p.phone = d.phone;
                 localStorage.setItem('ss_profile', JSON.stringify(p));

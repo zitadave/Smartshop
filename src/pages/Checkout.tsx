@@ -95,8 +95,15 @@ export default function Checkout() {
  const [rewardPoints, setRewardPoints] = useState(0);
 
  const [name, setName] = useState(profile.name || '');
- const [phone, setPhone] = useState(profile.phone || '');
- const [email, setEmail] = useState(profile.email || '');
+ const [phone, setPhone] = useState(() => {
+   const p = profile.phone || localStorage.getItem('ss_user_phone') || '';
+   return p.includes('@') ? '' : p;
+ });
+ const [email, setEmail] = useState(() => {
+   const e = profile.email || localStorage.getItem('ss_user_email') || '';
+   const badP = profile.phone || localStorage.getItem('ss_user_phone') || '';
+   return e || (badP.includes('@') ? badP : '');
+ });
  const [city, setCity] = useState('Addis Ababa');
  const [address, setAddress] = useState('');
  const [locationDetected, setLocationDetected] = useState(false);
@@ -473,7 +480,7 @@ export default function Checkout() {
  <h3 className="text-xs font-bold text-foreground mb-3"><MapPin size={14} className="inline mr-1 text-emerald-500" /> Delivery Info{locationDetected && <span className="text-[8px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-normal ml-1">Auto-detected</span>}</h3>
  <div className="space-y-2.5">
  <input className="w-full p-2.5 border border-border rounded-xl text-xs bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30" placeholder="Full Name *" value={name} onChange={e => setName(e.target.value)} />
- <input className="w-full p-2.5 border border-border rounded-xl text-xs bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30" placeholder="Phone Number *" value={phone} onChange={e => setPhone(e.target.value)} />
+ <input className="w-full p-2.5 border border-border rounded-xl text-xs bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30" placeholder="Phone Number *" value={phone} onChange={e => { const v = e.target.value; setPhone(v); if (!v.includes('@')) try { localStorage.setItem('ss_user_phone', v.trim()); } catch {} }} />
  <input type="email" className="w-full p-2.5 border border-border rounded-xl text-xs bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30" placeholder="Email Address (Optional — For Receipt & 4-Digit Security PIN)" value={email} onChange={e => { setEmail(e.target.value); try { localStorage.setItem('ss_user_email', e.target.value); } catch {} }} />
 
  {/* GPS Geolocation Auto-Detection Banner (Full Width - Premium UX) */}

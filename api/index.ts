@@ -1775,7 +1775,12 @@ export default async function handler(req: any, res: any) {
       return ok({ analytics: { totalProducts: p.length, totalSold: p.reduce((s, p) => s + (p.sold_count || 0), 0), totalRevenue: o.reduce((s, o) => s + (o.total || 0), 0), totalOrders: o.length, pendingOrders: o.filter(o => o.status === 'pending').length, shippedOrders: o.filter(o => o.status === 'shipped').length, topProducts: top } });
     }
     if (path === '/api/users' && method === 'GET') { const { data } = await supabase.from('users').select('*'); return ok({ success: true, users: data || [] }); }
-    if (path === '/api/users/register' && method === 'POST') { const { data } = await supabase.from('users').upsert(req.body, { onConflict: 'telegram_id' }).select().single(); return ok({ success: true, user: data || req.body }); }
+    if (path === '/api/users/register' && method === 'POST') {
+      const payload = req.body || {};
+      if (payload.phone && typeof payload.phone === 'string' && payload.phone.includes('@')) payload.phone = '';
+      const { data } = await supabase.from('users').upsert(payload, { onConflict: 'telegram_id' }).select().single();
+      return ok({ success: true, user: data || payload });
+    }
     if (path === '/api/affiliates' && method === 'GET') { const { data } = await supabase.from('products').select('*').eq('visible', true); return ok({ products: (data || []).map(norm) }); }
     if (path === '/api/affiliates/with-products' && method === 'GET') { const { data } = await supabase.from('products').select('*').eq('visible', true).gte('rating', 4); return ok({ products: (data || []).map(norm) }); }
     if (path === '/api/affiliates' && method === 'POST') { const { data, error } = await supabase.from('affiliates').insert(req.body).select().single(); if (error) return fail(error.message); return ok({ success: true, affiliate: data }); }
@@ -1807,7 +1812,7 @@ export default async function handler(req: any, res: any) {
       } catch {}
       const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]);
       const v = await getV();
-      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-07-V108000' });
+      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-07-V110000' });
     }
     if (path === '/api/test-cleanup' && (method === 'POST' || method === 'GET')) {
       try {
@@ -2185,15 +2190,16 @@ export default async function handler(req: any, res: any) {
       const tid = b.telegram_id || '';
       if (!tid) return ok({ success: false });
       var r: Record<string, any> = { success: true };
-      try { await supabase.from('users').upsert({ telegram_id: parseInt(tid), username: b.username || '', first_name: b.first_name || '', ...(b.phone ? { phone: b.phone } : {}) }, { onConflict: 'telegram_id' }); const { data: ur } = await supabase.from('users').select('*').eq('telegram_id', parseInt(tid)).single(); if (ur?.phone) r.phone = ur.phone; } catch {}
+      const cleanPhone = (b.phone && typeof b.phone === 'string' && !b.phone.includes('@')) ? b.phone : undefined;
+      try { await supabase.from('users').upsert({ telegram_id: parseInt(tid), username: b.username || '', first_name: b.first_name || '', ...(cleanPhone ? { phone: cleanPhone } : {}) }, { onConflict: 'telegram_id' }); const { data: ur } = await supabase.from('users').select('*').eq('telegram_id', parseInt(tid)).single(); if (ur?.phone && !String(ur.phone).includes('@')) r.phone = ur.phone; } catch {}
       try { 
         var v = await getV(); 
         var f = null;
         if (tid) {
           f = v.find((vv: any) => vv.telegram_id == parseInt(tid));
         }
-        if (!f && b.phone) {
-          f = v.find((vv: any) => vv.phone == b.phone);
+        if (!f && cleanPhone) {
+          f = v.find((vv: any) => vv.phone == cleanPhone);
         }
         if (f) { 
           r.vendor_status = f.status || 'pending'; 
@@ -2211,7 +2217,7 @@ export default async function handler(req: any, res: any) {
     if (path === '/api/user/contact' && method === 'GET') {
       const tid = new URLSearchParams(req.url?.split('?')[1] || '').get('telegram_id') || '';
       if (!tid) return ok({ phone: '' });
-      try { const { data } = await supabase.from('users').select('phone').eq('telegram_id', parseInt(tid)).single(); if (data?.phone) return ok({ phone: data.phone }); } catch {}
+      try { const { data } = await supabase.from('users').select('phone').eq('telegram_id', parseInt(tid)).single(); if (data?.phone && !String(data.phone).includes('@')) return ok({ phone: data.phone }); } catch {}
       return ok({ phone: '' });
     }
 

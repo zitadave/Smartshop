@@ -60,8 +60,12 @@ export default function Profile() {
     });
   } catch(e) {}
 
-  var displayPhone = profile.phone || ls.phone || lsPhone || matchedCustomer?.phone || '';
+  var rawPhoneCandidate = profile.phone || ls.phone || lsPhone || matchedCustomer?.phone || '';
+  var displayPhone = (rawPhoneCandidate && !String(rawPhoneCandidate).includes('@')) ? String(rawPhoneCandidate) : '';
   var displayEmail = profile.email || ls.email || lsEmail || matchedCustomer?.email || '';
+  if (!displayEmail && rawPhoneCandidate && String(rawPhoneCandidate).includes('@')) {
+    displayEmail = String(rawPhoneCandidate);
+  }
   var rawName = profile.name || ls.name || '';
   var displayName = (rawName && rawName !== 'Guest') ? rawName : (tgName || matchedCustomer?.name || (tgUser ? '@' + tgUser : (displayPhone || 'Guest')));
   var displayJoined = profile.joinedAt || ls.joinedAt || matchedCustomer?.joinedAt || '';
@@ -184,32 +188,62 @@ export default function Profile() {
   }
 
   function saveEdit() {
-    if (editName.trim()) {
-      var newProfile = { ...profile, name: editName.trim() };
-      store.setProfile(newProfile);
-      var lsP: any = {};
-      try { lsP = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
-      lsP.name = editName.trim();
+    var updatedName = editName.trim() || displayName;
+    var updatedPhone = editPhone.trim();
+    var updatedEmail = editEmail.trim();
+
+    if (updatedPhone.includes('@')) {
+      toast('Please enter a valid phone number, not an email address.', 'error');
+      return;
+    }
+
+    var newProfile = {
+      ...profile,
+      name: updatedName,
+      phone: updatedPhone,
+      email: updatedEmail,
+      telegramId: tgId || profile.telegramId || '',
+      telegramUsername: tgUser || profile.telegramUsername || '',
+      registered: true
+    };
+
+    store.setProfile(newProfile);
+    try {
+      var lsP = JSON.parse(localStorage.getItem('ss_profile') || '{}');
+      lsP.name = updatedName;
+      lsP.phone = updatedPhone;
+      lsP.email = updatedEmail;
+      lsP.registered = true;
       localStorage.setItem('ss_profile', JSON.stringify(lsP));
-    }
-    if (editPhone.trim()) {
-      store.setProfile({ ...profile, phone: editPhone.trim() });
-      localStorage.setItem('ss_user_phone', editPhone.trim());
-      var lsP2: any = {};
-      try { lsP2 = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
-      lsP2.phone = editPhone.trim();
-      localStorage.setItem('ss_profile', JSON.stringify(lsP2));
-    }
-    if (editEmail.trim() || editEmail === '') {
-      store.setProfile({ ...profile, email: editEmail.trim() });
-      localStorage.setItem('ss_user_email', editEmail.trim());
-      var lsP3: any = {};
-      try { lsP3 = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
-      lsP3.email = editEmail.trim();
-      localStorage.setItem('ss_profile', JSON.stringify(lsP3));
-    }
+      localStorage.setItem('ss_user_phone', updatedPhone);
+      if (updatedEmail) localStorage.setItem('ss_user_email', updatedEmail);
+
+      fetch('/api/user/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          telegram_id: tgId || '',
+          phone: updatedPhone,
+          username: tgUser || '',
+          first_name: updatedName
+        })
+      }).catch(function() {});
+
+      fetch('/api/users/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          telegramId: tgId || '',
+          name: updatedName,
+          phone: updatedPhone,
+          email: updatedEmail,
+          joinedAt: displayJoined || new Date().toISOString()
+        })
+      }).catch(function() {});
+    } catch(e) {}
+
     setShowEdit(false);
-    toast('✅ Profile updated!', 'success');
+    toast('✅ Profile saved & synced!', 'success');
   }
 
   var engagementItems: any[] = [

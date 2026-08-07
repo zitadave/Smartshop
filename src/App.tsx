@@ -177,18 +177,24 @@ export default function App() {
         var parsed = JSON.parse(stored);
         var tgId = parsed.telegramId || '';
         var existingPhone = parsed.phone || localStorage.getItem('ss_user_phone') || '';
+        if (existingPhone.includes('@')) {
+          existingPhone = '';
+          localStorage.removeItem('ss_user_phone');
+          delete parsed.phone;
+          localStorage.setItem('ss_profile', JSON.stringify(parsed));
+        }
         if (tgId && !existingPhone) {
           fetch('/api/user/contact?telegram_id=' + tgId)
             .then(function(r) { return r.json(); })
             .then(function(d) {
-              if (d && d.phone) {
+              if (d && d.phone && !String(d.phone).includes('@')) {
                 parsed.phone = d.phone;
                 localStorage.setItem('ss_profile', JSON.stringify(parsed));
                 localStorage.setItem('ss_user_phone', d.phone);
                 setProfile(parsed);
               }
             }).catch(function() {});
-        } else if (existingPhone && !parsed.phone) {
+        } else if (existingPhone && !parsed.phone && !existingPhone.includes('@')) {
           parsed.phone = existingPhone;
           localStorage.setItem('ss_profile', JSON.stringify(parsed));
           setProfile(parsed);

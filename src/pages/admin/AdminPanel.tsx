@@ -2393,14 +2393,18 @@ function doPost(e) {
     var subject = data.subject || "Notification from Smart Shop";
     var html = data.html || data.htmlBody || "<p>" + subject + "</p>";
     var plainText = data.plainText || html.replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, "").replace(/<[^>]+>/g, " ").replace(/\\s+/g, " ").trim() || subject;
-    var senderEmail = Session.getActiveUser().getEmail();
+    var effectiveUser = Session.getEffectiveUser().getEmail() || "";
+    
+    var gmailOptions = {
+      htmlBody: html,
+      name: "Smart Shop Ethiopia"
+    };
+    if (effectiveUser && effectiveUser.indexOf("@") !== -1) {
+      gmailOptions.replyTo = effectiveUser;
+    }
     
     try {
-      GmailApp.sendEmail(recipient, subject, plainText, {
-        htmlBody: html,
-        name: "Smart Shop Ethiopia",
-        replyTo: senderEmail
-      });
+      GmailApp.sendEmail(recipient, subject, plainText, gmailOptions);
     } catch (gmailErr) {
       MailApp.sendEmail({
         to: recipient,
@@ -2408,7 +2412,7 @@ function doPost(e) {
         body: plainText,
         htmlBody: html,
         name: "Smart Shop Ethiopia",
-        replyTo: senderEmail
+        replyTo: effectiveUser || undefined
       });
     }
     
