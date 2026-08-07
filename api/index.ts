@@ -1775,7 +1775,7 @@ export default async function handler(req: any, res: any) {
       return ok({ analytics: { totalProducts: p.length, totalSold: p.reduce((s, p) => s + (p.sold_count || 0), 0), totalRevenue: o.reduce((s, o) => s + (o.total || 0), 0), totalOrders: o.length, pendingOrders: o.filter(o => o.status === 'pending').length, shippedOrders: o.filter(o => o.status === 'shipped').length, topProducts: top } });
     }
     if (path === '/api/users' && method === 'GET') { const { data } = await supabase.from('users').select('*'); return ok({ success: true, users: data || [] }); }
-    if (path === '/api/users/register' && method === 'POST') { const { data } = await supabase.from('users').insert(req.body).select().single(); return ok({ success: true, user: data || req.body }); }
+    if (path === '/api/users/register' && method === 'POST') { const { data } = await supabase.from('users').upsert(req.body, { onConflict: 'telegram_id' }).select().single(); return ok({ success: true, user: data || req.body }); }
     if (path === '/api/affiliates' && method === 'GET') { const { data } = await supabase.from('products').select('*').eq('visible', true); return ok({ products: (data || []).map(norm) }); }
     if (path === '/api/affiliates/with-products' && method === 'GET') { const { data } = await supabase.from('products').select('*').eq('visible', true).gte('rating', 4); return ok({ products: (data || []).map(norm) }); }
     if (path === '/api/affiliates' && method === 'POST') { const { data, error } = await supabase.from('affiliates').insert(req.body).select().single(); if (error) return fail(error.message); return ok({ success: true, affiliate: data }); }
@@ -1807,7 +1807,7 @@ export default async function handler(req: any, res: any) {
       } catch {}
       const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]);
       const v = await getV();
-      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-02-V106000' });
+      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-02-V107000' });
     }
     if (path === '/api/test-cleanup' && (method === 'POST' || method === 'GET')) {
       try {
@@ -1912,7 +1912,7 @@ export default async function handler(req: any, res: any) {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            from: 'Smart Shop Support <onboarding@resend.dev>',
+            from: process.env.RESEND_FROM_EMAIL || process.env.EMAIL_FROM_ADDRESS || 'Smart Shop <onboarding@resend.dev>',
             reply_to: 'support@smartshop.et',
             to: [recipient],
             subject: subject || 'Notification from Smart Shop',
@@ -2004,7 +2004,7 @@ export default async function handler(req: any, res: any) {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            from: 'Smart Shop Support <onboarding@resend.dev>',
+            from: process.env.RESEND_FROM_EMAIL || process.env.EMAIL_FROM_ADDRESS || 'Smart Shop <onboarding@resend.dev>',
             reply_to: 'support@smartshop.et',
             to: [target || 'onboarding@resend.dev'],
             subject: subject || 'Smart Shop Special Announcement',
