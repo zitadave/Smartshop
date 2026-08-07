@@ -1863,8 +1863,13 @@ export default async function handler(req: any, res: any) {
               })
             });
             if (webhookRes.ok) {
-              console.log(`[Google/Gmail Free Email Success] Delivered to ${recipient}`);
-              return ok({ success: true, delivered: true, provider: 'google_gmail_free', id: 'gmail-' + Date.now(), recipient, subject });
+              const dataRes = await webhookRes.json().catch(() => ({}));
+              if (dataRes && (dataRes.success === true || dataRes.delivered === true || String(dataRes.status || '').includes('Active'))) {
+                console.log(`[Google/Gmail Free Email Success] Delivered to ${recipient}`);
+                return ok({ success: true, delivered: true, provider: 'google_gmail_free', id: 'gmail-' + Date.now(), recipient, subject });
+              } else {
+                console.warn('[Google/Gmail Webhook Returned Error - Falling Back]', dataRes.error || JSON.stringify(dataRes));
+              }
             }
           } catch (e: any) {
             console.warn('[Google/Gmail Free Email Fallback Error]', e.message);
@@ -1892,8 +1897,12 @@ export default async function handler(req: any, res: any) {
             });
             if (webhookRes.ok) {
               const d = await webhookRes.json().catch(() => ({}));
-              console.log(`[Oracle/Open-Source Email Success] Delivered to ${recipient}`);
-              return ok({ success: true, delivered: true, provider: 'oracle_opensource', id: d.id || 'oci-' + Date.now(), recipient, subject });
+              if (d && (d.success === true || d.delivered === true || d.id)) {
+                console.log(`[Oracle/Open-Source Email Success] Delivered to ${recipient}`);
+                return ok({ success: true, delivered: true, provider: 'oracle_opensource', id: d.id || 'oci-' + Date.now(), recipient, subject });
+              } else {
+                console.warn('[Oracle/Open-Source Webhook Returned Error - Falling Back]', d.error || JSON.stringify(d));
+              }
             }
           } catch (e: any) {
             console.warn('[Oracle/Open-Source Email Fallback Error]', e.message);
@@ -1966,7 +1975,10 @@ export default async function handler(req: any, res: any) {
               })
             });
             if (webhookRes.ok) {
-              return ok({ success: true, delivered: true, provider: 'google_gmail_free', id: 'gmail-' + Date.now(), campaignType, subject, count: 1 });
+              const dRes = await webhookRes.json().catch(() => ({}));
+              if (dRes && (dRes.success === true || dRes.delivered === true || String(dRes.status || '').includes('Active'))) {
+                return ok({ success: true, delivered: true, provider: 'google_gmail_free', id: 'gmail-' + Date.now(), campaignType, subject, count: 1 });
+              }
             }
           } catch {}
         }
@@ -1991,7 +2003,9 @@ export default async function handler(req: any, res: any) {
             });
             if (webhookRes.ok) {
               const d = await webhookRes.json().catch(() => ({}));
-              return ok({ success: true, delivered: true, provider: 'oracle_opensource', id: d.id || 'oci-' + Date.now(), campaignType, subject, count: 1 });
+              if (d && (d.success === true || d.delivered === true || d.id)) {
+                return ok({ success: true, delivered: true, provider: 'oracle_opensource', id: d.id || 'oci-' + Date.now(), campaignType, subject, count: 1 });
+              }
             }
           } catch {}
         }

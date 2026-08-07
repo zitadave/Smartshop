@@ -2395,11 +2395,22 @@ function doPost(e) {
     var plainText = data.plainText || html.replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, "").replace(/<[^>]+>/g, " ").replace(/\\s+/g, " ").trim() || subject;
     var senderEmail = Session.getActiveUser().getEmail();
     
-    GmailApp.sendEmail(recipient, subject, plainText, {
-      htmlBody: html,
-      name: "Smart Shop Ethiopia",
-      replyTo: senderEmail
-    });
+    try {
+      GmailApp.sendEmail(recipient, subject, plainText, {
+        htmlBody: html,
+        name: "Smart Shop Ethiopia",
+        replyTo: senderEmail
+      });
+    } catch (gmailErr) {
+      MailApp.sendEmail({
+        to: recipient,
+        subject: subject,
+        body: plainText,
+        htmlBody: html,
+        name: "Smart Shop Ethiopia",
+        replyTo: senderEmail
+      });
+    }
     
     return ContentService
       .createTextOutput(JSON.stringify({ success: true, delivered: true, inbox: "Primary" }))
@@ -2436,7 +2447,8 @@ function doGet(e) {
             <ol className="list-decimal list-inside text-[10px] text-slate-500 mt-1.5 space-y-0.5">
               <li>Click <strong>Copy Script</strong> above & open <code>script.google.com</code>.</li>
               <li><strong className="text-red-500">IMPORTANT:</strong> Select ALL existing code in Code.gs (Ctrl+A) and DELETE it before pasting!</li>
-              <li>Paste code & click <strong>Deploy ➔ Web App</strong> (Anyone access).</li>
+              <li>Click <strong>Save (Ctrl+S)</strong>, then click <strong>Deploy ➔ Manage Deployments</strong>.</li>
+              <li>Click the <strong>Pencil icon (Edit)</strong>, change Version to <strong>"New"</strong>, and click <strong>Deploy</strong> (Authorize access if prompted).</li>
               <li>Add <code>GOOGLE_EMAIL_WEBHOOK_URL=https://.../exec</code> in Vercel!</li>
             </ol>
           </div>
