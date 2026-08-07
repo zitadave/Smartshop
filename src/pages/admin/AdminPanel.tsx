@@ -5,7 +5,7 @@ import { formatPrice, cn, generateId, formatCountdown, isFlashDealActive, format
 import { useStore } from '@/stores/AppStore';
 import { toast } from '@/components/Toast';
 import {
-  LayoutDashboard, Package, ShoppingCart, Store, Settings as SettingsIcon,
+  Lock, LayoutDashboard, Package, ShoppingCart, Store, Settings as SettingsIcon,
   TrendingUp, Users, MessageSquare, BarChart3, Shield, LogOut, Menu, X,
   Bell, Bot, Rocket, Tags, Scale, Calendar, ClipboardList, ChevronRight,
   Camera, Megaphone, Clock, Globe, Palette, MapPin, FileText, Zap, Upload,
