@@ -576,6 +576,7 @@ function wrapHtmlEmailDoc(bodyHtml: string, titleText: string = 'Smart Shop Noti
   <title>${titleText}</title>
 </head>
 <body style="margin:0; padding:20px 10px; background-color:#f8fafc; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing:antialiased;">
+  <span style="display:none;font-size:1px;color:#f8fafc;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;">${titleText} — Official Smart Shop Notification</span>
   <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width:620px; margin:0 auto;">
     <tr>
       <td align="center">

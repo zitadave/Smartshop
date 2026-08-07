@@ -80,12 +80,26 @@ export default function Profile() {
   var [driverStatus, setDriverStatus] = useState('none');
 
   useEffect(function() {
+    try {
+      var badP = localStorage.getItem('ss_user_phone') || '';
+      if (badP.includes('@')) {
+        localStorage.removeItem('ss_user_phone');
+      }
+      if (profile.phone && profile.phone.includes('@')) {
+        store.setProfile({ ...profile, phone: '' });
+      }
+    } catch {}
+  }, []);
+
+  useEffect(function() {
     if (displayName && displayName !== 'Guest' && (!profile.name || profile.name === 'Guest' || !ls.name || ls.name === 'Guest')) {
+      var safePhone = displayPhone || (profile.phone && !profile.phone.includes('@') ? profile.phone : '');
+      var safeEmail = displayEmail || (profile.email || (profile.phone && profile.phone.includes('@') ? profile.phone : ''));
       var updated = {
         ...profile,
         name: displayName,
-        phone: displayPhone || profile.phone || '',
-        email: displayEmail || profile.email || '',
+        phone: safePhone,
+        email: safeEmail,
         telegramId: tgId || profile.telegramId || '',
         telegramUsername: tgUser || profile.telegramUsername || '',
         registered: true
@@ -94,8 +108,8 @@ export default function Profile() {
       try {
         var existing = JSON.parse(localStorage.getItem('ss_profile') || '{}');
         existing.name = displayName;
-        if (displayPhone) existing.phone = displayPhone;
-        if (displayEmail) existing.email = displayEmail;
+        if (safePhone) existing.phone = safePhone;
+        if (safeEmail) existing.email = safeEmail;
         if (tgId) existing.telegramId = tgId;
         existing.registered = true;
         localStorage.setItem('ss_profile', JSON.stringify(existing));
@@ -182,8 +196,8 @@ export default function Profile() {
 
   function openEdit() {
     setEditName(displayName === 'Guest' ? '' : displayName);
-    setEditPhone(displayPhone);
-    setEditEmail(displayEmail);
+    setEditPhone(displayPhone && !displayPhone.includes('@') ? displayPhone : '');
+    setEditEmail(displayEmail || (displayPhone && displayPhone.includes('@') ? displayPhone : ''));
     setShowEdit(true);
   }
 

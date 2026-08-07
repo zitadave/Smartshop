@@ -111,6 +111,27 @@ export default function Checkout() {
  const [useDetectedLocation, setUseDetectedLocation] = useState<boolean | null>(null);
  const [detectingLocation, setDetectingLocation] = useState(false);
 
+ useEffect(() => {
+   try {
+     const badP = localStorage.getItem('ss_user_phone') || '';
+     if (badP.includes('@')) {
+       localStorage.removeItem('ss_user_phone');
+     }
+     if (profile.phone && profile.phone.includes('@')) {
+       store.setProfile({ ...profile, phone: '' });
+     }
+   } catch {}
+ }, []);
+
+ useEffect(() => {
+   const p = profile.phone || localStorage.getItem('ss_user_phone') || '';
+   if (p && !p.includes('@') && !phone) setPhone(p);
+   const e = profile.email || localStorage.getItem('ss_user_email') || '';
+   const badP = profile.phone || localStorage.getItem('ss_user_phone') || '';
+   const realE = e || (badP.includes('@') ? badP : '');
+   if (realE && !email) setEmail(realE);
+ }, [profile.phone, profile.email]);
+
  const [promoCode, setPromoCode] = useState('');
  const [promoApplied, setPromoApplied] = useState(false);
  const [promoDiscount, setPromoDiscount] = useState(0);
