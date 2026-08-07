@@ -38,8 +38,20 @@ function getPayments(): ManualPayment[] {
 function savePayments(p: ManualPayment[]) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(p)); } catch { console.warn('Failed to save payments'); }
 }
+const DEFAULT_ETHIOPIAN_BANKS: BankAccount[] = [
+  { name: 'Commercial Bank of Ethiopia (CBE)', account: '1000234567890', holder: 'Smart Shop Trading PLC' },
+  { name: 'Telebirr', account: '+251911234567', holder: 'Smart Shop Trading PLC' },
+  { name: 'Bank of Abyssinia', account: '102938475601', holder: 'Smart Shop Trading PLC' },
+  { name: 'Dashen Bank', account: '098765432101', holder: 'Smart Shop Trading PLC' },
+  { name: 'Awash Bank', account: '013005432100', holder: 'Smart Shop Trading PLC' },
+];
+
 function getBankAccounts(): BankAccount[] {
-  try { return JSON.parse(localStorage.getItem(BANK_KEY) || '[]'); } catch { return []; }
+  try {
+    const parsed = JSON.parse(localStorage.getItem(BANK_KEY) || '[]');
+    if (parsed && parsed.length > 0) return parsed;
+  } catch {}
+  return DEFAULT_ETHIOPIAN_BANKS;
 }
 function saveBankAccounts(b: BankAccount[]) {
   try { localStorage.setItem(BANK_KEY, JSON.stringify(b)); } catch {}
@@ -101,10 +113,16 @@ export default function ManualPaymentReview() {
           setBankAccounts(mapped);
           saveBankAccounts(mapped);
         } else {
-          setBankAccounts(getBankAccounts());
+          const fb = getBankAccounts();
+          setBankAccounts(fb);
+          saveBankAccounts(fb);
         }
       })
-      .catch(() => setBankAccounts(getBankAccounts()));
+      .catch(() => {
+        const fb = getBankAccounts();
+        setBankAccounts(fb);
+        saveBankAccounts(fb);
+      });
   }, []);
 
   const filtered = payments.filter(p => {

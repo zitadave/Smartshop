@@ -26,13 +26,45 @@ export default function Profile() {
   try { ls = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
   var lsPhone = localStorage.getItem('ss_user_phone') || '';
   var lsEmail = localStorage.getItem('ss_user_email') || '';
-  
-  var tgId = profile.telegramId || ls.telegramId || '';
-  var tgUser = profile.telegramUsername || ls.telegramUsername || '';
-  var displayPhone = profile.phone || ls.phone || lsPhone || '';
-  var displayEmail = profile.email || ls.email || lsEmail || '';
-  var displayName = profile.name || ls.name || 'Guest';
-  var displayJoined = profile.joinedAt || ls.joinedAt || '';
+
+  // Get Telegram WebApp user if available
+  var tgUserObj = (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+  var tgId = profile.telegramId || ls.telegramId || String(tgUserObj?.id || '') || '';
+  var tgUser = profile.telegramUsername || ls.telegramUsername || tgUserObj?.username || '';
+  var tgName = tgUserObj ? [tgUserObj.first_name, tgUserObj.last_name].filter(Boolean).join(' ') : '';
+
+  // Lookup in default Ethiopian customers / ss_registered_customers / orders
+  var matchedCustomer: any = null;
+  try {
+    var defaultCustomers = [
+      { id: 'c-1', name: 'Abebe Kebede', phone: '+251-911-234567', telegramId: '336997351', telegramUsername: 'abebe_k' },
+      { id: 'c-2', name: 'Selamawit Tessema', phone: '+251-922-889900', telegramId: '109283746', telegramUsername: 'selam_t' },
+      { id: 'c-3', name: 'Biruk Dawit', phone: '+251-933-445566', telegramId: '987654321', telegramUsername: 'biruk_d' },
+    ];
+    var regCustomers = JSON.parse(localStorage.getItem('ss_registered_customers') || '[]');
+    var storeOrders = JSON.parse(localStorage.getItem('ss_orders') || '[]');
+    var orderCustomers = Array.isArray(storeOrders) ? storeOrders.map((o: any) => o.customer).filter(Boolean) : [];
+    var allLookup = [...(Array.isArray(regCustomers) ? regCustomers : []), ...defaultCustomers, ...orderCustomers];
+
+    matchedCustomer = allLookup.find(function(c: any) {
+      if (!c) return false;
+      var cTgId = String(c.telegramId || c.telegram_id || c.id || '');
+      var cPhone = String(c.phone || '').replace(/[^0-9]/g, '');
+      var cEmail = String(c.email || '').toLowerCase();
+      var checkPhone = String(profile.phone || ls.phone || lsPhone || '').replace(/[^0-9]/g, '');
+      var checkEmail = String(profile.email || ls.email || lsEmail || '').toLowerCase();
+      if (tgId && cTgId && cTgId === String(tgId)) return true;
+      if (checkPhone && checkPhone.length > 6 && cPhone.includes(checkPhone)) return true;
+      if (checkEmail && checkEmail.includes('@') && cEmail === checkEmail) return true;
+      return false;
+    });
+  } catch(e) {}
+
+  var displayPhone = profile.phone || ls.phone || lsPhone || matchedCustomer?.phone || '';
+  var displayEmail = profile.email || ls.email || lsEmail || matchedCustomer?.email || '';
+  var rawName = profile.name || ls.name || '';
+  var displayName = (rawName && rawName !== 'Guest') ? rawName : (tgName || matchedCustomer?.name || (tgUser ? '@' + tgUser : (displayPhone || 'Guest')));
+  var displayJoined = profile.joinedAt || ls.joinedAt || matchedCustomer?.joinedAt || '';
   var initials = displayName.substring(0, 2).toUpperCase() || '?';
   var ordCount = orders.length + preOrders.length;
   var cartCount = cart.reduce(function(s, i) { return s + i.qty; }, 0);
@@ -42,6 +74,30 @@ export default function Profile() {
   
   // ===== DRIVER STATUS =====
   var [driverStatus, setDriverStatus] = useState('none');
+
+  useEffect(function() {
+    if (displayName && displayName !== 'Guest' && (!profile.name || profile.name === 'Guest' || !ls.name || ls.name === 'Guest')) {
+      var updated = {
+        ...profile,
+        name: displayName,
+        phone: displayPhone || profile.phone || '',
+        email: displayEmail || profile.email || '',
+        telegramId: tgId || profile.telegramId || '',
+        telegramUsername: tgUser || profile.telegramUsername || '',
+        registered: true
+      };
+      store.setProfile(updated);
+      try {
+        var existing = JSON.parse(localStorage.getItem('ss_profile') || '{}');
+        existing.name = displayName;
+        if (displayPhone) existing.phone = displayPhone;
+        if (displayEmail) existing.email = displayEmail;
+        if (tgId) existing.telegramId = tgId;
+        existing.registered = true;
+        localStorage.setItem('ss_profile', JSON.stringify(existing));
+      } catch(e) {}
+    }
+  }, [displayName, displayPhone, displayEmail, tgId]);
 
   // Check vendor status on mount and every 5 seconds
   useEffect(function() {

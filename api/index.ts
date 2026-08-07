@@ -1807,7 +1807,7 @@ export default async function handler(req: any, res: any) {
       } catch {}
       const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]);
       const v = await getV();
-      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-02-V107000' });
+      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-07-V108000' });
     }
     if (path === '/api/test-cleanup' && (method === 'POST' || method === 'GET')) {
       try {
@@ -1844,6 +1844,7 @@ export default async function handler(req: any, res: any) {
       try {
         const { to, subject, html, type, data } = req.body || {};
         const recipient = (to && typeof to === 'string' && to.includes('@')) ? to : 'customer@smartshop.et';
+        const plainText = (html || '').replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() || subject || 'Notification from Smart Shop';
         
         // 1. Check Google Apps Script / Gmail Free Webhook (100% Free: 500/day = 15,000/mo, zero domain, zero credit card!)
         const googleWebhook = process.env.GOOGLE_EMAIL_WEBHOOK_URL || process.env.FREE_EMAIL_WEBHOOK_URL;
@@ -1856,6 +1857,7 @@ export default async function handler(req: any, res: any) {
                 to: recipient,
                 subject: subject || 'Notification from Smart Shop',
                 html: html || `<p>${subject}</p>`,
+                plainText,
                 templateType: type || 'general',
                 source: 'smartshop_vercel'
               })
@@ -1883,6 +1885,7 @@ export default async function handler(req: any, res: any) {
                 to: recipient,
                 subject: subject || 'Notification from Smart Shop',
                 html: html || `<p>${subject}</p>`,
+                plainText,
                 templateType: type || 'general',
                 source: 'smartshop_vercel'
               })
@@ -1946,6 +1949,7 @@ export default async function handler(req: any, res: any) {
     if (path === '/api/email/broadcast' && method === 'POST') {
       try {
         const { subject, html, campaignType, target } = req.body || {};
+        const plainText = (html || '').replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() || subject || 'Smart Shop Special Announcement';
         const googleWebhook = process.env.GOOGLE_EMAIL_WEBHOOK_URL || process.env.FREE_EMAIL_WEBHOOK_URL;
         if (googleWebhook) {
           try {
@@ -1956,6 +1960,7 @@ export default async function handler(req: any, res: any) {
                 to: target || 'all_subscribers',
                 subject: subject || 'Smart Shop Special Announcement',
                 html: html || `<p>${subject}</p>`,
+                plainText,
                 templateType: 'broadcast',
                 campaignType
               })
@@ -1979,6 +1984,7 @@ export default async function handler(req: any, res: any) {
                 to: target || 'all_subscribers',
                 subject: subject || 'Smart Shop Special Announcement',
                 html: html || `<p>${subject}</p>`,
+                plainText,
                 templateType: 'broadcast',
                 campaignType
               })

@@ -133,34 +133,84 @@ function AdminCustomersView() {
 
   useEffect(() => {
     setLoading(true);
+    const buildCustomersList = (apiList: any[] = []) => {
+      let list: any[] = [];
+      try {
+        const ls = JSON.parse(localStorage.getItem('ss_registered_customers') || '[]');
+        if (Array.isArray(ls)) list = [...ls];
+      } catch {}
+      const combinedMap = new Map();
+      defaultCustomers.forEach(c => combinedMap.set(String(c.telegramId || c.phone || c.id), c));
+      list.forEach(c => combinedMap.set(String(c.telegramId || c.phone || c.id), c));
+      apiList.forEach((c: any) => combinedMap.set(String(c.telegram_id || c.telegramId || c.phone || c.id), {
+        id: c.id || generateId(),
+        name: c.name || 'Telegram User',
+        phone: c.phone || 'N/A',
+        telegramId: c.telegram_id || c.telegramId || '',
+        telegramUsername: c.username || c.telegramUsername || '',
+        joinedAt: c.registered_at || c.joinedAt || new Date().toISOString(),
+        ordersCount: c.ordersCount || 1,
+        totalSpent: c.totalSpent || 0,
+        status: 'active'
+      }));
+      try {
+        const storeOrders = JSON.parse(localStorage.getItem('ss_orders') || '[]');
+        if (Array.isArray(storeOrders)) {
+          storeOrders.forEach((o: any) => {
+            const cust = o.customer || {};
+            const key = String(cust.telegram_id || cust.phone || cust.email || cust.name || '').trim();
+            if (key && key !== 'undefined' && key !== 'Guest') {
+              if (!combinedMap.has(key)) {
+                combinedMap.set(key, {
+                  id: 'c-ord-' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6),
+                  name: cust.name || 'Checkout Customer',
+                  phone: cust.phone || 'N/A',
+                  email: cust.email || '',
+                  telegramId: cust.telegram_id || '',
+                  joinedAt: o.createdAt || new Date().toISOString(),
+                  ordersCount: 1,
+                  totalSpent: o.total || 0,
+                  status: 'active'
+                });
+              } else {
+                const ex = combinedMap.get(key);
+                ex.ordersCount = (ex.ordersCount || 1) + 1;
+                ex.totalSpent = (ex.totalSpent || 0) + (o.total || 0);
+              }
+            }
+          });
+        }
+      } catch {}
+      try {
+        const myProfile = JSON.parse(localStorage.getItem('ss_profile') || '{}');
+        if (myProfile.name && myProfile.name !== 'Guest') {
+          const key = String(myProfile.telegramId || myProfile.phone || myProfile.email || myProfile.name).trim();
+          if (key && !combinedMap.has(key)) {
+            combinedMap.set(key, {
+              id: 'c-self-' + Date.now().toString(36),
+              name: myProfile.name,
+              phone: myProfile.phone || 'N/A',
+              email: myProfile.email || '',
+              telegramId: myProfile.telegramId || '',
+              joinedAt: myProfile.joinedAt || new Date().toISOString(),
+              ordersCount: 1,
+              totalSpent: 0,
+              status: 'active'
+            });
+          }
+        }
+      } catch {}
+      return Array.from(combinedMap.values());
+    };
+
     fetch('/api/users')
       .then(r => r.json())
       .then(d => {
-        let list: any[] = [];
-        try {
-          const ls = JSON.parse(localStorage.getItem('ss_registered_customers') || '[]');
-          list = [...ls];
-        } catch {}
-        const apiList = d?.users || [];
-        const combinedMap = new Map();
-        defaultCustomers.forEach(c => combinedMap.set(String(c.telegramId || c.phone || c.id), c));
-        list.forEach(c => combinedMap.set(String(c.telegramId || c.phone || c.id), c));
-        apiList.forEach((c: any) => combinedMap.set(String(c.telegram_id || c.telegramId || c.phone || c.id), {
-          id: c.id || generateId(),
-          name: c.name || 'Telegram User',
-          phone: c.phone || 'N/A',
-          telegramId: c.telegram_id || c.telegramId || '',
-          telegramUsername: c.username || c.telegramUsername || '',
-          joinedAt: c.registered_at || c.joinedAt || new Date().toISOString(),
-          ordersCount: c.ordersCount || 1,
-          totalSpent: c.totalSpent || 0,
-          status: 'active'
-        }));
-        setCustomers(Array.from(combinedMap.values()));
+        setCustomers(buildCustomersList(d?.users || []));
         setLoading(false);
       })
       .catch(() => {
-        setCustomers(defaultCustomers);
+        setCustomers(buildCustomersList([]));
         setLoading(false);
       });
   }, [defaultCustomers]);
@@ -342,9 +392,10 @@ function AdminLayoutInner() {
       id: 'verification',
       icon: Shield,
       label: '3. Verification & KYC',
-      desc: 'Document verification for stores, couriers & bank receipts',
-      defaultTab: 'vendors',
+      desc: 'Customer registry, document verification for stores, couriers & bank receipts',
+      defaultTab: 'customers',
       tabs: [
+        { id: 'customers', label: '👥 Registered Customers' },
         { id: 'vendors', label: '🏪 Vendor KYC Applications' },
         { id: 'driver', label: '🚚 Driver KYC & Fleet' },
         { id: 'manualpayments', label: '🏦 Bank Receipt Approvals' },
@@ -2341,16 +2392,17 @@ function doPost(e) {
     var recipient = data.to || "customer@smartshop.et";
     var subject = data.subject || "Notification from Smart Shop";
     var html = data.html || data.htmlBody || "<p>" + subject + "</p>";
+    var plainText = data.plainText || html.replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, "").replace(/<[^>]+>/g, " ").replace(/\\s+/g, " ").trim() || subject;
+    var senderEmail = Session.getActiveUser().getEmail();
     
-    MailApp.sendEmail({
-      to: recipient,
-      subject: subject,
+    GmailApp.sendEmail(recipient, subject, plainText, {
       htmlBody: html,
-      name: "Smart Shop Support"
+      name: "Smart Shop Ethiopia",
+      replyTo: senderEmail
     });
     
     return ContentService
-      .createTextOutput(JSON.stringify({ success: true, delivered: true }))
+      .createTextOutput(JSON.stringify({ success: true, delivered: true, inbox: "Primary" }))
       .setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
     return ContentService
@@ -2921,6 +2973,27 @@ function AdminSettings() {
   return (
     <div className=" space-y-4">
       <h2 className="text-lg font-bold flex items-center gap-2"><SettingsIcon size={20} /> Settings</h2>
+
+      <div className="bg-gradient-to-r from-blue-600/10 to-indigo-600/10 border border-blue-500/20 rounded-2xl p-4 flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-lg">🏦</div>
+          <div>
+            <div className="text-xs font-bold text-slate-900 dark:text-white">Storefront Bank Accounts & Manual Payments</div>
+            <p className="text-[10px] text-slate-500">Configure Commercial Bank of Ethiopia (CBE), Telebirr, Abyssinia, Dashen, Awash and approve customer receipts.</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            const btn = document.querySelector('[data-tab-id="manualpayments"]') as HTMLElement;
+            if (btn) btn.click();
+            else window.location.href = '/admin-panel?tab=manualpayments';
+          }}
+          className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow transition-all"
+        >
+          Manage Bank Accounts →
+        </button>
+      </div>
 
       {/* Platform Branding & Logo Customizer */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4" data-admin-card>

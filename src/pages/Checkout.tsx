@@ -68,16 +68,20 @@ export default function Checkout() {
          setBankAccounts(mapped);
        } else {
          setBankAccounts([
-           { name: 'Commercial Bank of Ethiopia', account: '100000XXXXXXX', holder: 'Smart Shop Trading PLC' },
-           { name: 'Dashen Bank', account: '0987654321', holder: 'Smart Shop Trading PLC' },
+           { name: 'Commercial Bank of Ethiopia (CBE)', account: '1000234567890', holder: 'Smart Shop Trading PLC' },
+           { name: 'Telebirr', account: '+251911234567', holder: 'Smart Shop Trading PLC' },
+           { name: 'Bank of Abyssinia', account: '102938475601', holder: 'Smart Shop Trading PLC' },
+           { name: 'Dashen Bank', account: '098765432101', holder: 'Smart Shop Trading PLC' },
            { name: 'Awash Bank', account: '013005432100', holder: 'Smart Shop Trading PLC' },
          ]);
        }
      })
      .catch(() => {
        setBankAccounts([
-         { name: 'Commercial Bank of Ethiopia', account: '100000XXXXXXX', holder: 'Smart Shop Trading PLC' },
-         { name: 'Dashen Bank', account: '0987654321', holder: 'Smart Shop Trading PLC' },
+         { name: 'Commercial Bank of Ethiopia (CBE)', account: '1000234567890', holder: 'Smart Shop Trading PLC' },
+         { name: 'Telebirr', account: '+251911234567', holder: 'Smart Shop Trading PLC' },
+         { name: 'Bank of Abyssinia', account: '102938475601', holder: 'Smart Shop Trading PLC' },
+         { name: 'Dashen Bank', account: '098765432101', holder: 'Smart Shop Trading PLC' },
          { name: 'Awash Bank', account: '013005432100', holder: 'Smart Shop Trading PLC' },
        ]);
      });
@@ -278,6 +282,53 @@ export default function Checkout() {
  const fulfillment = createFulfillment({ orderNumber: orderNum, items: order.items, total: order.total, customer: order.customer, createdAt: order.createdAt, status: order.status });
  upsertFulfillment(fulfillment);
  addOrder(order);
+
+ // Auto-register customer profile so they never show as Guest in /profile or Admin Panel
+ try {
+   const updatedProfile = {
+     ...profile,
+     name: name.trim() || profile.name,
+     phone: phone.trim() || profile.phone,
+     email: email.trim() || profile.email,
+     telegramId: tgId || profile.telegramId || '',
+     registered: true
+   };
+   store.setProfile(updatedProfile);
+   localStorage.setItem('ss_profile', JSON.stringify(updatedProfile));
+   localStorage.setItem('ss_user_phone', phone.trim());
+   if (email.trim()) localStorage.setItem('ss_user_email', email.trim());
+
+   const regList = JSON.parse(localStorage.getItem('ss_registered_customers') || '[]');
+   const existsIdx = regList.findIndex((c: any) =>
+     (tgId && String(c.telegramId) === String(tgId)) ||
+     (phone && c.phone && c.phone.replace(/[^0-9]/g, '') === phone.replace(/[^0-9]/g, ''))
+   );
+   const customerEntry = {
+     id: existsIdx >= 0 ? regList[existsIdx].id : 'c-' + Date.now().toString(36),
+     name: name.trim() || 'Customer',
+     phone: phone.trim(),
+     email: email.trim(),
+     telegramId: tgId || '',
+     telegramUsername: (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.username || '',
+     joinedAt: existsIdx >= 0 ? regList[existsIdx].joinedAt : new Date().toISOString(),
+     ordersCount: (existsIdx >= 0 ? (regList[existsIdx].ordersCount || 1) : 0) + 1,
+     totalSpent: (existsIdx >= 0 ? (regList[existsIdx].totalSpent || 0) : 0) + grandTotal,
+     status: 'active'
+   };
+   if (existsIdx >= 0) {
+     regList[existsIdx] = customerEntry;
+   } else {
+     regList.push(customerEntry);
+   }
+   localStorage.setItem('ss_registered_customers', JSON.stringify(regList));
+
+   fetch('/api/users/register', {
+     method: 'POST',
+     headers: { 'Content-Type': 'application/json' },
+     body: JSON.stringify(customerEntry)
+   }).catch(() => {});
+ } catch {}
+
  trackSocialEvent('CompletePayment', {
    value: grandTotal,
    currency: 'ETB',
