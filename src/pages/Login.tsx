@@ -109,9 +109,9 @@ export default function Login() {
   const isKnownUser = profile.name && profile.name !== 'Guest';
 
   return (
-    <div className="fixed inset-0 z-50 bg-background text-foreground flex items-center justify-center p-4 overflow-hidden select-none animate-fadeIn">
-      {/* ONE SINGLE CLEAN CARD — 100% DEAD CENTERED VERTICALLY & HORIZONTALLY */}
-      <div className="max-w-sm w-full bg-card dark:bg-slate-900 border border-border dark:border-slate-800 rounded-3xl p-7 shadow-2xl text-center space-y-5 my-auto">
+    <div className="fixed inset-0 z-50 w-full h-full bg-background text-foreground grid place-items-center p-4 overflow-hidden select-none animate-fadeIn">
+      {/* ONE SINGLE CLEAN CARD — 100% DEAD CENTERED VERTICALLY & HORIZONTALLY VIA CSS GRID */}
+      <div className="max-w-sm w-full bg-card dark:bg-slate-900 border border-border dark:border-slate-800 rounded-3xl p-7 shadow-2xl text-center space-y-5">
         {/* Top Icon & Greeting */}
         <div className="space-y-1.5">
           <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary mx-auto flex items-center justify-center text-2xl shadow-inner mb-2">

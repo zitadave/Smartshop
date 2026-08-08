@@ -27,7 +27,7 @@ export default function AuthGuard({ children, title, description, icon }: AuthGu
   }
 
   return (
-    <div className="min-h-[75vh] flex items-center justify-center px-4 py-12 animate-fadeIn">
+    <div className="min-h-[75vh] grid place-items-center px-4 py-8 animate-fadeIn">
       <div className="max-w-md w-full bg-card dark:bg-slate-900 border border-border dark:border-slate-800 rounded-3xl p-8 shadow-2xl text-center space-y-5">
         <div className="w-16 h-16 rounded-3xl bg-primary/10 text-primary flex items-center justify-center mx-auto text-2xl shadow-inner">
           {icon || '🔒'}
