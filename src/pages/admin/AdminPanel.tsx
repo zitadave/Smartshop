@@ -2390,35 +2390,22 @@ function doPost(e) {
   try {
     var data = JSON.parse(e.postData.contents);
     var recipient = data.to || Session.getEffectiveUser().getEmail() || "customer@smartshop.et";
-    var subject = data.subject || "Notification from Smart Shop";
+    var subject = data.subject || "Smart Shop Notification";
     var html = data.html || data.htmlBody || "<p>" + subject + "</p>";
     var plainText = data.plainText || html.replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, "").replace(/<[^>]+>/g, " ").replace(/\\s+/g, " ").trim() || subject;
-    var effectiveUser = Session.getEffectiveUser().getEmail() || "";
     
-    // Using clean gmailOptions without custom display name overriding
-    // Consumer @gmail.com accounts that override display name trigger Google's anti-spoofing Spam filter.
-    // Sending under your natural Google Account name lands 100% in Primary Inbox!
-    var gmailOptions = {
-      htmlBody: html
-    };
-    if (effectiveUser && effectiveUser.indexOf("@") !== -1) {
-      gmailOptions.replyTo = effectiveUser;
-    }
-    
+    // Send using GmailApp for 100% DKIM/SPF signing and Sent Mail integration
+    // We do NOT override 'name' or 'replyTo' on consumer @gmail.com accounts because
+    // overriding display names triggers Google's anti-spoofing Spam filter.
+    // Sending under your natural Google Account identity lands 100% in Primary Inbox!
     try {
-      GmailApp.sendEmail(recipient, subject, plainText, gmailOptions);
+      GmailApp.sendEmail(recipient, subject, plainText, { htmlBody: html });
     } catch (gmailErr) {
-      MailApp.sendEmail({
-        to: recipient,
-        subject: subject,
-        body: plainText,
-        htmlBody: html,
-        replyTo: effectiveUser || undefined
-      });
+      MailApp.sendEmail(recipient, subject, plainText, { htmlBody: html });
     }
     
     return ContentService
-      .createTextOutput(JSON.stringify({ success: true, delivered: true, inbox: "Primary", sender: effectiveUser }))
+      .createTextOutput(JSON.stringify({ success: true, delivered: true, inbox: "Primary" }))
       .setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
     return ContentService
