@@ -551,16 +551,38 @@ export default function Profile() {
 
       {/* Logout Modal */}
       {showLogout && (
-        <div className="fixed inset-0 bg-black/60 z-[200] flex items-center justify-center p-4" onClick={function() { setShowLogout(false); }}>
-          <div className="bg-card rounded-3xl w-full max-w-sm p-6 shadow-2xl" onClick={function(e) { e.stopPropagation(); }}>
-            <div className="text-center mb-4">
-              <div className="text-4xl mb-2">🚪</div>
-              <h3 className="text-sm font-bold">{t('logoutConfirmTitle', language)}</h3>
-              <p className="text-[11px] text-muted-foreground mt-1">{t('logoutConfirmDesc', language)}</p>
+        <div className="fixed inset-0 bg-black/60 z-[200] flex items-center justify-center p-4 animate-fadeIn" onClick={function() { setShowLogout(false); }}>
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-sm p-6 shadow-2xl animate-scaleIn text-slate-900 dark:text-white" onClick={function(e) { e.stopPropagation(); }}>
+            <div className="text-center mb-5">
+              <div className="w-16 h-16 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center mx-auto text-3xl mb-3">
+                🚪
+              </div>
+              <h3 className="text-base font-extrabold text-slate-900 dark:text-white">Are you sure you want to log out?</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
+                You will be signed out on this device. You can sign back in anytime using your verified phone number.
+              </p>
             </div>
-            <div className="flex gap-2">
-              <button className="flex-1 py-3 bg-destructive text-white rounded-xl text-xs font-bold" onClick={function() { store.setProfile({ name: '', phone: '', email: '', registered: false, joinedAt: '' }); setShowLogout(false); }}>{t('yesLogout', language)}</button>
-              <button className="flex-1 py-3 border border-border rounded-xl text-xs" onClick={function() { setShowLogout(false); }}>{t('cancelBtn', language)}</button>
+            <div className="flex gap-3">
+              <button
+                className="flex-1 py-3.5 bg-red-600 hover:bg-red-700 text-white rounded-2xl text-xs font-bold shadow-md transition-all"
+                onClick={function() {
+                  localStorage.removeItem('ss_profile');
+                  localStorage.removeItem('ss_user_phone');
+                  localStorage.removeItem('ss_user_email');
+                  localStorage.removeItem('ss_tg_detected');
+                  store.setProfile({ name: '', phone: '', email: '', registered: false, joinedAt: '' });
+                  setShowLogout(false);
+                  toast('✅ You have been logged out.', 'info');
+                }}
+              >
+                Yes, Log Out
+              </button>
+              <button
+                className="flex-1 py-3.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-2xl text-xs font-bold transition-all"
+                onClick={function() { setShowLogout(false); }}
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>

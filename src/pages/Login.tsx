@@ -124,7 +124,7 @@ export default function Login() {
             🏪
           </div>
           <h1 className="text-xl font-black text-foreground tracking-tight">
-            {isKnownUser ? `Welcome back, ${profile.name}! 👋` : 'Welcome to Smart Shop'}
+            Welcome to Smart Shop
           </h1>
           <p className="text-xs text-muted-foreground">
             Please enter your phone number

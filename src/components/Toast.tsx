@@ -39,7 +39,7 @@ export default function ToastContainer() {
   return (
     <div className="toast-container">
       {toasts.map(t => (
-        <div key={t.id} className={`toast ${t.type === 'error' ? 'error' : t.type === 'warning' ? 'warning' : 'success'}`}
+        <div key={t.id} className={`toast ${t.type === 'error' ? 'error' : t.type === 'warning' ? 'warning' : 'success'} bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 shadow-2xl font-bold`}
           onClick={() => remove(t.id)}>
           {icons[t.type] || icons.info}
           <span style={{ flex: 1 }}>{t.message}</span>
