@@ -14,6 +14,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [verificationNeeded, setVerificationNeeded] = useState(false);
   const [searchedPhone, setSearchedPhone] = useState('');
+  const botUsername = (store.settings as any)?.botUsername || (store.settings as any)?.telegramBotUsername || 'smart_shopping_et_bot';
 
   const handlePhoneSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,7 +91,6 @@ export default function Login() {
   };
 
   const handleTelegramDeepLink = () => {
-    const botUsername = 'SmartShopBot';
     const deepUrl = `tg://resolve?domain=${botUsername}&start=auth`;
     window.location.href = deepUrl;
     setTimeout(() => {
@@ -99,7 +99,6 @@ export default function Login() {
   };
 
   const handleTelegramBotVerify = () => {
-    const botUsername = 'SmartShopBot';
     const verifyUrl = `tg://resolve?domain=${botUsername}&start=verify_${searchedPhone.replace(/[^0-9]/g, '')}`;
     window.location.href = verifyUrl;
     setTimeout(() => {
@@ -197,7 +196,7 @@ export default function Login() {
             <span>Continue with Telegram</span>
           </button>
           <p className="text-[10px] text-muted-foreground/60">
-            1-tap verification via @SmartShopBot
+            1-tap verification via @{botUsername}
           </p>
         </div>
 
