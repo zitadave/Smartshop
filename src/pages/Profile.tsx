@@ -224,7 +224,7 @@ export default function Profile() {
     if (updatedPhone) {
       var phoneDigits = updatedPhone.replace(/[^0-9]/g, '');
       if (phoneDigits.length < 7) {
-        toast('Phone number must contain at least 7 digits (e.g. 0911... or 0711...).', 'error');
+        toast('Phone number must contain at least 7 digits (e.g. 0911234567).', 'error');
         return;
       }
     }

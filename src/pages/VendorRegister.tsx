@@ -263,7 +263,7 @@ export default function VendorRegister() {
     }
     const phDigits = storePhone.replace(/[^0-9]/g, '');
     if (phDigits.length < 7) {
-      toast('Store phone number must contain at least 7 digits (e.g. 0911... or 0711...)', 'error');
+      toast('Store phone number must contain at least 7 digits (e.g. 0911234567)', 'error');
       setStep(1);
       return;
     }
