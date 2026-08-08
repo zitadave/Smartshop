@@ -1778,6 +1778,8 @@ export default async function handler(req: any, res: any) {
     if (path === '/api/users/register' && method === 'POST') {
       const payload = req.body || {};
       if (payload.phone && typeof payload.phone === 'string' && payload.phone.includes('@')) payload.phone = '';
+      if (!payload.id && (payload.telegramId || payload.telegram_id)) payload.id = parseInt(payload.telegramId || payload.telegram_id);
+      else if (!payload.id) payload.id = Math.floor(Date.now() / 1000);
       const { data } = await supabase.from('users').upsert(payload, { onConflict: 'telegram_id' }).select().single();
       return ok({ success: true, user: data || payload });
     }
@@ -1812,11 +1814,11 @@ export default async function handler(req: any, res: any) {
       } catch {}
       const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]);
       const v = await getV();
-      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-07-V137000' });
+      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-07-V138000' });
     }
     if (path === '/api/test-db' && method === 'GET') {
       const { data: sData, error: sErr } = await supabase.from('users').select('*');
-      const { data: iData, error: iErr } = await supabase.from('users').upsert({ telegram_id: 336997351, phone: '+251911234567', first_name: 'Melona' }, { onConflict: 'telegram_id' }).select();
+      const { data: iData, error: iErr } = await supabase.from('users').upsert({ id: 336997351, telegram_id: 336997351, phone: '+251911234567', first_name: 'Melona' }, { onConflict: 'telegram_id' }).select();
       return ok({ sData, sErr, iData, iErr });
     }
     if (path === '/api/test-cleanup' && (method === 'POST' || method === 'GET')) {
@@ -2172,7 +2174,7 @@ export default async function handler(req: any, res: any) {
         try { var vendors = await getV(); var found = vendors.find(function(v: any) { return v.telegram_id == tgUser.id; }); if (found) vendorStatus = found.status || ''; } catch(e: any) {}
         return ok({ success: true, user: { telegramId: existing.telegram_id, firstName: existing.first_name || tgUser.first_name, lastName: existing.last_name || tgUser.last_name, username: existing.username || tgUser.username, languageCode: tgUser.language_code || 'en', photoUrl: tgUser.photo_url || null, phone: existing.phone || null, fullName: existing.full_name || null, city: existing.city || null, address: existing.address || null, profileComplete: !!(existing.full_name && existing.city && existing.address), vendorStatus: vendorStatus, firstSeen: existing.registered_at || now, lastSeen: now } });
             } else {
-        const { data: newUser } = await supabase.from('users').insert({ telegram_id: tgUser.id, first_name: tgUser.first_name, last_name: tgUser.last_name || '', username: tgUser.username || '', phone: '', registered_at: now }).select().single();
+        const { data: newUser } = await supabase.from('users').insert({ id: tgUser.id, telegram_id: tgUser.id, first_name: tgUser.first_name, last_name: tgUser.last_name || '', username: tgUser.username || '', phone: '', registered_at: now }).select().single();
         return ok({ success: true, user: { telegramId: tgUser.id, firstName: tgUser.first_name, lastName: tgUser.last_name || '', username: tgUser.username || '', languageCode: tgUser.language_code || 'en', photoUrl: tgUser.photo_url || null, phone: null, fullName: null, city: null, address: null, profileComplete: false, vendorStatus: '', firstSeen: now, lastSeen: now } });
       }
     }
@@ -2240,7 +2242,7 @@ export default async function handler(req: any, res: any) {
 
       if (!tid) return ok({ success: false });
       var r: Record<string, any> = { success: true };
-      try { await supabase.from('users').upsert({ telegram_id: parseInt(tid), username: b.username || '', first_name: b.first_name || '', ...(cleanPhone ? { phone: cleanPhone } : {}) }, { onConflict: 'telegram_id' }); const { data: ur } = await supabase.from('users').select('*').eq('telegram_id', parseInt(tid)).single(); if (ur?.phone && !String(ur.phone).includes('@')) r.phone = ur.phone; } catch {}
+      try { await supabase.from('users').upsert({ id: parseInt(tid), telegram_id: parseInt(tid), username: b.username || '', first_name: b.first_name || '', ...(cleanPhone ? { phone: cleanPhone } : {}) }, { onConflict: 'telegram_id' }); const { data: ur } = await supabase.from('users').select('*').eq('telegram_id', parseInt(tid)).single(); if (ur?.phone && !String(ur.phone).includes('@')) r.phone = ur.phone; } catch {}
       try { 
         var v = await getV(); 
         var f = null;
@@ -2540,7 +2542,7 @@ export default async function handler(req: any, res: any) {
 
         if (c.user_id && f.id && String(c.user_id) !== String(f.id)) { await sd('⚠️ Please share your *own* contact.'); return ok({ ok: true }); }
 
-        try { await supabase.from('users').upsert({ telegram_id: parseInt(uid), phone: ph, first_name: fn, username: un, registered_at: new Date().toISOString(), ...(ln ? { last_name: ln } : {}) }, { onConflict: 'telegram_id' }); } catch { try { await supabase.from('users').upsert({ telegram_id: parseInt(uid), first_name: fn, username: un, registered_at: new Date().toISOString(), ...(ln ? { last_name: ln } : {}) }, { onConflict: 'telegram_id' }); } catch {} }
+        try { await supabase.from('users').upsert({ id: parseInt(uid), telegram_id: parseInt(uid), phone: ph, first_name: fn, username: un, registered_at: new Date().toISOString(), ...(ln ? { last_name: ln } : {}) }, { onConflict: 'telegram_id' }); } catch { try { await supabase.from('users').upsert({ id: parseInt(uid), telegram_id: parseInt(uid), first_name: fn, username: un, registered_at: new Date().toISOString(), ...(ln ? { last_name: ln } : {}) }, { onConflict: 'telegram_id' }); } catch {} }
 
         tg(ENV.VENDOR_BOT_TOKEN, sc, '', undefined, { reply_markup: JSON.stringify({ remove_keyboard: true }) }).catch(() => {});
 
