@@ -109,26 +109,26 @@ export default function Login() {
   const isKnownUser = profile.name && profile.name !== 'Guest';
 
   return (
-    <div className="fixed inset-0 z-50 bg-background text-foreground flex flex-col justify-center items-center px-4 overflow-hidden select-none animate-fadeIn">
-      {/* Back / Storefront Navigation */}
-      <div className="max-w-sm w-full mx-auto flex items-center justify-between mb-4">
+    <div className="fixed inset-0 z-50 bg-background text-foreground flex items-center justify-center p-4 overflow-hidden select-none animate-fadeIn">
+      {/* Absolute Top-Corner Navigation */}
+      <div className="absolute top-6 left-6 right-6 max-w-sm mx-auto flex items-center justify-between z-10">
         <button
           onClick={() => navigate(-1)}
-          className="w-9 h-9 rounded-2xl bg-card border border-border flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground"
+          className="w-10 h-10 rounded-2xl bg-card border border-border flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground shadow-sm"
         >
-          <ArrowLeft size={17} />
+          <ArrowLeft size={18} />
         </button>
         <button
           onClick={() => navigate('/shop')}
-          className="px-3 py-1.5 rounded-xl bg-card border border-border text-[11px] font-bold hover:bg-muted transition-colors flex items-center gap-1.5 text-muted-foreground"
+          className="px-3.5 py-2 rounded-xl bg-card border border-border text-xs font-bold hover:bg-muted transition-colors flex items-center gap-1.5 text-muted-foreground shadow-sm"
         >
-          <Store size={13} />
+          <Store size={14} />
           <span>Storefront</span>
         </button>
       </div>
 
-      {/* ONE SINGLE CLEAN CARD */}
-      <div className="max-w-sm w-full mx-auto bg-card dark:bg-slate-900 border border-border dark:border-slate-800 rounded-3xl p-7 shadow-2xl text-center space-y-5">
+      {/* ONE SINGLE CLEAN CARD — 100% DEAD CENTERED VERTICALLY & HORIZONTALLY */}
+      <div className="max-w-sm w-full bg-card dark:bg-slate-900 border border-border dark:border-slate-800 rounded-3xl p-7 shadow-2xl text-center space-y-5 my-auto">
         {/* Top Icon & Greeting */}
         <div className="space-y-1.5">
           <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary mx-auto flex items-center justify-center text-2xl shadow-inner mb-2">
