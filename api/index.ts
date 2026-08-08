@@ -1812,7 +1812,7 @@ export default async function handler(req: any, res: any) {
       } catch {}
       const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]);
       const v = await getV();
-      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-07-V133000' });
+      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-07-V134000' });
     }
     if (path === '/api/test-cleanup' && (method === 'POST' || method === 'GET')) {
       try {
@@ -2472,7 +2472,7 @@ export default async function handler(req: any, res: any) {
         await sd('🏪 *Become a Vendor*', { inline_keyboard: [[{ text: '🏪 Register', web_app: { url: ENV.BASE_URL + '/vendor-register?tg_id=' + (from.id || '') + '&v=' + Date.now() } }]] });
         return ok({ ok: true });
       }
-      if (st === '/help' || st === '/menu') {
+      if (st === '/help' || st === '/menu' || st === '/commands' || st === '/cmd' || st.startsWith('/help') || st.startsWith('/commands')) {
         await sd('❓ *All Commands*\n\n🛍️ /shop — Open store\n🚚 /driver — Driver reg\n🏪 /vendor — Seller reg\n📞 /contact — Share phone\n❓ /help — This menu');
         return ok({ ok: true });
       }
