@@ -45,6 +45,7 @@ export default function Login() {
       } catch {}
 
       let cloudPhone = '';
+      let cloudUser: any = null;
       try {
         const syncRes = await fetch('/api/user/sync', {
           method: 'POST',
@@ -55,16 +56,21 @@ export default function Login() {
         if (syncData && syncData.phone && !String(syncData.phone).includes('@')) {
           cloudPhone = syncData.phone;
         }
+        if (syncData && syncData.user) {
+          cloudUser = syncData.user;
+        }
       } catch {}
 
-      if (matchedUser || cloudPhone) {
-        const resolvedPhone = cloudPhone || matchedUser?.phone || cleanPhone;
-        const resolvedName = matchedUser?.name || profile.name || 'Smart Shop Member';
+      if (matchedUser || cloudPhone || cloudUser) {
+        const resolvedPhone = cloudPhone || cloudUser?.phone || matchedUser?.phone || cleanPhone;
+        const resolvedName = cloudUser?.name || matchedUser?.name || profile.name || 'Smart Shop Member';
+        const resolvedTgId = cloudUser?.telegramId || matchedUser?.telegramId || profile.telegramId || '';
 
         const updatedProfile = {
           ...profile,
           name: resolvedName === 'Guest' ? 'Smart Shop Member' : resolvedName,
           phone: resolvedPhone,
+          telegramId: resolvedTgId,
           registered: true
         };
 

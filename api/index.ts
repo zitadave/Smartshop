@@ -1812,7 +1812,7 @@ export default async function handler(req: any, res: any) {
       } catch {}
       const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]);
       const v = await getV();
-      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-07-V134000' });
+      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-07-V135000' });
     }
     if (path === '/api/test-cleanup' && (method === 'POST' || method === 'GET')) {
       try {
@@ -2197,14 +2197,44 @@ export default async function handler(req: any, res: any) {
     }
 
     // ================================================================
-    // USER SYNC
+    // USER SYNC & PHONE LOOKUP
     // ================================================================
     if (path === '/api/user/sync' && method === 'POST') {
       var b = req.body || {};
       const tid = b.telegram_id || '';
+      const cleanPhone = (b.phone && typeof b.phone === 'string' && !b.phone.includes('@')) ? b.phone.trim() : undefined;
+
+      // 1. If only phone is provided (APK / Web login lookup without Telegram ID)
+      if (!tid && cleanPhone) {
+        const last9 = cleanPhone.replace(/[^0-9]/g, '').slice(-9);
+        if (last9.length >= 7) {
+          try {
+            const { data: allU } = await supabase.from('users').select('*').not('phone', 'is', null);
+            const foundU = (allU || []).find((u: any) => u.phone && String(u.phone).replace(/[^0-9]/g, '').slice(-9) === last9);
+            if (foundU) {
+              var vs = '';
+              try { var v = await getV(); var fv = v.find((vv: any) => vv.phone == foundU.phone || vv.telegram_id == foundU.telegram_id); if (fv) vs = fv.status || ''; } catch {}
+              return ok({
+                success: true,
+                found: true,
+                user: {
+                  telegramId: foundU.telegram_id || '',
+                  name: foundU.first_name ? `${foundU.first_name} ${foundU.last_name || ''}`.trim() : foundU.full_name || 'Smart Shop Member',
+                  phone: foundU.phone,
+                  username: foundU.username || '',
+                  vendorStatus: vs,
+                  joinedAt: foundU.registered_at || new Date().toISOString()
+                },
+                phone: foundU.phone
+              });
+            }
+          } catch {}
+        }
+        return ok({ success: true, found: false });
+      }
+
       if (!tid) return ok({ success: false });
       var r: Record<string, any> = { success: true };
-      const cleanPhone = (b.phone && typeof b.phone === 'string' && !b.phone.includes('@')) ? b.phone : undefined;
       try { await supabase.from('users').upsert({ telegram_id: parseInt(tid), username: b.username || '', first_name: b.first_name || '', ...(cleanPhone ? { phone: cleanPhone } : {}) }, { onConflict: 'telegram_id' }); const { data: ur } = await supabase.from('users').select('*').eq('telegram_id', parseInt(tid)).single(); if (ur?.phone && !String(ur.phone).includes('@')) r.phone = ur.phone; } catch {}
       try { 
         var v = await getV(); 
