@@ -26,7 +26,7 @@ export default function Login() {
     }
     const digitsOnly = cleanPhone.replace(/[^0-9]/g, '');
     if (digitsOnly.length < 7) {
-      toast('Please enter at least 7 digits (e.g. 0911234567)', 'error');
+      toast('Please enter at least 7 digits (e.g. 0911... or 0711...)', 'error');
       return;
     }
 
@@ -128,8 +128,8 @@ export default function Login() {
         {/* Form: Phone Input & Sign In Button */}
         <form onSubmit={handlePhoneSignIn} className="space-y-3.5">
           <div className="relative flex items-center">
-            <div className="absolute left-3.5 flex items-center gap-1 text-xs font-bold text-muted-foreground select-none">
-              <span>+251 / 09</span>
+            <div className="absolute left-3.5 flex items-center gap-1 text-[11px] font-bold text-muted-foreground select-none">
+              <span>+251 (09/07)</span>
             </div>
             <input
               type="tel"
@@ -139,8 +139,8 @@ export default function Login() {
                 setPhoneInput(val);
                 if (verificationNeeded) setVerificationNeeded(false);
               }}
-              placeholder="11 234 567"
-              className="w-full pl-24 pr-4 py-3.5 rounded-2xl border border-border dark:border-slate-700 bg-background text-foreground text-sm font-mono font-bold focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all text-left"
+              placeholder="09... / 07..."
+              className="w-full pl-32 pr-4 py-3.5 rounded-2xl border border-border dark:border-slate-700 bg-background text-foreground text-sm font-mono font-bold focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all text-left"
               required
             />
           </div>

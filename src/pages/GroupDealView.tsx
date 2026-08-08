@@ -578,7 +578,7 @@ export default function GroupDealView() {
                     className="w-full p-3.5 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs outline-none focus:border-green-400 transition-colors bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200" 
                   />
                   <input 
-                    placeholder="Phone Number (ስልክ ቁጥር)" 
+                    placeholder="Phone Number (09... or 07...)" 
                     value={phone} 
                     onChange={e => setPhone(e.target.value)}
                     className="w-full p-3.5 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs outline-none focus:border-green-400 transition-colors bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200" 

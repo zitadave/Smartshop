@@ -255,7 +255,7 @@ export default function DriverRegister() {
     }
     const phDigits = phone.replace(/[^0-9]/g, '');
     if (phDigits.length < 7) {
-      toast('Driver phone number must contain at least 7 digits (e.g. 0911234567)', 'error');
+      toast('Driver phone number must contain at least 7 digits (e.g. 0911... or 0711...)', 'error');
       return;
     }
     if (!vehicleType) { toast('Please select a vehicle type', 'error'); return; }
@@ -266,7 +266,7 @@ export default function DriverRegister() {
     }
     const emDigits = emergencyPhone.replace(/[^0-9]/g, '');
     if (emDigits.length < 7) {
-      toast('Emergency phone number must contain at least 7 digits', 'error');
+      toast('Emergency phone number must contain at least 7 digits (e.g. 0911... or 0711...)', 'error');
       return;
     }
     if (!agreeTerms) { toast('Please agree to the terms', 'error'); return; }

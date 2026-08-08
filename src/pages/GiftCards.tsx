@@ -36,7 +36,7 @@ export default function GiftCards() {
         </div>
         <div>
           <label className="text-[10px] font-semibold text-muted-foreground">Recipient Phone</label>
-          <input className="w-full p-2.5 border border-input rounded-lg text-sm bg-card" placeholder="09XXXXXXXX" value={phone} onChange={e => setPhone(e.target.value)} />
+          <input className="w-full p-2.5 border border-input rounded-lg text-sm bg-card" placeholder="09... / 07..." value={phone} onChange={e => setPhone(e.target.value)} />
         </div>
         <div>
           <label className="text-[10px] font-semibold text-muted-foreground">Message (optional)</label>
