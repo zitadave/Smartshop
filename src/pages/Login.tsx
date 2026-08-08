@@ -109,7 +109,7 @@ export default function Login() {
   const isKnownUser = profile.name && profile.name !== 'Guest';
 
   return (
-    <div className="h-screen max-h-screen w-full overflow-hidden bg-background text-foreground flex flex-col justify-center px-4 animate-fadeIn select-none">
+    <div className="fixed inset-0 z-50 bg-background text-foreground flex flex-col justify-center items-center px-4 overflow-hidden select-none animate-fadeIn">
       {/* Back / Storefront Navigation */}
       <div className="max-w-sm w-full mx-auto flex items-center justify-between mb-4">
         <button
