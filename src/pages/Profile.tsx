@@ -23,9 +23,16 @@ export default function Profile() {
 
   // Read localStorage data
   var ls: any = {};
-  try { ls = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch(e) {}
-  var lsPhone = localStorage.getItem('ss_user_phone') || '';
-  var lsEmail = localStorage.getItem('ss_user_email') || '';
+  try {
+    ls = JSON.parse(localStorage.getItem('ss_profile') || '{}');
+    if (ls.phone && String(ls.phone).includes('@')) {
+      ls.email = ls.email || String(ls.phone);
+      ls.phone = '';
+    }
+  } catch(e) {}
+  var rawLsPhone = localStorage.getItem('ss_user_phone') || '';
+  var lsPhone = (rawLsPhone && !rawLsPhone.includes('@')) ? rawLsPhone : '';
+  var lsEmail = localStorage.getItem('ss_user_email') || (rawLsPhone && rawLsPhone.includes('@') ? rawLsPhone : '');
 
   // Get Telegram WebApp user if available
   var tgUserObj = (window as any).Telegram?.WebApp?.initDataUnsafe?.user;

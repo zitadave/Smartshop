@@ -96,12 +96,14 @@ export default function Checkout() {
 
  const [name, setName] = useState(profile.name || '');
  const [phone, setPhone] = useState(() => {
-   const p = profile.phone || localStorage.getItem('ss_user_phone') || '';
+   let p = profile.phone || localStorage.getItem('ss_user_phone') || '';
+   try { const lsP = JSON.parse(localStorage.getItem('ss_profile') || '{}'); if (!p && lsP.phone) p = lsP.phone; } catch {}
    return p.includes('@') ? '' : p;
  });
  const [email, setEmail] = useState(() => {
-   const e = profile.email || localStorage.getItem('ss_user_email') || '';
-   const badP = profile.phone || localStorage.getItem('ss_user_phone') || '';
+   let e = profile.email || localStorage.getItem('ss_user_email') || '';
+   let badP = profile.phone || localStorage.getItem('ss_user_phone') || '';
+   try { const lsP = JSON.parse(localStorage.getItem('ss_profile') || '{}'); if (!e && lsP.email) e = lsP.email; if (!badP && lsP.phone) badP = lsP.phone; } catch {}
    return e || (badP.includes('@') ? badP : '');
  });
  const [city, setCity] = useState('Addis Ababa');

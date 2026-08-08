@@ -582,7 +582,7 @@ function wrapHtmlEmailDoc(bodyHtml: string, titleText: string = 'Smart Shop Noti
       <td align="center">
         ${bodyHtml}
         <div style="max-width:600px; margin:16px auto 0; text-align:center; font-size:10px; color:#94a3b8; line-height:1.5;">
-          <p style="margin:0;">Smart Shop Ethiopia PLC &middot; Churchill Road, Addis Ababa, Ethiopia &middot; <a href="https://smartshop-steel.vercel.app" style="color:#64748b; text-decoration:underline;">smartshop.et</a></p>
+          <p style="margin:0;">Smart Shop Ethiopia PLC &middot; Churchill Road, Addis Ababa, Ethiopia &middot; <a href="https://smartshop-steel.vercel.app" style="color:#64748b; text-decoration:underline;">Smart Shop Marketplace</a></p>
           <p style="margin:4px 0 0;">You received this transactional service alert because you hold an account or placed an order on Smart Shop. <a href="https://smartshop-steel.vercel.app/profile" style="color:#64748b; text-decoration:underline;">Manage Notifications</a> or <a href="https://smartshop-steel.vercel.app/?unsubscribe=true" style="color:#64748b; text-decoration:underline;">Unsubscribe</a>.</p>
         </div>
       </td>
