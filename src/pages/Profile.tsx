@@ -217,6 +217,21 @@ export default function Profile() {
       toast('Please enter a valid phone number, not an email address.', 'error');
       return;
     }
+    if (updatedName && updatedName.length < 2) {
+      toast('Please enter a full name with at least 2 characters.', 'error');
+      return;
+    }
+    if (updatedPhone) {
+      var phoneDigits = updatedPhone.replace(/[^0-9]/g, '');
+      if (phoneDigits.length < 7) {
+        toast('Phone number must contain at least 7 digits (e.g. 0911234567).', 'error');
+        return;
+      }
+    }
+    if (updatedEmail && (!updatedEmail.includes('@') || !updatedEmail.includes('.'))) {
+      toast('Please enter a valid email address (e.g. user@gmail.com).', 'error');
+      return;
+    }
 
     var newProfile = {
       ...profile,

@@ -250,13 +250,24 @@ export default function VendorRegister() {
   };
 
   const handleSubmitApplication = async () => {
-    if (!storeName.trim()) {
-      toast('Please enter your Store Name in Profile step', 'error');
+    if (!storeName.trim() || storeName.trim().length < 2) {
+      toast('Please enter your Store Name in Profile step (min 2 characters)', 'error');
       setStep(1);
       return;
     }
     if (!storePhone.trim()) {
       toast('Please enter your Store Phone Number in Profile step', 'error');
+      setStep(1);
+      return;
+    }
+    const phDigits = storePhone.replace(/[^0-9]/g, '');
+    if (phDigits.length < 7) {
+      toast('Store phone number must contain at least 7 digits (e.g. 0911234567)', 'error');
+      setStep(1);
+      return;
+    }
+    if (storeEmail.trim() && (!storeEmail.includes('@') || !storeEmail.includes('.'))) {
+      toast('Please enter a valid store email address (e.g. store@smartshop.et)', 'error');
       setStep(1);
       return;
     }

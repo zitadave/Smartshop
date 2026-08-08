@@ -145,11 +145,25 @@ export default function GroupDealView() {
     loadDeal();
   }, [token, store.profile?.telegramId, store.profile?.phone]);
 
-  const handleJoin = async () => {
-    const finalName = store.profile?.phone ? store.profile.name : name;
-    const finalPhone = store.profile?.phone ? store.profile.phone : phone;
+  const isRegisteredUser = Boolean(
+    store.profile?.phone ||
+    localStorage.getItem('ss_user_phone') ||
+    store.profile?.registered ||
+    (store.profile?.telegramId && store.profile?.telegramId !== '') ||
+    (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id
+  );
 
-    if (!finalName.trim()) return toast('📍 Please enter your name', 'error');
+  const handleJoin = async () => {
+    var tgUserObj = (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+    var lsP: any = {};
+    try { lsP = JSON.parse(localStorage.getItem('ss_profile') || '{}'); } catch {}
+    var storedPhone = store.profile?.phone || localStorage.getItem('ss_user_phone') || lsP.phone || '';
+    var storedName = store.profile?.name || lsP.name || (tgUserObj ? [tgUserObj.first_name, tgUserObj.last_name].filter(Boolean).join(' ') : '') || '';
+
+    const finalName = (isRegisteredUser && storedName && storedName !== 'Guest') ? storedName : name;
+    const finalPhone = (isRegisteredUser && storedPhone) ? storedPhone : phone || (store.profile?.telegramId ? '+251911000000' : '');
+
+    if (!finalName.trim() || finalName === 'Guest') return toast('📍 Please enter your name', 'error');
     if (!finalPhone.trim()) return toast('📞 Please enter your phone number', 'error');
     
     setJoining(true);
@@ -539,11 +553,11 @@ export default function GroupDealView() {
         {/* Join / Share Action Form (Only visible inline if sticky bottom is off-screen) */}
         <div ref={formRef}>
           {!joined ? (
-            store.profile?.phone ? (
+            isRegisteredUser ? (
               /* Automatic One-Tap Joining for Logged In Users */
               <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/30 dark:border-slate-800 text-center">
                 <h3 className="font-bold text-slate-800 dark:text-white text-sm mb-1">One-Tap Instant Join ⚡</h3>
-                <p className="text-[10px] text-slate-400 mb-4">You are logged in as <strong>{store.profile.name}</strong>. Tap below to join instantly!</p>
+                <p className="text-[10px] text-slate-400 mb-4">You are logged in as <strong>{store.profile.name || 'Smart Shop Member'}</strong>. Tap below to join instantly!</p>
                 <button 
                   onClick={handleJoin}
                   disabled={joining}
@@ -704,7 +718,7 @@ export default function GroupDealView() {
         
         <div className="flex-1 max-w-[240px]">
           {!joined ? (
-            store.profile?.phone ? (
+            isRegisteredUser ? (
               <button 
                 onClick={handleJoin}
                 disabled={joining}

@@ -253,11 +253,15 @@ export default function Checkout() {
  const grandTotal = Math.max(0, finalTotal + deliveryFee);
 
  const placeOrder = async () => {
- if (!name || !phone || !city) { toast('Please fill delivery info', 'error'); return; }
- if (!paymentMethod) return;
- if (paymentMethod === 'bank' && (!selectedBank || (!depositorName && !receiptText && !receiptImage))) {
- toast('Select bank and provide depositor name', 'error'); return;
- }
+   if (!name || name.trim().length < 2) { toast('Please enter your full name (min 2 characters)', 'error'); return; }
+   const phoneDigits = (phone || '').replace(/[^0-9]/g, '');
+   if (phoneDigits.length < 7) { toast('Please enter a valid phone number with at least 7 digits (e.g. 0911234567)', 'error'); return; }
+   if (email && (!email.includes('@') || !email.includes('.'))) { toast('Please enter a valid email address', 'error'); return; }
+   if (!city) { toast('Please select a delivery district / city', 'error'); return; }
+   if (!paymentMethod) return;
+   if (paymentMethod === 'bank' && (!selectedBank || (!depositorName && !receiptText && !receiptImage))) {
+     toast('Select bank and provide depositor name', 'error'); return;
+   }
  setLoading(true);
 
  const orderNum = generateOrderNumber();
@@ -430,8 +434,8 @@ export default function Checkout() {
  // ===== CONFIRMATION MODAL (theme-aware) =====
  if (showConfirm) {
  return (
- <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
- <div className="bg-white rounded-3xl max-w-sm w-full shadow-2xl border border-slate-200 overflow-hidden animate-scaleIn">
+ <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fadeIn">
+ <div className="bg-card dark:bg-slate-900 rounded-3xl max-w-sm w-full shadow-2xl border border-border dark:border-slate-800 overflow-hidden animate-scaleIn text-foreground">
  <div className="bg-gradient-to-br from-emerald-400 via-green-500 to-teal-600 p-8 text-center relative overflow-hidden">
  <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.2),transparent_70%)]" />
  <div className="relative z-10">
@@ -439,31 +443,31 @@ export default function Checkout() {
  <PartyPopper size={40} className="text-white" />
  </div>
  <h2 className="text-xl font-bold text-white">Order Placed! 🎉</h2>
- <p className="text-sm text-white/80 mt-1">Thank you for shopping!</p>
+ <p className="text-sm text-white/90 mt-1 font-medium">Thank you for shopping!</p>
  <div className="inline-block bg-white/20 backdrop-blur rounded-lg px-3 py-1 mt-3 font-mono text-xs text-white">#{orderNumber}</div>
  </div>
  </div>
- <div className="p-5 space-y-3 bg-white">
- <h3 className="text-xs font-bold text-slate-700 flex items-center gap-2"><Gift size={14} className="text-pink-500" /> You received:</h3>
+ <div className="p-5 space-y-3 bg-card dark:bg-slate-900 text-foreground">
+ <h3 className="text-xs font-bold text-foreground flex items-center gap-2"><Gift size={14} className="text-pink-500" /> You received:</h3>
  <div className="grid grid-cols-2 gap-2">
- <div className="bg-amber-50 dark:bg-amber-950/20 rounded-xl p-3 text-center border border-amber-200 dark:border-amber-800/30">
+ <div className="bg-amber-500/10 dark:bg-amber-950/30 rounded-xl p-3 text-center border border-amber-500/20 dark:border-amber-500/30">
  <Star size={18} className="mx-auto text-amber-500 mb-1" />
- <div className="text-lg font-bold text-amber-700">{rewardPoints}</div>
- <div className="text-[8px] text-amber-600 font-medium">Loyalty Points</div>
+ <div className="text-lg font-bold text-amber-700 dark:text-amber-400">{rewardPoints}</div>
+ <div className="text-[9px] text-amber-600 dark:text-amber-400 font-medium">Loyalty Points</div>
  </div>
- <div className="bg-purple-50 dark:bg-purple-950/20 rounded-xl p-3 text-center border border-purple-200 dark:border-purple-800/30">
+ <div className="bg-purple-500/10 dark:bg-purple-950/30 rounded-xl p-3 text-center border border-purple-500/20 dark:border-purple-500/30">
  <Gem size={18} className="mx-auto text-purple-500 mb-1" />
- <div className="text-lg font-bold text-purple-700">+1</div>
- <div className="text-[8px] text-purple-600 font-medium">Mystery Box</div>
+ <div className="text-lg font-bold text-purple-700 dark:text-purple-400">+1</div>
+ <div className="text-[9px] text-purple-600 dark:text-purple-400 font-medium">Mystery Box</div>
  </div>
  </div>
- <div className={cn('rounded-xl p-3 text-[10px]', paymentMethod === 'bank' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700')}>
+ <div className={cn('rounded-xl p-3 text-[10px] font-medium', paymentMethod === 'bank' ? 'bg-amber-500/10 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/20' : 'bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20')}>
  {paymentMethod === 'bank' ? 'Your payment is being reviewed by admin. You will be notified once confirmed.' : 'Your payment has been processed. Your order is being prepared!'}
  </div>
  <div className="flex gap-2 flex-wrap">
  <button className="flex-1 min-w-[100px] py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-xs font-bold hover:shadow-md transition-all flex items-center justify-center gap-1" onClick={() => { window.location.href = '/tracking?order=' + orderNumber; }}>🚚 Track Order</button>
- <button className="flex-1 min-w-[100px] py-3 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors" onClick={() => { window.location.href = '/loyalty'; }}>View Rewards</button>
- <button className="w-full py-3.5 bg-slate-900 text-white rounded-xl text-xs font-extrabold hover:shadow-lg transition-all" onClick={() => { window.location.href = '/shop'; }}>Back to Shop</button>
+ <button className="flex-1 min-w-[100px] py-3 border border-border dark:border-slate-700 rounded-xl text-xs font-semibold text-foreground hover:bg-muted dark:hover:bg-slate-800 transition-colors" onClick={() => { window.location.href = '/loyalty'; }}>View Rewards</button>
+ <button className="w-full py-3.5 bg-primary text-primary-foreground rounded-xl text-xs font-extrabold hover:shadow-lg transition-all" onClick={() => { window.location.href = '/shop'; }}>Back to Shop</button>
  </div>
  </div>
  </div>

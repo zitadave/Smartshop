@@ -252,11 +252,21 @@ export default function DriverRegister() {
       toast('Please fill in all required identity verification fields', 'error');
       return;
     }
+    const phDigits = phone.replace(/[^0-9]/g, '');
+    if (phDigits.length < 7) {
+      toast('Driver phone number must contain at least 7 digits (e.g. 0911234567)', 'error');
+      return;
+    }
     if (!vehicleType) { toast('Please select a vehicle type', 'error'); return; }
     if (P.length === 0) { toast('Please select at least one service zone', 'error'); return; }
     if (!emergencyFirstName.trim() || !emergencyMiddleName.trim() || !emergencyLastName.trim() || !emergencyPhone.trim() || !emergencyIdFrontImage || !emergencyIdBackImage) { 
       toast('Emergency contact person (First/Middle/Last) and their Front/Back ID photos are required', 'error'); 
       return; 
+    }
+    const emDigits = emergencyPhone.replace(/[^0-9]/g, '');
+    if (emDigits.length < 7) {
+      toast('Emergency phone number must contain at least 7 digits', 'error');
+      return;
     }
     if (!agreeTerms) { toast('Please agree to the terms', 'error'); return; }
     
