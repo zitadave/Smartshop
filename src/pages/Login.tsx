@@ -109,17 +109,7 @@ export default function Login() {
   const isKnownUser = profile.name && profile.name !== 'Guest';
 
   return (
-    <div className="fixed inset-0 z-[100] w-screen h-screen bg-background text-foreground flex items-center justify-center p-4 overflow-hidden select-none animate-fadeIn">
-      {/* Subtle Close Button in Top Right to exit to Storefront */}
-      <button
-        type="button"
-        onClick={() => navigate('/shop')}
-        className="absolute top-5 right-5 w-9 h-9 rounded-full bg-muted/60 hover:bg-muted flex items-center justify-center text-muted-foreground transition-colors z-10"
-        title="Continue to Storefront"
-      >
-        ✕
-      </button>
-
+    <div className="fixed inset-0 z-[100] w-screen h-screen bg-background text-foreground grid place-items-center p-4 overflow-hidden select-none animate-fadeIn">
       {/* ONE SINGLE CLEAN CARD — 100% DEAD CENTERED VERTICALLY & HORIZONTALLY WITH EQUAL SPACING */}
       <div className="max-w-sm w-full bg-card dark:bg-slate-900 border border-border dark:border-slate-800 rounded-3xl p-7 shadow-2xl text-center space-y-5">
         {/* Top Icon & Greeting */}
