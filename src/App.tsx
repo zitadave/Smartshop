@@ -20,6 +20,7 @@ const Wishlist = lazy(() => import('@/pages/Wishlist'));
 const Orders = lazy(() => import('@/pages/Orders'));
 const OrderDetail = lazy(() => import('@/pages/OrderDetail'));
 const Profile = lazy(() => import('@/pages/Profile'));
+const Login = lazy(() => import('@/pages/Login'));
 const VendorRegister = lazy(() => import('@/pages/VendorRegister'));
 const Checkout = lazy(() => import('@/pages/Checkout'));
 const Confirmation = lazy(() => import('@/pages/Confirmation'));
@@ -232,6 +233,7 @@ export default function App() {
           <Route path="/orders" element={<Suspense fallback={<PageLoader />}><Orders /></Suspense>} />
           <Route path="/orders/:orderNumber" element={<Suspense fallback={<PageLoader />}><OrderDetail /></Suspense>} />
           <Route path="/profile" element={<Suspense fallback={<PageLoader />}><Profile /></Suspense>} />
+          <Route path="/login" element={<Suspense fallback={<PageLoader />}><Login /></Suspense>} />
           <Route path="/checkout" element={<Suspense fallback={<PageLoader />}><Checkout /></Suspense>} />
           <Route path="/confirmation/:orderNumber" element={<Suspense fallback={<PageLoader />}><Confirmation /></Suspense>} />
           <Route path="/gift-cards" element={<Suspense fallback={<PageLoader />}><GiftCards /></Suspense>} />

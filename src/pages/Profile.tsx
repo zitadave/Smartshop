@@ -343,6 +343,27 @@ export default function Profile() {
 
   return (
     <div className="pb-4">
+      {/* Guest Sign-In & Verification Banner */}
+      {(!profile.phone || displayName === 'Guest') && (
+        <div className="mx-3 mt-3 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-4 text-white shadow-lg flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <div className="text-xs font-extrabold flex items-center gap-1.5">
+              <span>🔑 Sign In & Phone Verification</span>
+            </div>
+            <p className="text-[10px] text-white/80 mt-0.5">
+              Have a verified phone number? Sign in to synchronize your account across devices.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/login')}
+            className="px-3.5 py-2 bg-white text-blue-700 hover:bg-blue-50 rounded-xl text-xs font-extrabold shadow-md transition-all"
+          >
+            Sign In Now →
+          </button>
+        </div>
+      )}
+
       {/* Profile Header Card */}
       <div className="relative mx-3 mt-3 overflow-hidden rounded-2xl bg-gradient-to-br from-primary/90 via-primary to-blue-700 text-white shadow-xl">
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/4" />
