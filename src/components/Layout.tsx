@@ -68,15 +68,6 @@ export default function Layout() {
             <button className="w-9 h-9 rounded-2xl flex items-center justify-center text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-all duration-200 active:scale-90"
               onClick={() => setDarkMode(!darkMode)}>{darkMode ? <Sun size={17} /> : <Moon size={17} />}</button>
 
-            {(!profile.phone || !profile.registered) && !TG && (
-              <button
-                onClick={() => navigate('/login')}
-                className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-primary to-blue-600 text-white text-[10px] font-extrabold shadow-md hover:shadow-lg transition-all flex items-center gap-1 flex-shrink-0"
-              >
-                <span>🔑 Sign In</span>
-              </button>
-            )}
-
             {cartCount > 0 && (
               <button className="w-9 h-9 rounded-2xl flex items-center justify-center text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-all duration-200 active:scale-90 relative"
                 onClick={() => navigate('/cart')}>

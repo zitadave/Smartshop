@@ -486,6 +486,26 @@ export default function Checkout() {
  <button className="p-2 -ml-2 rounded-xl hover:bg-muted transition-colors" onClick={() => navigate('/cart')}><ArrowLeft size={18} /></button>
  <div><h1 className="text-lg font-bold text-foreground">Checkout</h1><p className="text-[10px] text-muted-foreground">{cart.length} item{cart.length > 1 ? 's' : ''} &middot; Br {grandTotal.toLocaleString()}</p></div>
  </div>
+
+ {!profile.phone && !localStorage.getItem('ss_user_phone') && (
+   <div className="bg-gradient-to-r from-blue-600/10 via-indigo-600/10 to-primary/10 border border-blue-500/20 rounded-2xl p-3.5 mb-4 flex items-center justify-between flex-wrap gap-2 animate-fadeIn">
+     <div className="flex items-center gap-2.5">
+       <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm">🔑</div>
+       <div>
+         <div className="text-xs font-extrabold text-foreground">Already have an account?</div>
+         <div className="text-[10px] text-muted-foreground">Sign in to autofill your delivery info & earn rewards</div>
+       </div>
+     </div>
+     <button
+       type="button"
+       onClick={() => navigate('/login')}
+       className="px-3.5 py-1.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-xs font-bold shadow-md transition-all"
+     >
+       Sign In →
+     </button>
+   </div>
+ )}
+
  <div className="bg-card rounded-2xl border border-border p-4 shadow-sm mb-3">
  <h3 className="text-xs font-bold text-foreground mb-3"><Package size={14} className="inline mr-1 text-indigo-500" /> Products</h3>
  <div className="space-y-2">{cart.map(i => (

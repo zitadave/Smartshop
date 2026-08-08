@@ -6,6 +6,7 @@ import { SpinWheel, StreakBadge, MysteryBox } from '@/components/game/SpinWheel'
 import { checkStreak, claimStreakReward, getStreak, getSpinData } from '@/lib/game';
 import { toast } from '@/components/Toast';
 import { haptic } from '@/lib/confetti';
+import AuthGuard from '@/components/auth/AuthGuard';
 import { Gift, Flame, Sparkles, Trophy, ArrowLeft, Coins, Tag, Copy, CheckCircle } from 'lucide-react';
 
 const REWARD_STORE_ITEMS = [
@@ -148,6 +149,7 @@ export default function Loyalty() {
   };
 
   return (
+    <AuthGuard title="Loyalty & Rewards" icon="🏆" description="Sign in to view your accumulated loyalty points, mystery boxes, and comeback discount vouchers.">
     <div className="pb-12 animate-fadeUp">
       {/* Header */}
       <div className="sticky top-14 z-10 bg-gradient-to-b from-primary/5 to-transparent backdrop-blur-xl px-4 pt-4 pb-3 border-b border-border/40">
@@ -342,5 +344,6 @@ export default function Loyalty() {
         </div>
       )}
     </div>
+    </AuthGuard>
   );
 }

@@ -6,6 +6,7 @@ import { haptic } from '@/lib/confetti';
 import { cn } from '@/lib/utils';
 import { sendAdminTelegram } from '@/lib/adminNotifier';
 import { sendEmailNotification } from '@/lib/emailNotifier';
+import AuthGuard from '@/components/auth/AuthGuard';
 import {
   ArrowLeft, Store, Save, Smartphone, Mail, FileText, Store as StoreIcon,
   Loader, Camera, Shield, CheckCircle, FileSpreadsheet, MapPin, Upload, X,
@@ -447,6 +448,7 @@ export default function VendorRegister() {
   }
 
   return (
+    <AuthGuard title="Merchant Application" icon="🏪" description="Sign in with your verified Ethiopian phone number before submitting your vendor application.">
     <div className={'min-h-screen p-4 pb-12 ' + (darkMode ? 'dark bg-slate-900 text-white' : 'bg-gradient-to-br from-slate-50 to-slate-100 text-slate-900')}>
       <div className="max-w-md mx-auto space-y-4">
         <button
@@ -820,5 +822,6 @@ export default function VendorRegister() {
         </div>
       </div>
     </div>
+    </AuthGuard>
   );
 }

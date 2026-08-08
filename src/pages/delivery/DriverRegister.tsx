@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/stores/AppStore';
 import { toast } from '@/components/Toast';
+import AuthGuard from '@/components/auth/AuthGuard';
 import { Bike, ArrowLeft, Camera, ChevronDown, CheckCircle, Shield, Loader, Clock, XCircle } from 'lucide-react';
 
 const ZONES = ['Bole', 'Merkato', 'Piassa', 'Summit', 'Mexico', 'Kazanchis', 'CMC', 'Ayat'];
@@ -335,6 +336,7 @@ export default function DriverRegister() {
   var vehicleIcons: Record<string, string> = { on_foot: '🚶', bicycle: '🚲', motorcycle: '🏍️', bajaj: '🛺' };
 
   return (
+    <AuthGuard title="Courier Registration" icon="🚚" description="Sign in with your verified Ethiopian phone number before registering as a courier.">
     <div className="min-h-screen p-4 pb-20 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white">
       {/* Laser scan keyframe style */}
       <style>{`
@@ -702,5 +704,6 @@ export default function DriverRegister() {
         </div>
       </div>
     </div>
+    </AuthGuard>
   );
 }

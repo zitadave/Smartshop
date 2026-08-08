@@ -6,6 +6,7 @@ import { t } from '@/i18n/translations';
 import { formatPrice, cn } from '@/lib/utils';
 import { ReceiptButton } from '@/components/features/DigitalReceipt';
 import { OrderProgressBar } from '@/components/features/OrderTrackingMap';
+import AuthGuard from '@/components/auth/AuthGuard';
 import { FileText, MapPin, RotateCcw } from 'lucide-react';
 
 export default function Orders() {
@@ -53,16 +54,17 @@ export default function Orders() {
   }))].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   return (
-    <div className="px-3 pt-3 pb-4 max-w-lg mx-auto">
-      <h2 className="text-base font-bold mb-3">📦 {t('orders', language)} ({allOrders.length})</h2>
-      {allOrders.length === 0 ? (
-        <div className="text-center py-16">
-          <div className="text-5xl opacity-40 mb-3">📦</div>
-          <h3 className="text-sm font-semibold text-muted-foreground">{t('noOrders', language)}</h3>
-          <button className="mt-4 px-6 py-2.5 bg-primary text-white rounded-lg text-sm font-semibold" onClick={() => navigate('/shop')}>
-            🛍️ {t('shop', language)}
-          </button>
-        </div>
+    <AuthGuard title="Your Orders" icon="📦" description="Sign in to view your order tracking, digital receipts, and delivery security PINs.">
+      <div className="px-3 pt-3 pb-4 max-w-lg mx-auto">
+        <h2 className="text-base font-bold mb-3">📦 {t('orders', language)} ({allOrders.length})</h2>
+        {allOrders.length === 0 ? (
+          <div className="text-center py-16">
+            <div className="text-5xl opacity-40 mb-3">📦</div>
+            <h3 className="text-sm font-semibold text-muted-foreground">{t('noOrders', language)}</h3>
+            <button className="mt-4 px-6 py-2.5 bg-primary text-white rounded-lg text-sm font-semibold" onClick={() => navigate('/shop')}>
+              🛍️ {t('shop', language)}
+            </button>
+          </div>
       ) : (
         allOrders.map(o => {
           const total = o.total || o.items.reduce((s, i) => s + i.price * i.quantity, 0);
@@ -105,5 +107,6 @@ export default function Orders() {
         })
       )}
     </div>
+    </AuthGuard>
   );
 }

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/stores/AppStore';
 import { toast } from '@/components/Toast';
 import { burstConfetti } from '@/lib/confetti';
-import { Phone, Shield, ArrowLeft, CheckCircle2, Lock, Sparkles, Send } from 'lucide-react';
+import { Phone, Shield, ArrowLeft, CheckCircle2, Lock, Sparkles, Send, Store } from 'lucide-react';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -102,42 +102,57 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground pb-20 px-4 pt-6 animate-fadeIn">
+    <div className="min-h-screen bg-background text-foreground pb-24 px-4 pt-6 animate-fadeIn">
       <div className="max-w-md mx-auto">
-        {/* Back navigation */}
-        <div className="flex items-center gap-3 mb-6">
+        {/* Top bar */}
+        <div className="flex items-center justify-between mb-6">
           <button
             onClick={() => navigate(-1)}
             className="w-10 h-10 rounded-2xl bg-card border border-border flex items-center justify-center hover:bg-muted transition-colors"
           >
             <ArrowLeft size={18} />
           </button>
-          <div>
-            <h1 className="text-lg font-extrabold tracking-tight">Sign In & Phone Verification</h1>
-            <p className="text-[11px] text-muted-foreground">One Verified Phone Number · Zero Duplicate Accounts</p>
-          </div>
+          <button
+            onClick={() => navigate('/shop')}
+            className="px-3.5 py-1.5 rounded-xl bg-card border border-border text-xs font-bold hover:bg-muted transition-colors flex items-center gap-1.5"
+          >
+            <Store size={14} />
+            <span>Storefront</span>
+          </button>
+        </div>
+
+        {/* Hero Section */}
+        <div className="text-center space-y-2.5 mb-7">
+          <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-extrabold uppercase tracking-wider shadow-sm">
+            <span>🇪🇹</span>
+            <span>Smart Shop Ethiopia Official</span>
+          </span>
+          <h1 className="text-2xl font-black tracking-tight text-foreground">Sign In to Your Account</h1>
+          <p className="text-xs text-muted-foreground leading-relaxed max-w-xs mx-auto">
+            Enter your registered phone number to synchronize your orders, saved delivery addresses, and loyalty rewards across all your devices.
+          </p>
         </div>
 
         {/* Security Feature Banner */}
-        <div className="bg-gradient-to-r from-emerald-500/10 via-green-500/10 to-teal-500/10 border border-emerald-500/20 rounded-3xl p-4 mb-6 flex items-center gap-3.5">
+        <div className="bg-gradient-to-r from-emerald-500/10 via-green-500/10 to-teal-500/10 border border-emerald-500/20 rounded-3xl p-4 mb-6 flex items-center gap-3.5 shadow-sm">
           <div className="w-11 h-11 rounded-2xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
             <Shield size={22} />
           </div>
           <div>
-            <h3 className="text-xs font-bold text-slate-900 dark:text-white">Strict Phone Number Policy</h3>
+            <h3 className="text-xs font-bold text-slate-900 dark:text-white">One Verified Account Policy</h3>
             <p className="text-[10px] text-slate-600 dark:text-slate-400 leading-relaxed mt-0.5">
-              Every Smart Shop account is uniquely identified by your verified Ethiopian phone number. We do not allow duplicate accounts.
+              To keep your rewards secure and prevent duplicates, every Smart Shop member is uniquely identified by their verified Ethiopian phone number.
             </p>
           </div>
         </div>
 
-        {/* Login Form */}
+        {/* Login Form Card */}
         <div className="bg-card dark:bg-slate-900 border border-border dark:border-slate-800 rounded-3xl p-6 shadow-xl mb-6">
           <h2 className="text-sm font-extrabold mb-1 text-slate-900 dark:text-white flex items-center gap-2">
             <Phone size={16} className="text-primary" /> Enter Your Phone Number
           </h2>
           <p className="text-[11px] text-muted-foreground mb-5">
-            Enter your registered Ethiopian phone number to access your orders, saved addresses, and loyalty rewards.
+            We'll instantly look up your account. No passwords required.
           </p>
 
           <form onSubmit={handlePhoneSignIn} className="space-y-4">
@@ -145,18 +160,24 @@ export default function Login() {
               <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">
                 Ethiopian Phone Number *
               </label>
-              <input
-                type="tel"
-                value={phoneInput}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setPhoneInput(val);
-                  if (verificationNeeded) setVerificationNeeded(false);
-                }}
-                placeholder="e.g. 0911234567 or +251911234567"
-                className="w-full p-4 rounded-2xl border border-border dark:border-slate-700 bg-background text-foreground text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all"
-                required
-              />
+              <div className="relative flex items-center">
+                <div className="absolute left-3.5 flex items-center gap-1.5 pointer-events-none text-xs font-bold text-muted-foreground">
+                  <span>🇪🇹</span>
+                  <span>+251 / 09</span>
+                </div>
+                <input
+                  type="tel"
+                  value={phoneInput}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setPhoneInput(val);
+                    if (verificationNeeded) setVerificationNeeded(false);
+                  }}
+                  placeholder="11 234 567"
+                  className="w-full pl-24 pr-4 py-4 rounded-2xl border border-border dark:border-slate-700 bg-background text-foreground text-sm font-mono font-bold focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all"
+                  required
+                />
+              </div>
             </div>
 
             <button
@@ -189,7 +210,7 @@ export default function Login() {
                       Phone Number Not Verified Yet ({searchedPhone})
                     </h4>
                     <p className="text-[10px] text-muted-foreground mt-0.5">
-                      To enforce our "One Account Per Verified Phone" security rule, please tap below to verify your SIM-verified phone number via Telegram Bot in 1 second.
+                      To protect your account and enforce our One Verified Phone Number rule, please tap below to verify via Telegram Bot SIM verification in 1 second.
                     </p>
                   </div>
                 </div>
@@ -208,7 +229,7 @@ export default function Login() {
         </div>
 
         {/* Alternate Telegram 1-Click Deep Link */}
-        <div className="bg-card dark:bg-slate-900 border border-border dark:border-slate-800 rounded-3xl p-6 text-center space-y-3">
+        <div className="bg-card dark:bg-slate-900 border border-border dark:border-slate-800 rounded-3xl p-6 text-center space-y-3 shadow-sm">
           <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-500 mx-auto flex items-center justify-center">
             <Sparkles size={24} />
           </div>
