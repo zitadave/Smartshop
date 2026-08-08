@@ -109,8 +109,8 @@ export default function Login() {
   const isKnownUser = profile.name && profile.name !== 'Guest';
 
   return (
-    <div className="fixed inset-0 z-[100] w-screen h-screen bg-background text-foreground grid place-items-center p-4 overflow-hidden select-none animate-fadeIn">
-      {/* ONE SINGLE CLEAN CARD — 100% DEAD CENTERED VERTICALLY & HORIZONTALLY WITH EQUAL SPACING */}
+    <div className="w-full h-[calc(100vh-7.5rem)] overflow-hidden flex flex-col justify-start items-center pt-6 px-4 select-none animate-fadeIn">
+      {/* ONE SINGLE CLEAN CARD — COMPACT TOP SPACING WITH BOTTOM NAVBAR VISIBLE */}
       <div className="max-w-sm w-full bg-card dark:bg-slate-900 border border-border dark:border-slate-800 rounded-3xl p-7 shadow-2xl text-center space-y-5">
         {/* Top Icon & Greeting */}
         <div className="space-y-1.5">
