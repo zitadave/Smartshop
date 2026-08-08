@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/stores/AppStore';
 import { toast } from '@/components/Toast';
 import { burstConfetti } from '@/lib/confetti';
-import { ArrowLeft, Send, Store } from 'lucide-react';
+import { Send } from 'lucide-react';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -110,23 +110,6 @@ export default function Login() {
 
   return (
     <div className="fixed inset-0 z-50 bg-background text-foreground flex items-center justify-center p-4 overflow-hidden select-none animate-fadeIn">
-      {/* Absolute Top-Corner Navigation */}
-      <div className="absolute top-6 left-6 right-6 max-w-sm mx-auto flex items-center justify-between z-10">
-        <button
-          onClick={() => navigate(-1)}
-          className="w-10 h-10 rounded-2xl bg-card border border-border flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground shadow-sm"
-        >
-          <ArrowLeft size={18} />
-        </button>
-        <button
-          onClick={() => navigate('/shop')}
-          className="px-3.5 py-2 rounded-xl bg-card border border-border text-xs font-bold hover:bg-muted transition-colors flex items-center gap-1.5 text-muted-foreground shadow-sm"
-        >
-          <Store size={14} />
-          <span>Storefront</span>
-        </button>
-      </div>
-
       {/* ONE SINGLE CLEAN CARD — 100% DEAD CENTERED VERTICALLY & HORIZONTALLY */}
       <div className="max-w-sm w-full bg-card dark:bg-slate-900 border border-border dark:border-slate-800 rounded-3xl p-7 shadow-2xl text-center space-y-5 my-auto">
         {/* Top Icon & Greeting */}
