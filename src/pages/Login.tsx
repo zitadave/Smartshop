@@ -63,12 +63,14 @@ export default function Login() {
 
       if (matchedUser || cloudPhone || cloudUser) {
         const resolvedPhone = cloudPhone || cloudUser?.phone || matchedUser?.phone || cleanPhone;
-        const resolvedName = cloudUser?.name || matchedUser?.name || profile.name || 'Smart Shop Member';
+        const resolvedName = (cloudUser?.name && cloudUser.name !== 'Smart Shop Member' && cloudUser.name !== 'Guest')
+          ? cloudUser.name
+          : (cloudUser?.username ? `@${cloudUser.username}` : (matchedUser?.name && matchedUser.name !== 'Guest' ? matchedUser.name : (profile.name && profile.name !== 'Guest' ? profile.name : 'Smart Shop Member')));
         const resolvedTgId = cloudUser?.telegramId || matchedUser?.telegramId || profile.telegramId || '';
 
         const updatedProfile = {
           ...profile,
-          name: resolvedName === 'Guest' ? 'Smart Shop Member' : resolvedName,
+          name: resolvedName,
           phone: resolvedPhone,
           telegramId: resolvedTgId,
           registered: true

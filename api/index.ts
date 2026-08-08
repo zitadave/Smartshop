@@ -1814,7 +1814,7 @@ export default async function handler(req: any, res: any) {
       } catch {}
       const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]);
       const v = await getV();
-      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-07-V138000' });
+      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-07-V139000' });
     }
     if (path === '/api/test-db' && method === 'GET') {
       const { data: sData, error: sErr } = await supabase.from('users').select('*');
@@ -2226,7 +2226,7 @@ export default async function handler(req: any, res: any) {
                 found: true,
                 user: {
                   telegramId: foundU.telegram_id || '',
-                  name: foundU.first_name ? `${foundU.first_name} ${foundU.last_name || ''}`.trim() : foundU.full_name || 'Smart Shop Member',
+                  name: foundU.first_name ? `${foundU.first_name} ${foundU.last_name || ''}`.trim() : foundU.full_name || (foundU.username ? `@${foundU.username}` : 'Smart Shop Member'),
                   phone: foundU.phone,
                   username: foundU.username || '',
                   vendorStatus: vs,
