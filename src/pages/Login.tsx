@@ -75,7 +75,7 @@ export default function Login() {
         burstConfetti({ count: 50, duration: 3000 });
         toast(`🎉 Welcome back, ${updatedProfile.name}!`, 'success');
         setLoading(false);
-        navigate('/profile');
+        navigate(-1);
         return;
       }
 
@@ -110,7 +110,7 @@ export default function Login() {
   const isKnownUser = profile.name && profile.name !== 'Guest';
 
   return (
-    <div className="min-h-[85vh] bg-background text-foreground flex flex-col justify-center px-4 pb-16 animate-fadeIn">
+    <div className="h-screen max-h-screen w-full overflow-hidden bg-background text-foreground flex flex-col justify-center px-4 animate-fadeIn select-none">
       {/* Back / Storefront Navigation */}
       <div className="max-w-sm w-full mx-auto flex items-center justify-between mb-4">
         <button
@@ -129,17 +129,17 @@ export default function Login() {
       </div>
 
       {/* ONE SINGLE CLEAN CARD */}
-      <div className="max-w-sm w-full mx-auto bg-card dark:bg-slate-900 border border-border dark:border-slate-800 rounded-3xl p-7 shadow-2xl text-center space-y-6">
+      <div className="max-w-sm w-full mx-auto bg-card dark:bg-slate-900 border border-border dark:border-slate-800 rounded-3xl p-7 shadow-2xl text-center space-y-5">
         {/* Top Icon & Greeting */}
         <div className="space-y-1.5">
-          <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary mx-auto flex items-center justify-center text-2xl shadow-inner mb-3">
+          <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary mx-auto flex items-center justify-center text-2xl shadow-inner mb-2">
             🏪
           </div>
           <h1 className="text-xl font-black text-foreground tracking-tight">
-            {isKnownUser ? `Welcome back, ${profile.name}! 👋` : 'Welcome to Smart Shop 🇪🇹'}
+            {isKnownUser ? `Welcome back, ${profile.name}! 👋` : 'Welcome to Smart Shop'}
           </h1>
           <p className="text-xs text-muted-foreground">
-            Enter your Ethiopian phone number to continue
+            Please enter your phone number
           </p>
         </div>
 
@@ -147,8 +147,7 @@ export default function Login() {
         <form onSubmit={handlePhoneSignIn} className="space-y-3.5">
           <div className="relative flex items-center">
             <div className="absolute left-3.5 flex items-center gap-1 text-xs font-bold text-muted-foreground select-none">
-              <span>🇪🇹</span>
-              <span>+251</span>
+              <span>+251 / 09</span>
             </div>
             <input
               type="tel"
@@ -158,8 +157,8 @@ export default function Login() {
                 setPhoneInput(val);
                 if (verificationNeeded) setVerificationNeeded(false);
               }}
-              placeholder="911 234 567"
-              className="w-full pl-20 pr-4 py-3.5 rounded-2xl border border-border dark:border-slate-700 bg-background text-foreground text-sm font-mono font-bold focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all text-left"
+              placeholder="11 234 567"
+              className="w-full pl-24 pr-4 py-3.5 rounded-2xl border border-border dark:border-slate-700 bg-background text-foreground text-sm font-mono font-bold focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all text-left"
               required
             />
           </div>
@@ -188,7 +187,7 @@ export default function Login() {
         </div>
 
         {/* Telegram Deep-Link Button */}
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <button
             type="button"
             onClick={handleTelegramDeepLink}
@@ -205,7 +204,7 @@ export default function Login() {
         {/* Inline Telegram Verification Prompt (Only shown if number not found) */}
         {verificationNeeded && (
           <div className="pt-3 border-t border-border/40 animate-scaleIn">
-            <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-center space-y-2">
+            <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-center space-y-2">
               <p className="text-xs font-bold text-amber-600 dark:text-amber-400">
                 Phone {searchedPhone} not verified yet
               </p>

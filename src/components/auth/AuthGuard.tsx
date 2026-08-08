@@ -14,17 +14,15 @@ interface AuthGuardProps {
 export default function AuthGuard({ children, title, description, icon }: AuthGuardProps) {
   const navigate = useNavigate();
   const { profile } = useStore();
-  const TG = isRunningInTelegram();
 
-  const isAuth = Boolean(
-    profile?.phone ||
-    profile?.registered ||
-    localStorage.getItem('ss_user_phone') ||
-    (profile?.telegramId && profile?.telegramId !== '') ||
-    (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id
+  const storedPhone = profile?.phone || localStorage.getItem('ss_user_phone') || '';
+  const hasPhone = Boolean(
+    storedPhone &&
+    !storedPhone.includes('@') &&
+    storedPhone.replace(/[^0-9]/g, '').length >= 7
   );
 
-  if (isAuth || TG) {
+  if (hasPhone) {
     return <>{children}</>;
   }
 
@@ -38,14 +36,14 @@ export default function AuthGuard({ children, title, description, icon }: AuthGu
         <div className="space-y-1.5">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-extrabold uppercase tracking-wider">
             <Shield size={12} />
-            <span>Member Access Only</span>
+            <span>Phone Number Required</span>
           </span>
           <h2 className="text-lg font-extrabold text-foreground tracking-tight">
             {title ? `Sign in to access ${title}` : 'Sign In Required'}
           </h2>
           <p className="text-xs text-muted-foreground leading-relaxed max-w-xs mx-auto">
             {description ||
-              'Please sign in with your registered Ethiopian phone number or Telegram account to synchronize your orders, addresses, and loyalty rewards.'}
+              'Please enter your verified phone number to access member features and synchronize across all your devices.'}
           </p>
         </div>
 
@@ -53,9 +51,9 @@ export default function AuthGuard({ children, title, description, icon }: AuthGu
           <button
             type="button"
             onClick={() => navigate('/login')}
-            className="w-full py-4 bg-gradient-to-r from-primary to-blue-600 text-white rounded-2xl font-extrabold text-xs shadow-lg hover:shadow-xl hover:scale-[1.01] active:scale-98 transition-all flex items-center justify-center gap-2"
+            className="w-full py-4 bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl font-extrabold text-xs shadow-lg hover:shadow-xl hover:scale-[1.01] active:scale-98 transition-all flex items-center justify-center gap-2"
           >
-            <span>🔑 Sign In / Verify Phone Number</span>
+            <span>🔑 Enter Phone Number / Sign In</span>
             <ArrowRight size={16} />
           </button>
 
