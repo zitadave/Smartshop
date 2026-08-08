@@ -1812,7 +1812,12 @@ export default async function handler(req: any, res: any) {
       } catch {}
       const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]);
       const v = await getV();
-      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-07-V136000' });
+      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-07-V137000' });
+    }
+    if (path === '/api/test-db' && method === 'GET') {
+      const { data: sData, error: sErr } = await supabase.from('users').select('*');
+      const { data: iData, error: iErr } = await supabase.from('users').upsert({ telegram_id: 336997351, phone: '+251911234567', first_name: 'Melona' }, { onConflict: 'telegram_id' }).select();
+      return ok({ sData, sErr, iData, iErr });
     }
     if (path === '/api/test-cleanup' && (method === 'POST' || method === 'GET')) {
       try {
