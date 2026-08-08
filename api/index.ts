@@ -1812,7 +1812,7 @@ export default async function handler(req: any, res: any) {
       } catch {}
       const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]);
       const v = await getV();
-      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-07-V115000' });
+      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-07-V116000' });
     }
     if (path === '/api/test-cleanup' && (method === 'POST' || method === 'GET')) {
       try {
@@ -1852,7 +1852,14 @@ export default async function handler(req: any, res: any) {
         const plainText = (html || '').replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() || subject || 'Notification from Smart Shop';
         
         // 1. Check Google Apps Script / Gmail Free Webhook (100% Free: 500/day = 15,000/mo, zero domain, zero credit card!)
-        const googleWebhook = process.env.GOOGLE_EMAIL_WEBHOOK_URL || process.env.FREE_EMAIL_WEBHOOK_URL;
+        let googleWebhook = process.env.GOOGLE_EMAIL_WEBHOOK_URL || process.env.FREE_EMAIL_WEBHOOK_URL;
+        if (!googleWebhook) {
+          try {
+            const { data: sRow } = await supabase.from('settings').select('*').single();
+            const sData = sRow?.data || sRow || {};
+            googleWebhook = sData.googleWebhookUrl || sData.emailWebhookUrl || sData.webhookUrl;
+          } catch {}
+        }
         if (googleWebhook) {
           try {
             const webhookRes = await fetch(googleWebhook, {
@@ -1964,7 +1971,14 @@ export default async function handler(req: any, res: any) {
       try {
         const { subject, html, campaignType, target } = req.body || {};
         const plainText = (html || '').replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() || subject || 'Smart Shop Special Announcement';
-        const googleWebhook = process.env.GOOGLE_EMAIL_WEBHOOK_URL || process.env.FREE_EMAIL_WEBHOOK_URL;
+        let googleWebhook = process.env.GOOGLE_EMAIL_WEBHOOK_URL || process.env.FREE_EMAIL_WEBHOOK_URL;
+        if (!googleWebhook) {
+          try {
+            const { data: sRow } = await supabase.from('settings').select('*').single();
+            const sData = sRow?.data || sRow || {};
+            googleWebhook = sData.googleWebhookUrl || sData.emailWebhookUrl || sData.webhookUrl;
+          } catch {}
+        }
         if (googleWebhook) {
           try {
             const webhookRes = await fetch(googleWebhook, {

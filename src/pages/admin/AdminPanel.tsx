@@ -2473,6 +2473,45 @@ function doGet(e) {
         </div>
       </div>
 
+      {/* Activated Google Gmail Webhook URL Card */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4" data-admin-card>
+        <h3 className="text-sm font-bold mb-1 text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+          <span>🌟 Activate 100% Free Google Gmail Webhook (Primary Email Engine)</span>
+        </h3>
+        <p className="text-[10px] text-slate-500 mb-3">
+          Paste your deployed Google Apps Script Web App URL below to send up to 15,000 free emails/month directly from your Gmail account without Resend restrictions or Vercel env vars!
+        </p>
+
+        <div className="flex gap-2 items-center flex-wrap">
+          <input
+            type="text"
+            className="flex-1 min-w-[240px] p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-slate-50 dark:bg-slate-800/40 text-foreground font-mono"
+            placeholder="https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec"
+            value={(store.settings as any)?.googleWebhookUrl || (store.settings as any)?.emailWebhookUrl || ''}
+            onChange={(e) => {
+              const url = e.target.value.trim();
+              const updated = { ...store.settings, googleWebhookUrl: url };
+              store.setSettings(updated as any);
+            }}
+          />
+          <button
+            type="button"
+            className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-1"
+            onClick={() => {
+              const url = (store.settings as any)?.googleWebhookUrl || '';
+              if (!url || !url.startsWith('https://script.google.com/')) {
+                toast('Please enter a valid Google Apps Script URL starting with https://script.google.com/', 'error');
+                return;
+              }
+              settingsApi.update(store.settings as any);
+              toast('✅ Google Gmail Webhook activated and saved to database!', 'success');
+            }}
+          >
+            💾 Save & Activate Webhook
+          </button>
+        </div>
+      </div>
+
       {/* Live Inbox Test & Sender Configuration Card */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4" data-admin-card>
         <h3 className="text-sm font-bold mb-1">✉️ Live Inbox Test & Sender Configuration</h3>
