@@ -1812,7 +1812,7 @@ export default async function handler(req: any, res: any) {
       } catch {}
       const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]);
       const v = await getV();
-      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-07-V123000' });
+      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-07-V124000' });
     }
     if (path === '/api/test-cleanup' && (method === 'POST' || method === 'GET')) {
       try {
@@ -2565,8 +2565,8 @@ export default async function handler(req: any, res: any) {
 
       const sm = (t: any) => tg(ENV.ADMIN_BOT_TOKEN, ch, t);
 
-      if (cmd === 'start' || cmd === 'help') {
-        await sm('👋 *Admin Bot*\n/panel - 🖥️ Open Admin Panel\n/stats - 📊 Store stats\n/orders - 📋 Recent orders\n/lowstock - ⚠️ Low stock\n/vendors - 🏪 Pending vendors\n/alerts - 🔔 Active alerts');
+      if (cmd === 'start' || cmd === 'help' || cmd === 'commands' || cmd === 'menu' || cmd === 'cmd') {
+        await sm('👋 *Admin Bot Commands*\n\n/panel - 🖥️ Open Admin Panel\n/stats - 📊 Store stats\n/orders - 📋 Recent orders\n/lowstock - ⚠️ Low stock\n/vendors - 🏪 Pending vendors\n/alerts - 🔔 Active alerts');
       } else if (cmd === 'stats') {
         await sm('📊 *Store Stats*\n📦 ' + pl.length + ' products\n📋 ' + ol.length + ' orders\n💰 ' + new Intl.NumberFormat('en').format(tr) + ' Br\n⚠️ ' + ls.length + ' low stock\n🏪 ' + vc + ' vendors (' + pendingV + ' pending)');
       } else if (cmd === 'orders') {
@@ -2599,10 +2599,34 @@ export default async function handler(req: any, res: any) {
     }
 
     // ── Admin Bot — Set Webhook ───────────────────────────────────
-    if (path === '/api/admin-bot/set-webhook' && method === 'POST') {
+    if (path === '/api/admin-bot/set-webhook' && (method === 'POST' || method === 'GET')) {
       const wh = ENV.BASE_URL + '/api/admin-bot/webhook';
       const d = await fetchRetry('https://api.telegram.org/bot' + ENV.ADMIN_BOT_TOKEN + '/setWebhook?url=' + wh, { method: 'POST', timeout: 10000 }).then(r => r.json()).catch(() => ({ ok: false }));
       return ok({ ok: d.ok, description: d.description, webhookUrl: wh });
+    }
+
+    // ── Shop Bot — Set Webhook ────────────────────────────────────
+    if (path === '/api/shop-bot/set-webhook' && (method === 'POST' || method === 'GET')) {
+      const wh = ENV.BASE_URL + '/api/shop-bot/webhook';
+      const d = await fetchRetry('https://api.telegram.org/bot' + (ENV.BOT_TOKEN || '') + '/setWebhook?url=' + wh, { method: 'POST', timeout: 10000 }).then(r => r.json()).catch(() => ({ ok: false }));
+      return ok({ ok: d.ok, description: d.description, webhookUrl: wh });
+    }
+
+    // ── All Bots — Re-Link All Webhooks ───────────────────────────
+    if (path === '/api/telegram/init-all-webhooks' && (method === 'POST' || method === 'GET')) {
+      const adminWh = ENV.BASE_URL + '/api/admin-bot/webhook';
+      const shopWh = ENV.BASE_URL + '/api/shop-bot/webhook';
+      const [adminRes, shopRes, vendorRes] = await Promise.all([
+        ENV.ADMIN_BOT_TOKEN ? fetchRetry('https://api.telegram.org/bot' + ENV.ADMIN_BOT_TOKEN + '/setWebhook?url=' + adminWh, { method: 'POST', timeout: 10000 }).then(r => r.json()).catch(() => ({ ok: false })) : Promise.resolve({ ok: false, description: 'No token' }),
+        ENV.BOT_TOKEN ? fetchRetry('https://api.telegram.org/bot' + ENV.BOT_TOKEN + '/setWebhook?url=' + shopWh, { method: 'POST', timeout: 10000 }).then(r => r.json()).catch(() => ({ ok: false })) : Promise.resolve({ ok: false, description: 'No token' }),
+        ENV.VENDOR_BOT_TOKEN ? fetchRetry('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/setWebhook?url=' + shopWh, { method: 'POST', timeout: 10000 }).then(r => r.json()).catch(() => ({ ok: false })) : Promise.resolve({ ok: false, description: 'No token' })
+      ]);
+      return ok({
+        success: true,
+        adminBot: { ok: adminRes.ok, description: adminRes.description, url: adminWh },
+        shopBot: { ok: shopRes.ok, description: shopRes.description, url: shopWh },
+        vendorBot: { ok: vendorRes.ok, description: vendorRes.description, url: shopWh }
+      });
     }
 
     // FALLBACK
