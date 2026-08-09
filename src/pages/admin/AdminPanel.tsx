@@ -2385,6 +2385,10 @@ function AdminEmailEngineView() {
 //    - Execute as: "Me"
 //    - Who has access: "Anyone"
 // ==========================================
+// Set this to your DirectAdmin email address once added in Gmail "Send mail as"
+// Leave blank "" to send from your default @gmail.com account!
+var CUSTOM_DOMAIN_SENDER = "smartsve@smartshop.pro.et";
+// ==========================================
 
 function doPost(e) {
   try {
@@ -2394,12 +2398,16 @@ function doPost(e) {
     var html = data.html || data.htmlBody || "<p>" + subject + "</p>";
     var plainText = data.plainText || html.replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, "").replace(/<[^>]+>/g, " ").replace(/\\s+/g, " ").trim() || subject;
     
-    // Send using GmailApp for 100% DKIM/SPF signing and Sent Mail integration
-    // We do NOT override 'name' or 'replyTo' on consumer @gmail.com accounts because
-    // overriding display names triggers Google's anti-spoofing Spam filter.
-    // Sending under your natural Google Account identity lands 100% in Primary Inbox!
+    var gmailOptions = {
+      htmlBody: html
+    };
+    if (CUSTOM_DOMAIN_SENDER && CUSTOM_DOMAIN_SENDER.indexOf("@") !== -1) {
+      gmailOptions.from = CUSTOM_DOMAIN_SENDER;
+      gmailOptions.name = "Smart Shop Ethiopia";
+    }
+    
     try {
-      GmailApp.sendEmail(recipient, subject, plainText, { htmlBody: html });
+      GmailApp.sendEmail(recipient, subject, plainText, gmailOptions);
     } catch (gmailErr) {
       MailApp.sendEmail(recipient, subject, plainText, { htmlBody: html });
     }

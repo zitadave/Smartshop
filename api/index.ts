@@ -1815,7 +1815,7 @@ export default async function handler(req: any, res: any) {
       } catch {}
       const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]);
       const v = await getV();
-      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-07-V141000' });
+      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-07-V142000' });
     }
     if (path === '/api/test-db' && method === 'GET') {
       const { data: sData, error: sErr } = await supabase.from('users').select('*');
@@ -1944,7 +1944,7 @@ export default async function handler(req: any, res: any) {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            from: process.env.RESEND_FROM_EMAIL || process.env.EMAIL_FROM_ADDRESS || 'Smart Shop Ethiopia <orders@smartshop.pro.et>',
+            from: process.env.RESEND_FROM_EMAIL || process.env.EMAIL_FROM_ADDRESS || 'Smart Shop Ethiopia <smartsve@smartshop.pro.et>',
             reply_to: 'support@smartshop.pro.et',
             to: [recipient],
             subject: subject || 'Notification from Smart Shop',
