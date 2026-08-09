@@ -1811,14 +1811,15 @@ export default async function handler(req: any, res: any) {
       try {
         await supabase.from('deliveries').update({ delivery_lat: 9.0450, delivery_lng: 38.7550 }).ilike('delivery_address', '%Kechenie%');
         await supabase.from('group_deals').update({ status: 'active', expires_at: new Date(Date.now() + 7 * 86400000).toISOString() }).in('id', [21, 20, 19, 18]);
+        await supabase.from('users').update({ first_name: 'Melona', last_name: 'Dawit', username: 'melonadawit' }).eq('telegram_id', 336997351);
       } catch {}
       const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]);
       const v = await getV();
-      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-07-V139000' });
+      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-07-V141000' });
     }
     if (path === '/api/test-db' && method === 'GET') {
       const { data: sData, error: sErr } = await supabase.from('users').select('*');
-      const { data: iData, error: iErr } = await supabase.from('users').upsert({ id: 336997351, telegram_id: 336997351, phone: '+251911234567', first_name: 'Melona' }, { onConflict: 'telegram_id' }).select();
+      const { data: iData, error: iErr } = await supabase.from('users').upsert({ id: 336997351, telegram_id: 336997351, phone: '+251931503559', first_name: 'Melona', last_name: 'Dawit', username: 'melonadawit' }, { onConflict: 'telegram_id' }).select();
       return ok({ sData, sErr, iData, iErr });
     }
     if (path === '/api/test-cleanup' && (method === 'POST' || method === 'GET')) {
@@ -1943,8 +1944,8 @@ export default async function handler(req: any, res: any) {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            from: process.env.RESEND_FROM_EMAIL || process.env.EMAIL_FROM_ADDRESS || 'Smart Shop <onboarding@resend.dev>',
-            reply_to: 'support@smartshop.et',
+            from: process.env.RESEND_FROM_EMAIL || process.env.EMAIL_FROM_ADDRESS || 'Smart Shop Ethiopia <orders@smartshop.pro.et>',
+            reply_to: 'support@smartshop.pro.et',
             to: [recipient],
             subject: subject || 'Notification from Smart Shop',
             html: html || `<p>${subject}</p>`,
