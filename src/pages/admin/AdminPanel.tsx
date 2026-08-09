@@ -2495,7 +2495,7 @@ function doGet(e) {
             type="text"
             className="flex-1 min-w-[240px] p-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-xs bg-slate-50 dark:bg-slate-800/40 text-foreground font-mono"
             placeholder="https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec"
-            value={(store.settings as any)?.googleWebhookUrl || (store.settings as any)?.emailWebhookUrl || ''}
+            value={(store.settings as any)?.googleWebhookUrl || (store.settings as any)?.emailWebhookUrl || 'https://script.google.com/macros/s/AKfycbxrCEKXlLkX1ye2vkWGJgj7lqbOp0fDUjnCrtLc9vaSsyaM4AtL0Dz9KVRxYWJr9WWwnA/exec'}
             onChange={(e) => {
               const url = e.target.value.trim();
               const updated = { ...store.settings, googleWebhookUrl: url };
@@ -2506,12 +2506,14 @@ function doGet(e) {
             type="button"
             className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-1"
             onClick={() => {
-              const url = (store.settings as any)?.googleWebhookUrl || '';
+              const url = (store.settings as any)?.googleWebhookUrl || (store.settings as any)?.emailWebhookUrl || 'https://script.google.com/macros/s/AKfycbxrCEKXlLkX1ye2vkWGJgj7lqbOp0fDUjnCrtLc9vaSsyaM4AtL0Dz9KVRxYWJr9WWwnA/exec';
               if (!url || !url.startsWith('https://script.google.com/')) {
                 toast('Please enter a valid Google Apps Script URL starting with https://script.google.com/', 'error');
                 return;
               }
-              settingsApi.update(store.settings as any);
+              const updated = { ...store.settings, googleWebhookUrl: url };
+              store.setSettings(updated as any);
+              settingsApi.update(updated as any);
               toast('✅ Google Gmail Webhook activated and saved to database!', 'success');
             }}
           >

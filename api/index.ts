@@ -1812,10 +1812,17 @@ export default async function handler(req: any, res: any) {
         await supabase.from('deliveries').update({ delivery_lat: 9.0450, delivery_lng: 38.7550 }).ilike('delivery_address', '%Kechenie%');
         await supabase.from('group_deals').update({ status: 'active', expires_at: new Date(Date.now() + 7 * 86400000).toISOString() }).in('id', [21, 20, 19, 18]);
         await supabase.from('users').update({ first_name: 'Melona', last_name: 'Dawit', username: 'melonadawit' }).eq('telegram_id', 336997351);
+        const { data: sRow } = await supabase.from('settings').select('*').single();
+        if (sRow) {
+          const sData = sRow.data || sRow || {};
+          if (!sData.googleWebhookUrl) {
+            await supabase.from('settings').update({ data: { ...sData, googleWebhookUrl: 'https://script.google.com/macros/s/AKfycbxrCEKXlLkX1ye2vkWGJgj7lqbOp0fDUjnCrtLc9vaSsyaM4AtL0Dz9KVRxYWJr9WWwnA/exec' } }).eq('id', sRow.id);
+          }
+        }
       } catch {}
       const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]);
       const v = await getV();
-      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-07-V142000' });
+      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-07-V143000' });
     }
     if (path === '/api/test-db' && method === 'GET') {
       const { data: sData, error: sErr } = await supabase.from('users').select('*');
@@ -1853,6 +1860,8 @@ export default async function handler(req: any, res: any) {
     // =========================================================================
     // RESEND EMAIL NOTIFICATION & MARKETING API (Free Tier 3,000/month)
     // =========================================================================
+    const DEFAULT_GOOGLE_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbxrCEKXlLkX1ye2vkWGJgj7lqbOp0fDUjnCrtLc9vaSsyaM4AtL0Dz9KVRxYWJr9WWwnA/exec';
+
     if (path === '/api/email/send' && method === 'POST') {
       try {
         const { to, subject, html, type, data } = req.body || {};
@@ -1867,6 +1876,9 @@ export default async function handler(req: any, res: any) {
             const sData = sRow?.data || sRow || {};
             googleWebhook = sData.googleWebhookUrl || sData.emailWebhookUrl || sData.webhookUrl;
           } catch {}
+        }
+        if (!googleWebhook) {
+          googleWebhook = DEFAULT_GOOGLE_WEBHOOK_URL;
         }
         if (googleWebhook) {
           try {
@@ -1986,6 +1998,9 @@ export default async function handler(req: any, res: any) {
             const sData = sRow?.data || sRow || {};
             googleWebhook = sData.googleWebhookUrl || sData.emailWebhookUrl || sData.webhookUrl;
           } catch {}
+        }
+        if (!googleWebhook) {
+          googleWebhook = DEFAULT_GOOGLE_WEBHOOK_URL;
         }
         if (googleWebhook) {
           try {
@@ -2154,7 +2169,14 @@ export default async function handler(req: any, res: any) {
     // SETTINGS
     // ================================================================
     if (path === '/api/settings') {
-      if (method === 'GET') { const { data: r } = await supabase.from('settings').select('*').single(); return ok({ success: true, settings: r?.data || r || {} }); }
+      if (method === 'GET') {
+        const { data: r } = await supabase.from('settings').select('*').single();
+        const st = r?.data || r || {};
+        if (!st.googleWebhookUrl && !st.emailWebhookUrl) {
+          st.googleWebhookUrl = 'https://script.google.com/macros/s/AKfycbxrCEKXlLkX1ye2vkWGJgj7lqbOp0fDUjnCrtLc9vaSsyaM4AtL0Dz9KVRxYWJr9WWwnA/exec';
+        }
+        return ok({ success: true, settings: st });
+      }
       if (method === 'PUT') { const { data: ex } = await supabase.from('settings').select('*').single(); if (ex) await supabase.from('settings').update({ data: { ...(ex.data || ex), ...req.body }, updated_at: new Date().toISOString() }).eq('id', ex.id); else await supabase.from('settings').insert({ data: req.body }); return ok({ success: true }); }
     }
 
