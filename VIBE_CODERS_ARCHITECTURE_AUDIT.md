@@ -44,7 +44,7 @@ Below is our exhaustive engineering evaluation categorizing every concept from t
 | **Optimistic & Pessimistic Locking** | **Optimistic Locking** deployed in `/api/orders` (`api/index.ts:1478`): checks `if (prod.stock_count === 0) return fail('Insufficient stock', 409)`. Prevents overselling during flash sales. | ✅ **ENTERPRISE HARDENED** |
 | **Race Conditions** | High-concurrency group buying (`Mahiber`) and stock decrements use atomic PostgreSQL updates via `@supabase/supabase-js`. | ✅ **ENTERPRISE HARDENED** |
 | **Idempotency** | Dedicated Idempotency Key Engine (`api/index.ts:104-116`, `chkIdem`, `setIdem`). Deduplicates double-clicked order submissions via `Idempotency-Key` HTTP headers with 24-hour TTL auto-cleanup. | ✅ **ENTERPRISE HARDENED** |
-| **Database Indexing & N+1 Queries** | **NEW in V146000:** Added endpoint `GET /api/system/db-indexes` generating exact DDL statements to index PostgreSQL DDL (`users(phone)`, `users(telegram_id)`, `orders(user_id)`, `deliveries(driver_id)`). | ✅ **NEWLY DEPLOYED** |
+| **Database Indexing & N+1 Queries** | **NEW in V147000:** Added endpoint `GET /api/system/db-indexes` generating exact DDL statements to index PostgreSQL DDL (`users(phone)`, `users(telegram_id)`, `orders(telegram_id)`, `orders(order_number)`, `deliveries(driver_id)`). | ✅ **NEWLY DEPLOYED** |
 | **Connection Pooling** | Supabase REST/HTTP connection pooling eliminates PostgreSQL connection exhaustion under high concurrency. | ✅ **ENTERPRISE HARDENED** |
 
 ### Pillar 4: Cyber Security, IAM & Data Privacy
@@ -125,19 +125,25 @@ CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone);
 CREATE INDEX IF NOT EXISTS idx_users_telegram_id ON users(telegram_id);
 
 -- 2. Index orders table for high-speed customer order history and order number queries
-CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders(user_id);
+CREATE INDEX IF NOT EXISTS idx_orders_telegram_id ON orders(telegram_id);
 CREATE INDEX IF NOT EXISTS idx_orders_order_number ON orders(order_number);
+CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
 
 -- 3. Index deliveries table for instant driver dashboard and active task filtering
 CREATE INDEX IF NOT EXISTS idx_deliveries_driver_id ON deliveries(driver_id);
+CREATE INDEX IF NOT EXISTS idx_deliveries_order_number ON deliveries(order_number);
 CREATE INDEX IF NOT EXISTS idx_deliveries_status ON deliveries(status);
+
+-- 4. Index products table for high-speed catalog browsing by category and vendor
+CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
+CREATE INDEX IF NOT EXISTS idx_products_vendor_id ON products(vendor_id);
 ```
 
 ---
 
 ## PART 4: SUMMARY & ARCHITECTURE VERIFICATION
 
-| Checkpoint | Old Status | New Status (`BUILD-2026-08-07-V146000`) |
+| Checkpoint | Old Status | New Status (`BUILD-2026-08-07-V147000`) |
 | :--- | :--- | :--- |
 | **HTTP Security Headers** | CORS only | **100% COMPLIANT** (XSS, HSTS, Frame-Options, Content-Type, Referrer) |
 | **CDN Edge Caching** | No Cache-Control headers | **ENTERPRISE CDN CACHING** (`public, s-maxage=60, stale-while-revalidate=300`) |

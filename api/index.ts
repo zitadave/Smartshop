@@ -1837,16 +1837,20 @@ export default async function handler(req: any, res: any) {
       } catch {}
       const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]);
       const v = await getV();
-      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-07-V146000' });
+      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-07-V147000' });
     }
     if (path === '/api/system/db-indexes' && method === 'GET') {
       const sql = [
         'CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone);',
         'CREATE INDEX IF NOT EXISTS idx_users_telegram_id ON users(telegram_id);',
-        'CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders(user_id);',
+        'CREATE INDEX IF NOT EXISTS idx_orders_telegram_id ON orders(telegram_id);',
         'CREATE INDEX IF NOT EXISTS idx_orders_order_number ON orders(order_number);',
+        'CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);',
         'CREATE INDEX IF NOT EXISTS idx_deliveries_driver_id ON deliveries(driver_id);',
-        'CREATE INDEX IF NOT EXISTS idx_deliveries_status ON deliveries(status);'
+        'CREATE INDEX IF NOT EXISTS idx_deliveries_order_number ON deliveries(order_number);',
+        'CREATE INDEX IF NOT EXISTS idx_deliveries_status ON deliveries(status);',
+        'CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);',
+        'CREATE INDEX IF NOT EXISTS idx_products_vendor_id ON products(vendor_id);'
       ];
       return ok({ success: true, message: 'Execute these DDL statements in Supabase SQL Editor to eliminate N+1 full-table scans', sql });
     }

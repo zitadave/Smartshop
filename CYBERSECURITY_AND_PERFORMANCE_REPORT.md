@@ -72,7 +72,7 @@ Following a multi-turn remediation of DNS/SMTP routing, Telegram bot compromise 
   * **Idempotency Key Cleanup:** Transactional payment and order creation endpoints implement automatic garbage collection for idempotency keys older than 24 hours (`Date.now() - created_at > 86400000`), preventing database bloating in `settings.idempotency_keys`.
 * **Database Query Performance:**
   * **Connection Pooling:** Supabase queries use HTTP/REST connection pooling, avoiding PostgreSQL max-connection limits during traffic spikes.
-  * **Recommended Indexing:** Ensure PostgreSQL B-Tree indexes exist on `users(phone)`, `users(telegram_id)`, `orders(user_id)`, and `deliveries(driver_id)`.
+  * **Recommended Indexing:** Ensure PostgreSQL B-Tree indexes exist on `users(phone)`, `users(telegram_id)`, `orders(telegram_id)`, `orders(order_number)`, and `deliveries(driver_id)`.
 
 ### 2.3 Mobile PWA & Capacitor Native Rendering Speed (Horizontal Scroll Lock)
 * **Root Cause of Mobile Horizontal Scroll / Overflow:**
@@ -105,7 +105,7 @@ Following a multi-turn remediation of DNS/SMTP routing, Telegram bot compromise 
 |   └── 100% Free Google Apps Script Email Engine (15k emails/mo, 0% spam)          |
 +-----------------------------------------------------------------------------------+
 |  [ SHORT-TERM TARGETS ] (Next 30 Days)                                            |
-|   ├── Enable PostgreSQL B-Tree Indexing on users(phone) and orders(user_id)       |
+|   ├── Enable PostgreSQL B-Tree Indexing on users(phone) and orders(telegram_id)   |
 |   ├── Set up Cloudflare CDN Proxy in front of DirectAdmin / Vercel DNS            |
 |   └── Add Service Worker Offline Caching for downloaded Ethiopian product images  |
 +-----------------------------------------------------------------------------------+
