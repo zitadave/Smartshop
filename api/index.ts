@@ -22,12 +22,14 @@ const supabase = createClient(ENV.SUPABASE_URL, ENV.SUPABASE_KEY, { auth: { pers
 
 // ===== RATE LIMITING =====
 const rateStore = new Map();
-const RATE_WIN = 60000, RATE_MAX = 60;
-function chkRate(ip: any) {
-  const n = Date.now(); const r: any = rateStore.get(ip);
-  if (!r || n > r.resetAt) { rateStore.set(ip, { c: 1, resetAt: n + RATE_WIN }); return { ok: true, rem: RATE_MAX - 1 }; }
-  if (r.c >= RATE_MAX) return { ok: false, rem: 0 };
-  r.c++; return { ok: true, rem: RATE_MAX - r.c };
+const RATE_WIN = 60000, RATE_MAX = 60, RATE_SENSITIVE_MAX = 15;
+function chkRate(ip: any, isSensitive: boolean = false) {
+  const max = isSensitive ? RATE_SENSITIVE_MAX : RATE_MAX;
+  const key = isSensitive ? ip + ':s' : ip;
+  const n = Date.now(); const r: any = rateStore.get(key);
+  if (!r || n > r.resetAt) { rateStore.set(key, { c: 1, resetAt: n + RATE_WIN }); return { ok: true, rem: max - 1 }; }
+  if (r.c >= max) return { ok: false, rem: 0 };
+  r.c++; return { ok: true, rem: max - r.c };
 }
 setInterval(() => { const n = Date.now(); for (const [k, v] of rateStore) if (n > (v as any).resetAt) rateStore.delete(k); }, 60000);
 
@@ -521,13 +523,26 @@ export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Idempotency-Key');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
   if (method === 'OPTIONS') return res.status(204).end();
 
-  const rc = chkRate(ip);
-  if (!rc.ok) { res.setHeader('Retry-After', '60'); logReq(method, path, 429, dur(start), ip, 'RL'); return res.status(429).json({ error: 'Too many requests' }); }
+  const isSensitive = method === 'POST' && (path === '/api/email/send' || path === '/api/email/broadcast' || path === '/api/orders' || path === '/api/orders/create' || path === '/api/users/register' || path === '/api/auth/telegram');
+  const rc = chkRate(ip, isSensitive);
+  if (!rc.ok) { res.setHeader('Retry-After', '60'); logReq(method, path, 429, dur(start), ip, 'RL'); return res.status(429).json({ error: 'Too many requests - Rate limit exceeded' }); }
   res.setHeader('X-RateLimit-Remaining', rc.rem);
 
-  function ok(d: any, s: number = 200) { return res.status(s).json(d); }
+  function ok(d: any, s: number = 200) {
+    if (method === 'GET' && (path === '/api/products' || path === '/api/categories' || path === '/api/flash-deals' || path === '/api/settings' || path.startsWith('/api/products/'))) {
+      res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+    } else {
+      res.setHeader('Cache-Control', 'private, no-cache, no-store, must-revalidate');
+    }
+    return res.status(s).json(d);
+  }
   function fail(m: any, s: number = 400) { return res.status(s).json({ error: m }); }
 
   try {
@@ -1822,7 +1837,18 @@ export default async function handler(req: any, res: any) {
       } catch {}
       const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]);
       const v = await getV();
-      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-07-V145000' });
+      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-07-V146000' });
+    }
+    if (path === '/api/system/db-indexes' && method === 'GET') {
+      const sql = [
+        'CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone);',
+        'CREATE INDEX IF NOT EXISTS idx_users_telegram_id ON users(telegram_id);',
+        'CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders(user_id);',
+        'CREATE INDEX IF NOT EXISTS idx_orders_order_number ON orders(order_number);',
+        'CREATE INDEX IF NOT EXISTS idx_deliveries_driver_id ON deliveries(driver_id);',
+        'CREATE INDEX IF NOT EXISTS idx_deliveries_status ON deliveries(status);'
+      ];
+      return ok({ success: true, message: 'Execute these DDL statements in Supabase SQL Editor to eliminate N+1 full-table scans', sql });
     }
     if (path === '/api/test-db' && method === 'GET') {
       const { data: sData, error: sErr } = await supabase.from('users').select('*');
