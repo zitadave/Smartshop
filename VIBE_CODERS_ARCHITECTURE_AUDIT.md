@@ -124,8 +124,8 @@ To eliminate N+1 full-table scans as your user base scales, open your **Supabase
 CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone);
 CREATE INDEX IF NOT EXISTS idx_users_telegram_id ON users(telegram_id);
 
--- 2. Index orders table for high-speed customer order history and order number queries
-CREATE INDEX IF NOT EXISTS idx_orders_telegram_id ON orders(telegram_id);
+-- 2. Index orders table using your actual database columns (chat_id, order_number, status)
+CREATE INDEX IF NOT EXISTS idx_orders_chat_id ON orders(chat_id);
 CREATE INDEX IF NOT EXISTS idx_orders_order_number ON orders(order_number);
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
 

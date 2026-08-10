@@ -1837,13 +1837,13 @@ export default async function handler(req: any, res: any) {
       } catch {}
       const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]);
       const v = await getV();
-      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-07-V147000' });
+      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-07-V149000' });
     }
     if (path === '/api/system/db-indexes' && method === 'GET') {
       const sql = [
         'CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone);',
         'CREATE INDEX IF NOT EXISTS idx_users_telegram_id ON users(telegram_id);',
-        'CREATE INDEX IF NOT EXISTS idx_orders_telegram_id ON orders(telegram_id);',
+        'CREATE INDEX IF NOT EXISTS idx_orders_chat_id ON orders(chat_id);',
         'CREATE INDEX IF NOT EXISTS idx_orders_order_number ON orders(order_number);',
         'CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);',
         'CREATE INDEX IF NOT EXISTS idx_deliveries_driver_id ON deliveries(driver_id);',
