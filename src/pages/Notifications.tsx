@@ -23,7 +23,7 @@ export default function Notifications() {
   };
 
   return (
-    <div className="px-3 pt-3 pb-4 max-w-lg mx-auto">
+    <div className="w-full max-w-full overflow-x-hidden px-3 pt-3 pb-4 max-w-lg mx-auto">
       <div className="flex items-center gap-2 mb-4">
         <button onClick={() => navigate(-1)} className="p-1 hover:bg-muted rounded-lg transition-colors"><ChevronLeft size={20} /></button>
         <h2 className="text-base font-bold">🔔 Notifications</h2>
@@ -42,20 +42,20 @@ export default function Notifications() {
           <p className="text-[10px] text-muted-foreground/60 mt-1">You're all caught up!</p>
         </div>
       ) : (
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 w-full max-w-full overflow-hidden">
           {notifications.map((n, i) => (
             <div
               key={i}
               className={cn(
-                'bg-card rounded-xl border border-border p-3 flex items-start gap-3 cursor-pointer hover:shadow-sm transition-all',
+                'bg-card rounded-xl border border-border p-3 flex items-start gap-3 cursor-pointer hover:shadow-sm transition-all w-full max-w-full overflow-hidden',
                 selectedNotifs.includes(i) && 'border-primary bg-primary/5'
               )}
               onClick={() => toggleSelect(i)}
             >
               <span className="text-lg flex-shrink-0">{n.icon}</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-foreground">{n.text}</p>
-                <p className="text-[9px] text-muted-foreground mt-0.5">{n.time}</p>
+              <div className="flex-1 min-w-0 break-words overflow-hidden">
+                <p className="text-xs text-foreground break-words font-medium leading-relaxed">{n.text}</p>
+                <p className="text-[9px] text-muted-foreground mt-0.5 break-words">{n.time}</p>
               </div>
               {selectedNotifs.includes(i) && (
                 <Check size={14} className="text-primary flex-shrink-0 mt-0.5" />

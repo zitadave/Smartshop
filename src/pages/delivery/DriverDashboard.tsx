@@ -728,7 +728,7 @@ export default function DriverDashboard() {
 
   // Handle Approved Screen (Dashboard Pro)
   return (
-    <div className="min-h-screen bg-background text-foreground pb-28 transition-colors">
+    <div className="w-full max-w-full overflow-x-hidden min-h-screen bg-background text-foreground pb-28 transition-colors">
       {/* Custom keyframe styles for radar effect */}
       <style>{`
         @keyframes radar-pulse {
@@ -744,7 +744,7 @@ export default function DriverDashboard() {
           <div className="absolute right-6 top-6 w-32 h-32 bg-primary/10 rounded-full blur-2xl animate-pulse" />
         )}
         
-        <div className="max-w-lg mx-auto relative z-10">
+        <div className="w-full max-w-lg mx-auto relative z-10 overflow-x-hidden">
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-3">
               <div className="relative">
@@ -811,8 +811,8 @@ export default function DriverDashboard() {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="max-w-lg mx-auto -mt-4 px-4 relative z-10">
-        <div className="bg-card rounded-2xl shadow-xl border border-border p-1 flex">
+      <div className="w-full max-w-lg mx-auto -mt-4 px-3 relative z-10 overflow-x-hidden">
+        <div className="w-full bg-card rounded-2xl shadow-xl border border-border p-1 flex items-center justify-between overflow-x-hidden">
           {[
             { id: 'available' as Tab, icon: Bell, label: 'Available', badge: deliveries.filter(function(d) { return d.status === 'pending'; }).length },
             { id: 'active' as Tab, icon: Clock, label: 'Active', badge: deliveries.filter(function(d) { return d.status !== 'pending' && d.status !== 'delivered' && d.status !== 'failed' && d.status !== 'cancelled' && d.status !== 'returned'; }).length },
@@ -863,7 +863,7 @@ export default function DriverDashboard() {
                   var fee = del.driver_payout || del.fee || 0;
                   var pTag = getPriorityTag(del);
                   return (
-                    <div key={del.id} className="bg-card text-card-foreground rounded-3xl border border-border p-4 shadow-xl hover:border-primary/40 transition-all duration-300 animate-scaleIn space-y-3">
+                    <div key={del.id} className="bg-card text-card-foreground rounded-3xl border border-border p-4 shadow-xl hover:border-primary/40 transition-all duration-300 animate-scaleIn space-y-3 w-full max-w-full overflow-hidden">
                       <div className="flex items-start justify-between">
                         <div className="space-y-1">
                           <div className="flex items-center gap-1.5 flex-wrap">
