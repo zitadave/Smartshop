@@ -1822,7 +1822,7 @@ export default async function handler(req: any, res: any) {
       } catch {}
       const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]);
       const v = await getV();
-      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-07-V143000' });
+      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-07-V144000' });
     }
     if (path === '/api/test-db' && method === 'GET') {
       const { data: sData, error: sErr } = await supabase.from('users').select('*');

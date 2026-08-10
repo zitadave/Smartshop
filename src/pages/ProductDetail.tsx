@@ -352,57 +352,76 @@ export default function ProductDetail() {
             <button className={cn('py-3.5 px-4 rounded-2xl border text-sm transition-all', wis ? 'bg-destructive/10 border-destructive/30 text-destructive' : 'border-border text-muted-foreground hover:bg-muted')} onClick={() => toggleWishlist(product)}>
               {wis ? '❤️' : '♡'}
             </button>
-            <button
-              type="button"
-              className="py-3.5 px-3 rounded-2xl border border-pink-500/30 bg-pink-500/10 hover:bg-pink-500/20 text-pink-600 dark:text-pink-400 font-bold text-xs transition-all flex items-center gap-1"
-              onClick={() => {
-                const link = `${window.location.origin}/product/${product.id}?utm_source=tiktok`;
-                navigator.clipboard.writeText(link);
-                toast('🎵 TikTok share link copied!', 'success');
-              }}
-              title="Copy TikTok Share Link"
-            >
-              🎵 TikTok
-            </button>
-            <button className="py-3.5 px-4 rounded-2xl border border-border text-muted-foreground hover:bg-muted transition-all" onClick={() => { const text = `Check out ${product.nameEn} at Smart Shop! ${formatPrice(product.price)}`; if (navigator.share) navigator.share({ title: product.nameEn, text }); else navigator.clipboard.writeText(text + ' ' + window.location.href); }}>
+            <button className="py-3.5 px-4 rounded-2xl border border-border text-muted-foreground hover:bg-muted transition-all" onClick={() => { const text = `Check out ${product.nameEn} at Smart Shop! ${formatPrice(product.price)}`; if (navigator.share) navigator.share({ title: product.nameEn, text }); else { navigator.clipboard.writeText(text + ' ' + window.location.href); toast('🔗 Product link copied to clipboard!', 'success'); } }} title="Share / Copy Link">
               <Share2 size={15} />
             </button>
           </div>
 
-          {/* Active Group Deals list */}
-          {activeDeals.length > 0 && (
-            <div className="mt-1 bg-green-50/70 border border-green-100 rounded-2xl p-3.5 mb-3">
-              <h4 className="text-xs font-bold text-green-800 mb-2 flex items-center gap-1">
-                🤝 Join Active Mahiber Groups & Save!
-              </h4>
-              <div className="space-y-2">
-                {activeDeals.map((deal) => (
-                  <div key={deal.id} 
-                    onClick={() => navigate(`/group-deal/${deal.share_token}`)}
-                    className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-green-100 cursor-pointer hover:border-green-300 transition-all">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 bg-green-100 text-green-600 font-bold rounded-full flex items-center justify-center text-xs">
-                        {deal.creator_name?.charAt(0).toUpperCase() || 'U'}
-                      </div>
-                      <div className="text-left">
-                        <p className="text-xs font-bold text-slate-800">{deal.creator_name || 'Anonymous'}'s Group</p>
-                        <p className="text-[9px] text-slate-400">{deal.current_members} joined · {deal.max_members - deal.current_members} spots left</p>
-                      </div>
-                    </div>
-                    <div className="text-right flex items-center gap-1.5">
-                      <div>
-                        <p className="text-xs font-bold text-green-600">Br {(deal.group_price || 0).toLocaleString()}</p>
-                        <p className="text-[8px] text-slate-400 line-through">Br {(deal.regular_price || 0).toLocaleString()}</p>
-                      </div>
-                      <span className="text-[10px] bg-green-500 text-white px-2 py-1 rounded-lg font-bold flex items-center gap-0.5">
-                        Join
-                      </span>
+          {/* Active Group Deals - Clean Modern Progress Bar UI */}
+          {activeDeals.length > 0 && (() => {
+            const bestDeal = activeDeals[0];
+            const currentMembers = bestDeal.current_members || 2;
+            const maxMembers = bestDeal.max_members || 10;
+            const spotsLeft = Math.max(1, maxMembers - currentMembers);
+            const percent = Math.min(100, Math.round((currentMembers / maxMembers) * 100));
+            const groupPrice = bestDeal.group_price || 0;
+            const regularPrice = bestDeal.regular_price || product.price;
+
+            return (
+              <div 
+                onClick={() => navigate(`/group-deal/${bestDeal.share_token}`)}
+                className="mt-2 bg-gradient-to-br from-emerald-500/10 via-green-500/5 to-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 mb-3 cursor-pointer hover:border-emerald-500/40 transition-all group"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs font-bold">
+                      🤝
+                    </span>
+                    <div>
+                      <h4 className="text-xs font-extrabold text-emerald-900 dark:text-emerald-300 flex items-center gap-1.5">
+                        Active Mahiber Group Deal
+                        {activeDeals.length > 1 && (
+                          <span className="text-[10px] px-1.5 py-0.5 bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 rounded-full font-semibold">
+                            {activeDeals.length} active
+                          </span>
+                        )}
+                      </h4>
+                      <p className="text-[10px] text-emerald-700/80 dark:text-emerald-400/80 font-medium">
+                        {spotsLeft} {spotsLeft === 1 ? 'spot' : 'spots'} left to unlock group discount
+                      </p>
                     </div>
                   </div>
-                ))}
+                  <div className="text-right">
+                    <div className="text-sm font-black text-emerald-600 dark:text-emerald-400">
+                      Br {groupPrice.toLocaleString()}
+                    </div>
+                    {regularPrice > groupPrice && (
+                      <div className="text-[9px] text-muted-foreground line-through">
+                        Br {regularPrice.toLocaleString()}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="w-full bg-emerald-500/15 dark:bg-emerald-950/40 h-2.5 rounded-full overflow-hidden mb-2.5">
+                  <div
+                    className="bg-gradient-to-r from-emerald-500 to-green-500 h-full rounded-full transition-all duration-500"
+                    style={{ width: `${percent}%` }}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between text-[10px] font-semibold">
+                  <span className="text-emerald-700 dark:text-emerald-400">
+                    {currentMembers} of {maxMembers} shoppers joined
+                  </span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold group-hover:translate-x-0.5 transition-transform flex items-center gap-1">
+                    Join Deal & Save Br {(regularPrice - groupPrice).toLocaleString()} →
+                  </span>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           <button className="w-full py-2.5 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-lg text-xs font-semibold shadow-sm hover:shadow active:scale-95 transition-all" onClick={() => { addToCart(product, qty); trackSocialEvent('AddToCart', { content_id: product.id, content_name: product.nameEn, value: product.price, currency: 'ETB' }); navigate('/checkout'); }}>
             ⚡ Buy Now
