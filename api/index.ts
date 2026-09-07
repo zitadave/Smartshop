@@ -18,6 +18,10 @@ const ENV = {
   CHAPA_ENCRYPTION_KEY: process.env.CHAPA_ENCRYPTION_KEY || 'GyZtXJroHpl4ZOogcjZ7aFXl',
   BASE_URL: 'https://smartshop-steel.vercel.app',
 };
+
+// Vendors have NO dedicated bot — they use the in-app Vendor Dashboard.
+// Any Telegram notification to vendors/drivers routes through the Shop Bot.
+const VBOT = () => ENV.VENDOR_BOT_TOKEN || ENV.BOT_TOKEN || ENV.ADMIN_BOT_TOKEN;
 const supabase = createClient(ENV.SUPABASE_URL, ENV.SUPABASE_KEY, { auth: { persistSession: false } });
 
 // ===== RATE LIMITING =====
@@ -564,7 +568,7 @@ const BOT_COMMANDS = [
     { command: 'help', description: '❓ Commands / ትእዛዛት' },
   ];
   const tokens = [
-    { token: ENV.VENDOR_BOT_TOKEN, isAdmin: false },
+    { token: ENV.BOT_TOKEN, isAdmin: false },
     { token: ENV.ADMIN_BOT_TOKEN, isAdmin: true },
   ];
   for (const tObj of tokens) {
@@ -839,9 +843,9 @@ export default async function handler(req: any, res: any) {
         if (error) return fail(error.message); 
         if (data?.telegram_id) {
           if (finalStatus === 'approved') {
-            tg(ENV.VENDOR_BOT_TOKEN, data.telegram_id, '🎉 *Approved!* You can now start delivering.');
+            tg(VBOT(), data.telegram_id, '🎉 *Approved!* You can now start delivering.');
           } else if (finalStatus === 'rejected') {
-            tg(ENV.VENDOR_BOT_TOKEN, data.telegram_id, '❌ *Application Declined.* Rejection reason: ' + (b.reason || 'Application does not meet requirements'));
+            tg(VBOT(), data.telegram_id, '❌ *Application Declined.* Rejection reason: ' + (b.reason || 'Application does not meet requirements'));
           }
         }
         return ok({ success: true, driver: data });
@@ -1562,7 +1566,7 @@ export default async function handler(req: any, res: any) {
           total_delivered: ((sub.total_delivered || 0) + 1),
         }).eq('id', sub.id);
         // Notify user
-        tg(ENV.VENDOR_BOT_TOKEN, sub.telegram_id,
+        tg(VBOT(), sub.telegram_id,
           '📦 *Your delivery is on the way!*\n\n' +
           sub.product_name + ' x' + sub.quantity + '\n' +
           '📍 ' + (sub.delivery_address || 'Your address') + '\n' +
@@ -1697,7 +1701,7 @@ export default async function handler(req: any, res: any) {
     // ================================================================
     if (path.startsWith('/api/vendors')) {
       if (method === 'GET' && !['/api/vendors/applications', '/api/vendors/check-status', '/api/vendors/approve'].includes(path) && /\/api\/vendors\/\d+/.test(path)) { const v = await getV(); const f = v.find((vv: any) => vv.id == pid(path) || vv.id === String(pid(path))); return ok({ vendor: f || null }); }
-      if (path === '/api/vendors/approve' && method === 'POST') { if (!(await requireAdmin(req))) return fail('Admin session required', 403); const id = req.body.id; try { let v = await getV(); let okf = false; v = v.map((vv: any) => { if (vv.id == id || vv.id === String(id)) { okf = true; return { ...vv, status: 'approved' }; } return vv; }); if (okf) await setV(v); tg(ENV.ADMIN_BOT_TOKEN, ENV.adminChatId, '✅ Approved: ' + (req.body.name || id), 'HTML'); const uv = await getV(); const av = uv.find((vv: any) => vv.id == id || vv.id === String(id)); if (av?.telegram_id) tg(ENV.VENDOR_BOT_TOKEN, av.telegram_id, '🎉 *Approved!*', 'HTML'); return ok({ success: true, status: 'approved' }); } catch (e: any) { return fail(e.message, 500); } }
+      if (path === '/api/vendors/approve' && method === 'POST') { if (!(await requireAdmin(req))) return fail('Admin session required', 403); const id = req.body.id; try { let v = await getV(); let okf = false; v = v.map((vv: any) => { if (vv.id == id || vv.id === String(id)) { okf = true; return { ...vv, status: 'approved' }; } return vv; }); if (okf) await setV(v); tg(ENV.ADMIN_BOT_TOKEN, ENV.adminChatId, '✅ Approved: ' + (req.body.name || id), 'HTML'); const uv = await getV(); const av = uv.find((vv: any) => vv.id == id || vv.id === String(id)); if (av?.telegram_id) tg(VBOT(), av.telegram_id, '🎉 *Approved!*', 'HTML'); return ok({ success: true, status: 'approved' }); } catch (e: any) { return fail(e.message, 500); } }
       if (path === '/api/vendors/check-status' && method === 'GET') { const id = new URLSearchParams(req.url?.split('?')[1] || '').get('id') || ''; const ph = new URLSearchParams(req.url?.split('?')[1] || '').get('phone') || ''; try { const v = await getV(); if (id) { const f = v.find((vv: any) => vv.id == id || vv.id === id); return ok({ status: f?.status || 'none' }); } if (ph) { const f = v.find((vv: any) => vv.phone == ph); return ok({ status: f?.status || 'none' }); } } catch {} return ok({ status: 'none' }); }
       if (path === '/api/vendors/applications' && method === 'GET') { const v = await getV(); return ok({ applications: v }); }
       if (method === 'GET' && (path === '/api/vendors' || path === '/api/')) { const v = await getV(); return ok({ vendors: v || [] }); }
@@ -1749,7 +1753,7 @@ export default async function handler(req: any, res: any) {
         tg(ENV.ADMIN_BOT_TOKEN, ENV.adminChatId, '🆕 *Vendor Application*:\n👤 ' + (b.full_name_latin || b.name || '') + '\n📞 ' + (b.phone || '') + '\n🆔 Fayda: ' + (b.fayda_id || 'N/A'));
         return ok({ success: true, vendor: v });
       }
-      if (method === 'DELETE') { if (!(await requireAdmin(req))) return fail('Admin session required', 403); const vid = pid(path); try { let vs = await getV(); let dv: any = null; const f = vs.filter((v: any) => { if (v.id == vid || v.id === String(vid)) { dv = v; return false; } return true; }); await setV(f); if (dv?.telegram_id) tg(ENV.VENDOR_BOT_TOKEN, dv.telegram_id, '⚠️ Revoked.'); return ok({ success: true, deleted: true }); } catch (e: any) { return fail(e.message, 500); } }
+      if (method === 'DELETE') { if (!(await requireAdmin(req))) return fail('Admin session required', 403); const vid = pid(path); try { let vs = await getV(); let dv: any = null; const f = vs.filter((v: any) => { if (v.id == vid || v.id === String(vid)) { dv = v; return false; } return true; }); await setV(f); if (dv?.telegram_id) tg(VBOT(), dv.telegram_id, '⚠️ Revoked.'); return ok({ success: true, deleted: true }); } catch (e: any) { return fail(e.message, 500); } }
       if (method === 'PUT') { const vid = pid(path); try { const vs = await getV(); const up = vs.map((v: any) => v.id == vid ? { ...v, ...req.body } : v); await setV(up); } catch {} const em = req.body.status === 'approved' ? '✅' : req.body.status === 'rejected' ? '❌' : '⏸️'; tg(ENV.ADMIN_BOT_TOKEN, ENV.adminChatId, em + ' Vendor ' + vid + ': ' + (req.body.status || 'updated')); return ok({ success: true }); }
     }
 
@@ -1930,7 +1934,7 @@ export default async function handler(req: any, res: any) {
       } catch {}
       const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]);
       const v = await getV();
-      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-09-07-V151000' });
+      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-09-07-V152000' });
     }
     if (path === '/api/system/db-indexes' && method === 'GET') {
       const sql = [
@@ -2231,7 +2235,7 @@ export default async function handler(req: any, res: any) {
         fd.append('chat_id', String(telegramId));
         fd.append('document', new Blob([buf], { type: 'image/png' }), fn);
         if (caption) fd.append('caption', caption);
-        const r = await fetchTO('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/sendDocument', {
+        const r = await fetchTO('https://api.telegram.org/bot' + VBOT() + '/sendDocument', {
           method: 'POST',
           body: fd,
           timeout: 20000
@@ -2561,7 +2565,7 @@ export default async function handler(req: any, res: any) {
             if (order.customer?.telegram_id || order.telegram_id) {
               const tid = order.customer?.telegram_id || order.telegram_id;
               const successMsg = `🎉 *Payment Confirmed!* \n\nThank you, your payment of *Br ${paidAmt}* for order *#${orderNumber}* has been verified successfully! \n\nWe are preparing your package for express dispatch.`;
-              await tg(ENV.VENDOR_BOT_TOKEN, tid, successMsg);
+              await tg(VBOT(), tid, successMsg);
             }
             console.log(`[CHAPA WEBHOOK] Order ${orderNumber} successfully processed & confirmed via server webhook!`);
           }
@@ -2606,7 +2610,7 @@ export default async function handler(req: any, res: any) {
     // ================================================================
     // VENDOR NOTIFY
     // ================================================================
-    if (path === '/api/vendor/notify' && method === 'POST') { var { telegramId, type, message } = req.body || {}; if (!telegramId || !message) return fail('required'); var em = type === 'payout' ? '💰' : type === 'order' ? '📦' : '📢'; var isSent = await tg(ENV.VENDOR_BOT_TOKEN, telegramId, em + ' *Smart Shop*\n\n' + message); return ok({ success: isSent }); }
+    if (path === '/api/vendor/notify' && method === 'POST') { var { telegramId, type, message } = req.body || {}; if (!telegramId || !message) return fail('required'); var em = type === 'payout' ? '💰' : type === 'order' ? '📦' : '📢'; var isSent = await tg(VBOT(), telegramId, em + ' *Smart Shop*\n\n' + message); return ok({ success: isSent }); }
 
 
     // ================================================================
@@ -2616,7 +2620,6 @@ export default async function handler(req: any, res: any) {
       // ── ANTI-FORGERY: reject posts that don't carry Telegram's secret_token
       if (!validWebhookSecret(req)) {
         registerWebhook(ENV.BOT_TOKEN, ENV.BASE_URL + '/api/shop-bot/webhook').catch(() => {});
-        registerWebhook(ENV.VENDOR_BOT_TOKEN, ENV.BASE_URL + '/api/shop-bot/webhook').catch(() => {});
         return ok({ ok: true });
       }
       const sb = req.body, sc = sb.message?.chat?.id, st = sb.message?.text || '';
@@ -2701,12 +2704,12 @@ export default async function handler(req: any, res: any) {
         const qid = sb.callback_query.id;
         if (cbd === 'help') {
           await sd('❓ *Commands*\n🛍️ /shop\n🚚 /driver\n🏪 /vendor\n📞 /contact\n❓ /help');
-          fetchTO('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/answerCallbackQuery', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ callback_query_id: qid }) }).catch(() => {});
+          fetchTO('https://api.telegram.org/bot' + VBOT() + '/answerCallbackQuery', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ callback_query_id: qid }) }).catch(() => {});
           return ok({ ok: true });
         }
         if (cbd === 'contact') {
           await sd('📞 *Share contact*', { keyboard: [[{ text: '📱 Share Contact', request_contact: true }]], resize_keyboard: true, one_time_keyboard: true });
-          fetchTO('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/answerCallbackQuery', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ callback_query_id: qid }) }).catch(() => {});
+          fetchTO('https://api.telegram.org/bot' + VBOT() + '/answerCallbackQuery', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ callback_query_id: qid }) }).catch(() => {});
           return ok({ ok: true });
         }
       }
@@ -2721,7 +2724,7 @@ export default async function handler(req: any, res: any) {
 
         try { await supabase.from('users').upsert({ id: parseInt(uid), telegram_id: parseInt(uid), phone: ph, first_name: fn, username: un, registered_at: new Date().toISOString(), ...(ln ? { last_name: ln } : {}) }, { onConflict: 'telegram_id' }); } catch { try { await supabase.from('users').upsert({ id: parseInt(uid), telegram_id: parseInt(uid), first_name: fn, username: un, registered_at: new Date().toISOString(), ...(ln ? { last_name: ln } : {}) }, { onConflict: 'telegram_id' }); } catch {} }
 
-        tg(ENV.VENDOR_BOT_TOKEN, sc, '', undefined, { reply_markup: JSON.stringify({ remove_keyboard: true }) }).catch(() => {});
+        tg(VBOT(), sc, '', undefined, { reply_markup: JSON.stringify({ remove_keyboard: true }) }).catch(() => {});
 
         const shopUrl = ENV.BASE_URL + '?tg_id=' + encodeURIComponent(uid) + '&phone=' + encodeURIComponent(ph) + '&name=' + encodeURIComponent(fn) + (un ? '&username=' + encodeURIComponent(un) : '') + '&v=' + Date.now();
 
@@ -2739,7 +2742,7 @@ export default async function handler(req: any, res: any) {
           ? '🏍️ Smart Express'
           : '🚚 /driver';
 
-        fetchTO('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/setChatMenuButton', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: sc, menu_button: { type: 'default' } }) }).catch(() => {});
+        fetchTO('https://api.telegram.org/bot' + VBOT() + '/setChatMenuButton', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: sc, menu_button: { type: 'default' } }) }).catch(() => {});
 
         await sd('✅ *Welcome to Smart Shop!* 🇪🇹\n\n👇 *Choose a command:*', {
           inline_keyboard: [
@@ -2889,16 +2892,17 @@ export default async function handler(req: any, res: any) {
     if (path === '/api/telegram/init-all-webhooks' && (method === 'POST' || method === 'GET')) {
       const adminWh = ENV.BASE_URL + '/api/admin-bot/webhook';
       const shopWh = ENV.BASE_URL + '/api/shop-bot/webhook';
-      const [adminRes, shopRes, vendorRes] = await Promise.all([
+      // Only 2 real bots exist: Admin Bot + Shop Bot.
+      // Vendors have no bot — they use the in-app Vendor Dashboard.
+      const [adminRes, shopRes] = await Promise.all([
         registerWebhook(ENV.ADMIN_BOT_TOKEN, adminWh),
-        registerWebhook(ENV.BOT_TOKEN, shopWh),
-        registerWebhook(ENV.VENDOR_BOT_TOKEN, shopWh)
+        registerWebhook(ENV.BOT_TOKEN, shopWh)
       ]);
       return ok({
-        success: true,
+        success: adminRes.ok === true && shopRes.ok === true,
         adminBot: { ok: adminRes.ok, description: adminRes.description, url: adminWh },
         shopBot: { ok: shopRes.ok, description: shopRes.description, url: shopWh },
-        vendorBot: { ok: vendorRes.ok, description: vendorRes.description, url: shopWh }
+        vendorBot: { ok: true, description: 'N/A — vendors use the in-app Vendor Dashboard (no bot)' }
       });
     }
 
