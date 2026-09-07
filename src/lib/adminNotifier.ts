@@ -31,7 +31,7 @@ export async function sendAdminTelegram(
   try {
     const res = await fetch('/api/admin-bot/send', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Session': sessionStorage.getItem('ss_admin_session') || '' },
       body: JSON.stringify({ chatId: config.chatId, message }),
     });
     const data = await res.json();
@@ -128,7 +128,7 @@ export async function sendFileToTelegram(
   try {
     const res = await fetch('/api/admin-bot/send-file', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Session': sessionStorage.getItem('ss_admin_session') || '' },
       body: JSON.stringify({
         chatId: config.chatId,
         filename,

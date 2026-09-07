@@ -1341,7 +1341,7 @@ function AdminVendors() {
   const approveVendorApp = function(id: any, name: any) {
     fetch('/api/vendors/approve', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Session': sessionStorage.getItem('ss_admin_session') || '' },
       body: JSON.stringify({ id: id, name: name || '' })
     }).then(function(r) { return r.json(); }).then(function(d) {
       if (d.success) {
@@ -1370,7 +1370,7 @@ function AdminVendors() {
     setDeleteConfirmId(null);
     fetch('/api/vendors/' + id, {
       method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Session': sessionStorage.getItem('ss_admin_session') || '' }
     }).then(function(r) { return r.json(); }).then(function(d) {
       if (d && d.success) {
         toast('🗑️ Vendor deleted and notified via Telegram.', 'success');

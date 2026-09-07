@@ -117,6 +117,37 @@ function validTgInitData(initData: string, botTokens: string[]): string | null {
 }
 
 const ADMIN_SESSION_SECRET = () => (process.env.ADMIN_SESSION_SECRET || ENV.SUPABASE_KEY || ENV.ADMIN_BOT_TOKEN || 'ss-admin-secret');
+
+// ── Telegram webhook secret_token (anti-forgery) ─────────────────
+// Only real Telegram servers echo this back in the
+// X-Telegram-Bot-Api-Secret-Token header. Blocks forged webhook posts.
+function whSecret(token: string): string {
+  return crypto.createHmac('sha256', ADMIN_SESSION_SECRET()).update('tg-webhook:' + token).digest('hex').slice(0, 64);
+}
+function validWebhookSecret(req: any): boolean {
+  const h = String(req.headers['x-telegram-bot-api-secret-token'] || '');
+  if (!h) return false;
+  return [ENV.ADMIN_BOT_TOKEN, ENV.BOT_TOKEN, ENV.VENDOR_BOT_TOKEN].filter(Boolean).some((t: string) => {
+    try { const s = whSecret(t); return h.length === s.length && crypto.timingSafeEqual(Buffer.from(h), Buffer.from(s)); } catch { return false; }
+  });
+}
+// Self-heal: (re)register a bot webhook WITH its secret token
+async function registerWebhook(token: string, url: string) {
+  if (!token) return { ok: false, description: 'No token' };
+  try {
+    const r = await fetchRetry('https://api.telegram.org/bot' + token + '/setWebhook?url=' + encodeURIComponent(url) + '&secret_token=' + whSecret(token), { method: 'POST', timeout: 10000 });
+    return await r.json();
+  } catch { return { ok: false }; }
+}
+
+// ── Require a verified registered-admin session for privileged APIs ──
+async function requireAdmin(req: any): Promise<string | null> {
+  const tok = String(req.headers['x-admin-session'] || '');
+  const id = tok ? verifyAdminSession(tok) : null;
+  if (!id) return null;
+  const reg = await adminRegistry();
+  return reg.has(String(id)) ? String(id) : null;
+}
 function signAdminSession(tgId: string): string {
   const exp = Date.now() + 12 * 3600 * 1000; // 12h session
   const payload = tgId + '.' + exp;
@@ -1666,7 +1697,7 @@ export default async function handler(req: any, res: any) {
     // ================================================================
     if (path.startsWith('/api/vendors')) {
       if (method === 'GET' && !['/api/vendors/applications', '/api/vendors/check-status', '/api/vendors/approve'].includes(path) && /\/api\/vendors\/\d+/.test(path)) { const v = await getV(); const f = v.find((vv: any) => vv.id == pid(path) || vv.id === String(pid(path))); return ok({ vendor: f || null }); }
-      if (path === '/api/vendors/approve' && method === 'POST') { const id = req.body.id; try { let v = await getV(); let okf = false; v = v.map((vv: any) => { if (vv.id == id || vv.id === String(id)) { okf = true; return { ...vv, status: 'approved' }; } return vv; }); if (okf) await setV(v); tg(ENV.ADMIN_BOT_TOKEN, ENV.adminChatId, '✅ Approved: ' + (req.body.name || id), 'HTML'); const uv = await getV(); const av = uv.find((vv: any) => vv.id == id || vv.id === String(id)); if (av?.telegram_id) tg(ENV.VENDOR_BOT_TOKEN, av.telegram_id, '🎉 *Approved!*', 'HTML'); return ok({ success: true, status: 'approved' }); } catch (e: any) { return fail(e.message, 500); } }
+      if (path === '/api/vendors/approve' && method === 'POST') { if (!(await requireAdmin(req))) return fail('Admin session required', 403); const id = req.body.id; try { let v = await getV(); let okf = false; v = v.map((vv: any) => { if (vv.id == id || vv.id === String(id)) { okf = true; return { ...vv, status: 'approved' }; } return vv; }); if (okf) await setV(v); tg(ENV.ADMIN_BOT_TOKEN, ENV.adminChatId, '✅ Approved: ' + (req.body.name || id), 'HTML'); const uv = await getV(); const av = uv.find((vv: any) => vv.id == id || vv.id === String(id)); if (av?.telegram_id) tg(ENV.VENDOR_BOT_TOKEN, av.telegram_id, '🎉 *Approved!*', 'HTML'); return ok({ success: true, status: 'approved' }); } catch (e: any) { return fail(e.message, 500); } }
       if (path === '/api/vendors/check-status' && method === 'GET') { const id = new URLSearchParams(req.url?.split('?')[1] || '').get('id') || ''; const ph = new URLSearchParams(req.url?.split('?')[1] || '').get('phone') || ''; try { const v = await getV(); if (id) { const f = v.find((vv: any) => vv.id == id || vv.id === id); return ok({ status: f?.status || 'none' }); } if (ph) { const f = v.find((vv: any) => vv.phone == ph); return ok({ status: f?.status || 'none' }); } } catch {} return ok({ status: 'none' }); }
       if (path === '/api/vendors/applications' && method === 'GET') { const v = await getV(); return ok({ applications: v }); }
       if (method === 'GET' && (path === '/api/vendors' || path === '/api/')) { const v = await getV(); return ok({ vendors: v || [] }); }
@@ -1718,7 +1749,7 @@ export default async function handler(req: any, res: any) {
         tg(ENV.ADMIN_BOT_TOKEN, ENV.adminChatId, '🆕 *Vendor Application*:\n👤 ' + (b.full_name_latin || b.name || '') + '\n📞 ' + (b.phone || '') + '\n🆔 Fayda: ' + (b.fayda_id || 'N/A'));
         return ok({ success: true, vendor: v });
       }
-      if (method === 'DELETE') { const vid = pid(path); try { let vs = await getV(); let dv: any = null; const f = vs.filter((v: any) => { if (v.id == vid || v.id === String(vid)) { dv = v; return false; } return true; }); await setV(f); if (dv?.telegram_id) tg(ENV.VENDOR_BOT_TOKEN, dv.telegram_id, '⚠️ Revoked.'); return ok({ success: true, deleted: true }); } catch (e: any) { return fail(e.message, 500); } }
+      if (method === 'DELETE') { if (!(await requireAdmin(req))) return fail('Admin session required', 403); const vid = pid(path); try { let vs = await getV(); let dv: any = null; const f = vs.filter((v: any) => { if (v.id == vid || v.id === String(vid)) { dv = v; return false; } return true; }); await setV(f); if (dv?.telegram_id) tg(ENV.VENDOR_BOT_TOKEN, dv.telegram_id, '⚠️ Revoked.'); return ok({ success: true, deleted: true }); } catch (e: any) { return fail(e.message, 500); } }
       if (method === 'PUT') { const vid = pid(path); try { const vs = await getV(); const up = vs.map((v: any) => v.id == vid ? { ...v, ...req.body } : v); await setV(up); } catch {} const em = req.body.status === 'approved' ? '✅' : req.body.status === 'rejected' ? '❌' : '⏸️'; tg(ENV.ADMIN_BOT_TOKEN, ENV.adminChatId, em + ' Vendor ' + vid + ': ' + (req.body.status || 'updated')); return ok({ success: true }); }
     }
 
@@ -1899,7 +1930,7 @@ export default async function handler(req: any, res: any) {
       } catch {}
       const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]);
       const v = await getV();
-      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-09-07-V150000' });
+      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-09-07-V151000' });
     }
     if (path === '/api/system/db-indexes' && method === 'GET') {
       const sql = [
@@ -2080,6 +2111,8 @@ export default async function handler(req: any, res: any) {
     }
 
     if (path === '/api/email/broadcast' && method === 'POST') {
+      // SECURITY: mass email may only be triggered by a verified registered admin
+      if (!(await requireAdmin(req))) return fail('Admin session required', 403);
       try {
         const { subject, html, campaignType, target } = req.body || {};
         const plainText = (html || '').replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() || subject || 'Smart Shop Special Announcement';
@@ -2211,6 +2244,14 @@ export default async function handler(req: any, res: any) {
     }
     if (path === '/api/admin-bot/send-file' && method === 'POST') {
       const { chatId, filename, content, contentType, caption } = req.body || {}; if (!chatId || !content) return fail('required');
+      // SECURITY: same destination lock as /api/admin-bot/send
+      {
+        const adminId = await requireAdmin(req);
+        if (!adminId) {
+          const reg = await adminRegistry();
+          if (!reg.has(String(chatId))) return fail('Destination not allowed', 403);
+        }
+      }
       try { let buf, ct = contentType || 'text/plain', fn = filename || 'file.txt'; if (typeof content === 'string' && content.startsWith('data:')) { const mp = content.split(';base64,'); if (mp.length === 2) { ct = mp[0].replace('data:', ''); const ext = ct.includes('jpeg') ? 'jpg' : ct.includes('png') ? 'png' : 'csv'; fn = 'receipt-' + Date.now().toString(36) + '.' + ext; buf = Buffer.from(mp[1], 'base64'); } else buf = Buffer.from(content); } else buf = Buffer.from(typeof content === 'string' ? content : JSON.stringify(content)); const fd = new FormData(); fd.append('chat_id', String(chatId)); fd.append('document', new Blob([buf], { type: ct }), fn); if (caption) fd.append('caption', caption); const r = await fetchTO('https://api.telegram.org/bot' + ENV.ADMIN_BOT_TOKEN + '/sendDocument', { method: 'POST', body: fd, timeout: 15000 }); const d = await r.json(); return ok({ sent: d.ok === true, description: d.description }); }
       catch (e: any) { return ok({ sent: false, error: e.message }); }
     }
@@ -2254,7 +2295,7 @@ export default async function handler(req: any, res: any) {
       }
       if (method === 'POST') { const { data } = await supabase.from('products').insert(cln(req.body)).select().single(); return ok({ success: true, product: data }); }
       if (method === 'PUT') { await supabase.from('products').update(cln(req.body)).eq('id', pid(path)); return ok({ success: true }); }
-      if (method === 'DELETE') { await supabase.from('products').delete().eq('id', pid(path)); return ok({ success: true }); }
+      if (method === 'DELETE') { if (!(await requireAdmin(req))) return fail('Admin session required', 403); await supabase.from('products').delete().eq('id', pid(path)); return ok({ success: true }); }
     }
 
     // ================================================================
@@ -2572,6 +2613,12 @@ export default async function handler(req: any, res: any) {
     // SHOP BOT WEBHOOK — Contact First → Command List
     // ================================================================
     if (path === '/api/shop-bot/webhook' && method === 'POST') {
+      // ── ANTI-FORGERY: reject posts that don't carry Telegram's secret_token
+      if (!validWebhookSecret(req)) {
+        registerWebhook(ENV.BOT_TOKEN, ENV.BASE_URL + '/api/shop-bot/webhook').catch(() => {});
+        registerWebhook(ENV.VENDOR_BOT_TOKEN, ENV.BASE_URL + '/api/shop-bot/webhook').catch(() => {});
+        return ok({ ok: true });
+      }
       const sb = req.body, sc = sb.message?.chat?.id, st = sb.message?.text || '';
       if (!sc) return ok({ ok: true });
       const uc = sb.message?.contact;
@@ -2749,6 +2796,13 @@ export default async function handler(req: any, res: any) {
     // ================================================================
     if (path === '/api/admin-bot/webhook' && method === 'POST') {
       if (!ENV.ADMIN_BOT_TOKEN) return ok({ ok: true });
+      // ── ANTI-FORGERY: only genuine Telegram servers know our secret_token.
+      // A forged POST could impersonate the founder's from.id — reject it here.
+      if (!validWebhookSecret(req)) {
+        // Self-heal: re-register webhook WITH secret; Telegram will redeliver.
+        registerWebhook(ENV.ADMIN_BOT_TOKEN, ENV.BASE_URL + '/api/admin-bot/webhook').catch(() => {});
+        return ok({ ok: true });
+      }
       const bd = req.body;
       const ch = bd.message?.chat?.id || bd.callback_query?.message?.chat?.id;
       const tx = bd.message?.text || '';
@@ -2806,32 +2860,39 @@ export default async function handler(req: any, res: any) {
     if (path === '/api/admin-bot/send' && method === 'POST') {
       const { chatId, message } = req.body || {};
       if (!chatId || !message) return fail('chatId and message required');
+      // SECURITY: without a verified admin session, the admin bot may ONLY
+      // deliver to registered admin chat IDs — never to arbitrary users.
+      const adminId = await requireAdmin(req);
+      if (!adminId) {
+        const reg = await adminRegistry();
+        if (!reg.has(String(chatId))) return fail('Destination not allowed', 403);
+      }
       const sent = await tg(ENV.ADMIN_BOT_TOKEN, chatId, message, 'HTML');
       return ok({ sent });
     }
 
-    // ── Admin Bot — Set Webhook ───────────────────────────────────
+    // ── Admin Bot — Set Webhook (with anti-forgery secret_token) ──
     if (path === '/api/admin-bot/set-webhook' && (method === 'POST' || method === 'GET')) {
       const wh = ENV.BASE_URL + '/api/admin-bot/webhook';
-      const d = await fetchRetry('https://api.telegram.org/bot' + ENV.ADMIN_BOT_TOKEN + '/setWebhook?url=' + wh, { method: 'POST', timeout: 10000 }).then(r => r.json()).catch(() => ({ ok: false }));
-      return ok({ ok: d.ok, description: d.description, webhookUrl: wh });
+      const d = await registerWebhook(ENV.ADMIN_BOT_TOKEN, wh);
+      return ok({ ok: d.ok, description: d.description, webhookUrl: wh, secured: true });
     }
 
-    // ── Shop Bot — Set Webhook ────────────────────────────────────
+    // ── Shop Bot — Set Webhook (with anti-forgery secret_token) ───
     if (path === '/api/shop-bot/set-webhook' && (method === 'POST' || method === 'GET')) {
       const wh = ENV.BASE_URL + '/api/shop-bot/webhook';
-      const d = await fetchRetry('https://api.telegram.org/bot' + (ENV.BOT_TOKEN || '') + '/setWebhook?url=' + wh, { method: 'POST', timeout: 10000 }).then(r => r.json()).catch(() => ({ ok: false }));
-      return ok({ ok: d.ok, description: d.description, webhookUrl: wh });
+      const d = await registerWebhook(ENV.BOT_TOKEN, wh);
+      return ok({ ok: d.ok, description: d.description, webhookUrl: wh, secured: true });
     }
 
-    // ── All Bots — Re-Link All Webhooks ───────────────────────────
+    // ── All Bots — Re-Link All Webhooks (with anti-forgery secret) ─
     if (path === '/api/telegram/init-all-webhooks' && (method === 'POST' || method === 'GET')) {
       const adminWh = ENV.BASE_URL + '/api/admin-bot/webhook';
       const shopWh = ENV.BASE_URL + '/api/shop-bot/webhook';
       const [adminRes, shopRes, vendorRes] = await Promise.all([
-        ENV.ADMIN_BOT_TOKEN ? fetchRetry('https://api.telegram.org/bot' + ENV.ADMIN_BOT_TOKEN + '/setWebhook?url=' + adminWh, { method: 'POST', timeout: 10000 }).then(r => r.json()).catch(() => ({ ok: false })) : Promise.resolve({ ok: false, description: 'No token' }),
-        ENV.BOT_TOKEN ? fetchRetry('https://api.telegram.org/bot' + ENV.BOT_TOKEN + '/setWebhook?url=' + shopWh, { method: 'POST', timeout: 10000 }).then(r => r.json()).catch(() => ({ ok: false })) : Promise.resolve({ ok: false, description: 'No token' }),
-        ENV.VENDOR_BOT_TOKEN ? fetchRetry('https://api.telegram.org/bot' + ENV.VENDOR_BOT_TOKEN + '/setWebhook?url=' + shopWh, { method: 'POST', timeout: 10000 }).then(r => r.json()).catch(() => ({ ok: false })) : Promise.resolve({ ok: false, description: 'No token' })
+        registerWebhook(ENV.ADMIN_BOT_TOKEN, adminWh),
+        registerWebhook(ENV.BOT_TOKEN, shopWh),
+        registerWebhook(ENV.VENDOR_BOT_TOKEN, shopWh)
       ]);
       return ok({
         success: true,

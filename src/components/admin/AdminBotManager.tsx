@@ -82,7 +82,7 @@ export default function AdminBotManager() {
     setSending(true);
     try {
       const res = await fetch('/api/admin-bot/send', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Session': sessionStorage.getItem('ss_admin_session') || '' },
         body: JSON.stringify({ chatId, message: '🔔 <b>Smart Shop Admin Bot</b>\n\n✅ Test notification successful!\nYour bot is configured correctly.' }),
       });
       const data = await res.json();
