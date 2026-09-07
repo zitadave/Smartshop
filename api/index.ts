@@ -11,7 +11,7 @@ const ENV = {
   SUPABASE_KEY: process.env.SUPABASE_SERVICE_KEY || '',
   BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN || '',
   ADMIN_BOT_TOKEN: process.env.TELEGRAM_ADMIN_BOT_TOKEN || '8951025148:AAG456KIIBnyLBQqbkeDLajcT_TaPSYCIYc',
-  VENDOR_BOT_TOKEN: process.env.VENDOR_BOT_TOKEN || '7761374287:AAHreFF93x92F4tMqRoA1swcNiJoDv5M-Rk',
+  VENDOR_BOT_TOKEN: process.env.VENDOR_BOT_TOKEN || '', // set in Vercel env — old hardcoded token was revoked (401)
   adminChatId: process.env.TELEGRAM_ADMIN_CHAT_ID || '336997351',
   CHAPA_SECRET_KEY: process.env.CHAPA_SECRET_KEY || 'CHASECK_TEST-a1y8t4NUlLoHF3ltfA7oczUIB777CJxz',
   CHAPA_PUBLIC_KEY: process.env.CHAPA_PUBLIC_KEY || 'CHAPUBK_TEST-8QjyLYBTfvQHXakSwYOCaOyxxty3UZfv',
