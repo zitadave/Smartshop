@@ -52,6 +52,12 @@ async function request<T = any>(path: string, options: CustomRequestInit = {}): 
     headers['Idempotency-Key'] = generateUuid();
   }
 
+  // Auto-attach verified admin session token (issued by /api/admin/verify) for privileged writes
+  try {
+    const adminSession = sessionStorage.getItem('ss_admin_session');
+    if (adminSession && !headers['X-Admin-Session']) headers['X-Admin-Session'] = adminSession;
+  } catch {}
+
   let attempt = 0;
   while (true) {
     attempt++;

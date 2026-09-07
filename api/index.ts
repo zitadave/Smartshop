@@ -73,6 +73,68 @@ function escapeHtml(unsafe: any): string {
     .replace(/>/g, "&gt;");
 }
 
+// ===== ADMIN ACCESS REGISTRY (server-side source of truth) =====
+// Founder is permanently registered and can NEVER be removed.
+const FOUNDER_TELEGRAM_ID = '336997351';
+
+async function adminRegistry(): Promise<Set<string>> {
+  const ids = new Set<string>([FOUNDER_TELEGRAM_ID]);
+  if (ENV.adminChatId) ids.add(String(ENV.adminChatId));
+  try {
+    const { data: sd } = await supabase.from('settings').select('*').single();
+    const s = sd?.data || {};
+    const list = Array.isArray(s.adminUsers) ? s.adminUsers : [];
+    for (const au of list) {
+      if (au && au.telegramId && au.status === 'active') ids.add(String(au.telegramId));
+    }
+  } catch {}
+  try {
+    const { data: aus } = await supabase.from('admin_users').select('telegram_id').eq('is_active', true);
+    if (aus) for (const au of aus) if (au.telegram_id) ids.add(String(au.telegram_id));
+  } catch {}
+  return ids;
+}
+
+// Validate Telegram WebApp initData (HMAC-SHA256 per Telegram spec) → returns telegram user id or null
+function validTgInitData(initData: string, botTokens: string[]): string | null {
+  try {
+    const p = new URLSearchParams(initData);
+    const hash = p.get('hash');
+    if (!hash) return null;
+    p.delete('hash');
+    const dataCheck = [...p.entries()].map(([k, v]) => k + '=' + v).sort().join('\n');
+    for (const t of botTokens) {
+      if (!t) continue;
+      const secret = crypto.createHmac('sha256', 'WebAppData').update(t).digest();
+      const h = crypto.createHmac('sha256', secret).update(dataCheck).digest('hex');
+      if (h === hash) {
+        const u = JSON.parse(p.get('user') || '{}');
+        return u && u.id ? String(u.id) : null;
+      }
+    }
+  } catch {}
+  return null;
+}
+
+const ADMIN_SESSION_SECRET = () => (process.env.ADMIN_SESSION_SECRET || ENV.SUPABASE_KEY || ENV.ADMIN_BOT_TOKEN || 'ss-admin-secret');
+function signAdminSession(tgId: string): string {
+  const exp = Date.now() + 12 * 3600 * 1000; // 12h session
+  const payload = tgId + '.' + exp;
+  const sig = crypto.createHmac('sha256', ADMIN_SESSION_SECRET()).update(payload).digest('hex');
+  return payload + '.' + sig;
+}
+function verifyAdminSession(token: string): string | null {
+  try {
+    const parts = String(token).split('.');
+    if (parts.length !== 3) return null;
+    const [tgId, exp, sig] = parts;
+    if (Date.now() > Number(exp)) return null;
+    const expect = crypto.createHmac('sha256', ADMIN_SESSION_SECRET()).update(tgId + '.' + exp).digest('hex');
+    if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expect))) return null;
+    return tgId;
+  } catch { return null; }
+}
+
 async function notifyAdmins(txt: string, pm = 'HTML') {
   const chatIds = new Set<string>();
   if (ENV.adminChatId) chatIds.add(String(ENV.adminChatId));
@@ -530,7 +592,7 @@ export default async function handler(req: any, res: any) {
   res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
   if (method === 'OPTIONS') return res.status(204).end();
 
-  const isSensitive = method === 'POST' && (path === '/api/email/send' || path === '/api/email/broadcast' || path === '/api/orders' || path === '/api/orders/create' || path === '/api/users/register' || path === '/api/auth/telegram');
+  const isSensitive = method === 'POST' && (path === '/api/email/send' || path === '/api/email/broadcast' || path === '/api/orders' || path === '/api/orders/create' || path === '/api/users/register' || path === '/api/auth/telegram' || path === '/api/admin/verify');
   const rc = chkRate(ip, isSensitive);
   if (!rc.ok) { res.setHeader('Retry-After', '60'); logReq(method, path, 429, dur(start), ip, 'RL'); return res.status(429).json({ error: 'Too many requests - Rate limit exceeded' }); }
   res.setHeader('X-RateLimit-Remaining', rc.rem);
@@ -1837,7 +1899,7 @@ export default async function handler(req: any, res: any) {
       } catch {}
       const [pc, uc] = await Promise.all([supabase.from('products').select('*', { count: 'exact', head: true }), supabase.from('users').select('*')]);
       const v = await getV();
-      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-08-07-V149000' });
+      return ok({ products: pc.count || 0, telegramUsers: uc.data?.length || 0, vendors: v.length, message: 'Smart Shop API running on Vercel!', buildId: 'BUILD-2026-09-07-V150000' });
     }
     if (path === '/api/system/db-indexes' && method === 'GET') {
       const sql = [
@@ -2207,7 +2269,22 @@ export default async function handler(req: any, res: any) {
         }
         return ok({ success: true, settings: st });
       }
-      if (method === 'PUT') { const { data: ex } = await supabase.from('settings').select('*').single(); if (ex) await supabase.from('settings').update({ data: { ...(ex.data || ex), ...req.body }, updated_at: new Date().toISOString() }).eq('id', ex.id); else await supabase.from('settings').insert({ data: req.body }); return ok({ success: true }); }
+      if (method === 'PUT') {
+        const body = { ...(req.body || {}) };
+        // SECURITY: adminUsers registry may only be modified by a verified registered admin
+        if ('adminUsers' in body) {
+          const sessTok = String(req.headers['x-admin-session'] || '');
+          const sessId = sessTok ? verifyAdminSession(sessTok) : null;
+          const reg = sessId ? await adminRegistry() : null;
+          if (!sessId || !reg || !reg.has(sessId)) {
+            delete body.adminUsers; // silently strip — non-admins cannot self-register as admin
+          }
+        }
+        const { data: ex } = await supabase.from('settings').select('*').single();
+        if (ex) await supabase.from('settings').update({ data: { ...(ex.data || ex), ...body }, updated_at: new Date().toISOString() }).eq('id', ex.id);
+        else await supabase.from('settings').insert({ data: body });
+        return ok({ success: true });
+      }
     }
 
     // ================================================================
@@ -2634,7 +2711,41 @@ export default async function handler(req: any, res: any) {
     }
 
     // ================================================================
-    // ADMIN BOT WEBHOOK
+    // ADMIN ACCESS VERIFICATION (server-side gate for /admin-panel)
+    // ================================================================
+    if (path === '/api/admin/verify' && method === 'POST') {
+      const b = req.body || {};
+      let tgId: string | null = null;
+      let via = '';
+      // 1) Strongest proof: signed Telegram WebApp initData
+      if (b.initData) {
+        tgId = validTgInitData(String(b.initData), [ENV.ADMIN_BOT_TOKEN, ENV.BOT_TOKEN, ENV.VENDOR_BOT_TOKEN]);
+        if (tgId) via = 'telegram_webapp';
+      }
+      // 2) Existing signed session token (renewal)
+      if (!tgId && b.session) {
+        tgId = verifyAdminSession(String(b.session));
+        if (tgId) via = 'session';
+      }
+      // 3) Fallback: telegramId + registered phone must BOTH match the same user record
+      if (!tgId && b.telegramId && b.phone) {
+        try {
+          const { data: u } = await supabase.from('users').select('telegram_id, phone').eq('telegram_id', String(b.telegramId)).maybeSingle();
+          const norm = (x: any) => String(x || '').replace(/[^0-9]/g, '').slice(-9);
+          if (u && norm(u.phone) && norm(u.phone) === norm(b.phone)) { tgId = String(b.telegramId); via = 'phone_match'; }
+        } catch {}
+      }
+      if (!tgId) return fail('Not authenticated', 401);
+      const reg = await adminRegistry();
+      if (!reg.has(String(tgId))) {
+        notifyAdmins('🚨 <b>Unauthorized admin panel attempt</b>\n🆔 Telegram ID: <code>' + escapeHtml(tgId) + '</code>\n🔎 Method: ' + escapeHtml(via)).catch(() => {});
+        return fail('Access denied: not a registered admin', 403);
+      }
+      return ok({ success: true, telegramId: tgId, isFounder: tgId === FOUNDER_TELEGRAM_ID, session: signAdminSession(tgId), via });
+    }
+
+    // ================================================================
+    // ADMIN BOT WEBHOOK — LOCKED to registered admins only
     // ================================================================
     if (path === '/api/admin-bot/webhook' && method === 'POST') {
       if (!ENV.ADMIN_BOT_TOKEN) return ok({ ok: true });
@@ -2644,6 +2755,17 @@ export default async function handler(req: any, res: any) {
       const callbackData = bd.callback_query?.data || '';
       const fn = bd.message?.from?.first_name || bd.callback_query?.from?.first_name || 'Admin';
       if (!ch) return ok({ ok: true });
+
+      // ── ZERO-TRUST GATE: sender must be a registered admin ──
+      const senderId = String(bd.message?.from?.id || bd.callback_query?.from?.id || '');
+      const senderUsername = bd.message?.from?.username || bd.callback_query?.from?.username || '';
+      const registry = await adminRegistry();
+      if (!senderId || !registry.has(senderId)) {
+        await tg(ENV.ADMIN_BOT_TOKEN, ch, '⛔ *Access Denied*\n\nThis bot is restricted to registered Smart Shop administrators only.\n\nYour access attempt has been logged and reported.', 'Markdown');
+        notifyAdmins('🚨 <b>Blocked Admin Bot access attempt</b>\n👤 ' + escapeHtml(fn) + (senderUsername ? ' (@' + escapeHtml(senderUsername) + ')' : '') + '\n🆔 Telegram ID: <code>' + escapeHtml(senderId || 'unknown') + '</code>\n💬 Message: <code>' + escapeHtml((tx || callbackData || '').slice(0, 64)) + '</code>').catch(() => {});
+        return ok({ ok: true });
+      }
+
       const cmd = (callbackData || tx).replace('/', '').toLowerCase();
 
       const [pr, or] = await Promise.all([supabase.from('products').select('*'), supabase.from('orders').select('*')]);

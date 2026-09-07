@@ -56,6 +56,8 @@ export default function AdminRoles() {
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [showNewUser, setShowNewUser] = useState(false);
 
+  const FOUNDER_ID = '336997351';
+
   const saveRoles = (r: Role[]) => { localStorage.setItem('ss_admin_roles', JSON.stringify(r)); setRoles(r); };
   const saveUsers = (u: AdminUser[]) => {
     localStorage.setItem('ss_admin_users', JSON.stringify(u));
@@ -111,12 +113,16 @@ export default function AdminRoles() {
   };
 
   const toggleUserStatus = (userId: string) => {
+    const target = users.find(u => u.id === userId);
+    if (target && target.telegramId === FOUNDER_ID) { toast('👑 The Founder admin cannot be deactivated', 'error'); return; }
     const updated = users.map(u => u.id === userId ? { ...u, status: u.status === 'active' ? 'inactive' as const : 'active' as const } : u);
     saveUsers(updated);
     toast('User status updated', 'info');
   };
 
   const removeUser = (userId: string, roleId: string) => {
+    const target = users.find(u => u.id === userId);
+    if (target && target.telegramId === FOUNDER_ID) { toast('👑 The Founder admin cannot be removed', 'error'); return; }
     saveUsers(users.filter(u => u.id !== userId));
     const updatedRoles = roles.map(r => r.id === roleId ? { ...r, userCount: Math.max(0, r.userCount - 1) } : r);
     saveRoles(updatedRoles);
@@ -126,6 +132,11 @@ export default function AdminRoles() {
   return (
     <div className="animate-fadeUp space-y-4">
       <h2 className="text-lg font-bold flex items-center gap-2"><Shield size={20} className="text-indigo-500" /> Admin Roles & Security</h2>
+
+      <div className="bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 rounded-2xl p-3 text-[10px] text-indigo-700 dark:text-indigo-300 leading-relaxed">
+        🔐 <b>Zero-Trust Enforcement:</b> Only Telegram IDs registered here (status <b>active</b>) can open the Admin Panel or use the Admin Bot.
+        The server verifies every access attempt against this registry. The Founder (ID {`336997351`}) is permanently registered and can never be removed.
+      </div>
 
       {/* Two-column Layout */}
       <div className="grid lg:grid-cols-3 gap-4">

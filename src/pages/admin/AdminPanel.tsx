@@ -538,121 +538,106 @@ function AdminLayoutInner() {
         window.location.href = '/admin-panel';
         return;
       }
-      const f = params.get('founder') || params.get('admin');
-      if (f === '336997351') {
-        localStorage.setItem('ss_founder_unlocked', 'true');
-        const p = JSON.parse(localStorage.getItem('ss_profile') || '{}');
-        p.telegramId = '336997351';
-        p.role = 'super_admin';
-        localStorage.setItem('ss_profile', JSON.stringify(p));
-        store.setProfile({ ...store.profile, telegramId: '336997351', role: 'super_admin' } as any);
-        toast('🔓 Founder Admin access unlocked!', 'success');
-      }
     } catch {}
   }, []);
 
+  // ══════════════════════════════════════════════════════════════
+  // ZERO-TRUST ADMIN GATE — access is verified SERVER-SIDE against
+  // the registered admin registry. No client-side backdoors.
+  // ══════════════════════════════════════════════════════════════
+  const [authState, setAuthState] = useState<'checking' | 'granted' | 'denied'>('checking');
+  const [denyReason, setDenyReason] = useState('');
+
   useEffect(() => {
-    try {
-      localStorage.setItem('ss_founder_unlocked', 'true');
-      const p = JSON.parse(localStorage.getItem('ss_profile') || '{}');
-      if (!p.telegramId) p.telegramId = '336997351';
-      if (!p.role) p.role = 'super_admin';
-      localStorage.setItem('ss_profile', JSON.stringify(p));
-      if (!store.profile.telegramId) {
-        store.setProfile({ ...store.profile, telegramId: '336997351', role: 'super_admin' } as any);
+    let cancelled = false;
+    (async () => {
+      try {
+        const body: any = {};
+        // 1) Telegram WebApp signed initData (opened from admin bot) — strongest proof
+        const tgApp = (window as any)?.Telegram?.WebApp;
+        if (tgApp?.initData) body.initData = tgApp.initData;
+        // 2) Previously issued server session token
+        const sess = sessionStorage.getItem('ss_admin_session');
+        if (sess) body.session = sess;
+        // 3) Fallback: profile telegramId + registered phone (both must match server records)
+        try {
+          const p = JSON.parse(localStorage.getItem('ss_profile') || '{}');
+          const ph = localStorage.getItem('ss_user_phone') || p.phone || '';
+          if (p.telegramId) body.telegramId = String(p.telegramId);
+          if (ph) body.phone = String(ph);
+        } catch {}
+
+        const r = await fetch('/api/admin/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const d = await r.json().catch(() => ({}));
+        if (cancelled) return;
+        if (r.ok && d.success) {
+          if (d.session) sessionStorage.setItem('ss_admin_session', d.session);
+          setAuthState('granted');
+        } else {
+          sessionStorage.removeItem('ss_admin_session');
+          setDenyReason(d.error || 'You are not registered as an administrator.');
+          setAuthState('denied');
+        }
+      } catch {
+        if (!cancelled) { setDenyReason('Could not reach the security server. Check your connection and retry.'); setAuthState('denied'); }
       }
-    } catch {}
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   const profile = store.profile;
-  const isAuthorizedAdmin = true;
+  const isAuthorizedAdmin = authState === 'granted';
+
+  if (authState === 'checking') {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-6">
+        <div className="text-center space-y-3">
+          <div className="w-12 h-12 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin mx-auto" />
+          <p className="text-xs text-slate-400 font-mono">Verifying administrator credentials…</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!isAuthorizedAdmin) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-6">
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 max-w-md w-full text-center shadow-2xl space-y-4 animate-scaleIn">
-          <div className="w-16 h-16 rounded-2xl bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 flex items-center justify-center text-3xl mx-auto shadow-inner">
-            🔒
+          <div className="w-16 h-16 rounded-2xl bg-red-500/15 border border-red-500/30 text-red-400 flex items-center justify-center text-3xl mx-auto shadow-inner">
+            ⛔
           </div>
           <div>
-            <h2 className="text-lg font-bold tracking-tight text-white">Administrator Portal</h2>
+            <h2 className="text-lg font-bold tracking-tight text-white">Access Denied</h2>
             <p className="text-[11px] text-slate-400 leading-relaxed mt-1">
-              Protected by Smart Shop Security. Enter your authorized Admin Passkey below to authenticate.
+              This area is restricted to registered Smart Shop administrators only.
+              Admin access is granted exclusively by the founding administrator through the Admin Roles registry.
             </p>
+            {denyReason && (
+              <p className="text-[10px] text-red-400/80 font-mono mt-2 bg-red-500/5 border border-red-500/20 rounded-lg px-3 py-2">
+                {denyReason}
+              </p>
+            )}
           </div>
 
-          <div className="space-y-3 pt-2 text-left">
+          <div className="space-y-3 pt-2">
             <button
               type="button"
-              onClick={() => {
-                localStorage.setItem('ss_founder_unlocked', 'true');
-                const p = JSON.parse(localStorage.getItem('ss_profile') || '{}');
-                p.telegramId = '336997351';
-                p.role = 'super_admin';
-                localStorage.setItem('ss_profile', JSON.stringify(p));
-                store.setProfile({ ...store.profile, telegramId: '336997351', role: 'super_admin' } as any);
-                setUnlocked(true);
-                toast('👑 Welcome back, Founder (336997351)!', 'success');
-                setTimeout(() => { window.location.href = '/admin-panel?unlocked=true'; }, 100);
-              }}
-              className="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:opacity-95 text-white rounded-xl text-xs font-extrabold shadow-lg shadow-amber-500/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2 mb-2"
+              onClick={() => { sessionStorage.removeItem('ss_admin_session'); window.location.reload(); }}
+              className="w-full py-3 bg-gradient-to-r from-indigo-500 to-blue-600 hover:opacity-95 text-white rounded-xl text-xs font-extrabold shadow-lg shadow-indigo-500/20 transition-all active:scale-[0.98]"
             >
-              👑 1-Click Founder Login (Telegram ID: 336997351)
+              🔄 Retry Verification
             </button>
-
-            <div>
-              <label className="text-[9px] font-bold uppercase text-slate-400 block mb-1">Admin Passkey</label>
-              <input
-                type="password"
-                id="admin-auth-passkey"
-                className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 transition-colors text-center"
-                placeholder="Enter Admin Passkey..."
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    const el = document.getElementById('admin-auth-passkey') as HTMLInputElement;
-                    const val = el?.value?.trim();
-                    if (val === 'SmartAdmin2026!' || val === 'smartadmin' || val === 'admin2026' || val === '336997351' || val === (store.settings as any)?.adminMasterKey) {
-                      localStorage.setItem('ss_founder_unlocked', 'true');
-                      const p = JSON.parse(localStorage.getItem('ss_profile') || '{}');
-                      p.telegramId = '336997351';
-                      p.role = 'super_admin';
-                      localStorage.setItem('ss_profile', JSON.stringify(p));
-                      store.setProfile({ ...store.profile, telegramId: '336997351', role: 'super_admin' } as any);
-                      setUnlocked(true);
-                      toast('🔓 Administrator authentication verified! Welcome back.', 'success');
-                    } else {
-                      toast('❌ Invalid Admin Passkey. Unauthorized attempt logged.', 'error');
-                      el.value = '';
-                    }
-                  }
-                }}
-              />
-            </div>
-
             <button
               type="button"
-              onClick={() => {
-                const el = document.getElementById('admin-auth-passkey') as HTMLInputElement;
-                const val = el?.value?.trim();
-                if (val === 'SmartAdmin2026!' || val === 'smartadmin' || val === 'admin2026' || val === '336997351' || val === (store.settings as any)?.adminMasterKey) {
-                  localStorage.setItem('ss_founder_unlocked', 'true');
-                  const p = JSON.parse(localStorage.getItem('ss_profile') || '{}');
-                  p.telegramId = '336997351';
-                  p.role = 'super_admin';
-                  localStorage.setItem('ss_profile', JSON.stringify(p));
-                  store.setProfile({ ...store.profile, telegramId: '336997351', role: 'super_admin' } as any);
-                  setUnlocked(true);
-                  toast('🔓 Administrator authentication verified! Welcome back.', 'success');
-                } else {
-                  toast('❌ Invalid Admin Passkey. Unauthorized attempt logged.', 'error');
-                  if (el) el.value = '';
-                }
-              }}
-              className="w-full py-3.5 bg-gradient-to-r from-indigo-500 to-blue-600 hover:opacity-95 text-white rounded-xl text-xs font-extrabold shadow-lg shadow-indigo-500/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+              onClick={() => navigate('/login')}
+              className="w-full py-3 border border-slate-800 text-slate-300 hover:text-white rounded-xl text-xs font-semibold transition-colors"
             >
-              🔓 Unlock Admin Control Panel
+              🔐 Sign In With Your Registered Phone
             </button>
-
             <button
               type="button"
               onClick={() => navigate('/')}
@@ -660,35 +645,10 @@ function AdminLayoutInner() {
             >
               ← Return to Storefront
             </button>
-
-            <button
-              type="button"
-              onClick={async () => {
-                try {
-                  if ('serviceWorker' in navigator) {
-                    const regs = await navigator.serviceWorker.getRegistrations();
-                    for (const r of regs) await r.unregister();
-                  }
-                  if ('caches' in window) {
-                    const names = await caches.keys();
-                    for (const n of names) await caches.delete(n);
-                  }
-                  localStorage.clear();
-                  sessionStorage.clear();
-                  toast('🧹 All app caches & service workers purged! Loading fresh build...', 'success');
-                  window.location.href = '/admin-panel';
-                } catch {
-                  window.location.reload();
-                }
-              }}
-              className="w-full py-2 bg-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-slate-200 rounded-xl text-[11px] font-semibold transition-colors flex items-center justify-center gap-1.5"
-            >
-              🧹 Clear Stale App Cache & Reset Service Worker
-            </button>
           </div>
 
           <div className="text-[10px] text-slate-600 font-mono pt-1">
-            Zero-Trust Gate · All Access Attempts Audited
+            Zero-Trust Gate · Server-Verified · All Access Attempts Audited
           </div>
         </div>
       </div>
@@ -782,11 +742,11 @@ function AdminLayoutInner() {
               onClick={() => {
                 if (window.confirm('Lock Administrator Session and return to normal customer profile?')) {
                   localStorage.removeItem('ss_founder_unlocked');
+                  sessionStorage.removeItem('ss_admin_session');
                   const p = JSON.parse(localStorage.getItem('ss_profile') || '{}');
                   delete p.role;
-                  if (p.telegramId === '336997351') delete p.telegramId;
                   localStorage.setItem('ss_profile', JSON.stringify(p));
-                  store.setProfile({ ...store.profile, role: undefined, telegramId: undefined } as any);
+                  store.setProfile({ ...store.profile, role: undefined } as any);
                   toast('🔒 Administrator session locked.', 'info');
                   window.location.href = '/profile';
                 }
